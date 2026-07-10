@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Enums;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -75,12 +76,12 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
     private string GetConnectionString()
     {
         _connectionString ??= BuildConnectionString(
-            DatabaseConfigProvider.GetRequired("POSTGRES_HOST"),
-            DatabaseConfigProvider.GetOptional("POSTGRES_PORT"),
-            DatabaseConfigProvider.GetRequired("POSTGRES_USER"),
-            DatabaseConfigProvider.GetRequired("POSTGRES_PASS"),
-            DatabaseConfigProvider.GetRequired("POSTGRES_DB"),
-            DatabaseConfigProvider.GetOptional("POSTGRES_EXTRA_PARAMS"));
+            DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresHost),
+            DatabaseConfigProvider.GetOptional(ConfigurationKeys.PostgresPort),
+            DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresUser),
+            DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresPassword),
+            DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresDatabase),
+            DatabaseConfigProvider.GetOptional(ConfigurationKeys.PostgresExtraParams));
 
         return _connectionString;
     }

@@ -133,6 +133,10 @@ PostgreSQL can be used instead by setting `DATABASE_PROVIDER=postgres` plus the 
 
 Cleanuparr creates three schemas in the target database: `data`, `events` and `users`, one per internal database context, each with its own migration history.
 
+<Note>
+`DATABASE_PROVIDER` and the `POSTGRES_*` settings can also be supplied as keys in `cleanuparr.json` (non-Docker installs, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker)) instead of environment variables, exactly like `PORT`, `BIND_ADDRESS` and `BASE_PATH`.
+</Note>
+
 Example with SSL enabled via `POSTGRES_EXTRA_PARAMS`:
 
 ```bash

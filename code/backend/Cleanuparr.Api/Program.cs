@@ -6,12 +6,17 @@ using Cleanuparr.Api.DependencyInjection;
 using Microsoft.AspNetCore.DataProtection;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
+using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .AddJsonFile(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.json"), optional: true, reloadOnChange: true);
+DatabaseConfigProvider.Initialize(builder.Configuration);
 
 await builder.InitAsync();
 builder.Logging.AddLogging();
@@ -29,13 +34,10 @@ if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     }
 }
 
-builder.Configuration
-    .AddJsonFile(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.json"), optional: true, reloadOnChange: true);
-
-int.TryParse(builder.Configuration.GetValue<string>("PORT"), out int port);
+int.TryParse(builder.Configuration.GetValue<string>(ConfigurationKeys.Port), out int port);
 port = port is 0 ? 11011 : port;
 
-string? bindAddress = builder.Configuration.GetValue<string>("BIND_ADDRESS");
+string? bindAddress = builder.Configuration.GetValue<string>(ConfigurationKeys.BindAddress);
 
 if (!builder.Environment.IsDevelopment())
 {
@@ -111,7 +113,7 @@ if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 var app = builder.Build();
 
 // Configure BASE_PATH immediately after app build and before any other configuration
-string? basePath = app.Configuration.GetValue<string>("BASE_PATH");
+string? basePath = app.Configuration.GetValue<string>(ConfigurationKeys.BasePath);
 ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
 
 if (basePath is not null)

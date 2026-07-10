@@ -1,5 +1,7 @@
+using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Enums;
 using Cleanuparr.Shared.Helpers;
+using Microsoft.Extensions.Configuration;
 using Shouldly;
 using Xunit;
 
@@ -32,5 +34,39 @@ public class DatabaseConfigProviderTests
     public void ParseProvider_unknown_value_throws()
     {
         Should.Throw<InvalidOperationException>(() => DatabaseConfigProvider.ParseProvider("mysql"));
+    }
+
+    [Fact]
+    public void Provider_reads_from_configuration_when_initialized()
+    {
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [ConfigurationKeys.DatabaseProvider] = "postgres" })
+            .Build();
+        try
+        {
+            DatabaseConfigProvider.Initialize(config);
+            DatabaseConfigProvider.Provider.ShouldBe(DatabaseProvider.Postgres);
+        }
+        finally
+        {
+            DatabaseConfigProvider.Initialize(new ConfigurationBuilder().Build());
+        }
+    }
+
+    [Fact]
+    public void GetRequired_reads_value_from_configuration()
+    {
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [ConfigurationKeys.PostgresHost] = "db.example" })
+            .Build();
+        try
+        {
+            DatabaseConfigProvider.Initialize(config);
+            DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresHost).ShouldBe("db.example");
+        }
+        finally
+        {
+            DatabaseConfigProvider.Initialize(new ConfigurationBuilder().Build());
+        }
     }
 }

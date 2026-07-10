@@ -1,10 +1,19 @@
+using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Enums;
+using Microsoft.Extensions.Configuration;
 
 namespace Cleanuparr.Shared.Helpers;
 
 public static class DatabaseConfigProvider
 {
-    public static DatabaseProvider Provider => ParseProvider(Environment.GetEnvironmentVariable("DATABASE_PROVIDER"));
+    private static IConfiguration? _configuration;
+
+    public static void Initialize(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    public static DatabaseProvider Provider => ParseProvider(Read(ConfigurationKeys.DatabaseProvider));
 
     public static DatabaseProvider ParseProvider(string? value)
     {
@@ -17,13 +26,19 @@ public static class DatabaseConfigProvider
         {
             "sqlite" => DatabaseProvider.Sqlite,
             "postgres" => DatabaseProvider.Postgres,
-            _ => throw new InvalidOperationException($"Unsupported DATABASE_PROVIDER value: '{value}'. Supported values: sqlite, postgres."),
+            _ => throw new InvalidOperationException($"Unsupported {ConfigurationKeys.DatabaseProvider} value: '{value}'. Supported values: sqlite, postgres."),
         };
     }
 
-    public static string GetRequired(string name) =>
-        Environment.GetEnvironmentVariable(name)
-        ?? throw new InvalidOperationException($"Environment variable '{name}' is required when DATABASE_PROVIDER=postgres.");
+    public static string GetRequired(string key) =>
+        Read(key)
+        ?? throw new InvalidOperationException($"Configuration value '{key}' is required when {ConfigurationKeys.DatabaseProvider}=postgres.");
 
-    public static string? GetOptional(string name) => Environment.GetEnvironmentVariable(name);
+    public static string? GetOptional(string key) => Read(key);
+
+    private static string? Read(string key)
+    {
+        string? value = _configuration is not null ? _configuration[key] : Environment.GetEnvironmentVariable(key);
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
 }

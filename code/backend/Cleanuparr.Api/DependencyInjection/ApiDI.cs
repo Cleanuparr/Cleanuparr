@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Http.Json;
 using System.Text;
 using Cleanuparr.Api.Middleware;
+using Cleanuparr.Shared.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Cleanuparr.Api.DependencyInjection;
@@ -112,7 +113,7 @@ public static class ApiDI
         // Custom SPA fallback to inject base path
         app.MapFallback(async context =>
         {
-            var basePath = app.Configuration.GetValue<string>("BASE_PATH") ?? "/";
+            var basePath = app.Configuration.GetValue<string>(ConfigurationKeys.BasePath) ?? "/";
             
             // Normalize the base path (remove trailing slash if not root)
             if (basePath != "/" && basePath.EndsWith("/"))
