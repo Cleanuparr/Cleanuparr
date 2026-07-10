@@ -14,7 +14,8 @@ public static class DatabaseProviderFactory
         return DatabaseConfigProvider.Provider switch
         {
             DatabaseProvider.Sqlite => new SqliteDatabaseProvider(),
-            _ => throw new NotSupportedException("PostgreSQL provider is added in a later task."),
+            DatabaseProvider.Postgres => new PostgresDatabaseProvider(),
+            _ => throw new InvalidOperationException($"No provider registered for {DatabaseConfigProvider.Provider}."),
         };
     }
 }
