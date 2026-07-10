@@ -21,12 +21,6 @@ public sealed record SearchQueueItem
     public Guid ArrInstanceId { get; set; }
 
     /// <summary>
-    /// Navigation property to the associated arr instance
-    /// </summary>
-    /// 
-    public ArrInstance ArrInstance { get; set; } = null!;
-
-    /// <summary>
     /// The item ID to search for (movieId, episodeId, albumId, etc.)
     /// </summary>
     public long ItemId { get; set; }

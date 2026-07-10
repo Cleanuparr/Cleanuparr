@@ -21,11 +21,6 @@ public sealed record SeekerCommandTracker
     public Guid ArrInstanceId { get; set; }
 
     /// <summary>
-    /// Navigation property to the associated arr instance
-    /// </summary>
-    public ArrInstance ArrInstance { get; set; } = null!;
-
-    /// <summary>
     /// The command ID returned by the arr API
     /// </summary>
     public long CommandId { get; set; }

@@ -84,16 +84,6 @@ public class DataContext : DbContext
 
     public DbSet<SeekerInstanceConfig> SeekerInstanceConfigs { get; set; }
 
-    public DbSet<SeekerHistory> SeekerHistory { get; set; }
-
-    public DbSet<SearchQueueItem> SearchQueue { get; set; }
-
-    public DbSet<CustomFormatScoreEntry> CustomFormatScoreEntries { get; set; }
-
-    public DbSet<CustomFormatScoreHistory> CustomFormatScoreHistory { get; set; }
-
-    public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
-
     public DataContext()
     {
     }
@@ -241,59 +231,6 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(s => s.ArrInstanceId).IsUnique();
-
-        });
-
-        modelBuilder.Entity<SeekerHistory>(entity =>
-        {
-            entity.HasOne(s => s.ArrInstance)
-                  .WithMany()
-                  .HasForeignKey(s => s.ArrInstanceId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.CycleId }).IsUnique();
-
-        });
-
-        modelBuilder.Entity<SeekerCommandTracker>(entity =>
-        {
-            entity.HasOne(s => s.ArrInstance)
-                  .WithMany()
-                  .HasForeignKey(s => s.ArrInstanceId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-        });
-
-        modelBuilder.Entity<SearchQueueItem>(entity =>
-        {
-            entity.HasOne(s => s.ArrInstance)
-                  .WithMany()
-                  .HasForeignKey(s => s.ArrInstanceId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-        });
-
-        modelBuilder.Entity<CustomFormatScoreEntry>(entity =>
-        {
-            entity.HasOne(s => s.ArrInstance)
-                  .WithMany()
-                  .HasForeignKey(s => s.ArrInstanceId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
-            entity.HasIndex(s => s.LastUpgradedAt);
-
-        });
-
-        modelBuilder.Entity<CustomFormatScoreHistory>(entity =>
-        {
-            entity.HasOne(s => s.ArrInstance)
-                  .WithMany()
-                  .HasForeignKey(s => s.ArrInstanceId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId });
-            entity.HasIndex(s => s.RecordedAt);
 
         });
 
