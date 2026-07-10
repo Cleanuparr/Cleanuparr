@@ -39,6 +39,7 @@ public sealed class Seeker : IHandler
 
     private readonly ILogger<Seeker> _logger;
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly IArrClientFactory _arrClientFactory;
@@ -52,6 +53,7 @@ public sealed class Seeker : IHandler
     public Seeker(
         ILogger<Seeker> logger,
         DataContext dataContext,
+        EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         IArrClientFactory arrClientFactory,
@@ -64,6 +66,7 @@ public sealed class Seeker : IHandler
     {
         _logger = logger;
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _arrClientFactory = arrClientFactory;
@@ -92,7 +95,7 @@ public sealed class Seeker : IHandler
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
         // Replacement searches queued after download removal
-        SearchQueueItem? replacementItem = await _dataContext.SearchQueue
+        SearchQueueItem? replacementItem = await _eventsContext.SearchQueue
             .OrderBy(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
@@ -143,18 +146,18 @@ public sealed class Seeker : IHandler
             _logger.LogWarning(
                 "Skipping replacement search for '{Title}' — arr instance {InstanceId} no longer exists",
                 item.Title, item.ArrInstanceId);
-            _dataContext.SearchQueue.Remove(item);
-            await _dataContext.SaveChangesAsync();
+            _eventsContext.SearchQueue.Remove(item);
+            await _eventsContext.SaveChangesAsync();
             return;
         }
 
-        ContextProvider.Set(nameof(InstanceType), item.ArrInstance.ArrConfig.Type);
+        ContextProvider.Set(nameof(InstanceType), arrInstance.ArrConfig.Type);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstance.Id);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalOrInternalUrl);
 
         try
         {
-            IArrClient arrClient = _arrClientFactory.GetClient(item.ArrInstance.ArrConfig.Type, arrInstance.Version);
+            IArrClient arrClient = _arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
             SearchItem searchItem = BuildSearchItem(item);
 
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
@@ -163,7 +166,7 @@ public sealed class Seeker : IHandler
 
             if (!isDryRun)
             {
-                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
+                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, arrInstance.ArrConfig.Type, item.ItemId, item.Title);
             }
 
             _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
@@ -178,8 +181,8 @@ public sealed class Seeker : IHandler
         {
             if (!isDryRun)
             {
-                _dataContext.SearchQueue.Remove(item);
-                await _dataContext.SaveChangesAsync();
+                _eventsContext.SearchQueue.Remove(item);
+                await _eventsContext.SaveChangesAsync();
             }
         }
     }
@@ -327,13 +330,13 @@ public sealed class Seeker : IHandler
         CancellationToken cancellationToken)
     {
         // Load search history for the current cycle
-        List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
+        List<SeekerHistory> currentCycleHistory = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id && h.CycleId == instanceConfig.CurrentCycleId)
             .ToListAsync();
 
         // Load all history for stale cleanup
-        List<long> allHistoryExternalIds = await _dataContext.SeekerHistory
+        List<long> allHistoryExternalIds = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id)
             .Select(x => x.ExternalItemId)
@@ -437,7 +440,7 @@ public sealed class Seeker : IHandler
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (instanceConfig.UseCustomFormatScore)
         {
-            cfScores = await _dataContext.CustomFormatScoreEntries
+            cfScores = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == InstanceType.Radarr)
                 .ToDictionaryAsync(e => e.ExternalItemId);
@@ -765,7 +768,7 @@ public sealed class Seeker : IHandler
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (instanceConfig.UseCustomFormatScore)
         {
-            cfScores = await _dataContext.CustomFormatScoreEntries
+            cfScores = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id
                     && e.ItemType == InstanceType.Sonarr
@@ -891,7 +894,7 @@ public sealed class Seeker : IHandler
             long id = searchedIds[i];
             string title = itemTitles != null && i < itemTitles.Count ? itemTitles[i] : string.Empty;
 
-            SeekerHistory? existing = await _dataContext.SeekerHistory
+            SeekerHistory? existing = await _eventsContext.SeekerHistory
                 .FirstOrDefaultAsync(h =>
                     h.ArrInstanceId == arrInstanceId
                     && h.ExternalItemId == id
@@ -910,7 +913,7 @@ public sealed class Seeker : IHandler
             }
             else
             {
-                _dataContext.SeekerHistory.Add(new SeekerHistory
+                _eventsContext.SeekerHistory.Add(new SeekerHistory
                 {
                     ArrInstanceId = arrInstanceId,
                     ExternalItemId = id,
@@ -924,7 +927,7 @@ public sealed class Seeker : IHandler
             }
         }
 
-        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
     }
 
     private async Task SaveCommandTrackerAsync(
@@ -936,7 +939,7 @@ public sealed class Seeker : IHandler
         string itemTitle,
         int seasonNumber = 0)
     {
-        _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
             ArrInstanceId = arrInstanceId,
             CommandId = commandId,
@@ -946,7 +949,7 @@ public sealed class Seeker : IHandler
             SeasonNumber = seasonNumber,
         });
 
-        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
     }
 
     private async Task CleanupStaleHistoryAsync(
@@ -966,7 +969,7 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        await _dataContext.SeekerHistory
+        await _eventsContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstanceId
                 && h.ItemType == instanceType
                 && staleIds.Contains(h.ExternalItemId))
@@ -987,7 +990,7 @@ public sealed class Seeker : IHandler
     {
         DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-30);
 
-        int deleted = await _dataContext.SeekerHistory
+        int deleted = await _eventsContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstance.Id
                 && h.CycleId != currentCycleId
                 && h.LastSearchedAt < cutoff)

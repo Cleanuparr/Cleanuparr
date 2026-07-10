@@ -80,7 +80,7 @@ public sealed class GeneralConfigController : ControllerBase
                         .Where(d => !d.Strikes.Any())
                         .ExecuteDeleteAsync();
 
-                    var deletedHistory = await _dataContext.SeekerHistory
+                    var deletedHistory = await eventsContext.SeekerHistory
                         .Where(h => h.IsDryRun)
                         .ExecuteDeleteAsync();
 

@@ -27,6 +27,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly TimeProvider _timeProvider;
@@ -35,6 +36,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     public CustomFormatScoreSyncer(
         ILogger<CustomFormatScoreSyncer> logger,
         DataContext dataContext,
+        EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         TimeProvider timeProvider,
@@ -42,6 +44,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     {
         _logger = logger;
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _timeProvider = timeProvider;
@@ -50,25 +53,25 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
     private async Task ConfigureSqliteCacheSizeAsync(CancellationToken cancellationToken)
     {
-        if (_dataContext.Database.IsSqlite())
+        if (_eventsContext.Database.IsSqlite())
         {
-            await _dataContext.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-20000;", cancellationToken);
+            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-20000;", cancellationToken);
         }
     }
 
     private async Task CheckpointWalIfDueAsync(int flushedChunks, CancellationToken cancellationToken)
     {
-        if (_dataContext.Database.IsSqlite() && flushedChunks % CheckpointIntervalChunks == 0)
+        if (_eventsContext.Database.IsSqlite() && flushedChunks % CheckpointIntervalChunks == 0)
         {
-            await _dataContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
+            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
         }
     }
 
     private async Task CheckpointWalAsync(CancellationToken cancellationToken)
     {
-        if (_dataContext.Database.IsSqlite())
+        if (_eventsContext.Database.IsSqlite())
         {
-            await _dataContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
+            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
         }
     }
 
@@ -213,7 +216,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task FlushRadarrTouchChunkAsync(ArrInstance arrInstance, List<long> movieIds, DateTimeOffset now)
     {
         List<long> chunkList = movieIds.ToList();
-        await _dataContext.CustomFormatScoreEntries
+        await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstance.Id
                 && e.ItemType == InstanceType.Radarr
                 && chunkList.Contains(e.ExternalItemId))
@@ -236,14 +239,14 @@ public sealed class CustomFormatScoreSyncer : IHandler
             arrInstance.Name, fileIds.Count, scores.Count);
 
         List<long> movieIds = chunk.Select(x => x.Movie.Id).ToList();
-        Dictionary<long, CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
+        Dictionary<long, CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstance.Id
                 && e.ItemType == InstanceType.Radarr
                 && movieIds.Contains(e.ExternalItemId))
             .ToDictionaryAsync(e => e.ExternalItemId);
 
-        bool autoDetect = _dataContext.ChangeTracker.AutoDetectChangesEnabled;
-        _dataContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        bool autoDetect = _eventsContext.ChangeTracker.AutoDetectChangesEnabled;
+        _eventsContext.ChangeTracker.AutoDetectChangesEnabled = false;
         try
         {
             foreach ((SearchableMovie movie, long fileId) in chunk)
@@ -271,13 +274,13 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 synced++;
             }
 
-            _dataContext.ChangeTracker.DetectChanges();
-            await _dataContext.SaveChangesAsync();
-            _dataContext.ChangeTracker.Clear();
+            _eventsContext.ChangeTracker.DetectChanges();
+            await _eventsContext.SaveChangesAsync();
+            _eventsContext.ChangeTracker.Clear();
         }
         finally
         {
-            _dataContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
+            _eventsContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
         }
 
         return (synced, skipped);
@@ -400,14 +403,14 @@ public sealed class CustomFormatScoreSyncer : IHandler
         if (itemsInChunk.Count > 0)
         {
             List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
-            Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
+            Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
                 .Where(e => e.ArrInstanceId == arrInstance.Id
                     && e.ItemType == InstanceType.Sonarr
                     && seriesIds.Contains(e.ExternalItemId))
                 .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
 
-            bool autoDetect = _dataContext.ChangeTracker.AutoDetectChangesEnabled;
-            _dataContext.ChangeTracker.AutoDetectChangesEnabled = false;
+            bool autoDetect = _eventsContext.ChangeTracker.AutoDetectChangesEnabled;
+            _eventsContext.ChangeTracker.AutoDetectChangesEnabled = false;
             try
             {
                 foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore, bool isMonitored) in itemsInChunk)
@@ -424,13 +427,13 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     synced++;
                 }
 
-                _dataContext.ChangeTracker.DetectChanges();
-                await _dataContext.SaveChangesAsync(cancellationToken);
-                _dataContext.ChangeTracker.Clear();
+                _eventsContext.ChangeTracker.DetectChanges();
+                await _eventsContext.SaveChangesAsync(cancellationToken);
+                _eventsContext.ChangeTracker.Clear();
             }
             finally
             {
-                _dataContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
+                _eventsContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
             }
         }
         else
@@ -446,7 +449,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             foreach (long[] epChunk in episodeIds.Chunk(ChunkSize))
             {
                 List<long> epChunkList = epChunk.ToList();
-                await _dataContext.CustomFormatScoreEntries
+                await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
                         && e.ItemType == InstanceType.Sonarr
                         && e.ExternalItemId == group.Key
@@ -460,7 +463,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             foreach (long[] failedChunk in failedSeriesIds.Chunk(ChunkSize))
             {
                 List<long> failedChunkList = failedChunk.ToList();
-                await _dataContext.CustomFormatScoreEntries
+                await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
                         && e.ItemType == InstanceType.Sonarr
                         && failedChunkList.Contains(e.ExternalItemId))
@@ -520,7 +523,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         {
             if (existing.CurrentScore != cfScore)
             {
-                _dataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+                _eventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
                 {
                     ArrInstanceId = arrInstanceId,
                     ExternalItemId = externalItemId,
@@ -548,7 +551,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
         else
         {
-            _dataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+            _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
             {
                 ArrInstanceId = arrInstanceId,
                 ExternalItemId = externalItemId,
@@ -564,7 +567,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             });
 
             // Record initial score in history
-            _dataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+            _eventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
             {
                 ArrInstanceId = arrInstanceId,
                 ExternalItemId = externalItemId,
@@ -586,7 +589,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task CleanupStaleEntriesAsync(
         Guid arrInstanceId, InstanceType instanceType, DateTimeOffset syncStartTime)
     {
-        List<long> staleItemIds = await _dataContext.CustomFormatScoreEntries
+        List<long> staleItemIds = await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
@@ -599,7 +602,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             return;
         }
 
-        await _dataContext.CustomFormatScoreEntries
+        await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
@@ -608,7 +611,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         foreach (long[] chunk in staleItemIds.Chunk(ChunkSize))
         {
             List<long> chunkList = chunk.ToList();
-            await _dataContext.CustomFormatScoreHistory
+            await _eventsContext.CustomFormatScoreHistory
                 .Where(h => h.ArrInstanceId == arrInstanceId
                     && h.ItemType == instanceType
                     && chunkList.Contains(h.ExternalItemId))
@@ -625,7 +628,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task CleanupOldHistoryAsync()
     {
         DateTimeOffset threshold = _timeProvider.GetUtcNow() - HistoryRetention;
-        int deleted = await _dataContext.CustomFormatScoreHistory
+        int deleted = await _eventsContext.CustomFormatScoreHistory
             .Where(h => h.RecordedAt < threshold)
             .ExecuteDeleteAsync();
 

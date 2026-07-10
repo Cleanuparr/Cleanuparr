@@ -104,7 +104,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 return;
             }
 
-            _dataContext.SearchQueue.Add(new SearchQueueItem
+            _eventsContext.SearchQueue.Add(new SearchQueueItem
             {
                 ArrInstanceId = request.Instance.Id,
                 ItemId = request.SearchItem.Id,
@@ -112,8 +112,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 SearchType = (request.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
                 Title = request.Record.Title,
             });
-            
-            await _dataContext.SaveChangesAsync();
+
+            await _eventsContext.SaveChangesAsync();
         }
         catch (HttpRequestException exception)
         {
