@@ -54,8 +54,9 @@ public sealed class QueueItemRemover : IQueueItemRemover
             await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.ChangeCategory, request.DeleteReason);
 
             // Mark the download item as removed in the database
+            string downloadId = request.Record.DownloadId.ToLower();
             await _eventsContext.DownloadItems
-                .Where(x => EF.Functions.Like(x.DownloadId, request.Record.DownloadId))
+                .Where(x => x.DownloadId.ToLower() == downloadId)
                 .ExecuteUpdateAsync(setter =>
                 {
                     setter.SetProperty(x => x.IsRemoved, true);

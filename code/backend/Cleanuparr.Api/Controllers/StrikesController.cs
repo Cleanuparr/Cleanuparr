@@ -62,8 +62,8 @@ public class StrikesController : ControllerBase
         {
             string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(d =>
-                EF.Functions.Like(d.Title, pattern) ||
-                EF.Functions.Like(d.DownloadId, pattern));
+                EF.Functions.Like(d.Title.ToLower(), pattern) ||
+                EF.Functions.Like(d.DownloadId.ToLower(), pattern));
         }
 
         var totalCount = await query.CountAsync();

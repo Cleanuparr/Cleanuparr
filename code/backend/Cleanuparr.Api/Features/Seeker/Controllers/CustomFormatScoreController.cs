@@ -66,7 +66,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         if (!string.IsNullOrWhiteSpace(search))
         {
             string pattern = EventsContext.GetLikePattern(search);
-            query = query.Where(e => EF.Functions.Like(e.Title, pattern));
+            query = query.Where(e => EF.Functions.Like(e.Title.ToLower(), pattern));
         }
 
         if (!string.IsNullOrWhiteSpace(qualityProfile))
@@ -246,7 +246,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         const string filterClause = 
             """
             WHERE (@instanceId IS NULL OR arr_instance_id = @instanceId)
-                AND (@search IS NULL OR title LIKE @search ESCAPE '\')
+                AND (@search IS NULL OR LOWER(title) LIKE @search ESCAPE '\')
                 AND (@cutoff IS NULL OR upgraded_at >= @cutoff)
             """;
 

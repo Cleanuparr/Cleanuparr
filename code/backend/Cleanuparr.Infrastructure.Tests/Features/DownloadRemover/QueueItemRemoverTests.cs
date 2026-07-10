@@ -56,7 +56,7 @@ public class QueueItemRemoverTests : IDisposable
 
         // Create a JobRun so event FK constraints are satisfied when events are saved
         _jobRunId = Guid.NewGuid();
-        _eventsContext.JobRuns.Add(new Persistence.Models.State.JobRun { Id = _jobRunId, Type = JobType.QueueCleaner });
+        _eventsContext.JobRuns.Add(new Cleanuparr.Persistence.Models.State.JobRun { Id = _jobRunId, Type = JobType.QueueCleaner });
         _eventsContext.SaveChanges();
         ContextProvider.SetJobRunId(_jobRunId);
 
