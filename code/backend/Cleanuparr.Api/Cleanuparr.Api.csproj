@@ -23,6 +23,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Cleanuparr.Infrastructure\Cleanuparr.Infrastructure.csproj" />
       <ProjectReference Include="..\Cleanuparr.Persistence.Sqlite\Cleanuparr.Persistence.Sqlite.csproj" />
+      <ProjectReference Include="..\Cleanuparr.Persistence.Postgres\Cleanuparr.Persistence.Postgres.csproj" />
     </ItemGroup>
 
     <ItemGroup>

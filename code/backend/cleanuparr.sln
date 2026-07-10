@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Api.Tests", "Cle
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Persistence.Sqlite", "Cleanuparr.Persistence.Sqlite\Cleanuparr.Persistence.Sqlite.csproj", "{B300527B-2A8A-4096-8FD6-80987C9A2C56}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Persistence.Postgres", "Cleanuparr.Persistence.Postgres\Cleanuparr.Persistence.Postgres.csproj", "{8D3FD152-54F2-40BC-A827-0E70D96FD484}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -136,6 +138,18 @@ Global
 		{B300527B-2A8A-4096-8FD6-80987C9A2C56}.Release|x64.Build.0 = Release|Any CPU
 		{B300527B-2A8A-4096-8FD6-80987C9A2C56}.Release|x86.ActiveCfg = Release|Any CPU
 		{B300527B-2A8A-4096-8FD6-80987C9A2C56}.Release|x86.Build.0 = Release|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Debug|x64.Build.0 = Debug|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Debug|x86.Build.0 = Debug|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Release|x64.ActiveCfg = Release|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Release|x64.Build.0 = Release|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Release|x86.ActiveCfg = Release|Any CPU
+		{8D3FD152-54F2-40BC-A827-0E70D96FD484}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

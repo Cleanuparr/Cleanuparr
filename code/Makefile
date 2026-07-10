@@ -21,6 +21,26 @@ ifndef name
 endif
 	dotnet ef migrations add $(name) --context UsersContext --project backend/Cleanuparr.Persistence.Sqlite/Cleanuparr.Persistence.Sqlite.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Users
 
+PG_DUMMY = DATABASE_PROVIDER=postgres POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_USER=postgres POSTGRES_PASS=postgres POSTGRES_DB=cleanuparr
+
+migrate-postgres-data:
+ifndef name
+	$(error name is required. Usage: make migrate-postgres-data name=YourMigrationName)
+endif
+	$(PG_DUMMY) dotnet ef migrations add $(name) --context DataContext --project backend/Cleanuparr.Persistence.Postgres/Cleanuparr.Persistence.Postgres.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Data
+
+migrate-postgres-events:
+ifndef name
+	$(error name is required. Usage: make migrate-postgres-events name=YourMigrationName)
+endif
+	$(PG_DUMMY) dotnet ef migrations add $(name) --context EventsContext --project backend/Cleanuparr.Persistence.Postgres/Cleanuparr.Persistence.Postgres.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Events
+
+migrate-postgres-users:
+ifndef name
+	$(error name is required. Usage: make migrate-postgres-users name=YourMigrationName)
+endif
+	$(PG_DUMMY) dotnet ef migrations add $(name) --context UsersContext --project backend/Cleanuparr.Persistence.Postgres/Cleanuparr.Persistence.Postgres.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Users
+
 docker-build:
 ifndef tag
 	$(error tag is required. Usage: make docker-build tag=latest version=1.0.0 user=... pat=...)
