@@ -460,7 +460,7 @@ public class DataContext : DbContext
 
         var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.db");
         optionsBuilder
-            .UseSqlite($"Data Source={dbPath};Cache=Shared")
+            .UseSqlite($"Data Source={dbPath}")
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
     }
