@@ -23,7 +23,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private const int FetchConcurrency = 5;
     private static readonly TimeSpan HistoryRetention = TimeSpan.FromDays(120);
 
-    private sealed record SeriesFetch(SearchableSeries Series, List<SearchableEpisode> Episodes, List<ArrEpisodeFile> EpisodeFiles);
+    private sealed record SeriesFetch(SearchableSeries Series, List<SearchableEpisode> Episodes, List<ArrEpisodeFile> EpisodeFiles, bool Failed);
 
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly DataContext _dataContext;
@@ -358,6 +358,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
         SeriesFetch[] fetched = await Task.WhenAll(fetchTasks);
         gate.Dispose();
 
+        List<long> failedSeriesIds = fetched
+            .Where(f => f.Failed)
+            .Select(f => f.Series.Id)
+            .ToList();
+
         // Collect all episodes with files for this chunk of series
         List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
         List<(long SeriesId, long EpisodeId)> episodesToTouch = [];
@@ -450,6 +455,19 @@ public sealed class CustomFormatScoreSyncer : IHandler
             }
         }
 
+        if (failedSeriesIds.Count > 0)
+        {
+            foreach (long[] failedChunk in failedSeriesIds.Chunk(ChunkSize))
+            {
+                List<long> failedChunkList = failedChunk.ToList();
+                await _dataContext.CustomFormatScoreEntries
+                    .Where(e => e.ArrInstanceId == arrInstance.Id
+                        && e.ItemType == InstanceType.Sonarr
+                        && failedChunkList.Contains(e.ExternalItemId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
+            }
+        }
+
         return (synced, skipped);
     }
 
@@ -466,14 +484,14 @@ public sealed class CustomFormatScoreSyncer : IHandler
             Task<List<ArrEpisodeFile>> episodeFilesTask = _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id);
             await Task.WhenAll(episodesTask, episodeFilesTask);
 
-            return new SeriesFetch(series, episodesTask.Result, episodeFilesTask.Result);
+            return new SeriesFetch(series, episodesTask.Result, episodeFilesTask.Result, Failed: false);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[Sonarr] Failed to fetch episodes for series '{SeriesTitle}' (id={SeriesId}) on {InstanceName}",
                 series.Title, series.Id, arrInstance.Name);
 
-            return new SeriesFetch(series, [], []);
+            return new SeriesFetch(series, [], [], Failed: true);
         }
         finally
         {

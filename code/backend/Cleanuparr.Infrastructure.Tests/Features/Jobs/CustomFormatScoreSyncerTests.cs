@@ -955,6 +955,76 @@ public class CustomFormatScoreSyncerTests : IDisposable
         history.ShouldHaveSingleItem();
     }
 
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_PreservesEntryWhenSeriesFetchFails()
+    {
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            FileId = 500,
+            CurrentScore = 300,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSyncedAt = new DateTime(1999, 12, 15, 0, 0, 0, DateTimeKind.Utc)
+        });
+        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            Score = 300,
+            CutoffScore = 500,
+            RecordedAt = new DateTime(1999, 12, 15, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
+            ]));
+
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns(Task.FromException<List<SearchableEpisode>>(new InvalidOperationException("transient failure")));
+
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([]);
+
+        var sut = CreateSut();
+
+        await sut.ExecuteAsync();
+
+        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].ExternalItemId.ShouldBe(10);
+        entries[0].CurrentScore.ShouldBe(300);
+
+        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        history.ShouldHaveSingleItem();
+    }
+
     #endregion
 
     #region WAL Checkpoint Tests
