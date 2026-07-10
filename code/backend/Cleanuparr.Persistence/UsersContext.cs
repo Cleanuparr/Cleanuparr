@@ -1,5 +1,6 @@
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,12 +46,17 @@ public class UsersContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<UtcDateTimeOffsetConverter>();
+        DatabaseProviderFactory.Current.ConfigureConventions(configurationBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        string? schema = DatabaseProviderFactory.Current.GetSchema(DbContextKind.Users);
+        if (schema is not null)
+        {
+            modelBuilder.HasDefaultSchema(schema);
+        }
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasIndex(u => u.Username).IsUnique();
@@ -95,10 +101,6 @@ public class UsersContext : DbContext
             return;
         }
 
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "users.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+        DatabaseProviderFactory.Current.ConfigureContext(optionsBuilder, DbContextKind.Users);
     }
 }

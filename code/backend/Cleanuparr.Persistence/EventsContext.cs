@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -55,21 +56,22 @@ public class EventsContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<UtcDateTimeOffsetConverter>();
+        DatabaseProviderFactory.Current.ConfigureConventions(configurationBuilder);
     }
 
     public static string GetLikePattern(string input)
     {
-        input = input.Replace("[", "[[]")
-            .Replace("%", "[%]")
-            .Replace("_", "[_]");
-        
-        return $"%{input}%";
+        return DatabaseProviderFactory.Current.EscapeLikePattern(input.ToLowerInvariant());
     }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        string? schema = DatabaseProviderFactory.Current.GetSchema(DbContextKind.Events);
+        if (schema is not null)
+        {
+            modelBuilder.HasDefaultSchema(schema);
+        }
+
         modelBuilder.Entity<AppEvent>(entity =>
         {
             entity.HasOne(e => e.Strike)
@@ -95,7 +97,7 @@ public class EventsContext : DbContext
             // Partial unique index — resolved rows are exempt, so history/cooldown is unaffected.
             entity.HasIndex(e => new { e.Type, e.ItemHash })
                 .IsUnique()
-                .HasFilter("\"is_resolved\" = 0");
+                .HasFilter(DatabaseProviderFactory.Current.GetUnresolvedEventFilter());
         });
 
         modelBuilder.Entity<SeekerHistory>(entity =>
@@ -156,11 +158,7 @@ public class EventsContext : DbContext
         {
             return;
         }
-        
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "events.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+
+        DatabaseProviderFactory.Current.ConfigureContext(optionsBuilder, DbContextKind.Events);
     }
-} 
+}
