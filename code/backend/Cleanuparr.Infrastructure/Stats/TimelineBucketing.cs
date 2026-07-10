@@ -8,21 +8,6 @@ public static class TimelineBucketing
     public static TimelineBucketSize DefaultFor(int hours) =>
         hours <= 24 ? TimelineBucketSize.Hour : TimelineBucketSize.Day;
 
-    /// <summary>
-    /// SQLite expression that maps the <c>timestamp</c> column to a bucket key. Hour keys are
-    /// "yyyy-MM-dd HH"; day/week/month keys are dates ("yyyy-MM-dd"), where week is the Monday of the
-    /// week and month is the first of the month. Fractional seconds are trimmed via substr so SQLite's
-    /// date functions parse the stored "yyyy-MM-dd HH:mm:ss.fffffff" format cleanly.
-    /// </summary>
-    public static string BucketExpr(TimelineBucketSize size) => size switch
-    {
-        TimelineBucketSize.Hour => "substr(timestamp, 1, 13)",
-        TimelineBucketSize.Day => "substr(timestamp, 1, 10)",
-        TimelineBucketSize.Week => "date(substr(timestamp, 1, 19), '-' || ((strftime('%w', substr(timestamp, 1, 19)) + 6) % 7) || ' days')",
-        TimelineBucketSize.Month => "strftime('%Y-%m-01', substr(timestamp, 1, 19))",
-        _ => throw new ArgumentOutOfRangeException(nameof(size), size, null),
-    };
-
     public static DateTimeOffset ParseKey(string key, TimelineBucketSize size)
     {
         string format = size == TimelineBucketSize.Hour ? "yyyy-MM-dd HH" : "yyyy-MM-dd";

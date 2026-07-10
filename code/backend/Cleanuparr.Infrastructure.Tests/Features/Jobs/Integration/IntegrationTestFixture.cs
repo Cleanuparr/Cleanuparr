@@ -22,6 +22,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
@@ -121,7 +122,8 @@ public class IntegrationTestFixture : IDisposable
             HubContext,
             Substitute.For<ILogger<EventPublisher>>(),
             NotificationPublisher,
-            DryRunInterceptor);
+            DryRunInterceptor,
+            new SqliteDatabaseProvider());
 
         // Expose EventPublisher as both concrete and interface
         EventPublisherInterface = EventPublisher;

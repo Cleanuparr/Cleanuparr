@@ -8,8 +8,8 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -25,19 +25,22 @@ public class EventPublisher : IEventPublisher
     private readonly ILogger<EventPublisher> _logger;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
+    private readonly IDatabaseProvider _databaseProvider;
 
     public EventPublisher(
         EventsContext context,
         IHubContext<AppHub> appHubContext,
         ILogger<EventPublisher> logger,
         INotificationPublisher notificationPublisher,
-        IDryRunInterceptor dryRunInterceptor)
+        IDryRunInterceptor dryRunInterceptor,
+        IDatabaseProvider databaseProvider)
     {
         _context = context;
         _appHubContext = appHubContext;
         _logger = logger;
         _notificationPublisher = notificationPublisher;
         _dryRunInterceptor = dryRunInterceptor;
+        _databaseProvider = databaseProvider;
     }
 
     /// <summary>
@@ -125,10 +128,8 @@ public class EventPublisher : IEventPublisher
             await _context.SaveChangesAsync();
         }
         catch (DbUpdateException ex) when (normalizedHash is not null
-            && ex.InnerException is SqliteException { SqliteErrorCode: 19 })
+            && _databaseProvider.IsUniqueConstraintViolation(ex))
         {
-            // SQLITE_CONSTRAINT (19): lost a race against the partial unique index — another run
-            // created it first. Treat as deduped. Any other failure is real and bubbles up.
             _logger.LogDebug("Manual event {type} for {hash} rejected by unique index", type, normalizedHash);
             _context.Entry(eventEntity).State = EntityState.Detached;
             return;

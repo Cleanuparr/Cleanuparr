@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -54,7 +55,8 @@ public class EventPublisherTests : IDisposable
             _hubContext,
             Substitute.For<ILogger<EventPublisher>>(),
             _notificationPublisher,
-            _dryRunInterceptor);
+            _dryRunInterceptor,
+            new SqliteDatabaseProvider());
 
         // Setup JobRunId in context for tests
         ContextProvider.SetJobRunId(Guid.NewGuid());

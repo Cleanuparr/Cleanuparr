@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Enums;
 using Npgsql;
@@ -64,5 +65,19 @@ public class PostgresDatabaseProviderTests
     {
         Should.Throw<Exception>(() =>
             PostgresDatabaseProvider.BuildConnectionString("h", "5432", "u", "p", "d", "this is not valid"));
+    }
+
+    [Fact]
+    public void FormatBooleanLiteral_uses_boolean_literals()
+    {
+        _provider.FormatBooleanLiteral(true).ShouldBe("true");
+        _provider.FormatBooleanLiteral(false).ShouldBe("false");
+    }
+
+    [Fact]
+    public void GetTimelineBucketExpr_month_uses_date_trunc_in_utc()
+    {
+        _provider.GetTimelineBucketExpr(TimelineBucketSize.Month)
+            .ShouldBe("to_char(date_trunc('month', \"timestamp\" AT TIME ZONE 'UTC'), 'YYYY-MM-DD')");
     }
 }

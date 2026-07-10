@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Shared.Enums;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,20 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
 
         return $"%{escaped}%";
     }
+
+    public string GetTimelineBucketExpr(TimelineBucketSize size) => size switch
+    {
+        TimelineBucketSize.Hour => "to_char(\"timestamp\" AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24')",
+        TimelineBucketSize.Day => "to_char(\"timestamp\" AT TIME ZONE 'UTC', 'YYYY-MM-DD')",
+        TimelineBucketSize.Week => "to_char(date_trunc('week', \"timestamp\" AT TIME ZONE 'UTC'), 'YYYY-MM-DD')",
+        TimelineBucketSize.Month => "to_char(date_trunc('month', \"timestamp\" AT TIME ZONE 'UTC'), 'YYYY-MM-DD')",
+        _ => throw new ArgumentOutOfRangeException(nameof(size), size, null),
+    };
+
+    public string FormatBooleanLiteral(bool value) => value ? "true" : "false";
+
+    public bool IsUniqueConstraintViolation(DbUpdateException exception) =>
+        exception.InnerException is PostgresException { SqlState: "23505" };
 
     private string GetConnectionString()
     {

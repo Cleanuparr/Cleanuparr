@@ -5,6 +5,7 @@ using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.Mvc;
 using Shouldly;
 
@@ -20,7 +21,7 @@ public class CustomFormatScoreControllerTests : IDisposable
     {
         _dataContext = SeekerTestDataFactory.CreateDataContext();
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
-        _controller = new CustomFormatScoreController(_dataContext, _eventsContext);
+        _controller = new CustomFormatScoreController(_dataContext, _eventsContext, new SqliteDatabaseProvider());
     }
 
     public void Dispose()

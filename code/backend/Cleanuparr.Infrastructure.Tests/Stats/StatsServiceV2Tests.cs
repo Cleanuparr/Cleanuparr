@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Shouldly;
@@ -29,7 +30,7 @@ public class StatsServiceV2Tests : IDisposable
         IJobManagementService jobs = Substitute.For<IJobManagementService>();
         jobs.GetAllJobs().ReturnsForAnyArgs(Task.FromResult<IReadOnlyList<JobInfo>>([]));
 
-        _service = new StatsService(Substitute.For<ILogger<StatsService>>(), _context, health, jobs);
+        _service = new StatsService(Substitute.For<ILogger<StatsService>>(), _context, health, jobs, new SqliteDatabaseProvider());
     }
 
     public void Dispose()

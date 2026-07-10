@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -51,7 +52,8 @@ public class StrikerTests : IDisposable
             hubContext,
             eventLogger,
             notificationPublisher,
-            dryRunInterceptor);
+            dryRunInterceptor,
+            new SqliteDatabaseProvider());
 
         _striker = new Striker(_logger, _strikerContext, _eventPublisher, dryRunInterceptor);
 

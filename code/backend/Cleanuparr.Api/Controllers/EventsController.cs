@@ -1,4 +1,3 @@
-using System.Globalization;
 using Cleanuparr.Api.Common;
 using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Api.Features.Events.Contracts.Responses;
@@ -6,6 +5,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,10 +18,12 @@ namespace Cleanuparr.Api.Controllers;
 public class EventsController : ControllerBase
 {
     private readonly EventsContext _context;
+    private readonly IDatabaseProvider _databaseProvider;
 
-    public EventsController(EventsContext context)
+    public EventsController(EventsContext context, IDatabaseProvider databaseProvider)
     {
         _context = context;
+        _databaseProvider = databaseProvider;
     }
 
     /// <summary>
@@ -185,18 +187,19 @@ public class EventsController : ControllerBase
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DateTimeOffset cutoff = now.AddHours(-hours);
         TimelineBucketSize size = TimelineBucketing.DefaultFor(hours);
-        string cutoffText = cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture);
 
-        string bucketExpr = TimelineBucketing.BucketExpr(size);
+        string bucketExpr = _databaseProvider.GetTimelineBucketExpr(size);
+        string? schema = _databaseProvider.GetSchema(DbContextKind.Events);
+        string eventsTable = schema is null ? "events" : $"{schema}.events";
         List<BucketTypeCount> rows = await _context.Database
             .SqlQueryRaw<BucketTypeCount>(
                 $$"""
                 SELECT {{bucketExpr}} AS "bucket", event_type AS "event_type", COUNT(*) AS "count"
-                FROM events
-                WHERE timestamp >= {0}
+                FROM {{eventsTable}}
+                WHERE "timestamp" >= {0}
                 GROUP BY {{bucketExpr}}, event_type
                 """,
-                cutoffText)
+                cutoff)
             .ToListAsync();
 
         Dictionary<(DateTimeOffset Bucket, EventType Type), int> byBucketType = new();

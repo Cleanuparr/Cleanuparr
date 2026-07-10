@@ -2,9 +2,9 @@ using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cleanuparr.Api.Features.Seeker.Controllers;
@@ -16,11 +16,13 @@ public sealed class CustomFormatScoreController : ControllerBase
 {
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
+    private readonly IDatabaseProvider _databaseProvider;
 
-    public CustomFormatScoreController(DataContext dataContext, EventsContext eventsContext)
+    public CustomFormatScoreController(DataContext dataContext, EventsContext eventsContext, IDatabaseProvider databaseProvider)
     {
         _dataContext = dataContext;
         _eventsContext = eventsContext;
+        _databaseProvider = databaseProvider;
     }
 
     /// <summary>
@@ -209,8 +211,11 @@ public sealed class CustomFormatScoreController : ControllerBase
             ? null
             : EventsContext.GetLikePattern(search);
 
-        const string upgradesCte = 
-            """
+        string? schema = _databaseProvider.GetSchema(DbContextKind.Events);
+        string historyTable = schema is null ? "custom_format_score_history" : $"{schema}.custom_format_score_history";
+
+        string upgradesCte =
+            $"""
             WITH scored AS (
                SELECT
                    arr_instance_id,
@@ -225,7 +230,7 @@ public sealed class CustomFormatScoreController : ControllerBase
                        PARTITION BY arr_instance_id, external_item_id, episode_id
                        ORDER BY recorded_at
                    ) AS prev_score
-               FROM custom_format_score_history
+               FROM {historyTable}
             ),
             upgrades AS (
                SELECT
@@ -243,41 +248,41 @@ public sealed class CustomFormatScoreController : ControllerBase
             )
             """;
         
-        const string filterClause = 
+        const string filterClause =
             """
-            WHERE (@instanceId IS NULL OR arr_instance_id = @instanceId)
-                AND (@search IS NULL OR LOWER(title) LIKE @search ESCAPE '\')
-                AND (@cutoff IS NULL OR upgraded_at >= @cutoff)
+            WHERE arr_instance_id = COALESCE({0}, arr_instance_id)
+                AND LOWER(title) LIKE COALESCE({1}, '%') ESCAPE '\'
+                AND upgraded_at >= COALESCE({2}, upgraded_at)
             """;
 
-        SqliteParameter[] BuildCommonParameters() => new[]
+        object[] BuildCommonParameters() => new[]
         {
-            new SqliteParameter("@instanceId", instanceId.HasValue ? instanceId.Value : DBNull.Value),
-            new SqliteParameter("@search", (object?)searchPattern ?? DBNull.Value),
-            new SqliteParameter("@cutoff", (object?)cutoff ?? DBNull.Value),
+            instanceId.HasValue ? instanceId.Value : (object)DBNull.Value,
+            (object?)searchPattern ?? DBNull.Value,
+            (object?)cutoff ?? DBNull.Value,
         };
 
         string listSql =
-            $"""
-             {upgradesCte}
-             SELECT * FROM upgrades
-             {filterClause}
-             ORDER BY {orderByClause}, upgraded_at DESC
-             LIMIT @take OFFSET @skip
-             """;
+            $$"""
+              {{upgradesCte}}
+              SELECT * FROM upgrades
+              {{filterClause}}
+              ORDER BY {{orderByClause}}, upgraded_at DESC
+              LIMIT {3} OFFSET {4}
+              """;
 
-        SqliteParameter[] listParams =
+        object[] listParams =
         [
             ..BuildCommonParameters(),
-            new("@take", pageSize),
-            new("@skip", (page - 1) * pageSize),
+            pageSize,
+            (page - 1) * pageSize,
         ];
 
         var rows = await _eventsContext.Database
             .SqlQueryRaw<UpgradeSqlRow>(listSql, listParams)
             .ToListAsync();
 
-        string countSql = $"{upgradesCte} SELECT COUNT(*) AS value FROM upgrades {filterClause}";
+        string countSql = $"{upgradesCte} SELECT COUNT(*) AS \"Value\" FROM upgrades {filterClause}";
         int totalCount = await _eventsContext.Database
             .SqlQueryRaw<int>(countSql, BuildCommonParameters())
             .FirstAsync();

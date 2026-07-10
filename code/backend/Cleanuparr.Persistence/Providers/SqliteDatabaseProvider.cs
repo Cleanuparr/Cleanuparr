@@ -1,6 +1,8 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Shared.Enums;
 using Cleanuparr.Shared.Helpers;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
@@ -65,4 +67,18 @@ public sealed class SqliteDatabaseProvider : IDatabaseProvider
 
         return $"%{escaped}%";
     }
+
+    public string GetTimelineBucketExpr(TimelineBucketSize size) => size switch
+    {
+        TimelineBucketSize.Hour => "substr(timestamp, 1, 13)",
+        TimelineBucketSize.Day => "substr(timestamp, 1, 10)",
+        TimelineBucketSize.Week => "date(substr(timestamp, 1, 19), '-' || ((strftime('%w', substr(timestamp, 1, 19)) + 6) % 7) || ' days')",
+        TimelineBucketSize.Month => "strftime('%Y-%m-01', substr(timestamp, 1, 19))",
+        _ => throw new ArgumentOutOfRangeException(nameof(size), size, null),
+    };
+
+    public string FormatBooleanLiteral(bool value) => value ? "1" : "0";
+
+    public bool IsUniqueConstraintViolation(DbUpdateException exception) =>
+        exception.InnerException is SqliteException { SqliteErrorCode: 19 };
 }
