@@ -17,6 +17,10 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Persistence;
 
+[CollectionDefinition("SeedParity", DisableParallelization = true)]
+public class SeedParityCollection;
+
+[Collection("SeedParity")]
 public class SeedParityTests
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
