@@ -5,9 +5,16 @@ namespace Cleanuparr.Persistence.Providers;
 
 public static class DatabaseProviderFactory
 {
-    private static readonly Lazy<IDatabaseProvider> LazyCurrent = new(Create);
+    private static readonly Lazy<IDatabaseProvider> LazyDefault = new(Create);
 
-    public static IDatabaseProvider Current => LazyCurrent.Value;
+    private static IDatabaseProvider? _override;
+
+    public static IDatabaseProvider Current => _override ?? LazyDefault.Value;
+
+    internal static void SetOverrideForTesting(IDatabaseProvider? provider)
+    {
+        _override = provider;
+    }
 
     private static IDatabaseProvider Create()
     {

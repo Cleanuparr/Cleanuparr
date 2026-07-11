@@ -11,6 +11,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <InternalsVisibleTo Include="Cleanuparr.Infrastructure.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="EFCore.NamingConventions" Version="10.0.0-rc.2" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
