@@ -3,8 +3,8 @@
 # /config is still required even with PostgreSQL: it holds DataProtection keys, cleanuparr.json
 # and log files. Only the .db files are no longer used.
 #
-# PostgreSQL support is for fresh installs only. There is no migration path from an existing
-# SQLite database to PostgreSQL.
+# To move data from an existing SQLite install to PostgreSQL, run the one-shot command
+# "migrate-to-postgres" (see the docs) before switching DATABASE_PROVIDER to postgres.
 services:
   postgres:
     image: postgres:17
