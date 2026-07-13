@@ -34,19 +34,32 @@ public class EventsContext : DbContext
 
     public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
 
-    public EventsContext()
+    private readonly IDatabaseProvider _provider;
+
+    public EventsContext() : this(DatabaseProviderFactory.Current)
     {
     }
-    
-    public EventsContext(DbContextOptions<EventsContext> options) : base(options)
+
+    public EventsContext(IDatabaseProvider provider)
+    {
+        _provider = provider;
+    }
+
+    public EventsContext(DbContextOptions<EventsContext> options) : this(options, DatabaseProviderFactory.Current)
     {
     }
-    
+
+    public EventsContext(DbContextOptions<EventsContext> options, IDatabaseProvider provider) : base(options)
+    {
+        _provider = provider;
+    }
+
     public static EventsContext CreateStaticInstance()
     {
-        var optionsBuilder = new DbContextOptionsBuilder<EventsContext>();
-        SetDbContextOptions(optionsBuilder);
-        return new EventsContext(optionsBuilder.Options);
+        EventsContext context = new();
+        DbContextOptionsBuilder<EventsContext> optionsBuilder = new();
+        context._provider.ConfigureContext(optionsBuilder, DbContextKind.Events);
+        return new EventsContext(optionsBuilder.Options, context._provider);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -56,7 +69,7 @@ public class EventsContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        DatabaseProviderFactory.Current.ConfigureConventions(configurationBuilder);
+        _provider.ConfigureConventions(configurationBuilder);
     }
 
     public static string GetLikePattern(string input)
@@ -71,7 +84,7 @@ public class EventsContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        string? schema = DatabaseProviderFactory.Current.GetSchema(DbContextKind.Events);
+        string? schema = _provider.GetSchema(DbContextKind.Events);
         if (schema is not null)
         {
             modelBuilder.HasDefaultSchema(schema);
@@ -102,7 +115,7 @@ public class EventsContext : DbContext
             // Partial unique index — resolved rows are exempt, so history/cooldown is unaffected.
             entity.HasIndex(e => new { e.Type, e.ItemHash })
                 .IsUnique()
-                .HasFilter(DatabaseProviderFactory.Current.GetUnresolvedEventFilter());
+                .HasFilter(_provider.GetUnresolvedEventFilter());
         });
 
         modelBuilder.Entity<SeekerHistory>(entity =>
@@ -157,13 +170,13 @@ public class EventsContext : DbContext
         }
     }
     
-    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
+    private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured)
         {
             return;
         }
 
-        DatabaseProviderFactory.Current.ConfigureContext(optionsBuilder, DbContextKind.Events);
+        _provider.ConfigureContext(optionsBuilder, DbContextKind.Events);
     }
 }

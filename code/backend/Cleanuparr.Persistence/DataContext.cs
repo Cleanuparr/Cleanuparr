@@ -85,21 +85,34 @@ public class DataContext : DbContext
 
     public DbSet<SeekerInstanceConfig> SeekerInstanceConfigs { get; set; }
 
-    public DataContext()
+    private readonly IDatabaseProvider _provider;
+
+    public DataContext() : this(DatabaseProviderFactory.Current)
     {
     }
 
-    public DataContext(DbContextOptions<DataContext> options) : base(options)
+    public DataContext(IDatabaseProvider provider)
+    {
+        _provider = provider;
+    }
+
+    public DataContext(DbContextOptions<DataContext> options) : this(options, DatabaseProviderFactory.Current)
     {
     }
-    
+
+    public DataContext(DbContextOptions<DataContext> options, IDatabaseProvider provider) : base(options)
+    {
+        _provider = provider;
+    }
+
     public static DataContext CreateStaticInstance()
     {
-        var optionsBuilder = new DbContextOptionsBuilder<DataContext>();
-        SetDbContextOptions(optionsBuilder);
-        return new DataContext(optionsBuilder.Options);
+        DataContext context = new();
+        DbContextOptionsBuilder<DataContext> optionsBuilder = new();
+        context._provider.ConfigureContext(optionsBuilder, DbContextKind.Data);
+        return new DataContext(optionsBuilder.Options, context._provider);
     }
-    
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         SetDbContextOptions(optionsBuilder);
@@ -107,12 +120,12 @@ public class DataContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        DatabaseProviderFactory.Current.ConfigureConventions(configurationBuilder);
+        _provider.ConfigureConventions(configurationBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        string? schema = DatabaseProviderFactory.Current.GetSchema(DbContextKind.Data);
+        string? schema = _provider.GetSchema(DbContextKind.Data);
         if (schema is not null)
         {
             modelBuilder.HasDefaultSchema(schema);
@@ -394,13 +407,13 @@ public class DataContext : DbContext
         }
     }
 
-    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
+    private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured)
         {
             return;
         }
 
-        DatabaseProviderFactory.Current.ConfigureContext(optionsBuilder, DbContextKind.Data);
+        _provider.ConfigureContext(optionsBuilder, DbContextKind.Data);
     }
 }
