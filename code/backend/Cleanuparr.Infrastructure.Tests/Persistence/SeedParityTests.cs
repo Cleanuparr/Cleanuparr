@@ -61,7 +61,6 @@ public class SeedParityTests
         }
         finally
         {
-            DatabaseProviderFactory.SetOverrideForTesting(null);
             await postgresContainer.DisposeAsync();
 
             if (File.Exists(sqlitePath))
@@ -79,7 +78,7 @@ public class SeedParityTests
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
 
-        await using DataContext context = new(optionsBuilder.Options);
+        await using DataContext context = new(optionsBuilder.Options, new SqliteDatabaseProvider());
         await context.Database.MigrateAsync();
 
         return await LoadSnapshotAsync(context);
@@ -87,15 +86,13 @@ public class SeedParityTests
 
     private static async Task<SeedSnapshot> LoadPostgresSeedAsync(PostgreSqlContainer postgresContainer)
     {
-        DatabaseProviderFactory.SetOverrideForTesting(new PostgresDatabaseProvider());
-
         DbContextOptionsBuilder<DataContext> optionsBuilder = new();
         optionsBuilder
             .UseNpgsql(postgresContainer.GetConnectionString(), options => options.MigrationsAssembly("Cleanuparr.Persistence.Postgres"))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
 
-        await using DataContext context = new(optionsBuilder.Options);
+        await using DataContext context = new(optionsBuilder.Options, new PostgresDatabaseProvider());
         await context.Database.MigrateAsync();
 
         return await LoadSnapshotAsync(context);
