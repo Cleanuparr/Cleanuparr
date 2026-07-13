@@ -4,13 +4,44 @@ using System.Text.Json.Serialization;
 using Cleanuparr.Api;
 using Cleanuparr.Api.DependencyInjection;
 using Microsoft.AspNetCore.DataProtection;
+using Cleanuparr.Infrastructure.Features.DatabaseMigration;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Serilog;
+
+if (args.Length > 0 && args[0] == "migrate-to-postgres")
+{
+    IConfiguration migrationConfig = new ConfigurationBuilder()
+        .AddJsonFile(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.json"), optional: true)
+        .AddEnvironmentVariables()
+        .Build();
+    DatabaseConfigProvider.Initialize(migrationConfig);
+
+    bool force = args.Contains("--force");
+    SqliteToPostgresMigrator migrator = new();
+    MigrationResult result = await migrator.RunAsync(force, CancellationToken.None);
+
+    if (result.Success)
+    {
+        Console.WriteLine("Migration complete. Row counts:");
+        foreach (KeyValuePair<string, int> entry in result.TableCounts.OrderBy(pair => pair.Key))
+        {
+            Console.WriteLine($"  {entry.Key}: {entry.Value}");
+        }
+        Console.WriteLine("Set DATABASE_PROVIDER=postgres to run on PostgreSQL. Your SQLite files are left untouched.");
+        Environment.Exit(0);
+    }
+    else
+    {
+        Console.Error.WriteLine($"Migration failed: {result.Error}");
+        Environment.Exit(1);
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
