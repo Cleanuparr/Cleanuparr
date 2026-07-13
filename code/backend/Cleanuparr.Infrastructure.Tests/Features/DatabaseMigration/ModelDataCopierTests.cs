@@ -2,10 +2,13 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DatabaseMigration;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Shouldly;
 using Xunit;
 
@@ -56,5 +59,30 @@ public class ModelDataCopierTests
             copied[0].Id.ShouldBe(arrConfigId);
             copied[0].Type.ShouldBe(InstanceType.Sonarr);
         }
+    }
+
+    [Fact]
+    public void OrderByDependencies_orders_principals_before_dependents_in_events_model()
+    {
+        SqliteConnection connection = new("DataSource=:memory:");
+        connection.Open();
+        SqliteDatabaseProvider provider = new();
+        DbContextOptions<EventsContext> options = new DbContextOptionsBuilder<EventsContext>()
+            .UseSqlite(connection)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+
+        using EventsContext context = new(options, provider);
+        List<IEntityType> ordered = ModelDataCopier.OrderByDependencies(context.Model.GetEntityTypes()).ToList();
+
+        int strikeIndex = ordered.FindIndex(entityType => entityType.ClrType == typeof(Strike));
+        int jobRunIndex = ordered.FindIndex(entityType => entityType.ClrType == typeof(JobRun));
+        int appEventIndex = ordered.FindIndex(entityType => entityType.ClrType == typeof(AppEvent));
+
+        strikeIndex.ShouldBeGreaterThanOrEqualTo(0);
+        jobRunIndex.ShouldBeGreaterThanOrEqualTo(0);
+        appEventIndex.ShouldBeGreaterThanOrEqualTo(0);
+        strikeIndex.ShouldBeLessThan(appEventIndex);
+        jobRunIndex.ShouldBeLessThan(appEventIndex);
     }
 }

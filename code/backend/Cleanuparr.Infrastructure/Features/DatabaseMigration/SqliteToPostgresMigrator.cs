@@ -89,7 +89,13 @@ public sealed class SqliteToPostgresMigrator
         }
 
         await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, keepKeys: false);
-        return await users.Users.AnyAsync(cancellationToken);
+        if (await users.Users.AnyAsync(cancellationToken))
+        {
+            return true;
+        }
+
+        await using DataContext data = BuildTargetContext<DataContext>(connectionString, keepKeys: false);
+        return await data.DownloadClients.AnyAsync(cancellationToken);
     }
 
     private async Task CopyContextAsync<TContext>(
@@ -106,7 +112,7 @@ public sealed class SqliteToPostgresMigrator
 
         await TruncateAsync(target, kind, cancellationToken);
         await _copier.CopyAsync(source, target, cancellationToken);
-        RecordCounts(target, counts);
+        await VerifyAndRecordCountsAsync(source, target, counts, cancellationToken);
     }
 
     private static TContext BuildSourceContext<TContext>(DbContextKind kind) where TContext : DbContext
@@ -178,7 +184,11 @@ public sealed class SqliteToPostgresMigrator
         await target.Database.ExecuteSqlRawAsync(sql, cancellationToken);
     }
 
-    private static void RecordCounts(DbContext target, Dictionary<string, int> counts)
+    private static async Task VerifyAndRecordCountsAsync(
+        DbContext source,
+        DbContext target,
+        Dictionary<string, int> counts,
+        CancellationToken cancellationToken)
     {
         foreach (IEntityType entityType in ModelDataCopier.OrderByDependencies(target.Model.GetEntityTypes()))
         {
@@ -188,13 +198,36 @@ public sealed class SqliteToPostgresMigrator
                 continue;
             }
 
-            MethodInfo setMethod = typeof(DbContext)
-                .GetMethods()
-                .Single(method => method.Name == nameof(DbContext.Set) && method.IsGenericMethod && method.GetParameters().Length == 0)
-                .MakeGenericMethod(entityType.ClrType);
+            int sourceCount = await CountAsync(source, entityType.ClrType, cancellationToken);
+            int targetCount = await CountAsync(target, entityType.ClrType, cancellationToken);
 
-            object dbSet = setMethod.Invoke(target, null)!;
-            counts[table] = ((IQueryable<object>)dbSet).Count();
+            if (sourceCount != targetCount)
+            {
+                throw new InvalidOperationException(
+                    $"Row count mismatch for table '{table}': source has {sourceCount} rows, target has {targetCount} rows.");
+            }
+
+            counts[table] = targetCount;
         }
+    }
+
+    private static async Task<int> CountAsync(DbContext context, Type entityClrType, CancellationToken cancellationToken)
+    {
+        MethodInfo setMethod = typeof(DbContext)
+            .GetMethods()
+            .Single(method => method.Name == nameof(DbContext.Set) && method.IsGenericMethod && method.GetParameters().Length == 0)
+            .MakeGenericMethod(entityClrType);
+
+        object dbSet = setMethod.Invoke(context, null)!;
+
+        MethodInfo countMethod = typeof(EntityFrameworkQueryableExtensions)
+            .GetMethods()
+            .Single(method =>
+                method.Name == nameof(EntityFrameworkQueryableExtensions.CountAsync) &&
+                method.GetParameters().Length == 2)
+            .MakeGenericMethod(entityClrType);
+
+        object task = countMethod.Invoke(null, new object[] { dbSet, cancellationToken })!;
+        return await (Task<int>)task;
     }
 }
