@@ -904,8 +904,9 @@ namespace Cleanuparr.Persistence.Migrations.Data
                                 .HasColumnType("TEXT")
                                 .HasColumnName("whisparr_blocklist_path");
 
-                            b1.Property<int>("BlocklistType")
-                                .HasColumnType("INTEGER")
+                            b1.Property<string>("BlocklistType")
+                                .IsRequired()
+                                .HasColumnType("TEXT")
                                 .HasColumnName("whisparr_blocklist_type");
 
                             b1.Property<bool>("Enabled")

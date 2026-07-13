@@ -4,84 +4,81 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cleanuparr.Persistence.Postgres.Migrations.Data
+namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20260713155427_WhisparrBlocklistTypeToText")]
+    partial class WhisparrBlocklistTypeToText
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasDefaultSchema("data")
-                .HasAnnotation("ProductVersion", "10.0.1")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<short>("FailedImportMaxStrikes")
-                        .HasColumnType("smallint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("failed_import_max_strikes");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("type");
 
                     b.HasKey("Id")
                         .HasName("pk_arr_configs");
 
-                    b.ToTable("arr_configs", "data");
+                    b.ToTable("arr_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("api_key");
 
                     b.Property<Guid>("ArrConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("arr_config_id");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
                     b.Property<string>("ExternalUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("external_url");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Url")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("url");
 
                     b.Property<float>("Version")
-                        .HasColumnType("real")
+                        .HasColumnType("REAL")
                         .HasColumnName("version");
 
                     b.HasKey("Id")
@@ -90,66 +87,66 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("ArrConfigId")
                         .HasDatabaseName("ix_arr_instances_arr_config_id");
 
-                    b.ToTable("arr_instances", "data");
+                    b.ToTable("arr_instances", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.BlacklistSync.BlacklistSyncConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("BlacklistPath")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("blacklist_path");
 
                     b.Property<string>("CronExpression")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("cron_expression");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
                     b.HasKey("Id")
                         .HasName("pk_blacklist_sync_configs");
 
-                    b.ToTable("blacklist_sync_configs", "data");
+                    b.ToTable("blacklist_sync_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.DeadTorrentConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.Property<int>("MaxStrikes")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("MaxStrikes")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("max_strikes");
 
                     b.Property<string>("TargetCategory")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("target_category");
 
                     b.Property<bool>("UseTag")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_tag");
 
                     b.HasKey("Id")
@@ -159,62 +156,62 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_dead_torrent_configs_download_client_config_id");
 
-                    b.ToTable("dead_torrent_configs", "data");
+                    b.ToTable("dead_torrent_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.DelugeSeedingRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<bool>("DeleteSourceFiles")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<double>("MaxRatio")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_ratio");
 
                     b.Property<double>("MaxSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_seed_time");
 
                     b.Property<double>("MinSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
                     b.Property<int>("MinSeeders")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_seeders");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("priority");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<string>("TrackerPatterns")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
@@ -223,76 +220,76 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("DownloadClientConfigId")
                         .HasDatabaseName("ix_deluge_seeding_rules_download_client_config_id");
 
-                    b.ToTable("deluge_seeding_rules", "data");
+                    b.ToTable("deluge_seeding_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.DownloadCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("CronExpression")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("cron_expression");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.PrimitiveCollection<List<string>>("IgnoredDownloads")
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
 
                     b.Property<bool>("UseAdvancedScheduling")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_advanced_scheduling");
 
                     b.HasKey("Id")
                         .HasName("pk_download_cleaner_configs");
 
-                    b.ToTable("download_cleaner_configs", "data");
+                    b.ToTable("download_cleaner_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
                     b.Property<string>("ExcludePatterns")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("exclude_patterns");
 
                     b.Property<int>("MinFileAgeHours")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_file_age_hours");
 
                     b.Property<string>("OrphanedDirectory")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("orphaned_directory");
 
                     b.Property<int?>("PurgeAfterHours")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("purge_after_hours");
 
                     b.Property<string>("ScanDirectories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("scan_directories");
 
                     b.HasKey("Id")
@@ -302,72 +299,72 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_orphaned_files_configs_download_client_config_id");
 
-                    b.ToTable("orphaned_files_configs", "data");
+                    b.ToTable("orphaned_files_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.QBitSeedingRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<bool>("DeleteSourceFiles")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<double>("MaxRatio")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_ratio");
 
                     b.Property<double>("MaxSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_seed_time");
 
                     b.Property<double>("MinSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
                     b.Property<int>("MinSeeders")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_seeders");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("priority");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<string>("TagsAll")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags_all");
 
                     b.Property<string>("TagsAny")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags_any");
 
                     b.Property<string>("TrackerPatterns")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
@@ -376,58 +373,58 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("DownloadClientConfigId")
                         .HasDatabaseName("ix_q_bit_seeding_rules_download_client_config_id");
 
-                    b.ToTable("q_bit_seeding_rules", "data");
+                    b.ToTable("q_bit_seeding_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.RTorrentSeedingRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<bool>("DeleteSourceFiles")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<double>("MaxRatio")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_ratio");
 
                     b.Property<double>("MaxSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_seed_time");
 
                     b.Property<double>("MinSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("priority");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<string>("TrackerPatterns")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
@@ -436,72 +433,72 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("DownloadClientConfigId")
                         .HasDatabaseName("ix_r_torrent_seeding_rules_download_client_config_id");
 
-                    b.ToTable("r_torrent_seeding_rules", "data");
+                    b.ToTable("r_torrent_seeding_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.TransmissionSeedingRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<bool>("DeleteSourceFiles")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<double>("MaxRatio")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_ratio");
 
                     b.Property<double>("MaxSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_seed_time");
 
                     b.Property<double>("MinSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
                     b.Property<int>("MinSeeders")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_seeders");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("priority");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<string>("TagsAll")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags_all");
 
                     b.Property<string>("TagsAny")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags_any");
 
                     b.Property<string>("TrackerPatterns")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
@@ -510,62 +507,62 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("DownloadClientConfigId")
                         .HasDatabaseName("ix_transmission_seeding_rules_download_client_config_id");
 
-                    b.ToTable("transmission_seeding_rules", "data");
+                    b.ToTable("transmission_seeding_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.UTorrentSeedingRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<bool>("DeleteSourceFiles")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<double>("MaxRatio")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_ratio");
 
                     b.Property<double>("MaxSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_seed_time");
 
                     b.Property<double>("MinSeedTime")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
                     b.Property<int>("MinSeeders")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_seeders");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("priority");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<string>("TrackerPatterns")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
@@ -574,41 +571,41 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("DownloadClientConfigId")
                         .HasDatabaseName("ix_u_torrent_seeding_rules_download_client_config_id");
 
-                    b.ToTable("u_torrent_seeding_rules", "data");
+                    b.ToTable("u_torrent_seeding_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.UnlinkedConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.PrimitiveCollection<List<string>>("Categories")
+                    b.PrimitiveCollection<string>("Categories")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("categories");
 
                     b.Property<Guid>("DownloadClientConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.PrimitiveCollection<List<string>>("IgnoredRootDirs")
+                    b.PrimitiveCollection<string>("IgnoredRootDirs")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ignored_root_dirs");
 
                     b.Property<string>("TargetCategory")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("target_category");
 
                     b.Property<bool>("UseTag")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_tag");
 
                     b.HasKey("Id")
@@ -618,117 +615,117 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_unlinked_configs_download_client_config_id");
 
-                    b.ToTable("unlinked_configs", "data");
+                    b.ToTable("unlinked_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("DownloadDirectorySource")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_directory_source");
 
                     b.Property<string>("DownloadDirectoryTarget")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_directory_target");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
                     b.Property<string>("ExternalUrl")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("external_url");
 
                     b.Property<string>("Host")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("host");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Password")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("password");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("type");
 
                     b.Property<string>("TypeName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("type_name");
 
                     b.Property<string>("UrlBase")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("url_base");
 
                     b.Property<string>("Username")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("username");
 
                     b.HasKey("Id")
                         .HasName("pk_download_clients");
 
-                    b.ToTable("download_clients", "data");
+                    b.ToTable("download_clients", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.General.GeneralConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<bool>("DisplaySupportBanner")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("display_support_banner");
 
                     b.Property<bool>("DryRun")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("dry_run");
 
                     b.Property<string>("EncryptionKey")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("encryption_key");
 
-                    b.Property<int>("HistoryRetentionDays")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("HistoryRetentionDays")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("history_retention_days");
 
                     b.Property<string>("HttpCertificateValidation")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("http_certificate_validation");
 
-                    b.Property<int>("HttpMaxRetries")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("HttpMaxRetries")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("http_max_retries");
 
-                    b.Property<int>("HttpTimeout")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("HttpTimeout")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("http_timeout");
 
-                    b.PrimitiveCollection<List<string>>("IgnoredDownloads")
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
 
                     b.Property<bool>("StatusCheckEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("status_check_enabled");
 
-                    b.Property<int>("StrikeInactivityWindowHours")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("StrikeInactivityWindowHours")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("strike_inactivity_window_hours");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Auth", "Cleanuparr.Persistence.Models.Configuration.General.GeneralConfig.Auth#AuthConfig", b1 =>
@@ -736,16 +733,16 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<bool>("DisableAuthForLocalAddresses")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("auth_disable_auth_for_local_addresses");
 
                             b1.Property<bool>("TrustForwardedHeaders")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("auth_trust_forwarded_headers");
 
                             b1.Property<string>("TrustedNetworks")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("auth_trusted_networks");
                         });
 
@@ -754,80 +751,80 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<bool>("ArchiveEnabled")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("log_archive_enabled");
 
-                            b1.Property<int>("ArchiveRetainedCount")
-                                .HasColumnType("integer")
+                            b1.Property<ushort>("ArchiveRetainedCount")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("log_archive_retained_count");
 
-                            b1.Property<int>("ArchiveTimeLimitHours")
-                                .HasColumnType("integer")
+                            b1.Property<ushort>("ArchiveTimeLimitHours")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("log_archive_time_limit_hours");
 
                             b1.Property<string>("Level")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("log_level");
 
-                            b1.Property<int>("RetainedFileCount")
-                                .HasColumnType("integer")
+                            b1.Property<ushort>("RetainedFileCount")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("log_retained_file_count");
 
-                            b1.Property<int>("RollingSizeMB")
-                                .HasColumnType("integer")
+                            b1.Property<ushort>("RollingSizeMB")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("log_rolling_size_mb");
 
-                            b1.Property<int>("TimeLimitHours")
-                                .HasColumnType("integer")
+                            b1.Property<ushort>("TimeLimitHours")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("log_time_limit_hours");
                         });
 
                     b.HasKey("Id")
                         .HasName("pk_general_configs");
 
-                    b.ToTable("general_configs", "data");
+                    b.ToTable("general_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("CronExpression")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("cron_expression");
 
                     b.Property<bool>("DeleteIfAnyFileBlocked")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_if_any_file_blocked");
 
                     b.Property<bool>("DeletePrivate")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_private");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
                     b.Property<bool>("IgnorePrivate")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("ignore_private");
 
-                    b.PrimitiveCollection<List<string>>("IgnoredDownloads")
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
 
                     b.Property<bool>("ProcessNoContentId")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("process_no_content_id");
 
                     b.Property<bool>("UseAdvancedScheduling")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_advanced_scheduling");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Lidarr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Lidarr#BlocklistSettings", b1 =>
@@ -835,16 +832,16 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<string>("BlocklistPath")
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("lidarr_blocklist_path");
 
                             b1.Property<string>("BlocklistType")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("lidarr_blocklist_type");
 
                             b1.Property<bool>("Enabled")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("lidarr_enabled");
                         });
 
@@ -853,16 +850,16 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<string>("BlocklistPath")
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("radarr_blocklist_path");
 
                             b1.Property<string>("BlocklistType")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("radarr_blocklist_type");
 
                             b1.Property<bool>("Enabled")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("radarr_enabled");
                         });
 
@@ -871,16 +868,16 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<string>("BlocklistPath")
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("readarr_blocklist_path");
 
                             b1.Property<string>("BlocklistType")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("readarr_blocklist_type");
 
                             b1.Property<bool>("Enabled")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("readarr_enabled");
                         });
 
@@ -889,16 +886,16 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<string>("BlocklistPath")
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("sonarr_blocklist_path");
 
                             b1.Property<string>("BlocklistType")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("sonarr_blocklist_type");
 
                             b1.Property<bool>("Enabled")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("sonarr_enabled");
                         });
 
@@ -907,61 +904,61 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<string>("BlocklistPath")
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("whisparr_blocklist_path");
 
                             b1.Property<string>("BlocklistType")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("whisparr_blocklist_type");
 
                             b1.Property<bool>("Enabled")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("whisparr_enabled");
                         });
 
                     b.HasKey("Id")
                         .HasName("pk_content_blocker_configs");
 
-                    b.ToTable("content_blocker_configs", "data");
+                    b.ToTable("content_blocker_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.AppriseConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("key");
 
                     b.Property<string>("Mode")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("mode");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.Property<string>("ServiceUrls")
                         .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("service_urls");
 
                     b.Property<string>("Tags")
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("url");
 
                     b.HasKey("Id")
@@ -971,36 +968,36 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_apprise_configs_notification_config_id");
 
-                    b.ToTable("apprise_configs", "data");
+                    b.ToTable("apprise_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.DiscordConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("AvatarUrl")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("avatar_url");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("character varying(80)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("username");
 
                     b.Property<string>("WebhookUrl")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("webhook_url");
 
                     b.HasKey("Id")
@@ -1010,34 +1007,34 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_discord_configs_notification_config_id");
 
-                    b.ToTable("discord_configs", "data");
+                    b.ToTable("discord_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.GotifyConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ApplicationToken")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("application_token");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.Property<int>("Priority")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("priority");
 
                     b.Property<string>("ServerUrl")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("server_url");
 
                     b.HasKey("Id")
@@ -1047,30 +1044,30 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_gotify_configs_notification_config_id");
 
-                    b.ToTable("gotify_configs", "data");
+                    b.ToTable("gotify_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NotifiarrConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ApiKey")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("api_key");
 
                     b.Property<string>("ChannelId")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("channel_id");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.HasKey("Id")
@@ -1080,69 +1077,71 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_notifiarr_configs_notification_config_id");
 
-                    b.ToTable("notifiarr_configs", "data");
+                    b.ToTable("notifiarr_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
                     b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_enabled");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<bool>("OnCategoryChanged")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_category_changed");
 
                     b.Property<bool>("OnDownloadCleaned")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_download_cleaned");
 
                     b.Property<bool>("OnFailedImportStrike")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_failed_import_strike");
 
                     b.Property<bool>("OnQueueItemDeleted")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_queue_item_deleted");
 
                     b.Property<bool>("OnSearchItemGrabbed")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_search_item_grabbed");
 
                     b.Property<bool>("OnSearchTriggered")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_search_triggered");
 
                     b.Property<bool>("OnSlowStrike")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_slow_strike");
 
                     b.Property<bool>("OnStalledStrike")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("on_stalled_strike");
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("type");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<string>("UpdatedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id")
@@ -1152,59 +1151,59 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_notification_configs_name");
 
-                    b.ToTable("notification_configs", "data");
+                    b.ToTable("notification_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NtfyConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("AccessToken")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("access_token");
 
                     b.Property<string>("AuthenticationType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("authentication_type");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.Property<string>("Password")
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("password");
 
                     b.Property<string>("Priority")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("priority");
 
                     b.Property<string>("ServerUrl")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("server_url");
 
-                    b.PrimitiveCollection<List<string>>("Tags")
+                    b.PrimitiveCollection<string>("Tags")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags");
 
-                    b.PrimitiveCollection<List<string>>("Topics")
+                    b.PrimitiveCollection<string>("Topics")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("topics");
 
                     b.Property<string>("Username")
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("username");
 
                     b.HasKey("Id")
@@ -1214,58 +1213,58 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_ntfy_configs_notification_config_id");
 
-                    b.ToTable("ntfy_configs", "data");
+                    b.ToTable("ntfy_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.PushoverConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ApiToken")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("api_token");
 
                     b.Property<string>("Devices")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("devices");
 
                     b.Property<int?>("Expire")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("expire");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.Property<string>("Priority")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("priority");
 
                     b.Property<int?>("Retry")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("retry");
 
                     b.Property<string>("Sound")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("sound");
 
                     b.Property<string>("Tags")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tags");
 
                     b.Property<string>("UserKey")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_key");
 
                     b.HasKey("Id")
@@ -1275,39 +1274,39 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_pushover_configs_notification_config_id");
 
-                    b.ToTable("pushover_configs", "data");
+                    b.ToTable("pushover_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.TelegramConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("BotToken")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("bot_token");
 
                     b.Property<string>("ChatId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("chat_id");
 
                     b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("notification_config_id");
 
                     b.Property<bool>("SendSilently")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("send_silently");
 
                     b.Property<string>("TopicId")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("topic_id");
 
                     b.HasKey("Id")
@@ -1317,40 +1316,40 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_telegram_configs_notification_config_id");
 
-                    b.ToTable("telegram_configs", "data");
+                    b.ToTable("telegram_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("CronExpression")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("cron_expression");
 
-                    b.Property<int>("DownloadingMetadataMaxStrikes")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("DownloadingMetadataMaxStrikes")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("downloading_metadata_max_strikes");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.PrimitiveCollection<List<string>>("IgnoredDownloads")
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
 
                     b.Property<bool>("ProcessNoContentId")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("process_no_content_id");
 
                     b.Property<bool>("UseAdvancedScheduling")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_advanced_scheduling");
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "FailedImport", "Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig.FailedImport#FailedImportConfig", b1 =>
@@ -1358,102 +1357,102 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.IsRequired();
 
                             b1.Property<bool>("ChangeCategory")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_change_category");
 
                             b1.Property<bool>("DeletePrivate")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_delete_private");
 
                             b1.Property<bool>("IgnorePrivate")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_ignore_private");
 
-                            b1.Property<int>("MaxStrikes")
-                                .HasColumnType("integer")
+                            b1.Property<ushort>("MaxStrikes")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_max_strikes");
 
                             b1.Property<string>("PatternMode")
                                 .IsRequired()
-                                .HasColumnType("text")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("failed_import_pattern_mode");
 
-                            b1.PrimitiveCollection<string[]>("Patterns")
+                            b1.PrimitiveCollection<string>("Patterns")
                                 .IsRequired()
-                                .HasColumnType("text[]")
+                                .HasColumnType("TEXT")
                                 .HasColumnName("failed_import_patterns");
 
                             b1.Property<bool>("SkipIfNotFoundInClient")
-                                .HasColumnType("boolean")
+                                .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_skip_if_not_found_in_client");
                         });
 
                     b.HasKey("Id")
                         .HasName("pk_queue_cleaner_configs");
 
-                    b.ToTable("queue_cleaner_configs", "data");
+                    b.ToTable("queue_cleaner_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<bool>("ChangeCategory")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("change_category");
 
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_private_torrents_from_client");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
                     b.Property<string>("IgnoreAboveSize")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ignore_above_size");
 
-                    b.Property<int>("MaxCompletionPercentage")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("MaxCompletionPercentage")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("max_completion_percentage");
 
                     b.Property<int>("MaxStrikes")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("max_strikes");
 
                     b.Property<double>("MaxTimeHours")
-                        .HasColumnType("double precision")
+                        .HasColumnType("REAL")
                         .HasColumnName("max_time_hours");
 
-                    b.Property<int>("MinCompletionPercentage")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("MinCompletionPercentage")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_completion_percentage");
 
                     b.Property<string>("MinSpeed")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("min_speed");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<Guid>("QueueCleanerConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("queue_cleaner_config_id");
 
                     b.Property<bool>("ResetStrikesOnProgress")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("reset_strikes_on_progress");
 
                     b.HasKey("Id")
@@ -1462,60 +1461,60 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("QueueCleanerConfigId")
                         .HasDatabaseName("ix_slow_rules_queue_cleaner_config_id");
 
-                    b.ToTable("slow_rules", "data");
+                    b.ToTable("slow_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.StallRule", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<bool>("ChangeCategory")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("change_category");
 
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("delete_private_torrents_from_client");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.Property<int>("MaxCompletionPercentage")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("MaxCompletionPercentage")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("max_completion_percentage");
 
                     b.Property<int>("MaxStrikes")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("max_strikes");
 
-                    b.Property<int>("MinCompletionPercentage")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("MinCompletionPercentage")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_completion_percentage");
 
                     b.Property<string>("MinimumProgress")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("minimum_progress");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("PrivacyType")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
 
                     b.Property<Guid>("QueueCleanerConfigId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("queue_cleaner_config_id");
 
                     b.Property<bool>("ResetStrikesOnProgress")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("reset_strikes_on_progress");
 
                     b.HasKey("Id")
@@ -1524,97 +1523,97 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.HasIndex("QueueCleanerConfigId")
                         .HasDatabaseName("ix_stall_rules_queue_cleaner_config_id");
 
-                    b.ToTable("stall_rules", "data");
+                    b.ToTable("stall_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Seeker.SeekerConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("PostReleaseGraceHours")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("post_release_grace_hours");
 
                     b.Property<bool>("ProactiveSearchEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("proactive_search_enabled");
 
                     b.Property<bool>("SearchEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("search_enabled");
 
-                    b.Property<int>("SearchInterval")
-                        .HasColumnType("integer")
+                    b.Property<ushort>("SearchInterval")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("search_interval");
 
                     b.Property<string>("SelectionStrategy")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("selection_strategy");
 
                     b.Property<bool>("UseRoundRobin")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_round_robin");
 
                     b.HasKey("Id")
                         .HasName("pk_seeker_configs");
 
-                    b.ToTable("seeker_configs", "data");
+                    b.ToTable("seeker_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Seeker.SeekerInstanceConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("ActiveDownloadLimit")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("active_download_limit");
 
                     b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("arr_instance_id");
 
                     b.Property<Guid>("CurrentCycleId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_cycle_id");
 
                     b.Property<bool>("Enabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.Property<DateTimeOffset?>("LastProcessedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<string>("LastProcessedAt")
+                        .HasColumnType("TEXT")
                         .HasColumnName("last_processed_at");
 
                     b.Property<int>("MinCycleTimeDays")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("min_cycle_time_days");
 
                     b.Property<bool>("MonitoredOnly")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("monitored_only");
 
-                    b.PrimitiveCollection<List<string>>("SkipTags")
+                    b.PrimitiveCollection<string>("SkipTags")
                         .IsRequired()
-                        .HasColumnType("text[]")
+                        .HasColumnType("TEXT")
                         .HasColumnName("skip_tags");
 
                     b.Property<int>("TotalEligibleItems")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("total_eligible_items");
 
                     b.Property<bool>("UseCustomFormatScore")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_custom_format_score");
 
                     b.Property<bool>("UseCutoff")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("use_cutoff");
 
                     b.HasKey("Id")
@@ -1624,23 +1623,23 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_seeker_instance_configs_arr_instance_id");
 
-                    b.ToTable("seeker_instance_configs", "data");
+                    b.ToTable("seeker_instance_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<Guid>("DownloadClientId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("download_client_id");
 
                     b.Property<string>("Hash")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("hash");
 
                     b.HasKey("Id")
@@ -1656,7 +1655,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .IsUnique()
                         .HasDatabaseName("ix_blacklist_sync_history_hash_download_client_id");
 
-                    b.ToTable("blacklist_sync_history", "data");
+                    b.ToTable("blacklist_sync_history", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", b =>
@@ -1678,7 +1677,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_dead_torrent_configs_download_clients_download_client_confi");
+                        .HasConstraintName("fk_dead_torrent_configs_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1690,7 +1689,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_deluge_seeding_rules_download_clients_download_client_confi");
+                        .HasConstraintName("fk_deluge_seeding_rules_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1702,7 +1701,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_orphaned_files_configs_download_clients_download_client_con");
+                        .HasConstraintName("fk_orphaned_files_configs_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1714,7 +1713,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_q_bit_seeding_rules_download_clients_download_client_config");
+                        .HasConstraintName("fk_q_bit_seeding_rules_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1726,7 +1725,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_r_torrent_seeding_rules_download_clients_download_client_co");
+                        .HasConstraintName("fk_r_torrent_seeding_rules_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1738,7 +1737,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_transmission_seeding_rules_download_clients_download_client");
+                        .HasConstraintName("fk_transmission_seeding_rules_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1750,7 +1749,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_u_torrent_seeding_rules_download_clients_download_client_co");
+                        .HasConstraintName("fk_u_torrent_seeding_rules_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });
@@ -1810,7 +1809,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.NotifiarrConfig", "NotificationConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_notifiarr_configs_notification_configs_notification_config_");
+                        .HasConstraintName("fk_notifiarr_configs_notification_configs_notification_config_id");
 
                     b.Navigation("NotificationConfig");
                 });
