@@ -19,46 +19,45 @@ public sealed class SqliteToPostgresMigrator
 
     public async Task<MigrationResult> RunAsync(bool force, CancellationToken cancellationToken)
     {
-        string connectionString;
-        try
-        {
-            connectionString = BuildPostgresConnectionString();
-        }
-        catch (Exception exception)
-        {
-            return new MigrationResult(false, exception.Message, new Dictionary<string, int>());
-        }
-
-        await MigrateTargetSchemaAsync(connectionString, cancellationToken);
-
-        if (!force && await TargetHasRealDataAsync(connectionString, cancellationToken))
-        {
-            return new MigrationResult(
-                false,
-                "Target PostgreSQL already contains data. Re-run with --force to wipe and re-import.",
-                new Dictionary<string, int>());
-        }
-
         Dictionary<string, int> counts = new();
 
-        await using NpgsqlConnection connection = new(connectionString);
-        await connection.OpenAsync(cancellationToken);
-        await using DbTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-
         try
         {
-            await CopyContextAsync<DataContext>(DbContextKind.Data, connection, transaction, counts, cancellationToken);
-            await CopyContextAsync<EventsContext>(DbContextKind.Events, connection, transaction, counts, cancellationToken);
-            await CopyContextAsync<UsersContext>(DbContextKind.Users, connection, transaction, counts, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+            string connectionString = BuildPostgresConnectionString();
+
+            if (!force && await TargetAlreadyProvisionedAsync(connectionString, cancellationToken))
+            {
+                return new MigrationResult(
+                    false,
+                    "Target PostgreSQL already contains a Cleanuparr database. Re-run with --force to wipe and re-import.",
+                    new Dictionary<string, int>());
+            }
+
+            await MigrateTargetSchemaAsync(connectionString, cancellationToken);
+
+            await using NpgsqlConnection connection = new(connectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using DbTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                await CopyContextAsync<DataContext>(DbContextKind.Data, connection, transaction, counts, cancellationToken);
+                await CopyContextAsync<EventsContext>(DbContextKind.Events, connection, transaction, counts, cancellationToken);
+                await CopyContextAsync<UsersContext>(DbContextKind.Users, connection, transaction, counts, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+
+            return new MigrationResult(true, null, counts);
         }
         catch (Exception exception)
         {
-            await transaction.RollbackAsync(cancellationToken);
             return new MigrationResult(false, exception.Message, counts);
         }
-
-        return new MigrationResult(true, null, counts);
     }
 
     private static string BuildPostgresConnectionString() =>
@@ -80,22 +79,11 @@ public sealed class SqliteToPostgresMigrator
         await users.Database.MigrateAsync(cancellationToken);
     }
 
-    private static async Task<bool> TargetHasRealDataAsync(string connectionString, CancellationToken cancellationToken)
+    private static async Task<bool> TargetAlreadyProvisionedAsync(string connectionString, CancellationToken cancellationToken)
     {
-        await using EventsContext events = BuildTargetContext<EventsContext>(connectionString, DbContextKind.Events, keepKeys: false);
-        if (await events.Events.AnyAsync(cancellationToken) || await events.Strikes.AnyAsync(cancellationToken))
-        {
-            return true;
-        }
-
-        await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, DbContextKind.Users, keepKeys: false);
-        if (await users.Users.AnyAsync(cancellationToken))
-        {
-            return true;
-        }
-
         await using DataContext data = BuildTargetContext<DataContext>(connectionString, DbContextKind.Data, keepKeys: false);
-        return await data.DownloadClients.AnyAsync(cancellationToken);
+        IEnumerable<string> applied = await data.Database.GetAppliedMigrationsAsync(cancellationToken);
+        return applied.Any();
     }
 
     private async Task CopyContextAsync<TContext>(
