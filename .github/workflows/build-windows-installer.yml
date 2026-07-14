@@ -65,6 +65,7 @@ jobs:
           repository: ${{ env.githubRepository }}
           ref: ${{ inputs.ref || github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
+          persist-credentials: false
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4

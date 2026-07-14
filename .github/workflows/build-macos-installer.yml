@@ -76,6 +76,7 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4

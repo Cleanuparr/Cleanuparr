@@ -30,6 +30,7 @@ jobs:
           repository: ${{ github.repository }}
           ref: ${{ inputs.ref || github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

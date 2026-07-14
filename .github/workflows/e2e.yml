@@ -43,6 +43,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         timeout-minutes: 1
+        with:
+          persist-credentials: false
 
       - name: Get vault secrets
         uses: hashicorp/vault-action@v2
