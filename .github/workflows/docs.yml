@@ -10,10 +10,7 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,12 +34,39 @@ jobs:
         working-directory: docs
         run: yarn build
 
+      - name: Publish to org site
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.DOCS_DEPLOY_TOKEN }}
+          external_repository: Cleanuparr/Cleanuparr.github.io
+          publish_branch: gh-pages
+          publish_dir: docs/build
+
+  redirect:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build redirect stub
+        run: |
+          mkdir redirect
+          cat > redirect/404.html <<'EOF'
+          <!doctype html>
+          <meta http-equiv="refresh" content="0;url=https://cleanuparr.github.io/docs">
+          <script>
+            var p = location.pathname.replace(/^\/Cleanuparr/, '');
+            location.replace('https://cleanuparr.github.io' + p + location.search + location.hash);
+          </script>
+          EOF
+          cp redirect/404.html redirect/index.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/build
+          path: redirect
           retention-days: 1
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy redirect to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
