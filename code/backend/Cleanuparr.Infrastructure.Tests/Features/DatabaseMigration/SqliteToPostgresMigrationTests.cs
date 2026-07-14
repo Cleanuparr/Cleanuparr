@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DatabaseMigration;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Persistence.Models.Auth;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
@@ -61,6 +62,8 @@ public class SqliteToPostgresMigrationTests
 
             await AssertKeysPreservedAsync(postgresContainer, arrConfigId, appEventId, userId);
 
+            await AssertAppSeesMigrationsAppliedAsync();
+
             MigrationResult second = await migrator.RunAsync(force: false, CancellationToken.None);
             second.Success.ShouldBeFalse();
 
@@ -113,6 +116,28 @@ public class SqliteToPostgresMigrationTests
         await users.SaveChangesAsync();
 
         return arrConfigCount;
+    }
+
+    private static async Task AssertAppSeesMigrationsAppliedAsync()
+    {
+        PostgresDatabaseProvider provider = new();
+
+        await using DataContext data = BuildAppContext<DataContext>(provider, DbContextKind.Data);
+        (await data.Database.GetPendingMigrationsAsync()).ShouldBeEmpty();
+
+        await using EventsContext events = BuildAppContext<EventsContext>(provider, DbContextKind.Events);
+        (await events.Database.GetPendingMigrationsAsync()).ShouldBeEmpty();
+
+        await using UsersContext users = BuildAppContext<UsersContext>(provider, DbContextKind.Users);
+        (await users.Database.GetPendingMigrationsAsync()).ShouldBeEmpty();
+    }
+
+    private static TContext BuildAppContext<TContext>(PostgresDatabaseProvider provider, DbContextKind kind)
+        where TContext : DbContext
+    {
+        DbContextOptionsBuilder<TContext> builder = new();
+        provider.ConfigureContext(builder, kind);
+        return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
     }
 
     private static void InitializeDatabaseConfig(PostgreSqlContainer postgresContainer)
