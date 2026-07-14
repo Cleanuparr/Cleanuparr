@@ -72,29 +72,29 @@ public sealed class SqliteToPostgresMigrator
 
     private async Task MigrateTargetSchemaAsync(string connectionString, CancellationToken cancellationToken)
     {
-        await using DataContext data = BuildTargetContext<DataContext>(connectionString, keepKeys: false);
+        await using DataContext data = BuildTargetContext<DataContext>(connectionString, DbContextKind.Data, keepKeys: false);
         await data.Database.MigrateAsync(cancellationToken);
-        await using EventsContext events = BuildTargetContext<EventsContext>(connectionString, keepKeys: false);
+        await using EventsContext events = BuildTargetContext<EventsContext>(connectionString, DbContextKind.Events, keepKeys: false);
         await events.Database.MigrateAsync(cancellationToken);
-        await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, keepKeys: false);
+        await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, DbContextKind.Users, keepKeys: false);
         await users.Database.MigrateAsync(cancellationToken);
     }
 
     private static async Task<bool> TargetHasRealDataAsync(string connectionString, CancellationToken cancellationToken)
     {
-        await using EventsContext events = BuildTargetContext<EventsContext>(connectionString, keepKeys: false);
+        await using EventsContext events = BuildTargetContext<EventsContext>(connectionString, DbContextKind.Events, keepKeys: false);
         if (await events.Events.AnyAsync(cancellationToken) || await events.Strikes.AnyAsync(cancellationToken))
         {
             return true;
         }
 
-        await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, keepKeys: false);
+        await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, DbContextKind.Users, keepKeys: false);
         if (await users.Users.AnyAsync(cancellationToken))
         {
             return true;
         }
 
-        await using DataContext data = BuildTargetContext<DataContext>(connectionString, keepKeys: false);
+        await using DataContext data = BuildTargetContext<DataContext>(connectionString, DbContextKind.Data, keepKeys: false);
         return await data.DownloadClients.AnyAsync(cancellationToken);
     }
 
@@ -107,7 +107,7 @@ public sealed class SqliteToPostgresMigrator
         where TContext : DbContext
     {
         await using TContext source = BuildSourceContext<TContext>(kind);
-        await using TContext target = BuildTargetContextOnConnection<TContext>(connection);
+        await using TContext target = BuildTargetContextOnConnection<TContext>(connection, kind);
         await target.Database.UseTransactionAsync(transaction, cancellationToken);
 
         await TruncateAsync(target, kind, cancellationToken);
@@ -133,11 +133,14 @@ public sealed class SqliteToPostgresMigrator
         return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
     }
 
-    private static TContext BuildTargetContext<TContext>(string connectionString, bool keepKeys) where TContext : DbContext
+    private static TContext BuildTargetContext<TContext>(string connectionString, DbContextKind kind, bool keepKeys) where TContext : DbContext
     {
         PostgresDatabaseProvider provider = new();
+        string schema = provider.GetSchema(kind)!;
         DbContextOptionsBuilder<TContext> builder = new();
-        builder.UseNpgsql(connectionString, options => options.MigrationsAssembly("Cleanuparr.Persistence.Postgres"))
+        builder.UseNpgsql(connectionString, options => options
+                .MigrationsAssembly("Cleanuparr.Persistence.Postgres")
+                .MigrationsHistoryTable("__ef_migrations_history", schema))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
         if (keepKeys)
@@ -147,11 +150,14 @@ public sealed class SqliteToPostgresMigrator
         return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
     }
 
-    private static TContext BuildTargetContextOnConnection<TContext>(NpgsqlConnection connection) where TContext : DbContext
+    private static TContext BuildTargetContextOnConnection<TContext>(NpgsqlConnection connection, DbContextKind kind) where TContext : DbContext
     {
         PostgresDatabaseProvider provider = new();
+        string schema = provider.GetSchema(kind)!;
         DbContextOptionsBuilder<TContext> builder = new();
-        builder.UseNpgsql(connection, options => options.MigrationsAssembly("Cleanuparr.Persistence.Postgres"))
+        builder.UseNpgsql(connection, options => options
+                .MigrationsAssembly("Cleanuparr.Persistence.Postgres")
+                .MigrationsHistoryTable("__ef_migrations_history", schema))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention()
             .ReplaceService<IModelCustomizer, KeepKeysModelCustomizer>();

@@ -66,7 +66,7 @@ Existing SQLite installs are unaffected and can keep using SQLite indefinitely: 
 If you already have a SQLite install and want to move its data to PostgreSQL, Cleanuparr ships a `migrate-to-postgres` subcommand that copies every row from the SQLite databases into a fresh PostgreSQL target.
 
 1. Stop the Cleanuparr app or container. The migration reads the SQLite files directly and must not run while Cleanuparr is writing to them.
-2. Run the same image with the `migrate-to-postgres` argument, the `/config` volume mounted the same way as your normal install, and the `POSTGRES_*` variables pointing at the target database:
+2. Run the same image with the `./Cleanuparr migrate-to-postgres` command, the `/config` volume mounted the same way as your normal install, and the `POSTGRES_*` variables pointing at the target database:
 
 ```bash
 docker run --rm \
@@ -77,14 +77,14 @@ docker run --rm \
   -e POSTGRES_USER=cleanuparr \
   -e POSTGRES_PASS=change-me \
   -e POSTGRES_DB=cleanuparr \
-  ghcr.io/cleanuparr/cleanuparr:latest migrate-to-postgres
+  ghcr.io/cleanuparr/cleanuparr:latest ./Cleanuparr migrate-to-postgres
 ```
 
 3. The command copies all three schemas (`data`, `events`, `users`) inside a single transaction and prints the row counts per table on success.
 4. Once the migration finishes, set `DATABASE_PROVIDER=postgres` (with the same `POSTGRES_*` variables) on your regular Cleanuparr container or service and start it as usual to run on PostgreSQL going forward.
 
 <Important>
-The migration refuses to run if the target PostgreSQL database already contains data, to avoid silently overwriting it. Pass `--force` at the end of the command to wipe and re-import anyway: `... migrate-to-postgres --force`.
+The migration refuses to run if the target PostgreSQL database already contains data, to avoid silently overwriting it. Pass `--force` at the end of the command to wipe and re-import anyway: `... ./Cleanuparr migrate-to-postgres --force`.
 </Important>
 
 <Note>
