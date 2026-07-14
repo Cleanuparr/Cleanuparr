@@ -5,6 +5,12 @@ on:
     types: [closed]
     paths:
       - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number whose preview deployments to delete'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,12 +19,12 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     # Skip fork PRs
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     env:
       CF_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
       CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       PROJECT: cleanuparr-docs
-      BRANCH: pull-${{ github.event.pull_request.number }}
+      BRANCH: pull-${{ github.event.pull_request.number || inputs.pr_number }}
     steps:
       - name: Delete preview deployments for this PR
         run: |
