@@ -27,6 +27,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         timeout-minutes: 1
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5

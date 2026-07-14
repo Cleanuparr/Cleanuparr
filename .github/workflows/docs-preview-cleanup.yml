@@ -1,0 +1,53 @@
+name: Docs Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+    paths:
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    # Skip fork PRs
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+      PROJECT: cleanuparr-docs
+      BRANCH: pull-${{ github.event.pull_request.number }}
+    steps:
+      - name: Delete preview deployments for this PR
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4"
+          auth="Authorization: Bearer $CF_API_TOKEN"
+
+          account_id=$(curl -fsS -H "$auth" "$api/accounts" | jq -r '.result[0].id')
+          echo "Account $account_id, tearing down branch $BRANCH"
+
+          ids=""
+          page=1
+          while :; do
+            resp=$(curl -fsS -H "$auth" \
+              "$api/accounts/$account_id/pages/projects/$PROJECT/deployments?page=$page&per_page=25")
+            count=$(echo "$resp" | jq '.result | length')
+            [ "$count" -eq 0 ] && break
+
+            page_ids=$(echo "$resp" | jq -r --arg b "$BRANCH" \
+              '.result[] | select(.deployment_trigger.metadata.branch == $b) | .id')
+            ids="$ids $page_ids"
+            page=$((page + 1))
+          done
+
+          deleted=0
+          for id in $ids; do
+            echo "Deleting deployment $id"
+            curl -fsS -X DELETE -H "$auth" \
+              "$api/accounts/$account_id/pages/projects/$PROJECT/deployments/$id?force=true" >/dev/null
+            deleted=$((deleted + 1))
+          done
+
+          echo "Deleted $deleted deployment(s) for $BRANCH"

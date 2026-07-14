@@ -150,6 +150,7 @@ jobs:
           repository: ${{ github.repository }}
           ref: ${{ needs.prepare.outputs.branch }}
           token: ${{ env.REPO_READONLY_PAT }}
+          persist-credentials: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

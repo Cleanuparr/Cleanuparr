@@ -72,6 +72,7 @@ jobs:
           repository: ${{ env.githubRepository }}
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
+          persist-credentials: false
 
       - name: Setup dotnet
         uses: actions/setup-dotnet@v5
