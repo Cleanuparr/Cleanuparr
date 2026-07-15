@@ -194,7 +194,7 @@ public sealed class SqliteToPostgresMigrator
         await target.Database.ExecuteSqlRawAsync(sql, cancellationToken);
     }
 
-    private static async Task VerifyAndRecordCountsAsync(
+    internal static async Task VerifyAndRecordCountsAsync(
         DbContext source,
         DbContext target,
         Dictionary<string, int> counts,
