@@ -10,7 +10,7 @@ namespace Cleanuparr.Persistence.Providers;
 
 public sealed class PostgresDatabaseProvider : IDatabaseProvider
 {
-    private const string MigrationsAssembly = "Cleanuparr.Persistence.Postgres";
+    public const string MigrationsAssembly = "Cleanuparr.Persistence.Postgres";
 
     private static readonly IReadOnlyDictionary<DbContextKind, string> Schemas = new Dictionary<DbContextKind, string>
     {

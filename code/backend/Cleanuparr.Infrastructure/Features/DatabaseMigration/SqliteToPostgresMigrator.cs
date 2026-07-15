@@ -105,19 +105,9 @@ public sealed class SqliteToPostgresMigrator
 
     private static TContext BuildSourceContext<TContext>(DbContextKind kind) where TContext : DbContext
     {
-        string fileName = kind switch
-        {
-            DbContextKind.Data => "cleanuparr.db",
-            DbContextKind.Events => "events.db",
-            DbContextKind.Users => "users.db",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
-        };
-        string path = Path.Combine(ConfigurationPathProvider.GetConfigPath(), fileName);
         SqliteDatabaseProvider provider = new();
         DbContextOptionsBuilder<TContext> builder = new();
-        builder.UseSqlite($"Data Source={path}", options => options.MigrationsAssembly("Cleanuparr.Persistence.Sqlite"))
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+        provider.ConfigureContext(builder, kind);
         return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
     }
 
@@ -127,7 +117,7 @@ public sealed class SqliteToPostgresMigrator
         string schema = provider.GetSchema(kind)!;
         DbContextOptionsBuilder<TContext> builder = new();
         builder.UseNpgsql(connectionString, options => options
-                .MigrationsAssembly("Cleanuparr.Persistence.Postgres")
+                .MigrationsAssembly(PostgresDatabaseProvider.MigrationsAssembly)
                 .MigrationsHistoryTable("__ef_migrations_history", schema))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
@@ -144,7 +134,7 @@ public sealed class SqliteToPostgresMigrator
         string schema = provider.GetSchema(kind)!;
         DbContextOptionsBuilder<TContext> builder = new();
         builder.UseNpgsql(connection, options => options
-                .MigrationsAssembly("Cleanuparr.Persistence.Postgres")
+                .MigrationsAssembly(PostgresDatabaseProvider.MigrationsAssembly)
                 .MigrationsHistoryTable("__ef_migrations_history", schema))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention()
@@ -154,13 +144,7 @@ public sealed class SqliteToPostgresMigrator
 
     private static async Task TruncateAsync(DbContext target, DbContextKind kind, CancellationToken cancellationToken)
     {
-        string schema = kind switch
-        {
-            DbContextKind.Data => "data",
-            DbContextKind.Events => "events",
-            DbContextKind.Users => "users",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind)),
-        };
+        string schema = new PostgresDatabaseProvider().GetSchema(kind)!;
         List<string> tables = target.Model.GetEntityTypes()
             .Where(entityType => !entityType.IsOwned())
             .Select(entityType => entityType.GetTableName())
