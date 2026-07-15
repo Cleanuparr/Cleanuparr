@@ -8,17 +8,28 @@ public sealed class ModelDataCopier
 {
     private const int BatchSize = 5000;
 
-    public async Task CopyAsync(DbContext source, DbContext target, CancellationToken cancellationToken)
+    public async Task CopyAsync(DbContext source, DbContext target, IProgress<string>? progress, CancellationToken cancellationToken)
     {
         IReadOnlyList<IEntityType> ordered = OrderByDependencies(target.Model.GetEntityTypes());
 
-        foreach (IEntityType entityType in ordered)
-        {
-            MethodInfo copyMethod = typeof(ModelDataCopier)
-                .GetMethod(nameof(CopyEntitySetAsync), BindingFlags.Instance | BindingFlags.NonPublic)!
-                .MakeGenericMethod(entityType.ClrType);
+        bool autoDetectChanges = target.ChangeTracker.AutoDetectChangesEnabled;
+        target.ChangeTracker.AutoDetectChangesEnabled = false;
 
-            await (Task)copyMethod.Invoke(this, new object[] { source, target, cancellationToken })!;
+        try
+        {
+            foreach (IEntityType entityType in ordered)
+            {
+                MethodInfo copyMethod = typeof(ModelDataCopier)
+                    .GetMethod(nameof(CopyEntitySetAsync), BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .MakeGenericMethod(entityType.ClrType);
+
+                int copied = await (Task<int>)copyMethod.Invoke(this, new object?[] { source, target, progress, cancellationToken })!;
+                progress?.Report($"{entityType.GetTableName()}: {copied} rows");
+            }
+        }
+        finally
+        {
+            target.ChangeTracker.AutoDetectChangesEnabled = autoDetectChanges;
         }
     }
 
@@ -67,9 +78,10 @@ public sealed class ModelDataCopier
         return ordered;
     }
 
-    private async Task CopyEntitySetAsync<TEntity>(DbContext source, DbContext target, CancellationToken cancellationToken)
+    private async Task<int> CopyEntitySetAsync<TEntity>(DbContext source, DbContext target, IProgress<string>? progress, CancellationToken cancellationToken)
         where TEntity : class
     {
+        string? table = target.Model.FindEntityType(typeof(TEntity))?.GetTableName();
         int count = 0;
         IAsyncEnumerable<TEntity> rows = source.Set<TEntity>().AsNoTracking().AsAsyncEnumerable();
 
@@ -82,6 +94,7 @@ public sealed class ModelDataCopier
             {
                 await target.SaveChangesAsync(cancellationToken);
                 target.ChangeTracker.Clear();
+                progress?.Report($"{table}: {count} rows copied...");
             }
         }
 
@@ -90,5 +103,7 @@ public sealed class ModelDataCopier
             await target.SaveChangesAsync(cancellationToken);
             target.ChangeTracker.Clear();
         }
+
+        return count;
     }
 }

@@ -51,7 +51,7 @@ public class ModelDataCopierTests
             await using (DataContext source = new(sourceOptions, provider))
             {
                 ModelDataCopier copier = new();
-                await copier.CopyAsync(source, target, CancellationToken.None);
+                await copier.CopyAsync(source, target, null, CancellationToken.None);
             }
 
             List<ArrConfig> copied = await target.ArrConfigs.AsNoTracking().ToListAsync();
@@ -84,6 +84,62 @@ public class ModelDataCopierTests
         appEventIndex.ShouldBeGreaterThanOrEqualTo(0);
         strikeIndex.ShouldBeLessThan(appEventIndex);
         jobRunIndex.ShouldBeLessThan(appEventIndex);
+    }
+
+    [Fact]
+    public async Task CopyAsync_copies_large_sets_in_batches_and_restores_change_tracking()
+    {
+        SqliteConnection sourceConnection = new("DataSource=:memory:");
+        sourceConnection.Open();
+        SqliteConnection targetConnection = new("DataSource=:memory:");
+        targetConnection.Open();
+
+        SqliteDatabaseProvider provider = new();
+
+        DbContextOptions<EventsContext> sourceOptions = new DbContextOptionsBuilder<EventsContext>()
+            .UseSqlite(sourceConnection)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        DbContextOptions<EventsContext> targetOptions = new DbContextOptionsBuilder<EventsContext>()
+            .UseSqlite(targetConnection)
+            .UseSnakeCaseNamingConvention()
+            .ReplaceService<IModelCustomizer, KeepKeysModelCustomizer>()
+            .Options;
+
+        const int rowCount = 12_000;
+
+        await using (EventsContext source = new(sourceOptions, provider))
+        {
+            await source.Database.EnsureCreatedAsync();
+            for (int i = 0; i < rowCount; i++)
+            {
+                source.Events.Add(new AppEvent
+                {
+                    EventType = EventType.QueueItemDeleted,
+                    Message = $"event {i}",
+                    Severity = EventSeverity.Information,
+                });
+            }
+            await source.SaveChangesAsync();
+        }
+
+        List<string> progressMessages = new();
+        Progress<string> progress = new(message => progressMessages.Add(message));
+
+        await using (EventsContext target = new(targetOptions, provider))
+        {
+            await target.Database.EnsureCreatedAsync();
+            target.ChangeTracker.AutoDetectChangesEnabled.ShouldBeTrue();
+
+            await using (EventsContext source = new(sourceOptions, provider))
+            {
+                ModelDataCopier copier = new();
+                await copier.CopyAsync(source, target, progress, CancellationToken.None);
+            }
+
+            (await target.Events.AsNoTracking().CountAsync()).ShouldBe(rowCount);
+            target.ChangeTracker.AutoDetectChangesEnabled.ShouldBeTrue();
+        }
     }
 
     [Fact]

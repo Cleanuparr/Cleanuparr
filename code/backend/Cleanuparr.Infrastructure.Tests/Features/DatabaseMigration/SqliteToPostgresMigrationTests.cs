@@ -54,7 +54,7 @@ public class SqliteToPostgresMigrationTests
 
             SqliteToPostgresMigrator migrator = new();
 
-            MigrationResult result = await migrator.RunAsync(force: false, CancellationToken.None);
+            MigrationResult result = await migrator.RunAsync(force: false, null, CancellationToken.None);
             result.Success.ShouldBeTrue(result.Error);
             result.TableCounts["arr_configs"].ShouldBe(arrConfigCount);
             result.TableCounts["events"].ShouldBe(1);
@@ -64,10 +64,10 @@ public class SqliteToPostgresMigrationTests
 
             await AssertAppSeesMigrationsAppliedAsync();
 
-            MigrationResult second = await migrator.RunAsync(force: false, CancellationToken.None);
+            MigrationResult second = await migrator.RunAsync(force: false, null, CancellationToken.None);
             second.Success.ShouldBeFalse();
 
-            MigrationResult forced = await migrator.RunAsync(force: true, CancellationToken.None);
+            MigrationResult forced = await migrator.RunAsync(force: true, null, CancellationToken.None);
             forced.Success.ShouldBeTrue(forced.Error);
             forced.TableCounts["arr_configs"].ShouldBe(arrConfigCount);
         }

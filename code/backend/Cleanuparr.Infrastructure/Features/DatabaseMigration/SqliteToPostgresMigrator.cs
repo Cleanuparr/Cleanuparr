@@ -17,7 +17,7 @@ public sealed class SqliteToPostgresMigrator
 {
     private readonly ModelDataCopier _copier = new();
 
-    public async Task<MigrationResult> RunAsync(bool force, CancellationToken cancellationToken)
+    public async Task<MigrationResult> RunAsync(bool force, IProgress<string>? progress, CancellationToken cancellationToken)
     {
         Dictionary<string, int> counts = new();
 
@@ -41,9 +41,9 @@ public sealed class SqliteToPostgresMigrator
 
             try
             {
-                await CopyContextAsync<DataContext>(DbContextKind.Data, connection, transaction, counts, cancellationToken);
-                await CopyContextAsync<EventsContext>(DbContextKind.Events, connection, transaction, counts, cancellationToken);
-                await CopyContextAsync<UsersContext>(DbContextKind.Users, connection, transaction, counts, cancellationToken);
+                await CopyContextAsync<DataContext>(DbContextKind.Data, connection, transaction, counts, progress, cancellationToken);
+                await CopyContextAsync<EventsContext>(DbContextKind.Events, connection, transaction, counts, progress, cancellationToken);
+                await CopyContextAsync<UsersContext>(DbContextKind.Users, connection, transaction, counts, progress, cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
             }
             catch
@@ -91,6 +91,7 @@ public sealed class SqliteToPostgresMigrator
         NpgsqlConnection connection,
         DbTransaction transaction,
         Dictionary<string, int> counts,
+        IProgress<string>? progress,
         CancellationToken cancellationToken)
         where TContext : DbContext
     {
@@ -99,7 +100,7 @@ public sealed class SqliteToPostgresMigrator
         await target.Database.UseTransactionAsync(transaction, cancellationToken);
 
         await TruncateAsync(target, kind, cancellationToken);
-        await _copier.CopyAsync(source, target, cancellationToken);
+        await _copier.CopyAsync(source, target, progress, cancellationToken);
         await VerifyAndRecordCountsAsync(source, target, counts, cancellationToken);
     }
 

@@ -23,7 +23,7 @@ if (args.Length > 0 && args[0] == "migrate-to-postgres")
 
     bool force = args.Contains("--force");
     SqliteToPostgresMigrator migrator = new();
-    MigrationResult result = await migrator.RunAsync(force, CancellationToken.None);
+    MigrationResult result = await migrator.RunAsync(force, null, CancellationToken.None);
 
     if (result.Success)
     {
