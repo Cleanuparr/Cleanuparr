@@ -45,10 +45,10 @@ public class UsersContext : DbContext
 
     public static UsersContext CreateStaticInstance()
     {
-        UsersContext context = new();
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
         DbContextOptionsBuilder<UsersContext> optionsBuilder = new();
-        context._provider.ConfigureContext(optionsBuilder, DbContextKind.Users);
-        return new UsersContext(optionsBuilder.Options, context._provider);
+        provider.ConfigureContext(optionsBuilder, DbContextKind.Users);
+        return new UsersContext(optionsBuilder.Options, provider);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

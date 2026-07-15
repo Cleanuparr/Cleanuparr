@@ -107,10 +107,10 @@ public class DataContext : DbContext
 
     public static DataContext CreateStaticInstance()
     {
-        DataContext context = new();
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
         DbContextOptionsBuilder<DataContext> optionsBuilder = new();
-        context._provider.ConfigureContext(optionsBuilder, DbContextKind.Data);
-        return new DataContext(optionsBuilder.Options, context._provider);
+        provider.ConfigureContext(optionsBuilder, DbContextKind.Data);
+        return new DataContext(optionsBuilder.Options, provider);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

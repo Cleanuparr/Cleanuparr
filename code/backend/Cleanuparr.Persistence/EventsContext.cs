@@ -56,10 +56,10 @@ public class EventsContext : DbContext
 
     public static EventsContext CreateStaticInstance()
     {
-        EventsContext context = new();
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
         DbContextOptionsBuilder<EventsContext> optionsBuilder = new();
-        context._provider.ConfigureContext(optionsBuilder, DbContextKind.Events);
-        return new EventsContext(optionsBuilder.Options, context._provider);
+        provider.ConfigureContext(optionsBuilder, DbContextKind.Events);
+        return new EventsContext(optionsBuilder.Options, provider);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

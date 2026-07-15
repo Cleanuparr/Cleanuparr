@@ -11,7 +11,6 @@ using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Configuration;
 using Serilog;
 
 if (args.Length > 0 && args[0] == "migrate-to-postgres")
