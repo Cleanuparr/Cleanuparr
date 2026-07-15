@@ -39,22 +39,30 @@ public sealed class SqliteToPostgresMigrator
 
             await MigrateSourceSchemaAsync(progress, cancellationToken);
 
-            await MigrateTargetSchemaAsync(connectionString, cancellationToken);
-
-            await using NpgsqlConnection connection = new(connectionString);
-            await connection.OpenAsync(cancellationToken);
-            await using DbTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
-
             try
             {
-                await CopyContextAsync<DataContext>(DbContextKind.Data, connection, transaction, counts, progress, cancellationToken);
-                await CopyContextAsync<EventsContext>(DbContextKind.Events, connection, transaction, counts, progress, cancellationToken);
-                await CopyContextAsync<UsersContext>(DbContextKind.Users, connection, transaction, counts, progress, cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                await MigrateTargetSchemaAsync(connectionString, cancellationToken);
+
+                await using NpgsqlConnection connection = new(connectionString);
+                await connection.OpenAsync(cancellationToken);
+                await using DbTransaction transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+                try
+                {
+                    await CopyContextAsync<DataContext>(DbContextKind.Data, connection, transaction, counts, progress, cancellationToken);
+                    await CopyContextAsync<EventsContext>(DbContextKind.Events, connection, transaction, counts, progress, cancellationToken);
+                    await CopyContextAsync<UsersContext>(DbContextKind.Users, connection, transaction, counts, progress, cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    throw;
+                }
             }
             catch
             {
-                await transaction.RollbackAsync(cancellationToken);
+                await DropCleanuparrSchemasAsync(connectionString, progress, cancellationToken);
                 throw;
             }
 
@@ -103,6 +111,33 @@ public sealed class SqliteToPostgresMigrator
         await events.Database.MigrateAsync(cancellationToken);
         await using UsersContext users = BuildTargetContext<UsersContext>(connectionString, DbContextKind.Users, keepKeys: false);
         await users.Database.MigrateAsync(cancellationToken);
+    }
+
+    internal static async Task DropCleanuparrSchemasAsync(string connectionString, IProgress<string>? progress, CancellationToken cancellationToken)
+    {
+        try
+        {
+            PostgresDatabaseProvider provider = new();
+            string[] schemas =
+            {
+                provider.GetSchema(DbContextKind.Data)!,
+                provider.GetSchema(DbContextKind.Events)!,
+                provider.GetSchema(DbContextKind.Users)!,
+            };
+
+            await using NpgsqlConnection connection = new(connectionString);
+            await connection.OpenAsync(cancellationToken);
+
+            foreach (string schema in schemas)
+            {
+                await using NpgsqlCommand command = new($"DROP SCHEMA IF EXISTS \"{schema}\" CASCADE;", connection);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            progress?.Report($"Warning: failed to clean up target schemas after error: {exception.Message}");
+        }
     }
 
     private static async Task<IReadOnlyList<string>> GetProvisionedSchemasAsync(string connectionString, CancellationToken cancellationToken)

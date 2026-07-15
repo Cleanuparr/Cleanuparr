@@ -112,6 +112,50 @@ public class SqliteToPostgresMigrationTests
         }
     }
 
+    [SkippableFact]
+    public async Task Cleaning_up_schemas_lets_a_retry_run_without_force()
+    {
+        PostgreSqlContainer postgresContainer = await StartPostgresOrSkipAsync();
+
+        string tempConfigDir = Path.Combine(Path.GetTempPath(), $"cleanuparr-migrator-cleanup-{Guid.NewGuid():N}");
+        string previousConfigPath = ConfigurationPathProvider.GetConfigPath();
+
+        Guid arrConfigId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        Guid appEventId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        Guid userId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+
+        try
+        {
+            ConfigurationPathProvider.SetConfigPath(tempConfigDir);
+            await SeedSqliteSourceAsync(arrConfigId, appEventId, userId);
+            InitializeDatabaseConfig(postgresContainer);
+
+            SqliteToPostgresMigrator migrator = new();
+
+            MigrationResult first = await migrator.RunAsync(force: false, null, CancellationToken.None);
+            first.Success.ShouldBeTrue(first.Error);
+
+            MigrationResult refused = await migrator.RunAsync(force: false, null, CancellationToken.None);
+            refused.Success.ShouldBeFalse();
+
+            await SqliteToPostgresMigrator.DropCleanuparrSchemasAsync(postgresContainer.GetConnectionString(), null, CancellationToken.None);
+
+            MigrationResult retry = await migrator.RunAsync(force: false, null, CancellationToken.None);
+            retry.Success.ShouldBeTrue(retry.Error);
+        }
+        finally
+        {
+            DatabaseConfigProvider.Initialize(new ConfigurationBuilder().Build());
+            ConfigurationPathProvider.SetConfigPath(previousConfigPath);
+            await postgresContainer.DisposeAsync();
+
+            if (Directory.Exists(tempConfigDir))
+            {
+                Directory.Delete(tempConfigDir, recursive: true);
+            }
+        }
+    }
+
     private static async Task<PostgreSqlContainer> StartPostgresOrSkipAsync()
     {
         try
