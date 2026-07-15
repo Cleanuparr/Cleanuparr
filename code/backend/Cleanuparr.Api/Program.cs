@@ -2,8 +2,8 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Cleanuparr.Api;
+using Cleanuparr.Api.Commands;
 using Cleanuparr.Api.DependencyInjection;
-using Cleanuparr.Infrastructure.Features.DatabaseMigration;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Shared.Configuration;
@@ -13,39 +13,15 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
 
-if (args.Length > 0 && args[0] == "migrate-to-postgres")
+if (MigrateToPostgresCommand.Matches(args))
 {
-    IConfiguration migrationConfig = new ConfigurationBuilder()
-        .AddJsonFile(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.json"), optional: true)
-        .AddEnvironmentVariables()
-        .Build();
-    DatabaseConfigProvider.Initialize(migrationConfig);
-
-    bool force = args.Contains("--force");
-    SqliteToPostgresMigrator migrator = new();
-    MigrationResult result = await migrator.RunAsync(force, null, CancellationToken.None);
-
-    if (result.Success)
-    {
-        Console.WriteLine("Migration complete. Row counts:");
-        foreach (KeyValuePair<string, int> entry in result.TableCounts.OrderBy(pair => pair.Key))
-        {
-            Console.WriteLine($"  {entry.Key}: {entry.Value}");
-        }
-        Console.WriteLine("Set DATABASE_PROVIDER=postgres to run on PostgreSQL. Your SQLite files are left untouched.");
-        Environment.Exit(0);
-    }
-    else
-    {
-        Console.Error.WriteLine($"Migration failed: {result.Error}");
-        Environment.Exit(1);
-    }
+    Environment.Exit(await MigrateToPostgresCommand.RunAsync(args));
 }
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
-    .AddJsonFile(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.json"), optional: true, reloadOnChange: true);
+    .AddJsonFile(ConfigurationPathProvider.GetConfigFilePath(), optional: true, reloadOnChange: true);
 DatabaseConfigProvider.Initialize(builder.Configuration);
 
 await builder.InitAsync();

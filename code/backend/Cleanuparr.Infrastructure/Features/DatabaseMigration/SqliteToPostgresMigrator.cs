@@ -60,7 +60,7 @@ public sealed class SqliteToPostgresMigrator
         }
         catch (Exception exception)
         {
-            return new MigrationResult(false, exception.Message, counts);
+            return new MigrationResult(false, exception.ToString(), counts);
         }
     }
 
