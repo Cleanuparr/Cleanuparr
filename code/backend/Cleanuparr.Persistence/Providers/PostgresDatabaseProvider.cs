@@ -19,8 +19,6 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
         [DbContextKind.Users] = "users",
     };
 
-    private string? _connectionString;
-
     public DatabaseProvider Kind => DatabaseProvider.Postgres;
 
     public void ConfigureContext(DbContextOptionsBuilder builder, DbContextKind kind)
@@ -61,18 +59,14 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
     public bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is PostgresException { SqlState: "23505" };
 
-    private string GetConnectionString()
-    {
-        _connectionString ??= BuildConnectionString(
+    private static string GetConnectionString() =>
+        BuildConnectionString(
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresHost),
             DatabaseConfigProvider.GetOptional(ConfigurationKeys.PostgresPort),
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresUser),
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresPassword),
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresDatabase),
             DatabaseConfigProvider.GetOptional(ConfigurationKeys.PostgresExtraParams));
-
-        return _connectionString;
-    }
 
     public static string BuildConnectionString(string host, string? port, string user, string password, string database, string? extraParams)
     {
