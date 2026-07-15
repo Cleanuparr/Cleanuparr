@@ -85,4 +85,45 @@ public class ModelDataCopierTests
         strikeIndex.ShouldBeLessThan(appEventIndex);
         jobRunIndex.ShouldBeLessThan(appEventIndex);
     }
+
+    [Fact]
+    public void OrderByDependencies_throws_on_a_circular_fk_dependency()
+    {
+        DbContextOptions<CycleContext> options = new DbContextOptionsBuilder<CycleContext>()
+            .UseSqlite("DataSource=:memory:")
+            .Options;
+
+        using CycleContext context = new(options);
+
+        InvalidOperationException exception = Should.Throw<InvalidOperationException>(
+            () => ModelDataCopier.OrderByDependencies(context.Model.GetEntityTypes()));
+        exception.Message.ShouldContain("Circular FK dependency");
+    }
+
+    private sealed class CycleContext : DbContext
+    {
+        public CycleContext(DbContextOptions<CycleContext> options) : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CycleNode>().HasOne(node => node.Edge).WithMany().HasForeignKey(node => node.EdgeId);
+            modelBuilder.Entity<CycleEdge>().HasOne(edge => edge.Node).WithMany().HasForeignKey(edge => edge.NodeId);
+        }
+    }
+
+    private sealed class CycleNode
+    {
+        public Guid Id { get; set; }
+        public Guid? EdgeId { get; set; }
+        public CycleEdge? Edge { get; set; }
+    }
+
+    private sealed class CycleEdge
+    {
+        public Guid Id { get; set; }
+        public Guid? NodeId { get; set; }
+        public CycleNode? Node { get; set; }
+    }
 }

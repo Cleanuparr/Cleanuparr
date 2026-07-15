@@ -26,6 +26,7 @@ public sealed class ModelDataCopier
     {
         List<IEntityType> types = entityTypes.Where(entityType => !entityType.IsOwned()).ToList();
         HashSet<IEntityType> visited = new();
+        HashSet<IEntityType> onStack = new();
         List<IEntityType> ordered = new();
 
         void Visit(IEntityType type)
@@ -35,15 +36,26 @@ public sealed class ModelDataCopier
                 return;
             }
 
+            onStack.Add(type);
+
             foreach (IForeignKey foreignKey in type.GetForeignKeys())
             {
                 IEntityType principal = foreignKey.PrincipalEntityType;
-                if (!ReferenceEquals(principal, type) && types.Contains(principal))
+                if (ReferenceEquals(principal, type) || !types.Contains(principal))
                 {
-                    Visit(principal);
+                    continue;
                 }
+
+                if (onStack.Contains(principal))
+                {
+                    throw new InvalidOperationException(
+                        $"Circular FK dependency between '{type.GetTableName()}' and '{principal.GetTableName()}'; copier cannot order inserts. Break the cycle or add deferred-constraint handling.");
+                }
+
+                Visit(principal);
             }
 
+            onStack.Remove(type);
             ordered.Add(type);
         }
 
