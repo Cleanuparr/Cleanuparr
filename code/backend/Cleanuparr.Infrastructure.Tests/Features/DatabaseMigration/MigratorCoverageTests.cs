@@ -1,4 +1,6 @@
+using Cleanuparr.Infrastructure.Features.DatabaseMigration;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Xunit;
@@ -18,5 +20,19 @@ public class MigratorCoverageTests
             .ToList();
 
         allContexts.ShouldAllBe(type => migratedContexts.Contains(type));
+    }
+
+    [Fact]
+    public void Instantiate_constructs_every_context_through_the_reflection_ctor()
+    {
+        IDatabaseProvider provider = new SqliteDatabaseProvider();
+
+        using DataContext data = SqliteToPostgresMigrator.Instantiate(new DbContextOptionsBuilder<DataContext>(), provider);
+        using EventsContext events = SqliteToPostgresMigrator.Instantiate(new DbContextOptionsBuilder<EventsContext>(), provider);
+        using UsersContext users = SqliteToPostgresMigrator.Instantiate(new DbContextOptionsBuilder<UsersContext>(), provider);
+
+        data.ShouldNotBeNull();
+        events.ShouldNotBeNull();
+        users.ShouldNotBeNull();
     }
 }

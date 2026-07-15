@@ -103,12 +103,15 @@ public sealed class SqliteToPostgresMigrator
         await VerifyAndRecordCountsAsync(source, target, counts, cancellationToken);
     }
 
+    public static TContext Instantiate<TContext>(DbContextOptionsBuilder<TContext> builder, IDatabaseProvider provider) where TContext : DbContext =>
+        (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
+
     private static TContext BuildSourceContext<TContext>(DbContextKind kind) where TContext : DbContext
     {
         SqliteDatabaseProvider provider = new();
         DbContextOptionsBuilder<TContext> builder = new();
         provider.ConfigureContext(builder, kind);
-        return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
+        return Instantiate(builder, provider);
     }
 
     private static TContext BuildTargetContext<TContext>(string connectionString, DbContextKind kind, bool keepKeys) where TContext : DbContext
@@ -125,7 +128,7 @@ public sealed class SqliteToPostgresMigrator
         {
             builder.ReplaceService<IModelCustomizer, KeepKeysModelCustomizer>();
         }
-        return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
+        return Instantiate(builder, provider);
     }
 
     private static TContext BuildTargetContextOnConnection<TContext>(NpgsqlConnection connection, DbContextKind kind) where TContext : DbContext
@@ -139,7 +142,7 @@ public sealed class SqliteToPostgresMigrator
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention()
             .ReplaceService<IModelCustomizer, KeepKeysModelCustomizer>();
-        return (TContext)Activator.CreateInstance(typeof(TContext), builder.Options, provider)!;
+        return Instantiate(builder, provider);
     }
 
     private static async Task TruncateAsync(DbContext target, DbContextKind kind, CancellationToken cancellationToken)
