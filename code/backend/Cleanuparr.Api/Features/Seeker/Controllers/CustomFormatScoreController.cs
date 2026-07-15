@@ -211,8 +211,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             ? null
             : EventsContext.GetLikePattern(search);
 
-        string? schema = _databaseProvider.GetSchema(DbContextKind.Events);
-        string historyTable = schema is null ? "custom_format_score_history" : $"{schema}.custom_format_score_history";
+        string historyTable = _databaseProvider.QualifyTable("custom_format_score_history", DbContextKind.Events);
 
         string upgradesCte =
             $"""

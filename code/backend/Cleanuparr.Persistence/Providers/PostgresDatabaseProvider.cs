@@ -35,6 +35,8 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
 
     public string? GetSchema(DbContextKind kind) => Schemas[kind];
 
+    public string QualifyTable(string tableName, DbContextKind kind) => $"{Schemas[kind]}.{tableName}";
+
     public void ConfigureConventions(ModelConfigurationBuilder builder)
     {
     }

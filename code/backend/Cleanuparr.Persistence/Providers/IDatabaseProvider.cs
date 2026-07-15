@@ -13,6 +13,8 @@ public interface IDatabaseProvider
 
     string? GetSchema(DbContextKind kind);
 
+    string QualifyTable(string tableName, DbContextKind kind);
+
     void ConfigureConventions(ModelConfigurationBuilder builder);
 
     string GetUnresolvedEventFilter();

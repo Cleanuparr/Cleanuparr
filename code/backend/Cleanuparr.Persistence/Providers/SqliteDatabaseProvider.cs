@@ -32,6 +32,8 @@ public sealed class SqliteDatabaseProvider : IDatabaseProvider
 
     public string? GetSchema(DbContextKind kind) => null;
 
+    public string QualifyTable(string tableName, DbContextKind kind) => tableName;
+
     public void ConfigureConventions(ModelConfigurationBuilder builder)
     {
         builder.Properties<DateTimeOffset>()
