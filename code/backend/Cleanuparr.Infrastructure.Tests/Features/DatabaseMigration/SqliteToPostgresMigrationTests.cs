@@ -19,23 +19,12 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DatabaseMigration;
 [Collection("SeedParity")]
 public class SqliteToPostgresMigrationTests
 {
+    private const string EventsMigrationBeforeCustomFormatScoreEntries = "20260706084236_EventStreamRework";
+
     [SkippableFact]
     public async Task RunAsync_copies_all_rows_preserves_keys_and_enforces_force_guard()
     {
-        PostgreSqlContainer postgresContainer;
-
-        try
-        {
-            postgresContainer = new PostgreSqlBuilder()
-                .WithImage("postgres:17")
-                .Build();
-
-            await postgresContainer.StartAsync();
-        }
-        catch (Exception exception)
-        {
-            throw new SkipException($"Docker is unavailable, skipping migrator round-trip test: {exception.Message}");
-        }
+        PostgreSqlContainer postgresContainer = await StartPostgresOrSkipAsync();
 
         string tempConfigDir = Path.Combine(Path.GetTempPath(), $"cleanuparr-migrator-{Guid.NewGuid():N}");
         string previousConfigPath = ConfigurationPathProvider.GetConfigPath();
@@ -82,6 +71,88 @@ public class SqliteToPostgresMigrationTests
                 Directory.Delete(tempConfigDir, recursive: true);
             }
         }
+    }
+
+    [SkippableFact]
+    public async Task RunAsync_upgrades_a_stale_sqlite_source_before_copying()
+    {
+        PostgreSqlContainer postgresContainer = await StartPostgresOrSkipAsync();
+
+        string tempConfigDir = Path.Combine(Path.GetTempPath(), $"cleanuparr-migrator-stale-{Guid.NewGuid():N}");
+        string previousConfigPath = ConfigurationPathProvider.GetConfigPath();
+
+        Guid arrConfigId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        Guid userId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+
+        try
+        {
+            ConfigurationPathProvider.SetConfigPath(tempConfigDir);
+
+            int arrConfigCount = await SeedStaleSqliteSourceAsync(arrConfigId, userId);
+
+            InitializeDatabaseConfig(postgresContainer);
+
+            SqliteToPostgresMigrator migrator = new();
+            MigrationResult result = await migrator.RunAsync(force: false, null, CancellationToken.None);
+
+            result.Success.ShouldBeTrue(result.Error);
+            result.TableCounts["arr_configs"].ShouldBe(arrConfigCount);
+            result.TableCounts.ShouldContainKey("custom_format_score_entries");
+        }
+        finally
+        {
+            DatabaseConfigProvider.Initialize(new ConfigurationBuilder().Build());
+            ConfigurationPathProvider.SetConfigPath(previousConfigPath);
+            await postgresContainer.DisposeAsync();
+
+            if (Directory.Exists(tempConfigDir))
+            {
+                Directory.Delete(tempConfigDir, recursive: true);
+            }
+        }
+    }
+
+    private static async Task<PostgreSqlContainer> StartPostgresOrSkipAsync()
+    {
+        try
+        {
+            PostgreSqlContainer container = new PostgreSqlBuilder()
+                .WithImage("postgres:17")
+                .Build();
+
+            await container.StartAsync();
+            return container;
+        }
+        catch (Exception exception)
+        {
+            throw new SkipException($"Docker is unavailable, skipping migrator test: {exception.Message}");
+        }
+    }
+
+    private static async Task<int> SeedStaleSqliteSourceAsync(Guid arrConfigId, Guid userId)
+    {
+        await using DataContext data = DataContext.CreateStaticInstance();
+        await data.Database.MigrateAsync();
+        data.ArrConfigs.Add(new ArrConfig { Id = arrConfigId, Type = InstanceType.Sonarr });
+        await data.SaveChangesAsync();
+        int arrConfigCount = await data.ArrConfigs.CountAsync();
+
+        await using UsersContext users = UsersContext.CreateStaticInstance();
+        await users.Database.MigrateAsync();
+        users.Users.Add(new User
+        {
+            Id = userId,
+            Username = "stale-user",
+            PasswordHash = "hash",
+            TotpSecret = "secret",
+            ApiKey = "api-key",
+        });
+        await users.SaveChangesAsync();
+
+        await using EventsContext events = EventsContext.CreateStaticInstance();
+        await events.Database.MigrateAsync(EventsMigrationBeforeCustomFormatScoreEntries);
+
+        return arrConfigCount;
     }
 
     private static async Task<int> SeedSqliteSourceAsync(Guid arrConfigId, Guid appEventId, Guid userId)

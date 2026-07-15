@@ -37,6 +37,8 @@ public sealed class SqliteToPostgresMigrator
                 }
             }
 
+            await MigrateSourceSchemaAsync(progress, cancellationToken);
+
             await MigrateTargetSchemaAsync(connectionString, cancellationToken);
 
             await using NpgsqlConnection connection = new(connectionString);
@@ -72,6 +74,26 @@ public sealed class SqliteToPostgresMigrator
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresPassword),
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresDatabase),
             DatabaseConfigProvider.GetOptional(ConfigurationKeys.PostgresExtraParams));
+
+    private async Task MigrateSourceSchemaAsync(IProgress<string>? progress, CancellationToken cancellationToken)
+    {
+        progress?.Report("Applying pending SQLite migrations to the source databases...");
+
+        await using (DataContext data = BuildSourceContext<DataContext>(DbContextKind.Data))
+        {
+            await data.Database.MigrateAsync(cancellationToken);
+        }
+
+        await using (EventsContext events = BuildSourceContext<EventsContext>(DbContextKind.Events))
+        {
+            await events.Database.MigrateAsync(cancellationToken);
+        }
+
+        await using (UsersContext users = BuildSourceContext<UsersContext>(DbContextKind.Users))
+        {
+            await users.Database.MigrateAsync(cancellationToken);
+        }
+    }
 
     private async Task MigrateTargetSchemaAsync(string connectionString, CancellationToken cancellationToken)
     {

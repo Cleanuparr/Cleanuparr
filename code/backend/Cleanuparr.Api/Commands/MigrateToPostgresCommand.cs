@@ -35,7 +35,8 @@ public static class MigrateToPostgresCommand
             Console.WriteLine($"  {entry.Key}: {entry.Value}");
         }
 
-        Console.WriteLine("Set DATABASE_PROVIDER=postgres to run on PostgreSQL. Your SQLite files are left untouched.");
+        Console.WriteLine("Set DATABASE_PROVIDER=postgres and restart Cleanuparr to run on PostgreSQL.");
+        Console.WriteLine("(Your SQLite databases were upgraded to the current schema in place; their data was preserved.)");
         return 0;
     }
 
