@@ -25,12 +25,16 @@ public sealed class SqliteToPostgresMigrator
         {
             string connectionString = BuildPostgresConnectionString();
 
-            if (!force && await TargetAlreadyProvisionedAsync(connectionString, cancellationToken))
+            if (!force)
             {
-                return new MigrationResult(
-                    false,
-                    "Target PostgreSQL already contains a Cleanuparr database. Re-run with --force to wipe and re-import.",
-                    new Dictionary<string, int>());
+                IReadOnlyList<string> provisioned = await GetProvisionedSchemasAsync(connectionString, cancellationToken);
+                if (provisioned.Count > 0)
+                {
+                    return new MigrationResult(
+                        false,
+                        $"Target PostgreSQL already contains applied migrations in schema(s): {string.Join(", ", provisioned)}. Re-run with --force to wipe and re-import.",
+                        new Dictionary<string, int>());
+                }
             }
 
             await MigrateTargetSchemaAsync(connectionString, cancellationToken);
@@ -79,10 +83,34 @@ public sealed class SqliteToPostgresMigrator
         await users.Database.MigrateAsync(cancellationToken);
     }
 
-    private static async Task<bool> TargetAlreadyProvisionedAsync(string connectionString, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<string>> GetProvisionedSchemasAsync(string connectionString, CancellationToken cancellationToken)
     {
-        await using DataContext data = BuildTargetContext<DataContext>(connectionString, DbContextKind.Data, keepKeys: false);
-        IEnumerable<string> applied = await data.Database.GetAppliedMigrationsAsync(cancellationToken);
+        PostgresDatabaseProvider provider = new();
+        List<string> provisioned = new();
+
+        if (await HasAppliedMigrationsAsync<DataContext>(connectionString, DbContextKind.Data, cancellationToken))
+        {
+            provisioned.Add(provider.GetSchema(DbContextKind.Data)!);
+        }
+
+        if (await HasAppliedMigrationsAsync<EventsContext>(connectionString, DbContextKind.Events, cancellationToken))
+        {
+            provisioned.Add(provider.GetSchema(DbContextKind.Events)!);
+        }
+
+        if (await HasAppliedMigrationsAsync<UsersContext>(connectionString, DbContextKind.Users, cancellationToken))
+        {
+            provisioned.Add(provider.GetSchema(DbContextKind.Users)!);
+        }
+
+        return provisioned;
+    }
+
+    private static async Task<bool> HasAppliedMigrationsAsync<TContext>(string connectionString, DbContextKind kind, CancellationToken cancellationToken)
+        where TContext : DbContext
+    {
+        await using TContext context = BuildTargetContext<TContext>(connectionString, kind, keepKeys: false);
+        IEnumerable<string> applied = await context.Database.GetAppliedMigrationsAsync(cancellationToken);
         return applied.Any();
     }
 
