@@ -82,7 +82,12 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
 
         if (!string.IsNullOrWhiteSpace(port))
         {
-            builder.Port = int.Parse(port);
+            if (!int.TryParse(port, out int parsedPort))
+            {
+                throw new InvalidOperationException($"{ConfigurationKeys.PostgresPort} must be an integer, got '{port}'.");
+            }
+
+            builder.Port = parsedPort;
         }
 
         if (!string.IsNullOrWhiteSpace(extraParams))
