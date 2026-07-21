@@ -102,7 +102,7 @@ public partial class UTorrentService
             return (false, DeleteReason.None, false, false);
         }
 
-        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
+        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper, await IsAltSpeedLimitActiveAsync());
     }
 
     private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)

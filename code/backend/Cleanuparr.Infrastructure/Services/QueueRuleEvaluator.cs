@@ -68,7 +68,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
         return (false, DeleteReason.None, false, false);
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent, bool altSpeedActive = false)
     {
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
@@ -82,6 +82,12 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
 
         _logger.LogTrace("Applying slow rule {rule} | {name}", rule.Name, torrent.Name);
         ContextProvider.Set<QueueRule>(rule);
+
+        if (altSpeedActive && rule.IgnoreWhileAltSpeedActive)
+        {
+            _logger.LogDebug("skip slow rule | alternate speed limits active | {name}", torrent.Name);
+            return (false, DeleteReason.None, false, false);
+        }
 
         if (!string.IsNullOrWhiteSpace(rule.MinSpeed))
         {
