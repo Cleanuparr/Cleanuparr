@@ -22,6 +22,7 @@ export interface SlowRule extends QueueRule {
   minSpeed: string;
   maxTimeHours: number;
   ignoreAboveSize?: string;
+  ignoreWhileAltSpeedActive: boolean;
 }
 
 export interface CreateStallRuleDto {
@@ -48,6 +49,7 @@ export interface CreateSlowRuleDto {
   minSpeed: string;
   maxTimeHours: number;
   ignoreAboveSize?: string;
+  ignoreWhileAltSpeedActive: boolean;
   deletePrivateTorrentsFromClient: boolean;
   changeCategory: boolean;
 }

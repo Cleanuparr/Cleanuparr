@@ -21,6 +21,7 @@ interface SlowRuleFormModel {
   maxCompletion: number | null;
   ignoreAboveSize: string;
   resetOnProgress: boolean;
+  ignoreWhileAltSpeedActive: boolean;
   deletePrivate: boolean;
   changeCategory: boolean;
 }
@@ -70,7 +71,8 @@ export class SlowRuleModalComponent {
   private readonly defaults: SlowRuleFormModel = {
     name: '', enabled: true, maxStrikes: 3, minSpeed: '', maxTimeHours: 0,
     privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100,
-    ignoreAboveSize: '', resetOnProgress: false, deletePrivate: false, changeCategory: false,
+    ignoreAboveSize: '', resetOnProgress: false, ignoreWhileAltSpeedActive: false,
+    deletePrivate: false, changeCategory: false,
   };
   readonly model = signal<SlowRuleFormModel>({ ...this.defaults });
   readonly form = form(this.model, (p) => {
@@ -113,6 +115,7 @@ export class SlowRuleModalComponent {
           maxCompletion: r.maxCompletionPercentage,
           ignoreAboveSize: r.ignoreAboveSize ?? '',
           resetOnProgress: r.resetStrikesOnProgress,
+          ignoreWhileAltSpeedActive: r.ignoreWhileAltSpeedActive,
           deletePrivate: r.deletePrivateTorrentsFromClient,
           changeCategory: r.changeCategory ?? false,
         } : { ...this.defaults };
@@ -146,6 +149,7 @@ export class SlowRuleModalComponent {
       minCompletionPercentage: m.minCompletion ?? 0,
       maxCompletionPercentage: m.maxCompletion ?? 100,
       resetStrikesOnProgress: m.resetOnProgress,
+      ignoreWhileAltSpeedActive: m.ignoreWhileAltSpeedActive,
       minSpeed: m.minSpeed.trim(),
       maxTimeHours: m.maxTimeHours ?? 0,
       ignoreAboveSize: m.ignoreAboveSize.trim() || undefined,
