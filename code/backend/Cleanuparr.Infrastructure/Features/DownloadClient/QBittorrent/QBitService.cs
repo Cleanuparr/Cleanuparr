@@ -20,6 +20,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 public partial class QBitService : DownloadService, IQBitService
 {
     protected readonly IQBittorrentClientWrapper _client;
+    private bool? _altSpeedLimitActive;
 
     public QBitService(
         ILogger<QBitService> logger,
@@ -153,6 +154,26 @@ public partial class QBitService : DownloadService, IQBitService
             .ToList();
     }
     
+    protected override async Task<bool> IsAltSpeedLimitActiveAsync()
+    {
+        if (_altSpeedLimitActive is not null)
+        {
+            return _altSpeedLimitActive.Value;
+        }
+
+        try
+        {
+            _altSpeedLimitActive = await _client.GetAlternativeSpeedLimitsEnabledAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read alternate speed limits state from qBittorrent client {clientId}", _downloadClientConfig.Id);
+            _altSpeedLimitActive = false;
+        }
+
+        return _altSpeedLimitActive.Value;
+    }
+
     public override void Dispose()
     {
         _client.Dispose();

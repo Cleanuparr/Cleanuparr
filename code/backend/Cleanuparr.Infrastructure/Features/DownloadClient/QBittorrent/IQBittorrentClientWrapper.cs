@@ -20,4 +20,5 @@ public interface IQBittorrentClientWrapper : IDisposable
     Task SetTorrentCategoryAsync(IEnumerable<string> hashes, string category);
     Task SetFilePriorityAsync(string hash, int fileIndex, TorrentContentPriority priority);
     Task SetPreferencesAsync(Preferences preferences);
+    Task<bool> GetAlternativeSpeedLimitsEnabledAsync();
 }

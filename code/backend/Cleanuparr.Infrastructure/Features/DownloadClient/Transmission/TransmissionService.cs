@@ -19,6 +19,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 public partial class TransmissionService : DownloadService, ITransmissionService
 {
     private readonly ITransmissionClientWrapper _client;
+    private bool? _altSpeedLimitActive;
 
     private static readonly string[] Fields =
     [
@@ -177,6 +178,27 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         }
     }
     
+    protected override async Task<bool> IsAltSpeedLimitActiveAsync()
+    {
+        if (_altSpeedLimitActive is not null)
+        {
+            return _altSpeedLimitActive.Value;
+        }
+
+        try
+        {
+            SessionInfo? session = await _client.GetSessionInformationAsync();
+            _altSpeedLimitActive = session?.AlternativeSpeedEnabled is true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read alternate speed state from Transmission client {clientId}", _downloadClientConfig.Id);
+            _altSpeedLimitActive = false;
+        }
+
+        return _altSpeedLimitActive.Value;
+    }
+
     public override void Dispose()
     {
     }
