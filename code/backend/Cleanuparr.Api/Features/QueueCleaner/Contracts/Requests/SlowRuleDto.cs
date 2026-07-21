@@ -10,6 +10,8 @@ public sealed record SlowRuleDto : QueueRuleDto
     
     [Range(0, double.MaxValue, ErrorMessage = "Maximum time cannot be negative")]
     public double MaxTimeHours { get; set; } = 0;
-    
+
     public string? IgnoreAboveSize { get; set; }
+
+    public bool IgnoreWhileAltSpeedActive { get; set; } = false;
 }

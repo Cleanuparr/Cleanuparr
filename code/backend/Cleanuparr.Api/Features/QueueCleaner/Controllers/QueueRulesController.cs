@@ -244,6 +244,7 @@ public class QueueRulesController : ControllerBase
                 MinSpeed = ruleDto.MinSpeed?.Trim() ?? string.Empty,
                 MaxTimeHours = ruleDto.MaxTimeHours,
                 IgnoreAboveSize = ruleDto.IgnoreAboveSize,
+                IgnoreWhileAltSpeedActive = ruleDto.IgnoreWhileAltSpeedActive,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
                 ChangeCategory = ruleDto.ChangeCategory,
             };
@@ -305,6 +306,7 @@ public class QueueRulesController : ControllerBase
                 MinSpeed = ruleDto.MinSpeed?.Trim() ?? string.Empty,
                 MaxTimeHours = ruleDto.MaxTimeHours,
                 IgnoreAboveSize = ruleDto.IgnoreAboveSize,
+                IgnoreWhileAltSpeedActive = ruleDto.IgnoreWhileAltSpeedActive,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
                 ChangeCategory = ruleDto.ChangeCategory,
             };
