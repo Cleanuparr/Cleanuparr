@@ -13,5 +13,5 @@ public sealed record SlowRuleDto : QueueRuleDto
 
     public string? IgnoreAboveSize { get; set; }
 
-    public bool IgnoreWhileAltSpeedActive { get; set; } = false;
+    public bool IgnoreWhileAltSpeedActive { get; set; } = true;
 }

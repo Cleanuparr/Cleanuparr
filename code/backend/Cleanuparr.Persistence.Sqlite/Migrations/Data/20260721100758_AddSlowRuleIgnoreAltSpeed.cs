@@ -15,7 +15,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 table: "slow_rules",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
         }
 
         /// <inheritdoc />

@@ -71,7 +71,7 @@ export class SlowRuleModalComponent {
   private readonly defaults: SlowRuleFormModel = {
     name: '', enabled: true, maxStrikes: 3, minSpeed: '', maxTimeHours: 0,
     privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100,
-    ignoreAboveSize: '', resetOnProgress: false, ignoreWhileAltSpeedActive: false,
+    ignoreAboveSize: '', resetOnProgress: false, ignoreWhileAltSpeedActive: true,
     deletePrivate: false, changeCategory: false,
   };
   readonly model = signal<SlowRuleFormModel>({ ...this.defaults });

@@ -16,7 +16,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                 table: "slow_rules",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
         }
 
         /// <inheritdoc />

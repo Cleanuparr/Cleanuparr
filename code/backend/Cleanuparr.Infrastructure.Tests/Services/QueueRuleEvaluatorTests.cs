@@ -649,7 +649,7 @@ public class QueueRuleEvaluatorTests : IDisposable
             resetOnProgress: false,
             maxStrikes: 3,
             minSpeed: "5 MB",
-            maxTimeHours: 0);
+            maxTimeHours: 0) with { IgnoreWhileAltSpeedActive = false };
 
         ruleManager
             .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
