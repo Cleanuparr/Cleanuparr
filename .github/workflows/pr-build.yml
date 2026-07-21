@@ -137,11 +137,13 @@ jobs:
     steps:
       - name: Post result comment
         uses: actions/github-script@v9
+        env:
+          PR_REF: ${{ needs.validate.outputs.pr_ref }}
         with:
           script: |
             const buildResult = '${{ needs.build-windows.result }}';
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const prRef = '${{ needs.validate.outputs.pr_ref }}';
+            const prRef = process.env.PR_REF;
             const prSha = '${{ needs.validate.outputs.pr_sha }}';
             const shortSha = prSha.substring(0, 7);
 
