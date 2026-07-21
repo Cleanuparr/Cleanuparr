@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -195,7 +195,7 @@ jobs:
     
     steps:
       - name: Get vault secrets
-        uses: hashicorp/vault-action@v2
+        uses: hashicorp/vault-action@v4
         with:
           url: ${{ secrets.VAULT_HOST }}
           method: approle
@@ -205,20 +205,20 @@ jobs:
             secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
 
       - name: Download executable artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: executable-*
           path: ./artifacts
           merge-multiple: true
 
       - name: Download Windows installer
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: Cleanuparr-windows-installer
           path: ./artifacts
 
       - name: Download macOS installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: Cleanuparr-macos-*-installer
           path: ./artifacts
@@ -232,7 +232,7 @@ jobs:
           echo "Total files: $(find ./artifacts -type f \( -name "*.zip" -o -name "*.pkg" -o -name "*.exe" \) | wc -l)"
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ needs.validate.outputs.release_version }}
           tag_name: ${{ needs.validate.outputs.release_version }}

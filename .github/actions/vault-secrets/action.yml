@@ -21,7 +21,7 @@ runs:
   using: "composite"
   steps:
     - name: Get vault secrets
-      uses: hashicorp/vault-action@v2
+      uses: hashicorp/vault-action@v4
       with:
         url: ${{ inputs.vault_host }}
         method: approle

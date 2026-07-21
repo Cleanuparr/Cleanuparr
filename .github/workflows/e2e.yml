@@ -41,13 +41,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         timeout-minutes: 1
         with:
           persist-credentials: false
 
       - name: Get vault secrets
-        uses: hashicorp/vault-action@v2
+        uses: hashicorp/vault-action@v4
         with:
           url: ${{ secrets.VAULT_HOST }}
           method: approle
@@ -64,7 +64,7 @@ jobs:
           PACKAGES_PAT: ${{ env.PACKAGES_PAT }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 26
 
@@ -94,7 +94,7 @@ jobs:
         run: npx playwright test --project=${{ matrix.suite.name }}
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-test-results-${{ matrix.suite.name }}
