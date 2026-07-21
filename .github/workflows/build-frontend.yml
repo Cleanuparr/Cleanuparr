@@ -9,12 +9,15 @@ on:
         required: false
         default: ''
 
+permissions:
+  contents: read
+
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
       - name: Get vault secrets
-        uses: hashicorp/vault-action@v2
+        uses: hashicorp/vault-action@v4
         with:
           url: ${{ secrets.VAULT_HOST }}
           method: approle
@@ -24,7 +27,7 @@ jobs:
             secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         timeout-minutes: 1
         with:
           repository: ${{ github.repository }}
@@ -33,7 +36,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '26'
           cache: 'npm'
@@ -46,7 +49,7 @@ jobs:
           npm run build
 
       - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: code/frontend/dist/ui/browser

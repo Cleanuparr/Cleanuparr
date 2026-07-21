@@ -59,7 +59,7 @@ jobs:
           echo "executableName=Cleanuparr.Api" >> $GITHUB_ENV
 
       - name: Get vault secrets
-        uses: hashicorp/vault-action@v2
+        uses: hashicorp/vault-action@v4
         with:
           url: ${{ secrets.VAULT_HOST }}
           method: approle
@@ -70,7 +70,7 @@ jobs:
             secrets/data/github packages_pat | PACKAGES_PAT
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ env.githubRepository }}
           ref: ${{ github.ref_name }}
@@ -79,13 +79,13 @@ jobs:
           persist-credentials: false
 
       - name: Download frontend artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-dist
           path: code/frontend/dist/ui/browser
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.200
 
@@ -370,7 +370,7 @@ jobs:
           echo "pkgName=${pkg_name}" >> $GITHUB_ENV
 
       - name: Upload installer as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Cleanuparr-macos-${{ matrix.artifact_suffix }}-installer
           path: '${{ env.pkgName }}'

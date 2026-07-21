@@ -14,6 +14,9 @@ on:
         type: string
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,7 +35,7 @@ jobs:
           EOF
       
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
           workingDirectory: "status"

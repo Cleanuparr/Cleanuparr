@@ -22,6 +22,9 @@ on:
         description: 'Repository name without owner'
         value: ${{ jobs.version.outputs.repository_name }}
 
+permissions:
+  contents: read
+
 jobs:
   version:
     runs-on: ubuntu-latest
