@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -33,19 +34,32 @@ public class EventsContext : DbContext
 
     public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
 
-    public EventsContext()
+    private readonly IDatabaseProvider _provider;
+
+    public EventsContext() : this(DatabaseProviderFactory.Current)
     {
     }
-    
-    public EventsContext(DbContextOptions<EventsContext> options) : base(options)
+
+    public EventsContext(IDatabaseProvider provider)
+    {
+        _provider = provider;
+    }
+
+    public EventsContext(DbContextOptions<EventsContext> options) : this(options, DatabaseProviderFactory.Current)
     {
     }
-    
+
+    public EventsContext(DbContextOptions<EventsContext> options, IDatabaseProvider provider) : base(options)
+    {
+        _provider = provider;
+    }
+
     public static EventsContext CreateStaticInstance()
     {
-        var optionsBuilder = new DbContextOptionsBuilder<EventsContext>();
-        SetDbContextOptions(optionsBuilder);
-        return new EventsContext(optionsBuilder.Options);
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
+        DbContextOptionsBuilder<EventsContext> optionsBuilder = new();
+        provider.ConfigureContext(optionsBuilder, DbContextKind.Events);
+        return new EventsContext(optionsBuilder.Options, provider);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -55,21 +69,27 @@ public class EventsContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<UtcDateTimeOffsetConverter>();
+        _provider.ConfigureConventions(configurationBuilder);
     }
 
     public static string GetLikePattern(string input)
     {
-        input = input.Replace("[", "[[]")
-            .Replace("%", "[%]")
-            .Replace("_", "[_]");
-        
-        return $"%{input}%";
+        string escaped = input.ToLowerInvariant()
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
+
+        return $"%{escaped}%";
     }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        string? schema = _provider.GetSchema(DbContextKind.Events);
+        if (schema is not null)
+        {
+            modelBuilder.HasDefaultSchema(schema);
+        }
+
         modelBuilder.Entity<AppEvent>(entity =>
         {
             entity.HasOne(e => e.Strike)
@@ -95,7 +115,7 @@ public class EventsContext : DbContext
             // Partial unique index — resolved rows are exempt, so history/cooldown is unaffected.
             entity.HasIndex(e => new { e.Type, e.ItemHash })
                 .IsUnique()
-                .HasFilter("\"is_resolved\" = 0");
+                .HasFilter(_provider.GetUnresolvedEventFilter());
         });
 
         modelBuilder.Entity<SeekerHistory>(entity =>
@@ -150,17 +170,13 @@ public class EventsContext : DbContext
         }
     }
     
-    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
+    private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured)
         {
             return;
         }
-        
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "events.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+
+        _provider.ConfigureContext(optionsBuilder, DbContextKind.Events);
     }
-} 
+}

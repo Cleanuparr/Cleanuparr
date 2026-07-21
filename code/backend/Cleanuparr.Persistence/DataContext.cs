@@ -11,6 +11,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -84,21 +85,34 @@ public class DataContext : DbContext
 
     public DbSet<SeekerInstanceConfig> SeekerInstanceConfigs { get; set; }
 
-    public DataContext()
+    private readonly IDatabaseProvider _provider;
+
+    public DataContext() : this(DatabaseProviderFactory.Current)
     {
     }
 
-    public DataContext(DbContextOptions<DataContext> options) : base(options)
+    public DataContext(IDatabaseProvider provider)
+    {
+        _provider = provider;
+    }
+
+    public DataContext(DbContextOptions<DataContext> options) : this(options, DatabaseProviderFactory.Current)
     {
     }
-    
+
+    public DataContext(DbContextOptions<DataContext> options, IDatabaseProvider provider) : base(options)
+    {
+        _provider = provider;
+    }
+
     public static DataContext CreateStaticInstance()
     {
-        var optionsBuilder = new DbContextOptionsBuilder<DataContext>();
-        SetDbContextOptions(optionsBuilder);
-        return new DataContext(optionsBuilder.Options);
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
+        DbContextOptionsBuilder<DataContext> optionsBuilder = new();
+        provider.ConfigureContext(optionsBuilder, DbContextKind.Data);
+        return new DataContext(optionsBuilder.Options, provider);
     }
-    
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         SetDbContextOptions(optionsBuilder);
@@ -106,12 +120,17 @@ public class DataContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<UtcDateTimeOffsetConverter>();
+        _provider.ConfigureConventions(configurationBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        string? schema = _provider.GetSchema(DbContextKind.Data);
+        if (schema is not null)
+        {
+            modelBuilder.HasDefaultSchema(schema);
+        }
+
         modelBuilder.Entity<GeneralConfig>(entity =>
         {
             entity.ComplexProperty(e => e.Log, cp =>
@@ -151,6 +170,10 @@ public class DataContext : DbContext
                 cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
             });
             entity.ComplexProperty(e => e.Readarr, cp =>
+            {
+                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
+            });
+            entity.ComplexProperty(e => e.Whisparr, cp =>
             {
                 cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
             });
@@ -388,17 +411,13 @@ public class DataContext : DbContext
         }
     }
 
-    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
+    private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured)
         {
             return;
         }
 
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+        _provider.ConfigureContext(optionsBuilder, DbContextKind.Data);
     }
 }

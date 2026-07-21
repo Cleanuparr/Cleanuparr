@@ -21,6 +21,7 @@ For most users, we recommend the Docker installation method as it provides the m
 - [Docker Installation (Recommended)](#docker-installation-recommended)
   - [Docker Run Method](#docker-run)
   - [Docker Compose Method](#docker-compose)
+  - [Database](#database)
 - [Unraid](#unraid)
 - [Windows Installation](#windows-installation)
   - [Windows Installer](#windows-installer)
@@ -102,6 +103,13 @@ services:
 | `PGID` | 1000 | Group ID for file permissions |
 | `UMASK` | 022 | File creation mask |
 | `TZ` | Etc/UTC | Timezone setting |
+| `DATABASE_PROVIDER` | sqlite | See [Database](./database) for more info |
+| `POSTGRES_HOST` | *(required for postgres)* | See [Database](./database) for more info |
+| `POSTGRES_PORT` | 5432 | See [Database](./database) for more info |
+| `POSTGRES_USER` | *(required for postgres)* | See [Database](./database) for more info |
+| `POSTGRES_PASS` | *(required for postgres)* | See [Database](./database) for more info |
+| `POSTGRES_DB` | *(required for postgres)* | See [Database](./database) for more info |
+| `POSTGRES_EXTRA_PARAMS` | *(empty)* | See [Database](./database) for more info |
 
 ### Volume Mounts
 
@@ -114,6 +122,9 @@ services:
 Replace `/path/to/config` with your desired configuration directory path on the host system.
 </Note>
 
+### Database
+
+Cleanuparr uses SQLite by default, with the database files stored under `/config`. No configuration is needed for this. PostgreSQL is also supported. See the [Database](./database) page for configuration and data migration details.
 </div>
 
 <div className={styles.section}>

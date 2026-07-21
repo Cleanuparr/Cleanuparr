@@ -18,6 +18,7 @@ using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -28,6 +29,7 @@ public static class ServicesDI
             .AddScoped<EventsContext>()
             .AddScoped<DataContext>()
             .AddScoped<UsersContext>()
+            .AddSingleton<IDatabaseProvider>(_ => DatabaseProviderFactory.Current)
             .AddSingleton<IJwtService, JwtService>()
             .AddSingleton<IPasswordService, PasswordService>()
             .AddSingleton<ITotpService, TotpService>()

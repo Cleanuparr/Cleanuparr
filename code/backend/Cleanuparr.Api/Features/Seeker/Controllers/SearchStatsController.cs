@@ -183,7 +183,7 @@ public sealed class SearchStatsController : ControllerBase
         {
             string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(e => e.ItemTitle != null
-                && EF.Functions.Like(e.ItemTitle, pattern));
+                && EF.Functions.Like(e.ItemTitle.ToLower(), pattern, "\\"));
         }
 
         // Filter by search status (multi-valued)

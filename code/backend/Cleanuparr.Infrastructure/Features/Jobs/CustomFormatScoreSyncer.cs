@@ -5,6 +5,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private readonly ISonarrClient _sonarrClient;
     private readonly TimeProvider _timeProvider;
     private readonly IHubContext<AppHub> _hubContext;
+    private readonly IDatabaseProvider _databaseProvider;
 
     public CustomFormatScoreSyncer(
         ILogger<CustomFormatScoreSyncer> logger,
@@ -40,7 +42,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         TimeProvider timeProvider,
-        IHubContext<AppHub> hubContext)
+        IHubContext<AppHub> hubContext,
+        IDatabaseProvider databaseProvider)
     {
         _logger = logger;
         _dataContext = dataContext;
@@ -49,30 +52,25 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _sonarrClient = sonarrClient;
         _timeProvider = timeProvider;
         _hubContext = hubContext;
+        _databaseProvider = databaseProvider;
     }
 
     private async Task ConfigureSqliteCacheSizeAsync(CancellationToken cancellationToken)
     {
-        if (_eventsContext.Database.IsSqlite())
-        {
-            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-20000;", cancellationToken);
-        }
+        await _databaseProvider.PrepareBulkWriteAsync(_eventsContext.Database, cancellationToken);
     }
 
     private async Task CheckpointWalIfDueAsync(int flushedChunks, CancellationToken cancellationToken)
     {
-        if (_eventsContext.Database.IsSqlite() && flushedChunks % CheckpointIntervalChunks == 0)
+        if (flushedChunks % CheckpointIntervalChunks == 0)
         {
-            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
+            await _databaseProvider.CheckpointAsync(_eventsContext.Database, cancellationToken);
         }
     }
 
     private async Task CheckpointWalAsync(CancellationToken cancellationToken)
     {
-        if (_eventsContext.Database.IsSqlite())
-        {
-            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
-        }
+        await _databaseProvider.CheckpointAsync(_eventsContext.Database, cancellationToken);
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)

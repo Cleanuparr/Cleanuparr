@@ -138,11 +138,11 @@ public class SeekerConfigControllerTests : IDisposable
         });
         await _dataContext.SaveChangesAsync();
 
-        // Keep interval at default (3)
+        // Keep interval at default (10)
         var request = new UpdateSeekerConfigRequest
         {
             SearchEnabled = true,
-            SearchInterval = 3,
+            SearchInterval = 10,
             ProactiveSearchEnabled = true,
             Instances =
             [

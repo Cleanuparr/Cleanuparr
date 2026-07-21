@@ -108,7 +108,7 @@ public class JobHandlerFixture : IDisposable
     public IDownloadService CreateMockDownloadService(string clientName = "Test Client")
     {
         var mock = Substitute.For<IDownloadService>();
-        mock.ClientConfig.Returns(new Persistence.Models.Configuration.DownloadClientConfig
+        mock.ClientConfig.Returns(new Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig
         {
             Id = Guid.NewGuid(),
             Name = clientName,

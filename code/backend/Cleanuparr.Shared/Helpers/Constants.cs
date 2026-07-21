@@ -15,7 +15,7 @@ public static class Constants
         SlidingExpiration = TimeSpan.FromMinutes(10)
     };
 
-    public const ushort DefaultSearchIntervalMinutes = 3;
+    public const ushort DefaultSearchIntervalMinutes = 10;
     public const ushort MinSearchIntervalMinutes = 2;
     public const ushort MaxSearchIntervalMinutes = 360;
 

@@ -1,5 +1,5 @@
-using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,19 +23,32 @@ public class UsersContext : DbContext
     /// </summary>
     public DbSet<UserFeatureView> UserFeatureViews { get; set; }
 
-    public UsersContext()
+    private readonly IDatabaseProvider _provider;
+
+    public UsersContext() : this(DatabaseProviderFactory.Current)
     {
     }
 
-    public UsersContext(DbContextOptions<UsersContext> options) : base(options)
+    public UsersContext(IDatabaseProvider provider)
     {
+        _provider = provider;
+    }
+
+    public UsersContext(DbContextOptions<UsersContext> options) : this(options, DatabaseProviderFactory.Current)
+    {
+    }
+
+    public UsersContext(DbContextOptions<UsersContext> options, IDatabaseProvider provider) : base(options)
+    {
+        _provider = provider;
     }
 
     public static UsersContext CreateStaticInstance()
     {
-        var optionsBuilder = new DbContextOptionsBuilder<UsersContext>();
-        SetDbContextOptions(optionsBuilder);
-        return new UsersContext(optionsBuilder.Options);
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
+        DbContextOptionsBuilder<UsersContext> optionsBuilder = new();
+        provider.ConfigureContext(optionsBuilder, DbContextKind.Users);
+        return new UsersContext(optionsBuilder.Options, provider);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -45,12 +58,17 @@ public class UsersContext : DbContext
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        configurationBuilder.Properties<DateTimeOffset>()
-            .HaveConversion<UtcDateTimeOffsetConverter>();
+        _provider.ConfigureConventions(configurationBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        string? schema = _provider.GetSchema(DbContextKind.Users);
+        if (schema is not null)
+        {
+            modelBuilder.HasDefaultSchema(schema);
+        }
+
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasIndex(u => u.Username).IsUnique();
@@ -88,17 +106,13 @@ public class UsersContext : DbContext
         });
     }
 
-    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
+    private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
     {
         if (optionsBuilder.IsConfigured)
         {
             return;
         }
 
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "users.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+        _provider.ConfigureContext(optionsBuilder, DbContextKind.Users);
     }
 }

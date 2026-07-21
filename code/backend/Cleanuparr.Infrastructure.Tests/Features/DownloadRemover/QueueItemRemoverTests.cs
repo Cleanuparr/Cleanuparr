@@ -14,6 +14,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -56,7 +57,7 @@ public class QueueItemRemoverTests : IDisposable
 
         // Create a JobRun so event FK constraints are satisfied when events are saved
         _jobRunId = Guid.NewGuid();
-        _eventsContext.JobRuns.Add(new Persistence.Models.State.JobRun { Id = _jobRunId, Type = JobType.QueueCleaner });
+        _eventsContext.JobRuns.Add(new Cleanuparr.Persistence.Models.State.JobRun { Id = _jobRunId, Type = JobType.QueueCleaner });
         _eventsContext.SaveChanges();
         ContextProvider.SetJobRunId(_jobRunId);
 
@@ -76,7 +77,8 @@ public class QueueItemRemoverTests : IDisposable
             hubContext,
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
-            dryRunInterceptor);
+            dryRunInterceptor,
+            new SqliteDatabaseProvider());
 
         // Create in-memory DataContext with seeded SeekerConfig
         _dataContext = TestDataContextFactory.Create();

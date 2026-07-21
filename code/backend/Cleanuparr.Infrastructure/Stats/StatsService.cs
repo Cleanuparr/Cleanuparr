@@ -1,9 +1,9 @@
-using System.Globalization;
 using System.Text;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -18,17 +18,20 @@ public class StatsService : IStatsService
     private readonly EventsContext _eventsContext;
     private readonly IHealthCheckService _healthCheckService;
     private readonly IJobManagementService _jobManagementService;
+    private readonly IDatabaseProvider _databaseProvider;
 
     public StatsService(
         ILogger<StatsService> logger,
         EventsContext eventsContext,
         IHealthCheckService healthCheckService,
-        IJobManagementService jobManagementService)
+        IJobManagementService jobManagementService,
+        IDatabaseProvider databaseProvider)
     {
         _logger = logger;
         _eventsContext = eventsContext;
         _healthCheckService = healthCheckService;
         _jobManagementService = jobManagementService;
+        _databaseProvider = databaseProvider;
     }
 
     /// <inheritdoc />
@@ -226,8 +229,8 @@ public class StatsService : IStatsService
         };
         bool malwareOnly = metric == "malwareBlocked";
 
-        List<object> parameters = [cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture)];
-        StringBuilder where = new("WHERE timestamp >= {0}");
+        List<object> parameters = [cutoff];
+        StringBuilder where = new("WHERE \"timestamp\" >= {0}");
 
         if (types is not null)
         {
@@ -245,13 +248,16 @@ public class StatsService : IStatsService
 
         if (!includeDryRun)
         {
-            where.Append(" AND is_dry_run = 0");
+            where.Append($" AND is_dry_run = {{{parameters.Count}}}");
+            parameters.Add(false);
         }
 
-        string bucketExpr = TimelineBucketing.BucketExpr(size);
+        string bucketExpr = _databaseProvider.GetTimelineBucketExpr(size);
+        string? schema = _databaseProvider.GetSchema(DbContextKind.Events);
+        string eventsTable = schema is null ? "events" : $"{schema}.events";
         string sql = $"""
             SELECT {bucketExpr} AS "bucket", COUNT(*) AS "count"
-            FROM events
+            FROM {eventsTable}
             {where}
             GROUP BY {bucketExpr}
             """;

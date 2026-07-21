@@ -1,0 +1,108 @@
+---
+sidebar_position: 5
+---
+
+import { Note, Important, styles } from '@site/src/components/documentation';
+
+# Database
+
+Cleanuparr stores its data in either SQLite (default) or PostgreSQL. This page covers configuring the database backend and migrating existing data between them.
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+## SQLite (default)
+
+Cleanuparr uses SQLite by default, with the database files stored under `/config`. No configuration is needed for this.
+
+## PostgreSQL
+
+PostgreSQL can be used instead by setting `DATABASE_PROVIDER=postgres` plus the connection variables below:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_PROVIDER` | sqlite | Database backend to use: `sqlite` or `postgres` |
+| `POSTGRES_HOST` | *(required for postgres)* | PostgreSQL server hostname |
+| `POSTGRES_PORT` | 5432 | PostgreSQL server port |
+| `POSTGRES_USER` | *(required for postgres)* | PostgreSQL username |
+| `POSTGRES_PASS` | *(required for postgres)* | PostgreSQL password |
+| `POSTGRES_DB` | *(required for postgres)* | PostgreSQL database name |
+| `POSTGRES_EXTRA_PARAMS` | *(empty)* | Additional connection string parameters, semicolon-separated |
+
+Cleanuparr creates three schemas in the target database: `data`, `events` and `users`, one per internal database context, each with its own migration history.
+
+<Note>
+`DATABASE_PROVIDER` and the `POSTGRES_*` settings can also be supplied as keys in `cleanuparr.json` (non-Docker installs, see [Port and Base Path (Non-Docker)](./detailed#port-and-base-path-non-docker)) instead of environment variables, exactly like `PORT`, `BIND_ADDRESS` and `BASE_PATH`.
+</Note>
+
+Example with SSL enabled via `POSTGRES_EXTRA_PARAMS`:
+
+```bash
+docker run -d --name cleanuparr \
+  --restart unless-stopped \
+  -p 11011:11011 \
+  -v /path/to/config:/config \
+  -e DATABASE_PROVIDER=postgres \
+  -e POSTGRES_HOST=postgres.example.com \
+  -e POSTGRES_PORT=5432 \
+  -e POSTGRES_USER=cleanuparr \
+  -e POSTGRES_PASS=change-me \
+  -e POSTGRES_DB=cleanuparr \
+  -e "POSTGRES_EXTRA_PARAMS=SSL Mode=Require;Trust Server Certificate=true" \
+  ghcr.io/cleanuparr/cleanuparr:latest
+```
+
+A ready-to-use example is also available as [`docker-compose.postgres.yml`](https://github.com/Cleanuparr/Cleanuparr/blob/main/code/docker-compose.postgres.yml) in the repository.
+
+<Note>
+`/config` is still required when using PostgreSQL. It holds DataProtection keys, `cleanuparr.json` and log files. Only the `.db` files are no longer used.
+</Note>
+
+Existing SQLite installs are unaffected and can keep using SQLite indefinitely: switching to PostgreSQL is optional.
+
+## Migrating existing data from SQLite to PostgreSQL
+
+If you already have a SQLite install and want to move its data to PostgreSQL, Cleanuparr ships a `migrate-to-postgres` subcommand that copies every row from the SQLite databases into a fresh PostgreSQL target.
+
+1. Stop the Cleanuparr app or container. The migration reads the SQLite files directly and must not run while Cleanuparr is writing to them.
+2. Run the migration with the `POSTGRES_*` variables pointing at the target database.
+
+   **Docker**: run the same image with the `./Cleanuparr migrate-to-postgres` command and the `/config` volume mounted the same way as your normal install:
+
+```bash
+docker run --rm \
+  -v /path/to/config:/config \
+  -e DATABASE_PROVIDER=postgres \
+  -e POSTGRES_HOST=postgres.example.com \
+  -e POSTGRES_PORT=5432 \
+  -e POSTGRES_USER=cleanuparr \
+  -e POSTGRES_PASS=change-me \
+  -e POSTGRES_DB=cleanuparr \
+  ghcr.io/cleanuparr/cleanuparr:latest ./Cleanuparr migrate-to-postgres
+```
+
+   **Non-Docker (Windows, macOS, Linux portable)**: run the executable directly from its installation directory with the `migrate-to-postgres` argument. The `POSTGRES_*` values can be set as environment variables or added to `cleanuparr.json` (see [Port and Base Path (Non-Docker)](./detailed#port-and-base-path-non-docker)); the `config` directory beside the executable holds the SQLite files that are read.
+
+```bash
+# Windows
+Cleanuparr.exe migrate-to-postgres
+
+# macOS / Linux
+./Cleanuparr migrate-to-postgres
+```
+
+3. The command copies all three schemas (`data`, `events`, `users`) inside a single transaction and prints the row counts per table on success.
+4. Once the migration finishes, set `DATABASE_PROVIDER=postgres` (with the same `POSTGRES_*` variables) on your regular Cleanuparr container or service and start it as usual to run on PostgreSQL going forward.
+
+<Important>
+The migration refuses to run if the target PostgreSQL database already contains data, to avoid silently overwriting it. Pass `--force` at the end of the command to wipe and re-import anyway: `... ./Cleanuparr migrate-to-postgres --force`.
+</Important>
+
+<Note>
+The SQLite files under `/config` are only read, never modified or deleted, so they remain in place as a backup after the migration completes.
+</Note>
+
+</div>
+
+</div>

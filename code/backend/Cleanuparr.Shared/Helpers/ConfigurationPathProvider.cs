@@ -44,9 +44,16 @@ public static class ConfigurationPathProvider
         return _configPath;
     }
     
+    public const string ConfigFileName = "cleanuparr.json";
+
     public static string GetConfigPath()
     {
         return _configPath ?? InitializeConfigPath();
+    }
+
+    public static string GetConfigFilePath()
+    {
+        return Path.Combine(GetConfigPath(), ConfigFileName);
     }
 
     public static void SetConfigPath(string path)

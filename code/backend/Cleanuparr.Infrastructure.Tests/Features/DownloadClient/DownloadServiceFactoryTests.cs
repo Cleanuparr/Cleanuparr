@@ -17,6 +17,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -84,7 +85,8 @@ public class DownloadServiceFactoryTests : IDisposable
             hubContext,
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
-            Substitute.For<IDryRunInterceptor>()));
+            Substitute.For<IDryRunInterceptor>(),
+            new SqliteDatabaseProvider()));
 
         // BlocklistProvider requires specific constructor arguments
         var scopeFactory = Substitute.For<IServiceScopeFactory>();

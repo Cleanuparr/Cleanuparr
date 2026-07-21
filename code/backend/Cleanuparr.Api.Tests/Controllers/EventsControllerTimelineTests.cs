@@ -4,6 +4,7 @@ using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.Mvc;
 using Shouldly;
 
@@ -17,7 +18,7 @@ public class EventsControllerTimelineTests : IDisposable
     public EventsControllerTimelineTests()
     {
         _context = SeekerTestDataFactory.CreateEventsContext();
-        _controller = new EventsController(_context);
+        _controller = new EventsController(_context, new SqliteDatabaseProvider());
     }
 
     public void Dispose()

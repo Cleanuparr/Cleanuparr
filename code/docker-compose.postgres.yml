@@ -1,0 +1,49 @@
+# Example docker-compose for running Cleanuparr against PostgreSQL instead of the default SQLite.
+#
+# /config is still required even with PostgreSQL: it holds DataProtection keys, cleanuparr.json
+# and log files. Only the .db files are no longer used.
+#
+# To move data from an existing SQLite install to PostgreSQL, run the one-shot command
+# "migrate-to-postgres" (see the docs) before switching DATABASE_PROVIDER to postgres.
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cleanuparr
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: cleanuparr
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cleanuparr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr:latest
+    container_name: cleanuparr
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_PROVIDER: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: cleanuparr
+      POSTGRES_PASS: change-me
+      POSTGRES_DB: cleanuparr
+      PORT: 11011
+      PUID: 1000
+      PGID: 1000
+      UMASK: "022"
+      TZ: Etc/UTC
+    ports:
+      - "11011:11011"
+    volumes:
+      - ./config:/config
+
+volumes:
+  pgdata:
