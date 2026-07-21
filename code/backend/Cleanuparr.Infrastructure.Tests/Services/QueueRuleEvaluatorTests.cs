@@ -600,6 +600,113 @@ public class QueueRuleEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenAltSpeedActiveAndRuleOptsIn_ShouldNotStrike()
+    {
+        IQueueRuleManager ruleManager = Substitute.For<IQueueRuleManager>();
+        IStriker striker = Substitute.For<IStriker>();
+        ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        EventsContext context = CreateInMemoryEventsContext();
+
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+
+        SlowRule slowRule = CreateSlowRule(
+            name: "Ignore When Throttled",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            minSpeed: "5 MB",
+            maxTimeHours: 1) with { IgnoreWhileAltSpeedActive = true };
+
+        ruleManager
+            .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(slowRule);
+
+        ITorrentItemWrapper torrent = CreateTorrentMock();
+        torrent.DownloadSpeed.Returns(ByteSize.Parse("1 MB").Bytes); // below 5 MB threshold
+        torrent.Eta.Returns(7200); // above 1 hour threshold
+
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result =
+            await evaluator.EvaluateSlowRulesAsync(torrent, altSpeedActive: true);
+
+        result.ShouldRemove.ShouldBeFalse();
+        result.Reason.ShouldBe(DeleteReason.None);
+
+        await striker.DidNotReceive().StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowSpeed, Arg.Any<long?>());
+        await striker.DidNotReceive().StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowTime, Arg.Any<long?>());
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenAltSpeedActiveButRuleDoesNotOptIn_ShouldStrike()
+    {
+        IQueueRuleManager ruleManager = Substitute.For<IQueueRuleManager>();
+        IStriker striker = Substitute.For<IStriker>();
+        ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        EventsContext context = CreateInMemoryEventsContext();
+
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+
+        SlowRule slowRule = CreateSlowRule(
+            name: "Strike When Throttled",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            minSpeed: "5 MB",
+            maxTimeHours: 0);
+
+        ruleManager
+            .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(slowRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowSpeed, Arg.Any<long?>())
+            .Returns(false);
+
+        ITorrentItemWrapper torrent = CreateTorrentMock();
+        torrent.DownloadSpeed.Returns(ByteSize.Parse("1 MB").Bytes); // below 5 MB threshold
+
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result =
+            await evaluator.EvaluateSlowRulesAsync(torrent, altSpeedActive: true);
+
+        result.ShouldRemove.ShouldBeFalse();
+
+        await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", 3, StrikeType.SlowSpeed, Arg.Any<long?>());
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenRuleOptsInButAltSpeedInactive_ShouldStrike()
+    {
+        IQueueRuleManager ruleManager = Substitute.For<IQueueRuleManager>();
+        IStriker striker = Substitute.For<IStriker>();
+        ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        EventsContext context = CreateInMemoryEventsContext();
+
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+
+        SlowRule slowRule = CreateSlowRule(
+            name: "Opt In But Not Throttled",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            minSpeed: "5 MB",
+            maxTimeHours: 0) with { IgnoreWhileAltSpeedActive = true };
+
+        ruleManager
+            .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(slowRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowSpeed, Arg.Any<long?>())
+            .Returns(false);
+
+        ITorrentItemWrapper torrent = CreateTorrentMock();
+        torrent.DownloadSpeed.Returns(ByteSize.Parse("1 MB").Bytes); // below 5 MB threshold
+
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result =
+            await evaluator.EvaluateSlowRulesAsync(torrent, altSpeedActive: false);
+
+        result.ShouldRemove.ShouldBeFalse();
+
+        await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", 3, StrikeType.SlowSpeed, Arg.Any<long?>());
+    }
+
+    [Fact]
     public async Task EvaluateStallRulesAsync_WithResetDisabled_ShouldNotReset()
     {
         var ruleManager = Substitute.For<IQueueRuleManager>();

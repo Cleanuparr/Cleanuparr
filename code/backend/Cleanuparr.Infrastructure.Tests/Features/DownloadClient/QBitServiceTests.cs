@@ -834,6 +834,68 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             result.DeleteFromClient.ShouldBeFalse();
             result.ChangeCategory.ShouldBeTrue();
         }
+
+        [Fact]
+        public async Task SlowDownload_WhenAlternateSpeedActive_PassesAltSpeedActiveToEvaluator()
+        {
+            // Arrange
+            const string hash = "test-hash";
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo torrentInfo = new()
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                State = TorrentState.Downloading,
+                DownloadSpeed = 1000
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
+
+            TorrentProperties properties = new()
+            {
+                AdditionalData = new Dictionary<string, JToken>
+                {
+                    { "is_private", JToken.FromObject(false) }
+                }
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
+
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
+                {
+                    new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
+                });
+
+            _fixture.ClientWrapper
+                .GetAlternativeSpeedLimitsEnabledAsync()
+                .Returns(true);
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<bool>())
+                .Returns((false, DeleteReason.None, false, false));
+
+            _fixture.RuleEvaluator
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false, false));
+
+            // Act
+            await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            await _fixture.RuleEvaluator.Received(1)
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), true);
+        }
     }
 
     public class ShouldRemoveFromArrQueueAsync_StalledDownloadScenarios : QBitServiceTests
