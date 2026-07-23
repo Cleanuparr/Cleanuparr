@@ -89,6 +89,11 @@ public sealed record UpdateGeneralConfigRequest
             throw new ValidationException("HISTORY_RETENTION_DAYS must be less than or equal to 3650");
         }
 
+        if (config.ConnectivityCheckEnabled && config.ConnectivityCheckUrls.Count is 0)
+        {
+            throw new ValidationException("At least one connectivity check URL is required when the internet connectivity check is enabled");
+        }
+
         config.Log.Validate();
         config.Auth.Validate();
     }

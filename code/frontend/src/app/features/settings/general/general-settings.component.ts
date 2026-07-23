@@ -152,6 +152,13 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     min(p.logArchiveTimeLimitHours, 0, { message: 'Minimum value is 0' });
     max(p.logArchiveTimeLimitHours, 1440, { message: 'Maximum value is 1440 hours (60 days)' });
     validate(p.logArchiveTimeLimitHours, () => this.bothZeroError());
+
+    validate(p.connectivityCheckUrls, () => {
+      const m = this.model();
+      return m.connectivityCheckEnabled && m.connectivityCheckUrls.length === 0
+        ? { kind: 'required', message: 'Add at least one URL when the connectivity check is enabled' }
+        : undefined;
+    });
   });
 
   private bothZeroError() {

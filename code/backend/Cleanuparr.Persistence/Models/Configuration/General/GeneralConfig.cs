@@ -51,6 +51,11 @@ public sealed record GeneralConfig : IConfig
             throw new ValidationException($"{nameof(HttpTimeout)} must be greater than 0");
         }
 
+        if (ConnectivityCheckEnabled && ConnectivityCheckUrls.Count is 0)
+        {
+            throw new ValidationException("At least one connectivity check URL is required when the internet connectivity check is enabled");
+        }
+
         Log.Validate();
         Auth.Validate();
     }

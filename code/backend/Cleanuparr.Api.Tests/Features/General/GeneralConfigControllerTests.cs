@@ -129,6 +129,26 @@ public class GeneralConfigControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateGeneralConfig_ConnectivityCheckEnabledWithNoUrls_Throws()
+    {
+        // Arrange — connectivity check enabled but no URLs fails validation
+        var existing = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
+        var request = new UpdateGeneralConfigRequest
+        {
+            HttpTimeout = 60,
+            EncryptionKey = existing.EncryptionKey,
+            StrikeInactivityWindowHours = 24,
+            ConnectivityCheckEnabled = true,
+            ConnectivityCheckUrls = new List<string>(),
+            Log = MatchingLogRequest(existing.Log),
+            Auth = new UpdateAuthConfigRequest(),
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request, _eventsContext));
+    }
+
+    [Fact]
     public async Task PurgeAllStrikes_ReturnsDeletedCounts()
     {
         // Act

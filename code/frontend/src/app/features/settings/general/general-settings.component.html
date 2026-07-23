@@ -48,8 +48,9 @@
         <app-chip-input
           label="Connectivity Check URLs"
           placeholder="e.g. https://github.com or http://gluetun:9999"
-          hint="The check passes if at least one URL returns a successful (2xx) response. Gluetun users can point this at their health server (http://gluetun:9999)."
+          hint="The check passes if at least one URL returns a successful (2xx) response. Gluetun users can point this at their health server (http://<gluetun host>:9999)."
           [formField]="genForm.connectivityCheckUrls"
+          [error]="genForm.connectivityCheckUrls().errors()[0]?.message"
           helpKey="general:connectivityCheckUrls"
         />
       }
