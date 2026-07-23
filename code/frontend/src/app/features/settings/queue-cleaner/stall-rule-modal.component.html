@@ -29,11 +29,11 @@
         hint="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
         helpKey="queue-cleaner:stallRule.minimumProgress" />
     }
-    <app-toggle label="Change category instead of delete" [formField]="form.changeCategory"
+    <app-toggle class="full-width" label="Change category instead of delete" [formField]="form.changeCategory"
       hint="Changes the category to the post-import category set in your arr"
       helpKey="queue-cleaner:stallRule.changeCategory" />
     @if (!form.changeCategory().value()) {
-      <app-toggle label="Delete Private from Client" [formField]="form.deletePrivate" [forceDisabled]="form.deletePrivate().disabled()"
+      <app-toggle class="full-width" label="Delete Private from Client" [formField]="form.deletePrivate" [forceDisabled]="form.deletePrivate().disabled()"
         hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
         helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
     }
