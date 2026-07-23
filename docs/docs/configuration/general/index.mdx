@@ -183,7 +183,7 @@ Skips the Queue Cleaner run when your internet connection is down, so genuine do
 **Connectivity Check URLs:** the endpoints to probe. Use public hosts (e.g. `https://github.com`), an internal host on your network, or a mix.
 
 <Note>
-**Gluetun users:** if Cleanuparr shares a network with a VPN container and has no direct internet access, point the check at Gluetun's health server at `http://gluetun:9999` (returns `200` when healthy, `500` when down). See the [Gluetun healthcheck documentation](https://github.com/qdm12/gluetun-wiki/blob/main/setup/options/healthcheck.md) for how to configure and expose it.
+**Gluetun users:** if Cleanuparr shares a network with a VPN container and has no direct internet access, point the check at Gluetun's health server at `http://<gluetun host>:9999` (returns `200` when healthy, `500` when down). See the [Gluetun healthcheck documentation](https://github.com/qdm12/gluetun-wiki/blob/main/setup/options/healthcheck.md) for how to configure and expose it.
 </Note>
 
 </ConfigSection>
