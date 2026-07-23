@@ -101,6 +101,22 @@ public class ConnectivityCheckerTests
     }
 
     [Fact]
+    public async Task IsOnlineAsync_CallerCancelled_ThrowsInsteadOfReportingOffline()
+    {
+        _httpHandler.SetupResponse(HttpStatusCode.OK);
+        GeneralConfig config = new()
+        {
+            ConnectivityCheckEnabled = true,
+            ConnectivityCheckUrls = ["https://example.com"],
+        };
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => CreateChecker().IsOnlineAsync(config, cts.Token));
+    }
+
+    [Fact]
     public async Task IsOnlineAsync_FirstFailsSecondSucceeds_ReturnsTrue()
     {
         _httpHandler.SetupResponse((request, _) =>

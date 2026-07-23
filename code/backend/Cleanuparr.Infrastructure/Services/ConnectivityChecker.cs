@@ -46,10 +46,11 @@ public sealed class ConnectivityChecker : IConnectivityChecker
                 }
             });
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         return online;
     }
 

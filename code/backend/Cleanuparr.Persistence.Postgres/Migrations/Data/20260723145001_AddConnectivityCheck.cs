@@ -24,7 +24,8 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                 schema: "data",
                 table: "general_configs",
                 type: "text[]",
-                nullable: false);
+                nullable: false,
+                defaultValueSql: "'{}'::text[]");
         }
 
         /// <inheritdoc />
