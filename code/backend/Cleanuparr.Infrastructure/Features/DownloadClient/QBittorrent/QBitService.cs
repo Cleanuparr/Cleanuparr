@@ -167,8 +167,8 @@ public partial class QBitService : DownloadService, IQBitService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read alternate speed limits state from qBittorrent client {clientId}", _downloadClientConfig.Id);
-            _altSpeedLimitActive = false;
+            _logger.LogWarning(ex, "Failed to read alternate speed limits state from qBittorrent client {name}", _downloadClientConfig.Name);
+            throw;
         }
 
         return _altSpeedLimitActive.Value;

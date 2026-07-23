@@ -192,8 +192,8 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read alternate speed state from Transmission client {clientId}", _downloadClientConfig.Id);
-            _altSpeedLimitActive = false;
+            _logger.LogWarning(ex, "Failed to read alternate speed state from Transmission client {name}", _downloadClientConfig.Name);
+            throw;
         }
 
         return _altSpeedLimitActive.Value;
