@@ -30,7 +30,7 @@ public sealed class GeneralConfigTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("HttpTimeout must be greater than 0");
+        exception.Message.ShouldBe("HTTP_TIMEOUT must be greater than 0");
     }
 
     [Theory]
