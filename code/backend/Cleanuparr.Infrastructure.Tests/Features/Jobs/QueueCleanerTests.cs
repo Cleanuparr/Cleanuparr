@@ -223,6 +223,57 @@ public class QueueCleanerTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessInstanceAsync_SkipsDownloadsIgnoredByClientName()
+    {
+        // Arrange
+        var generalConfig = _fixture.DataContext.GeneralConfigs.First();
+        generalConfig.IgnoredDownloads = ["myDownloadClient"];
+        _fixture.DataContext.SaveChanges();
+
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "not-a-valid-hash",
+            DownloadClient = "myDownloadClient",
+            Title = "Ignored By Client",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        _logger.ReceivedLogContaining(LogLevel.Information, "download is ignored");
+    }
+
+    [Fact]
     public async Task ProcessInstanceAsync_SkipsAlreadyCachedDownloads()
     {
         // Arrange
