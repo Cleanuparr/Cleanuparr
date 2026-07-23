@@ -35,6 +35,7 @@ public sealed record QueueRecord
     public string TrackedDownloadState { get; init; }
     public List<TrackedDownloadStatusMessage>? StatusMessages { get; init; }
     public required string DownloadId { get; init; }
+    public string? DownloadClient { get; init; }
     public required string Protocol { get; init; }
     public required long Id { get; init; }
     public long SizeLeft { get; init; }
