@@ -62,7 +62,13 @@ Replacement search is always enabled when Search is on and cannot be disabled. W
 </p>
 
 <Note>
-Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle resets and starts over. For Sonarr, the cycle is tracked at the season level — each season of each series is treated as a separate entry.
+Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle resets and starts over.
+
+For Sonarr, the cycle is tracked at the season level; each season of each series is treated as a separate entry. Sonarr's searches are currently triggered per season, not per episode.
+</Note>
+
+<Note>
+For an item to be eligible, it has to be released digitally. For example, if the item is currently in cinemas, it will be skipped until it has a proper digital release.
 </Note>
 
 <ConfigSection
