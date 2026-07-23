@@ -245,7 +245,7 @@ public class QueueCleanerTests : IDisposable
         {
             Id = 1,
             DownloadId = "not-a-valid-hash",
-            DownloadClient = "myDownloadClient",
+            DownloadClient = "MYDOWNLOADCLIENT",
             Title = "Ignored By Client",
             Protocol = "torrent",
             SeriesId = 1,
