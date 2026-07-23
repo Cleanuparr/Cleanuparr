@@ -169,6 +169,25 @@ myDownloadClient
 
 </ConfigSection>
 
+<ConfigSection
+  title="Internet Connectivity Check"
+>
+
+Skips the Queue Cleaner run when your internet connection is down, so genuine downloads are not struck or removed while everything looks stalled, slow, or failed during an outage. Disabled by default.
+
+**How it works:**
+- Before each Queue Cleaner run, Cleanuparr sends an HTTP `GET` to each configured URL.
+- The check passes (considered online) as soon as **at least one** URL returns a successful `2xx` response.
+- If **every** URL is unreachable, the run is skipped and no strikes are added.
+
+**Connectivity Check URLs:** the endpoints to probe. Use public hosts (e.g. `https://github.com`), an internal host on your network, or a mix.
+
+<Note>
+**Gluetun users:** if Cleanuparr shares a network with a VPN container and has no direct internet access, point the check at Gluetun's health server at `http://gluetun:9999` (returns `200` when healthy, `500` when down). See the [Gluetun healthcheck documentation](https://github.com/qdm12/gluetun-wiki/blob/main/setup/options/healthcheck.md) for how to configure and expose it.
+</Note>
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>

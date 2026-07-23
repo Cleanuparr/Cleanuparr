@@ -29,6 +29,10 @@ public sealed record GeneralConfig : IConfig
 
     public List<string> IgnoredDownloads { get; set; } = [];
 
+    public bool ConnectivityCheckEnabled { get; set; }
+
+    public List<string> ConnectivityCheckUrls { get; set; } = [];
+
     public ushort StrikeInactivityWindowHours { get; set; } = 24;
 
     /// <summary>

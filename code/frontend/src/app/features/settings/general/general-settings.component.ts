@@ -39,6 +39,8 @@ interface GeneralSettingsFormModel {
   httpCertificateValidation: CertificateValidationType;
   statusCheckEnabled: boolean;
   ignoredDownloads: string[];
+  connectivityCheckEnabled: boolean;
+  connectivityCheckUrls: string[];
   strikeInactivityWindowHours: number | null;
   historyRetentionDays: number | null;
   authDisableLocalAuth: boolean;
@@ -96,6 +98,8 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     httpCertificateValidation: CertificateValidationType.Enabled,
     statusCheckEnabled: true,
     ignoredDownloads: [],
+    connectivityCheckEnabled: false,
+    connectivityCheckUrls: [],
     strikeInactivityWindowHours: 24,
     historyRetentionDays: 365,
     authDisableLocalAuth: false,
@@ -176,6 +180,8 @@ export class GeneralSettingsComponent implements HasPendingChanges {
           httpCertificateValidation: config.httpCertificateValidation,
           statusCheckEnabled: config.statusCheckEnabled,
           ignoredDownloads: config.ignoredDownloads ?? [],
+          connectivityCheckEnabled: config.connectivityCheckEnabled ?? false,
+          connectivityCheckUrls: config.connectivityCheckUrls ?? [],
           strikeInactivityWindowHours: config.strikeInactivityWindowHours,
           historyRetentionDays: config.historyRetentionDays,
           authDisableLocalAuth: config.auth?.disableAuthForLocalAddresses ?? false,
@@ -224,6 +230,8 @@ export class GeneralSettingsComponent implements HasPendingChanges {
       strikeInactivityWindowHours: m.strikeInactivityWindowHours ?? 24,
       historyRetentionDays: m.historyRetentionDays ?? 365,
       ignoredDownloads: m.ignoredDownloads,
+      connectivityCheckEnabled: m.connectivityCheckEnabled,
+      connectivityCheckUrls: m.connectivityCheckUrls,
       auth: {
         disableAuthForLocalAddresses: m.authDisableLocalAuth,
         trustForwardedHeaders: m.authTrustForwardedHeaders,

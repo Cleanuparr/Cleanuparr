@@ -25,6 +25,10 @@ public sealed record UpdateGeneralConfigRequest
 
     public List<string> IgnoredDownloads { get; init; } = [];
 
+    public bool ConnectivityCheckEnabled { get; init; }
+
+    public List<string> ConnectivityCheckUrls { get; init; } = [];
+
     public ushort StrikeInactivityWindowHours { get; init; } = 24;
 
     public ushort HistoryRetentionDays { get; init; } = 365;
@@ -43,6 +47,8 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.StatusCheckEnabled = StatusCheckEnabled;
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;
+        existingConfig.ConnectivityCheckEnabled = ConnectivityCheckEnabled;
+        existingConfig.ConnectivityCheckUrls = ConnectivityCheckUrls;
         existingConfig.StrikeInactivityWindowHours = StrikeInactivityWindowHours;
         existingConfig.HistoryRetentionDays = HistoryRetentionDays;
 

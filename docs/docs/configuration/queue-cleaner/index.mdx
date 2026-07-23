@@ -19,6 +19,10 @@ import {
 
 The Queue Cleaner monitors your *arr's queues and automatically removes downloads based on configurable criteria. This helps keep your queue clean and prevents problematic downloads from being stuck.
 
+<Note>
+To avoid striking genuine downloads during an internet outage, enable the [Internet Connectivity Check](../general/#internet-connectivity-check) in General settings. When it fails, the Queue Cleaner skips its run so no strikes are accumulated.
+</Note>
+
 <ElementNavigator />
 
 <div className={styles.documentationPage}>

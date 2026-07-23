@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -20,6 +21,8 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class QueueCleaner : GenericHandler
 {
+    private readonly IConnectivityChecker _connectivityChecker;
+
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
         DataContext dataContext,
@@ -28,16 +31,26 @@ public sealed class QueueCleaner : GenericHandler
         IArrClientFactory arrClientFactory,
         IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
-        IEventPublisher eventPublisher
+        IEventPublisher eventPublisher,
+        IConnectivityChecker connectivityChecker
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
     )
     {
+        _connectivityChecker = connectivityChecker;
     }
-    
+
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
     {
+        GeneralConfig generalConfig = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig));
+
+        if (!await _connectivityChecker.IsOnlineAsync(generalConfig, cancellationToken))
+        {
+            _logger.LogWarning($"skip {nameof(QueueCleaner)} run | no internet connectivity detected");
+            return;
+        }
+
         List<StallRule> stallRules = await _dataContext.StallRules
             .Where(r => r.Enabled)
             .OrderByDescending(r => r.MaxCompletionPercentage)
