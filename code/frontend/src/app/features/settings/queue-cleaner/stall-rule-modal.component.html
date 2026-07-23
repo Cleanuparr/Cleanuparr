@@ -20,7 +20,7 @@
       hint="Apply the rule to items with a completion percentage less than or equal to this value"
       [error]="form.maxCompletion().errors()[0]?.message"
       helpKey="queue-cleaner:stallRule.completionRange" />
-    <app-toggle label="Reset Strikes on Progress" [formField]="form.resetOnProgress"
+    <app-toggle class="full-width" label="Reset Strikes on Progress" [formField]="form.resetOnProgress"
       hint="Reset strike count when torrent shows progress"
       helpKey="queue-cleaner:stallRule.resetStrikesOnProgress" />
     @if (form.resetOnProgress().value()) {

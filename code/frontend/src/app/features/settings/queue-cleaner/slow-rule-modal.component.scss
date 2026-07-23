@@ -1,5 +1,3 @@
 @use 'settings-layout' as *;
 
 .form-grid { @include form-grid; }
-
-.full-row { grid-column: 1 / -1; }
