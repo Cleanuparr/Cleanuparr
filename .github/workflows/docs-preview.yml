@@ -43,6 +43,7 @@ jobs:
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: docs
           command: pages deploy build --project-name=cleanuparr-docs --branch=pull-${{ github.event.pull_request.number }}
 
