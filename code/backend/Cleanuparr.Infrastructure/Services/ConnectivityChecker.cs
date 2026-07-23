@@ -25,30 +25,57 @@ public sealed class ConnectivityChecker : IConnectivityChecker
         }
 
         using HttpClient client = _httpClientFactory.CreateClient();
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(ProbeTimeout);
 
-        foreach (string url in config.ConnectivityCheckUrls)
+        bool online = false;
+        ParallelOptions options = new()
         {
-            try
+            MaxDegreeOfParallelism = 5,
+            CancellationToken = cts.Token,
+        };
+
+        try
+        {
+            await Parallel.ForEachAsync(config.ConnectivityCheckUrls, options, async (url, token) =>
             {
-                using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(ProbeTimeout);
-
-                using HttpResponseMessage response = await client
-                    .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-
-                if (response.IsSuccessStatusCode)
+                if (await ProbeAsync(client, url, token))
                 {
-                    return true;
+                    online = true;
+                    await cts.CancelAsync();
                 }
-
-                _logger.LogDebug("connectivity probe returned {status} | {url}", (int)response.StatusCode, url);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogDebug(exception, "connectivity probe failed | {url}", url);
-            }
+            });
+        }
+        catch (OperationCanceledException)
+        {
         }
 
-        return false;
+        return online;
+    }
+
+    private async Task<bool> ProbeAsync(HttpClient client, string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using HttpResponseMessage response = await client
+                .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            _logger.LogDebug("Connectivity probe returned {status} | {url}", (int)response.StatusCode, url);
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "Connectivity probe failed | {url}", url);
+            return false;
+        }
     }
 }

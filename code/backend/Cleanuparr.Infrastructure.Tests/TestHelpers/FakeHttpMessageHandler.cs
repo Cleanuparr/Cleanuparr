@@ -34,13 +34,21 @@ public class FakeHttpMessageHandler : HttpMessageHandler
         _handler = (_, _) => throw exception;
     }
 
+    private readonly object _captureLock = new();
+
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        CapturedRequests.Add(request);
-        CapturedRequestBodies.Add(request.Content != null
+        string? body = request.Content != null
             ? await request.Content.ReadAsStringAsync(cancellationToken)
-            : null);
+            : null;
+
+        lock (_captureLock)
+        {
+            CapturedRequests.Add(request);
+            CapturedRequestBodies.Add(body);
+        }
+
         return await _handler(request, cancellationToken);
     }
 }
