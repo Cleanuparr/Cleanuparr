@@ -137,7 +137,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
@@ -195,7 +195,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
@@ -403,7 +403,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
@@ -665,7 +665,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Assert
             result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive()
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>());
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>());
         }
 
         [Fact]
@@ -720,7 +720,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Assert
             result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive()
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>());
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>());
         }
 
         [Fact]
@@ -766,7 +766,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((true, DeleteReason.SlowSpeed, true, false)); // Rule matched
 
             // Act
@@ -822,7 +822,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((true, DeleteReason.SlowSpeed, false, true));
 
             // Act
@@ -836,7 +836,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
         }
 
         [Fact]
-        public async Task SlowDownload_WhenAlternateSpeedActive_PassesAltSpeedActiveToEvaluator()
+        public async Task SlowDownload_WhenAlternateSpeedActive_PassesAltSpeedProbeToEvaluator()
         {
             // Arrange
             const string hash = "test-hash";
@@ -881,8 +881,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 .GetAlternativeSpeedLimitsEnabledAsync()
                 .Returns(true);
 
+            Func<Task<bool>>? capturedProbe = null;
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<bool>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Do<Func<Task<bool>>?>(probe => capturedProbe = probe))
                 .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
@@ -893,8 +894,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            await _fixture.RuleEvaluator.Received(1)
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), true);
+            capturedProbe.ShouldNotBeNull();
+            (await capturedProbe!()).ShouldBeTrue();
         }
     }
 
@@ -947,7 +948,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((false, DeleteReason.None, false, false));
 
             // Act
@@ -1130,7 +1131,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             await _fixture.RuleEvaluator.DidNotReceive()
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>()); // Skipped
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>()); // Skipped
             await _fixture.RuleEvaluator.Received(1)
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>());
         }
@@ -1178,7 +1179,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>(), Arg.Any<Func<Task<bool>>?>())
                 .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
