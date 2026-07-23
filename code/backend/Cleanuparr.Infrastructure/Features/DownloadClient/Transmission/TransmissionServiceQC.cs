@@ -107,7 +107,7 @@ public partial class TransmissionService
             return (false, DeleteReason.None, false, false);
         }
 
-        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
+        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper, IsAltSpeedLimitActiveAsync);
     }
 
     private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)

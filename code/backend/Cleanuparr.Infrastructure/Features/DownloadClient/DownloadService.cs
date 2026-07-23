@@ -64,6 +64,11 @@ public abstract class DownloadService : IDownloadService
         ContextProvider.SetDownloadClient(_downloadClientConfig);
     }
 
+    protected virtual Task<bool> IsAltSpeedLimitActiveAsync()
+    {
+        return Task.FromResult(false);
+    }
+
     public abstract void Dispose();
 
     public abstract Task LoginAsync();

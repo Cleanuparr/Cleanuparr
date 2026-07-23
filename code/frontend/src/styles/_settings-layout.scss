@@ -64,6 +64,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: var(--space-5);
+
+  > .full-width {
+    grid-column: 1 / -1;
+  }
 }
 
 @mixin form-actions {

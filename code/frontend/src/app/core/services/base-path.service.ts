@@ -12,9 +12,9 @@ export class ApplicationPathService {
 
   getDocumentationBaseUrl(): string {
     if (isDevMode()) {
-      return 'http://localhost:3000/Cleanuparr';
+      return 'http://localhost:3000';
     }
-    return 'https://cleanuparr.github.io/Cleanuparr';
+    return 'https://cleanuparr.github.io';
   }
 
   buildUrl(path: string): string {

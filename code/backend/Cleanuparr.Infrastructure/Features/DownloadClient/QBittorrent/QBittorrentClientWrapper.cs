@@ -53,6 +53,9 @@ public sealed class QBittorrentClientWrapper : IQBittorrentClientWrapper
     public Task SetPreferencesAsync(Preferences preferences)
         => _client.SetPreferencesAsync(preferences);
 
+    public Task<bool> GetAlternativeSpeedLimitsEnabledAsync()
+        => _client.GetAlternativeSpeedLimitsEnabledAsync();
+
     public void Dispose()
         => _client.Dispose();
 }

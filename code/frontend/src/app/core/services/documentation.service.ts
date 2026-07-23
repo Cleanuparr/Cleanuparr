@@ -40,6 +40,7 @@ export class DocumentationService {
       'slowRule.completionRange': 'slow-completion-percentage-range',
       'slowRule.ignoreAboveSize': 'slow-ignore-above-size',
       'slowRule.resetStrikesOnProgress': 'slow-reset-strikes-on-progress',
+      'slowRule.ignoreWhileAltSpeedActive': 'slow-ignore-while-alternate-speed-active',
       'slowRule.deletePrivateTorrentsFromClient': 'slow-delete-private-from-client',
       'slowRule.changeCategory': 'slow-change-category',
     },

@@ -8,6 +8,8 @@ public sealed record SlowRule : QueueRule
 {
     public bool ResetStrikesOnProgress { get; init; } = true;
     public double MaxTimeHours { get; init; } = 0;
+
+    public bool IgnoreWhileAltSpeedActive { get; init; } = true;
     
     public string MinSpeed { get; init; } = string.Empty;
     

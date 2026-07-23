@@ -1413,6 +1413,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("ignore_above_size");
 
+                    b.Property<bool>("IgnoreWhileAltSpeedActive")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("ignore_while_alt_speed_active");
+
                     b.Property<ushort>("MaxCompletionPercentage")
                         .HasColumnType("INTEGER")
                         .HasColumnName("max_completion_percentage");

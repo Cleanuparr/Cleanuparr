@@ -31,14 +31,17 @@
       placeholder="e.g. 25"
       hint="Downloads will be ignored if size exceeds this threshold"
       helpKey="queue-cleaner:slowRule.ignoreAboveSize" />
-    <app-toggle label="Reset Strikes on Progress" [formField]="form.resetOnProgress"
+    <app-toggle class="full-width" label="Reset Strikes on Progress" [formField]="form.resetOnProgress"
       hint="Reset strike count when torrent shows progress"
       helpKey="queue-cleaner:slowRule.resetStrikesOnProgress" />
-    <app-toggle label="Change category instead of delete" [formField]="form.changeCategory"
+    <app-toggle class="full-width" label="Ignore While Alternate Speed Active" [formField]="form.ignoreWhileAltSpeedActive"
+      hint="Skip this rule while the client's alternate speed limits are active. Only supported for qBittorrent and Transmission."
+      helpKey="queue-cleaner:slowRule.ignoreWhileAltSpeedActive" />
+    <app-toggle class="full-width" label="Change category instead of delete" [formField]="form.changeCategory"
       hint="Changes the category to the post-import category set in your arr"
       helpKey="queue-cleaner:slowRule.changeCategory" />
     @if (!form.changeCategory().value()) {
-      <app-toggle label="Delete Private from Client" [formField]="form.deletePrivate" [forceDisabled]="form.deletePrivate().disabled()"
+      <app-toggle class="full-width" label="Delete Private from Client" [formField]="form.deletePrivate" [forceDisabled]="form.deletePrivate().disabled()"
         hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
         helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
     }
