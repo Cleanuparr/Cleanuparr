@@ -48,7 +48,27 @@ public sealed record GeneralConfig : IConfig
     {
         if (HttpTimeout is 0)
         {
-            throw new ValidationException($"{nameof(HttpTimeout)} must be greater than 0");
+            throw new ValidationException("HTTP_TIMEOUT must be greater than 0");
+        }
+
+        if (StrikeInactivityWindowHours is 0)
+        {
+            throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be greater than 0");
+        }
+
+        if (StrikeInactivityWindowHours > 168)
+        {
+            throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be less than or equal to 168");
+        }
+
+        if (HistoryRetentionDays is 0)
+        {
+            throw new ValidationException("HISTORY_RETENTION_DAYS must be greater than 0");
+        }
+
+        if (HistoryRetentionDays > 3650)
+        {
+            throw new ValidationException("HISTORY_RETENTION_DAYS must be less than or equal to 3650");
         }
 
         if (ConnectivityCheckEnabled && ConnectivityCheckUrls.Count is 0)
