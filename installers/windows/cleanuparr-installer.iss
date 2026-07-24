@@ -59,6 +59,9 @@ Filename: "http://localhost:11011"; Description: "Open Cleanuparr Web Interface"
 Filename: "{app}\{#MyAppExeName}"; Description: "Run {#MyAppName} Application"; Flags: nowait postinstall skipifsilent; Check: not IsTaskSelected('installservice')
 
 [Code]
+var
+  DeleteUserData: Boolean;
+
 procedure LogInstaller(const Msg: string);
 var
   LogFile, Line: string;
@@ -208,13 +211,15 @@ end;
 function InitializeUninstall(): Boolean;
 begin
   Result := True;
+  DeleteUserData := False;
 
-  if ServiceExists('{#MyServiceName}') then
+  if not UninstallSilent() then
   begin
-    if MsgBox('Cleanuparr service will be stopped and removed. Continue with uninstallation?',
-              mbConfirmation, MB_YESNO) <> IDYES then
+    if MsgBox('Do you want to keep Cleanuparr''s configuration and logs?' + #13#10#13#10 +
+              'Click Yes to keep them, or No to delete all data.',
+              mbConfirmation, MB_YESNO) = IDNO then
     begin
-      Result := False;
+      DeleteUserData := True;
     end;
   end;
 end;
@@ -235,5 +240,14 @@ begin
       LogInstaller('Removed EventLog source key')
     else
       LogInstaller('EventLog source key not present');
+  end
+  else if CurUninstallStep = usPostUninstall then
+  begin
+    if DeleteUserData then
+    begin
+      LogInstaller('Deleting configuration and logs');
+      DelTree(ExpandConstant('{app}\config'), True, True, True);
+      DeleteFile(ExpandConstant('{app}\cleanuparr-installer.log'));
+    end;
   end;
 end;
