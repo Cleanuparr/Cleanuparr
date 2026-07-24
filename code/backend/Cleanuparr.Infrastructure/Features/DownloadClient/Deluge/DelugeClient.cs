@@ -199,7 +199,17 @@ public sealed class DelugeClient
 
         string responseJson = await PostJson(requestJson);
 
-        DelugeResponse<T>? webResponse = JsonSerializer.Deserialize<DelugeResponse<T>>(responseJson, CleanuparrJsonOptions.ExternalApiRead);
+        DelugeResponse<T>? webResponse;
+
+        try
+        {
+            webResponse = JsonSerializer.Deserialize<DelugeResponse<T>>(responseJson, CleanuparrJsonOptions.ExternalApiRead);
+        }
+        catch (JsonException exception)
+        {
+            string truncated = responseJson.Length > 2000 ? responseJson[..2000] : responseJson;
+            throw new DelugeClientException($"failed to deserialize Deluge response for method '{webRequest.Method}': {truncated}", exception);
+        }
 
         if (webResponse?.Error != null)
         {
