@@ -52,13 +52,6 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\favicon.ico"; Tasks: desktopicon
 
 [Run]
-; Create service only if it doesn't exist (fresh install)
-Filename: "{sys}\sc.exe"; Parameters: "create ""{#MyServiceName}"" binPath= ""\""{app}\{#MyAppExeName}\"""" DisplayName= ""{#MyAppName}"" start= auto"; Tasks: installservice; Flags: runhidden; Check: not ServiceExists('{#MyServiceName}')
-Filename: "{sys}\sc.exe"; Parameters: "description ""{#MyServiceName}"" ""Cleanuparr download management service"""; Tasks: installservice; Flags: runhidden; Check: not ServiceExists('{#MyServiceName}')
-
-; Start service (both fresh install and update)
-Filename: "{sys}\sc.exe"; Parameters: "start ""{#MyServiceName}"""; Tasks: installservice; Flags: runhidden
-
 ; Open web interface
 Filename: "http://localhost:11011"; Description: "Open Cleanuparr Web Interface"; Flags: postinstall shellexec nowait; Check: IsTaskSelected('installservice')
 
@@ -158,24 +151,48 @@ begin
   LogInstaller('WARNING: service ' + Name + ' still present after 10 delete attempts');
 end;
 
+procedure CreateOrUpdateService();
+var
+  ResultCode: Integer;
+begin
+  if not IsTaskSelected('installservice') then
+    Exit;
+
+  if ServiceExists('{#MyServiceName}') then
+  begin
+    LogInstaller('Refreshing existing service definition');
+    Exec(ExpandConstant('{sys}\sc.exe'), ExpandConstant('config "{#MyServiceName}" binPath= "\"{app}\{#MyAppExeName}\"" start= auto'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end
+  else
+  begin
+    LogInstaller('Creating service');
+    Exec(ExpandConstant('{sys}\sc.exe'), ExpandConstant('create "{#MyServiceName}" binPath= "\"{app}\{#MyAppExeName}\"" DisplayName= "{#MyAppName}" start= auto'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
+
+  Exec(ExpandConstant('{sys}\sc.exe'), 'description "{#MyServiceName}" "Cleanuparr download management service"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  LogInstaller('Starting service');
+  Exec(ExpandConstant('{sys}\sc.exe'), 'start "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
 begin
   Result := True;
-  
-  // If service exists and is running, stop it for the update
+
   if ServiceExists('{#MyServiceName}') and IsServiceRunning('{#MyServiceName}') then
   begin
-    if MsgBox('Cleanuparr service is currently running and needs to be stopped for the installation. Continue?', 
+    if MsgBox('Cleanuparr service is currently running and needs to be stopped for the installation. Continue?',
               mbConfirmation, MB_YESNO) = IDYES then
     begin
+      LogInstaller('Stopping running service for update');
       Exec(ExpandConstant('{sys}\sc.exe'), 'stop "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      
+
       if not WaitForServiceStop('{#MyServiceName}', 30) then
       begin
-        MsgBox('Warning: Service took longer than expected to stop. Installation will continue but you may need to restart the service manually.', 
-               mbInformation, MB_OK);
+        LogInstaller('Service did not stop in time, force-killing ' + ExpandConstant('{#MyAppExeName}'));
+        Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /im "' + ExpandConstant('{#MyAppExeName}') + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
       end;
     end
     else
@@ -197,6 +214,12 @@ begin
       Result := False;
     end;
   end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    CreateOrUpdateService();
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
