@@ -115,15 +115,59 @@ begin
   Result := False;
 end;
 
+function GetServicePid(const Name: string): string;
+var
+  ResultCode: Integer;
+  TempFile: string;
+  Output: AnsiString;
+begin
+  Result := '';
+  TempFile := ExpandConstant('{tmp}\service_pid.txt');
+
+  if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+          '-Command "(Get-CimInstance Win32_Service | Where-Object { $_.Name -eq ''' + Name + ''' }).ProcessId" > "' + TempFile + '"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+  begin
+    if LoadStringFromFile(TempFile, Output) then
+      Result := Trim(String(Output));
+    DeleteFile(TempFile);
+  end;
+end;
+
+procedure ForceKillByPidOrImage(const Pid: string);
+var
+  ResultCode: Integer;
+begin
+  if Pid = '0' then
+  begin
+    LogInstaller('Service reported no process, skipping force-kill');
+    Exit;
+  end;
+
+  if Pid <> '' then
+  begin
+    LogInstaller('Force-killing service PID ' + Pid);
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /pid ' + Pid, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end
+  else
+  begin
+    LogInstaller('Service PID unresolved, force-killing by image name ' + ExpandConstant('{#MyAppExeName}'));
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /im "' + ExpandConstant('{#MyAppExeName}') + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
+end;
+
 procedure StopAndDeleteService(const Name: string);
 var
   ResultCode, i: Integer;
+  Pid: string;
 begin
   if not ServiceExists(Name) then
   begin
     LogInstaller('Service ' + Name + ' not present, nothing to remove');
     Exit;
   end;
+
+  Pid := GetServicePid(Name);
 
   if IsServiceRunning(Name) then
   begin
@@ -133,8 +177,7 @@ begin
       LogInstaller('WARNING: service did not report STOPPED within 30s');
   end;
 
-  LogInstaller('Force-killing ' + ExpandConstant('{#MyAppExeName}'));
-  Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /im "' + ExpandConstant('{#MyAppExeName}') + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  ForceKillByPidOrImage(Pid);
 
   for i := 1 to 10 do
   begin
@@ -146,7 +189,7 @@ begin
     end;
     Sleep(1000);
   end;
-  LogInstaller('WARNING: service ' + Name + ' still present after 10 delete attempts');
+  LogInstaller('WARNING: service ' + Name + ' still present after 10 delete attempts (last sc delete ResultCode=' + IntToStr(ResultCode) + ')');
 end;
 
 procedure CreateOrUpdateService();
@@ -197,6 +240,7 @@ end;
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
+  Pid: string;
 begin
   Result := True;
 
@@ -205,13 +249,14 @@ begin
     if MsgBox('Cleanuparr service is currently running and needs to be stopped for the installation. Continue?',
               mbConfirmation, MB_YESNO) = IDYES then
     begin
+      Pid := GetServicePid('{#MyServiceName}');
       LogInstaller('Stopping running service for update');
       Exec(ExpandConstant('{sys}\sc.exe'), 'stop "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
       if not WaitForServiceStop('{#MyServiceName}', 30) then
       begin
-        LogInstaller('Service did not stop in time, force-killing ' + ExpandConstant('{#MyAppExeName}'));
-        Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /im "' + ExpandConstant('{#MyAppExeName}') + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        LogInstaller('Service did not stop in time');
+        ForceKillByPidOrImage(Pid);
       end;
     end
     else
