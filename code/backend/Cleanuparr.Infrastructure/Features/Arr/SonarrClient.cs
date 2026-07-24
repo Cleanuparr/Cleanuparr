@@ -8,8 +8,9 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Series = Cleanuparr.Domain.Entities.Sonarr.Series;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
@@ -61,7 +62,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         {
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
             request.Content = new StringContent(
-                JsonConvert.SerializeObject(command, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
                 Encoding.UTF8,
                 "application/json"
             );
@@ -234,11 +235,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
         
-        using Stream stream = await response.Content.ReadAsStreamAsync();
-        using StreamReader sr = new(stream);
-        using JsonTextReader reader = new(sr);
-        JsonSerializer serializer = JsonSerializer.CreateDefault();
-        return serializer.Deserialize<List<Tag>>(reader) ?? [];
+        return await DeserializeStreamAsync<List<Tag>>(response) ?? [];
     }
 
     public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)

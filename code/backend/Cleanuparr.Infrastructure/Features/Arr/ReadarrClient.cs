@@ -6,8 +6,9 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
@@ -62,7 +63,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
         
         using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
         request.Content = new StringContent(
-            JsonConvert.SerializeObject(command),
+            JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
             Encoding.UTF8,
             "application/json"
         );

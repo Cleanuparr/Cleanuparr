@@ -9,7 +9,9 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Cleanuparr.Infrastructure.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
@@ -143,7 +145,7 @@ public abstract class ArrClient : IArrClient
             _logger.LogInformation(
                 "Item {title} has failed import status with the following reason(s):\n{messages}",
                 record.Title,
-                string.Join("\n",  record.StatusMessages?.Select(JsonConvert.SerializeObject) ?? [])
+                string.Join("\n",  record.StatusMessages?.Select(m => JsonSerializer.Serialize(m, CleanuparrJsonOptions.Outbound)) ?? [])
             );
             
             return await _striker.StrikeAndCheckLimit(
@@ -307,10 +309,8 @@ public abstract class ArrClient : IArrClient
     
     protected static async Task<T?> DeserializeStreamAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
-        using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using StreamReader sr = new(stream);
-        using JsonTextReader reader = new(sr);
-        return JsonSerializer.CreateDefault().Deserialize<T>(reader);
+        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await JsonSerializer.DeserializeAsync<T>(stream, CleanuparrJsonOptions.ExternalApiRead, cancellationToken);
     }
 
     protected static async Task<long?> ReadCommandIdAsync(HttpResponseMessage response)
@@ -321,7 +321,7 @@ public abstract class ArrClient : IArrClient
 
     private sealed class CommandIdResponse
     {
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public long? Id { get; init; }
     }
 
