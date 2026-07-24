@@ -61,11 +61,9 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Run {#MyAppName} Application"; 
 [Code]
 procedure LogInstaller(const Msg: string);
 var
-  LogDir, LogFile, Line: string;
+  LogFile, Line: string;
 begin
-  LogDir := ExpandConstant('{app}\config\logs');
-  ForceDirectories(LogDir);
-  LogFile := LogDir + '\cleanuparr-installer.log';
+  LogFile := ExpandConstant('{app}\cleanuparr-installer.log');
   Line := '[' + GetDateTimeString('yyyy/mm/dd hh:nn:ss', '-', ':') + '] ' + Msg + #13#10;
   SaveStringToFile(LogFile, Line, True);
 end;
