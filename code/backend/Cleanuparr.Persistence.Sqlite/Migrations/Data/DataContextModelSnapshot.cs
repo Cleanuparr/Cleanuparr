@@ -319,6 +319,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
+                    b.Property<double>("MaxInactiveDays")
+                        .HasColumnType("REAL")
+                        .HasColumnName("max_inactive_days");
+
                     b.Property<double>("MaxRatio")
                         .HasColumnType("REAL")
                         .HasColumnName("max_ratio");
