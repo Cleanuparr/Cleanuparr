@@ -78,23 +78,10 @@ end;
 function IsServiceRunning(ServiceName: string): Boolean;
 var
   ResultCode: Integer;
-  TempFile: string;
-  StatusOutput: AnsiString;
 begin
-  Result := False;
-  TempFile := ExpandConstant('{tmp}\service_status.txt');
-  
-  // Use PowerShell to get service status
-  if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), 
-          '-Command "try { (Get-Service -Name ''' + ServiceName + ''' -ErrorAction Stop).Status } catch { ''NotFound'' }" > "' + TempFile + '"', 
-          '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
-  begin
-    if LoadStringFromFile(TempFile, StatusOutput) then
-    begin
-      Result := (Pos('Running', StatusOutput) > 0);
-    end;
-    DeleteFile(TempFile);
-  end;
+  Result := Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+                 '-Command "if ((Get-Service -Name ''' + ServiceName + ''' -ErrorAction SilentlyContinue).Status -eq ''Running'') { exit 0 } else { exit 1 }"',
+                 '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
 function WaitForServiceStop(ServiceName: string; TimeoutSeconds: Integer): Boolean;
@@ -115,51 +102,9 @@ begin
   Result := False;
 end;
 
-function GetServicePid(const Name: string): string;
-var
-  ResultCode: Integer;
-  TempFile: string;
-  Output: AnsiString;
-begin
-  Result := '';
-  TempFile := ExpandConstant('{tmp}\service_pid.txt');
-
-  if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-          '-Command "(Get-CimInstance Win32_Service | Where-Object { $_.Name -eq ''' + Name + ''' }).ProcessId" > "' + TempFile + '"',
-          '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
-  begin
-    if LoadStringFromFile(TempFile, Output) then
-      Result := Trim(String(Output));
-    DeleteFile(TempFile);
-  end;
-end;
-
-procedure ForceKillByPidOrImage(const Pid: string);
-var
-  ResultCode: Integer;
-begin
-  if Pid = '0' then
-  begin
-    LogInstaller('Service reported no process, skipping force-kill');
-    Exit;
-  end;
-
-  if Pid <> '' then
-  begin
-    LogInstaller('Force-killing service PID ' + Pid);
-    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /pid ' + Pid, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  end
-  else
-  begin
-    LogInstaller('Service PID unresolved, force-killing by image name ' + ExpandConstant('{#MyAppExeName}'));
-    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /im "' + ExpandConstant('{#MyAppExeName}') + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  end;
-end;
-
 procedure StopAndDeleteService(const Name: string);
 var
   ResultCode, i: Integer;
-  Pid: string;
 begin
   if not ServiceExists(Name) then
   begin
@@ -167,17 +112,13 @@ begin
     Exit;
   end;
 
-  Pid := GetServicePid(Name);
+  LogInstaller('Stopping service ' + Name);
+  Exec(ExpandConstant('{sys}\sc.exe'), 'stop "' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if not WaitForServiceStop(Name, 30) then
+    LogInstaller('WARNING: service did not report STOPPED within 30s');
 
-  if IsServiceRunning(Name) then
-  begin
-    LogInstaller('Stopping service ' + Name);
-    Exec(ExpandConstant('{sys}\sc.exe'), 'stop "' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    if not WaitForServiceStop(Name, 30) then
-      LogInstaller('WARNING: service did not report STOPPED within 30s');
-  end;
-
-  ForceKillByPidOrImage(Pid);
+  LogInstaller('Force-killing the service process');
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /fi "SERVICES eq ' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   for i := 1 to 10 do
   begin
@@ -240,7 +181,6 @@ end;
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
-  Pid: string;
 begin
   Result := True;
 
@@ -249,14 +189,13 @@ begin
     if MsgBox('Cleanuparr service is currently running and needs to be stopped for the installation. Continue?',
               mbConfirmation, MB_YESNO) = IDYES then
     begin
-      Pid := GetServicePid('{#MyServiceName}');
       LogInstaller('Stopping running service for update');
       Exec(ExpandConstant('{sys}\sc.exe'), 'stop "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
       if not WaitForServiceStop('{#MyServiceName}', 30) then
       begin
-        LogInstaller('Service did not stop in time');
-        ForceKillByPidOrImage(Pid);
+        LogInstaller('Service did not stop in time, force-killing the service process');
+        Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /fi "SERVICES eq {#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
       end;
     end
     else
