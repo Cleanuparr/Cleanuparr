@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.UTorrent.Response;
 
@@ -11,8 +12,8 @@ public sealed class FileListResponse
     /// <summary>
     /// Raw file data from the API
     /// </summary>
-    [JsonProperty(PropertyName = "files")]
-    public object[]? FilesRaw { get; set; }
+    [JsonPropertyName("files")]
+    public JsonElement[]? FilesRaw { get; set; }
 
     /// <summary>
     /// Torrent hash for which files are listed
