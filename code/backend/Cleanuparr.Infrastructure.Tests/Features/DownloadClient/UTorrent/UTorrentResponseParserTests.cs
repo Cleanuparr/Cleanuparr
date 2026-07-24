@@ -51,6 +51,33 @@ public class UTorrentResponseParserTests
     }
 
     [Fact]
+    public void ParseTorrentList_NumericFieldsAsStrings_StillParsed()
+    {
+        // Arrange — some µTorrent builds send numeric fields as quoted strings
+        const string json = """
+        {
+            "build": 45816,
+            "torrents": [
+                ["HASH123", "137", "Ubuntu.iso", "1024000", "1000", "1024000", "0", "1000", "0", "0", "-1", "linux",
+                 "5", "50", "5", "50", "1", "0", "0", "", "", "", "stream-id", "1700000000", "1700001000", "", "/downloads"]
+            ],
+            "label": []
+        }
+        """;
+
+        // Act
+        var response = _parser.ParseTorrentList(json);
+
+        // Assert
+        var torrent = response.Torrents.ShouldHaveSingleItem();
+        torrent.Status.ShouldBe(137);
+        torrent.Size.ShouldBe(1024000);
+        torrent.Progress.ShouldBe(1000);
+        torrent.ETA.ShouldBe(-1);
+        torrent.DateAdded.ShouldBe(1700000000);
+    }
+
+    [Fact]
     public void ParseTorrentList_EmptyTorrentsAndLabels_ReturnsEmptyLists()
     {
         // Arrange
@@ -136,6 +163,22 @@ public class UTorrentResponseParserTests
         response.Files[0].Priority.ShouldBe(0);
         response.Files[1].Name.ShouldBe("sub.srt");
         response.Files[1].Priority.ShouldBe(1);
+    }
+
+    [Fact]
+    public void ParseFileList_NumericFieldsAsStrings_StillParsed()
+    {
+        // Arrange
+        const string json = """{"files": ["HASH123", [["movie.mkv", "1000", "500", "0"]]]}""";
+
+        // Act
+        var response = _parser.ParseFileList(json);
+
+        // Assert
+        var file = response.Files.ShouldHaveSingleItem();
+        file.Size.ShouldBe(1000);
+        file.Downloaded.ShouldBe(500);
+        file.Priority.ShouldBe(0);
     }
 
     [Fact]

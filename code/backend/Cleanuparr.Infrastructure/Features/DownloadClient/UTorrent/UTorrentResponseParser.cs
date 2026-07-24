@@ -19,6 +19,10 @@ public class UTorrentResponseParser : IUTorrentResponseParser
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    private static long AsInt64(JsonElement element) => element.Deserialize<long>(CleanuparrJsonOptions.ExternalApiRead);
+
+    private static int AsInt32(JsonElement element) => element.Deserialize<int>(CleanuparrJsonOptions.ExternalApiRead);
+
     /// <inheritdoc/>
     public TorrentListResponse ParseTorrentList(string json)
     {
@@ -41,30 +45,30 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                         response.Torrents.Add(new UTorrentItem
                         {
                             Hash = data[0].GetString() ?? string.Empty,
-                            Status = data[1].GetInt32(),
+                            Status = AsInt32(data[1]),
                             Name = data[2].GetString() ?? string.Empty,
-                            Size = data[3].GetInt64(),
-                            Progress = data[4].GetInt32(),
-                            Downloaded = data[5].GetInt64(),
-                            Uploaded = data[6].GetInt64(),
-                            RatioRaw = data[7].GetInt32(),
-                            UploadSpeed = data[8].GetInt32(),
-                            DownloadSpeed = data[9].GetInt32(),
-                            ETA = data[10].GetInt32(),
+                            Size = AsInt64(data[3]),
+                            Progress = AsInt32(data[4]),
+                            Downloaded = AsInt64(data[5]),
+                            Uploaded = AsInt64(data[6]),
+                            RatioRaw = AsInt32(data[7]),
+                            UploadSpeed = AsInt32(data[8]),
+                            DownloadSpeed = AsInt32(data[9]),
+                            ETA = AsInt32(data[10]),
                             Label = data[11].GetString() ?? string.Empty,
-                            PeersConnected = data[12].GetInt32(),
-                            PeersInSwarm = data[13].GetInt32(),
-                            SeedsConnected = data[14].GetInt32(),
-                            SeedsInSwarm = data[15].GetInt32(),
-                            Availability = data[16].GetInt32(),
-                            QueueOrder = data[17].GetInt32(),
-                            Remaining = data[18].GetInt64(),
+                            PeersConnected = AsInt32(data[12]),
+                            PeersInSwarm = AsInt32(data[13]),
+                            SeedsConnected = AsInt32(data[14]),
+                            SeedsInSwarm = AsInt32(data[15]),
+                            Availability = AsInt32(data[16]),
+                            QueueOrder = AsInt32(data[17]),
+                            Remaining = AsInt64(data[18]),
                             DownloadUrl = data[19].GetString() ?? string.Empty,
                             RssFeedUrl = data[20].GetString() ?? string.Empty,
                             StatusMessage = data[21].GetString() ?? string.Empty,
                             StreamId = data[22].GetString() ?? string.Empty,
-                            DateAdded = data[23].GetInt64(),
-                            DateCompleted = data[24].GetInt64(),
+                            DateAdded = AsInt64(data[23]),
+                            DateCompleted = AsInt64(data[24]),
                             AppUpdateUrl = data[25].GetString() ?? string.Empty,
                             SavePath = data[26].GetString() ?? string.Empty
                         });
@@ -137,9 +141,9 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                                 response.Files.Add(new UTorrentFile
                                 {
                                     Name = fileData[0].GetString() ?? string.Empty,
-                                    Size = fileData[1].GetInt64(),
-                                    Downloaded = fileData[2].GetInt64(),
-                                    Priority = fileData[3].GetInt32(),
+                                    Size = AsInt64(fileData[1]),
+                                    Downloaded = AsInt64(fileData[2]),
+                                    Priority = AsInt32(fileData[3]),
                                 });
                             }
                         }
