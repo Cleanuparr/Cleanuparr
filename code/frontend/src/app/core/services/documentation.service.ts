@@ -84,6 +84,7 @@ export class DocumentationService {
       'minSeedTime': 'min-seed-time',
       'maxSeedTime': 'max-seed-time',
       'minSeeders': 'min-seeders',
+      'maxInactiveDays': 'max-inactive-days',
       'deleteSourceFiles': 'delete-source-files',
       'unlinkedEnabled': 'enable-unlinked-download-handling',
       'unlinkedTargetCategory': 'target-category',

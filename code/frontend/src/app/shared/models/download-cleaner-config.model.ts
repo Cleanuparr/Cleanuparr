@@ -13,6 +13,7 @@ export interface SeedingRule {
   minSeedTime: number;
   maxSeedTime: number;
   minSeeders?: number;
+  maxInactiveDays?: number;
   deleteSourceFiles: boolean;
 }
 
@@ -73,6 +74,7 @@ export function createDefaultSeedingRule(): SeedingRule {
     minSeedTime: 0,
     maxSeedTime: -1,
     minSeeders: 0,
+    maxInactiveDays: -1,
     deleteSourceFiles: true,
   };
 }
