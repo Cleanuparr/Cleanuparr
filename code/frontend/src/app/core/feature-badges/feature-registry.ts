@@ -39,4 +39,6 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'history-retention' },
   { id: 'dashboard-stats-card' },
   { id: 'events-stats-card' },
+  { id: 'connectivity-check' },
+  { id: 'ignore-alt-speed' },
 ];
