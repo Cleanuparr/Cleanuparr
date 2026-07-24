@@ -354,6 +354,63 @@ public sealed class QBitSeedingRuleTests
 
     #endregion
 
+    #region Validate - MaxInactiveDays Validation
+
+    [Fact]
+    public void MaxInactiveDays_DefaultsToDisabled()
+    {
+        var rule = new QBitSeedingRule
+        {
+            Name = "test",
+            MaxRatio = -1,
+            MinSeedTime = 0,
+            MaxSeedTime = 24,
+            DeleteSourceFiles = false
+        };
+
+        rule.MaxInactiveDays.ShouldBe(-1);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(30)]
+    public void Validate_WithValidMaxInactiveDays_DoesNotThrow(double maxInactiveDays)
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = ["test-category"],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = -1,
+            MaxInactiveDays = maxInactiveDays,
+            DeleteSourceFiles = true
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithMaxInactiveDaysLessThanDisabled_ThrowsValidationException()
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = ["test-category"],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = -1,
+            MaxInactiveDays = -2,
+            DeleteSourceFiles = true
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Max inactive days can not be less than -1");
+    }
+
+    #endregion
+
     [Fact]
     public void DeleteSourceFiles_CanBeSetToFalse()
     {
