@@ -65,12 +65,18 @@ Filename: "http://localhost:11011"; Description: "Open Cleanuparr Web Interface"
 ; Run directly (if not installed as service)
 Filename: "{app}\{#MyAppExeName}"; Description: "Run {#MyAppName} Application"; Flags: nowait postinstall skipifsilent; Check: not IsTaskSelected('installservice')
 
-[UninstallRun]
-Filename: "{sys}\sc.exe"; Parameters: "stop ""{#MyServiceName}"""; Flags: runhidden; Check: ServiceExists('{#MyServiceName}')
-Filename: "{sys}\timeout.exe"; Parameters: "/t 5"; Flags: runhidden; Check: ServiceExists('{#MyServiceName}')
-Filename: "{sys}\sc.exe"; Parameters: "delete ""{#MyServiceName}"""; Flags: runhidden; Check: ServiceExists('{#MyServiceName}')
-
 [Code]
+procedure LogInstaller(const Msg: string);
+var
+  LogDir, LogFile, Line: string;
+begin
+  LogDir := ExpandConstant('{app}\config\logs');
+  ForceDirectories(LogDir);
+  LogFile := LogDir + '\cleanuparr-installer.log';
+  Line := '[' + GetDateTimeString('yyyy/mm/dd hh:nn:ss', '-', ':') + '] ' + Msg + #13#10;
+  SaveStringToFile(LogFile, Line, True);
+end;
+
 function ServiceExists(ServiceName: string): Boolean;
 var
   ResultCode: Integer;
@@ -118,6 +124,40 @@ begin
   Result := False;
 end;
 
+procedure StopAndDeleteService(const Name: string);
+var
+  ResultCode, i: Integer;
+begin
+  if not ServiceExists(Name) then
+  begin
+    LogInstaller('Service ' + Name + ' not present, nothing to remove');
+    Exit;
+  end;
+
+  if IsServiceRunning(Name) then
+  begin
+    LogInstaller('Stopping service ' + Name);
+    Exec(ExpandConstant('{sys}\sc.exe'), 'stop "' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if not WaitForServiceStop(Name, 30) then
+      LogInstaller('WARNING: service did not report STOPPED within 30s');
+  end;
+
+  LogInstaller('Force-killing ' + ExpandConstant('{#MyAppExeName}'));
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /t /im "' + ExpandConstant('{#MyAppExeName}') + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  for i := 1 to 10 do
+  begin
+    Exec(ExpandConstant('{sys}\sc.exe'), 'delete "' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if not ServiceExists(Name) then
+    begin
+      LogInstaller('Service ' + Name + ' deleted (attempt ' + IntToStr(i) + ')');
+      Exit;
+    end;
+    Sleep(1000);
+  end;
+  LogInstaller('WARNING: service ' + Name + ' still present after 10 delete attempts');
+end;
+
 function InitializeSetup(): Boolean;
 var
   ResultCode: Integer;
@@ -146,25 +186,24 @@ begin
 end;
 
 function InitializeUninstall(): Boolean;
-var
-  ResultCode: Integer;
 begin
   Result := True;
-  
+
   if ServiceExists('{#MyServiceName}') then
   begin
-    if MsgBox('Cleanuparr service will be stopped and removed. Continue with uninstallation?', 
-              mbConfirmation, MB_YESNO) = IDYES then
-    begin
-      if IsServiceRunning('{#MyServiceName}') then
-      begin
-        Exec(ExpandConstant('{sys}\sc.exe'), 'stop "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-        WaitForServiceStop('{#MyServiceName}', 30);
-      end;
-    end
-    else
+    if MsgBox('Cleanuparr service will be stopped and removed. Continue with uninstallation?',
+              mbConfirmation, MB_YESNO) <> IDYES then
     begin
       Result := False;
     end;
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    LogInstaller('=== Uninstall started ===');
+    StopAndDeleteService('{#MyServiceName}');
   end;
 end;
