@@ -1,20 +1,20 @@
-﻿using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.Extensions;
 
 internal static class DelugeExtensions
 {
-    public static List<String?> GetAllJsonPropertyFromType(this Type t)
+    public static List<string> GetAllJsonPropertyFromType(this Type t)
     {
-        var type = typeof(JsonPropertyAttribute);
-        var props = t.GetProperties()
+        Type type = typeof(JsonPropertyNameAttribute);
+        List<System.Reflection.PropertyInfo> props = t.GetProperties()
             .Where(prop => Attribute.IsDefined(prop, type))
             .ToList();
-        
+
         return props
             .Select(x => x.GetCustomAttributes(type, true).Single())
-            .Cast<JsonPropertyAttribute>()
-            .Select(x => x.PropertyName)
+            .Cast<JsonPropertyNameAttribute>()
+            .Select(x => x.Name)
             .ToList();
     }
 }

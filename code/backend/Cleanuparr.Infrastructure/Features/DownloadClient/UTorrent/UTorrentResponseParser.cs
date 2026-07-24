@@ -1,8 +1,8 @@
+using System.Text.Json;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Domain.Exceptions;
+using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 
@@ -19,13 +19,17 @@ public class UTorrentResponseParser : IUTorrentResponseParser
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    private static long AsInt64(JsonElement element) => element.Deserialize<long>(CleanuparrJsonOptions.ExternalApiRead);
+
+    private static int AsInt32(JsonElement element) => element.Deserialize<int>(CleanuparrJsonOptions.ExternalApiRead);
+
     /// <inheritdoc/>
     public TorrentListResponse ParseTorrentList(string json)
     {
         try
         {
-            var response = JsonConvert.DeserializeObject<TorrentListResponse>(json);
-            
+            TorrentListResponse? response = JsonSerializer.Deserialize<TorrentListResponse>(json, CleanuparrJsonOptions.ExternalApiRead);
+
             if (response == null)
             {
                 throw new UTorrentParsingException("Failed to deserialize torrent list response", json);
@@ -34,39 +38,39 @@ public class UTorrentResponseParser : IUTorrentResponseParser
             // Parse torrents
             if (response.TorrentsRaw != null)
             {
-                foreach (var data in response.TorrentsRaw)
+                foreach (JsonElement[] data in response.TorrentsRaw)
                 {
                     if (data is { Length: >= 27 })
                     {
                         response.Torrents.Add(new UTorrentItem
                         {
-                            Hash = data[0].ToString() ?? string.Empty,
-                            Status = Convert.ToInt32(data[1]),
-                            Name = data[2].ToString() ?? string.Empty,
-                            Size = Convert.ToInt64(data[3]),
-                            Progress = Convert.ToInt32(data[4]),
-                            Downloaded = Convert.ToInt64(data[5]),
-                            Uploaded = Convert.ToInt64(data[6]),
-                            RatioRaw = Convert.ToInt32(data[7]),
-                            UploadSpeed = Convert.ToInt32(data[8]),
-                            DownloadSpeed = Convert.ToInt32(data[9]),
-                            ETA = Convert.ToInt32(data[10]),
-                            Label = data[11].ToString() ?? string.Empty,
-                            PeersConnected = Convert.ToInt32(data[12]),
-                            PeersInSwarm = Convert.ToInt32(data[13]),
-                            SeedsConnected = Convert.ToInt32(data[14]),
-                            SeedsInSwarm = Convert.ToInt32(data[15]),
-                            Availability = Convert.ToInt32(data[16]),
-                            QueueOrder = Convert.ToInt32(data[17]),
-                            Remaining = Convert.ToInt64(data[18]),
-                            DownloadUrl = data[19].ToString() ?? string.Empty,
-                            RssFeedUrl = data[20].ToString() ?? string.Empty,
-                            StatusMessage = data[21].ToString() ?? string.Empty,
-                            StreamId = data[22].ToString() ?? string.Empty,
-                            DateAdded = Convert.ToInt64(data[23]),
-                            DateCompleted = Convert.ToInt64(data[24]),
-                            AppUpdateUrl = data[25].ToString() ?? string.Empty,
-                            SavePath = data[26].ToString() ?? string.Empty
+                            Hash = data[0].GetString() ?? string.Empty,
+                            Status = AsInt32(data[1]),
+                            Name = data[2].GetString() ?? string.Empty,
+                            Size = AsInt64(data[3]),
+                            Progress = AsInt32(data[4]),
+                            Downloaded = AsInt64(data[5]),
+                            Uploaded = AsInt64(data[6]),
+                            RatioRaw = AsInt32(data[7]),
+                            UploadSpeed = AsInt32(data[8]),
+                            DownloadSpeed = AsInt32(data[9]),
+                            ETA = AsInt32(data[10]),
+                            Label = data[11].GetString() ?? string.Empty,
+                            PeersConnected = AsInt32(data[12]),
+                            PeersInSwarm = AsInt32(data[13]),
+                            SeedsConnected = AsInt32(data[14]),
+                            SeedsInSwarm = AsInt32(data[15]),
+                            Availability = AsInt32(data[16]),
+                            QueueOrder = AsInt32(data[17]),
+                            Remaining = AsInt64(data[18]),
+                            DownloadUrl = data[19].GetString() ?? string.Empty,
+                            RssFeedUrl = data[20].GetString() ?? string.Empty,
+                            StatusMessage = data[21].GetString() ?? string.Empty,
+                            StreamId = data[22].GetString() ?? string.Empty,
+                            DateAdded = AsInt64(data[23]),
+                            DateCompleted = AsInt64(data[24]),
+                            AppUpdateUrl = data[25].GetString() ?? string.Empty,
+                            SavePath = data[26].GetString() ?? string.Empty
                         });
                     }
                 }
@@ -75,12 +79,12 @@ public class UTorrentResponseParser : IUTorrentResponseParser
             // Parse labels
             if (response.LabelsRaw != null)
             {
-                foreach (var labelData in response.LabelsRaw)
+                foreach (JsonElement[] labelData in response.LabelsRaw)
                 {
                     if (labelData is { Length: > 0 })
                     {
-                        var labelName = labelData[0].ToString();
-                        
+                        string? labelName = labelData[0].GetString();
+
                         if (!string.IsNullOrEmpty(labelName))
                         {
                             response.Labels.Add(labelName);
@@ -108,36 +112,38 @@ public class UTorrentResponseParser : IUTorrentResponseParser
     {
         try
         {
-            var rawResponse = JsonConvert.DeserializeObject<FileListResponse>(json);
-            
+            FileListResponse? rawResponse = JsonSerializer.Deserialize<FileListResponse>(json, CleanuparrJsonOptions.ExternalApiRead);
+
             if (rawResponse == null)
             {
                 throw new UTorrentParsingException("Failed to deserialize file list response", json);
             }
 
-            var response = new FileListResponse();
+            FileListResponse response = new();
 
             // Parse files from the nested array structure
             if (rawResponse.FilesRaw is { Length: >= 2 })
             {
-                response.Hash = rawResponse.FilesRaw[0].ToString() ?? string.Empty;
-                
-                if (rawResponse.FilesRaw[1] is JArray jArray)
+                response.Hash = rawResponse.FilesRaw[0].GetString() ?? string.Empty;
+
+                JsonElement filesElement = rawResponse.FilesRaw[1];
+
+                if (filesElement.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var jToken in jArray)
+                    foreach (JsonElement fileEntry in filesElement.EnumerateArray())
                     {
-                        if (jToken is JArray fileArray)
+                        if (fileEntry.ValueKind == JsonValueKind.Array)
                         {
-                            var fileData = fileArray.ToObject<object[]>() ?? Array.Empty<object>();
-                            
+                            JsonElement[] fileData = fileEntry.EnumerateArray().ToArray();
+
                             if (fileData.Length >= 4)
                             {
                                 response.Files.Add(new UTorrentFile
                                 {
-                                    Name = fileData[0]?.ToString() ?? string.Empty,
-                                    Size = Convert.ToInt64(fileData[1]),
-                                    Downloaded = Convert.ToInt64(fileData[2]),
-                                    Priority = Convert.ToInt32(fileData[3]),
+                                    Name = fileData[0].GetString() ?? string.Empty,
+                                    Size = AsInt64(fileData[1]),
+                                    Downloaded = AsInt64(fileData[2]),
+                                    Priority = AsInt32(fileData[3]),
                                 });
                             }
                         }
@@ -164,19 +170,20 @@ public class UTorrentResponseParser : IUTorrentResponseParser
     {
         try
         {
-            var rawResponse = JsonConvert.DeserializeObject<PropertiesResponse>(json);
-            
+            PropertiesResponse? rawResponse = JsonSerializer.Deserialize<PropertiesResponse>(json, CleanuparrJsonOptions.ExternalApiRead);
+
             if (rawResponse == null)
             {
                 throw new UTorrentParsingException("Failed to deserialize properties response", json);
             }
 
-            var response = new PropertiesResponse();
+            PropertiesResponse response = new();
 
             // Parse properties from the array structure
             if (rawResponse.PropertiesRaw is { Length: > 0 })
             {
-                response.Properties = JsonConvert.DeserializeObject<UTorrentProperties>(rawResponse.PropertiesRaw.FirstOrDefault()?.ToString());
+                response.Properties = rawResponse.PropertiesRaw[0]
+                    .Deserialize<UTorrentProperties>(CleanuparrJsonOptions.ExternalApiRead) ?? new UTorrentProperties();
             }
 
             return response;
@@ -198,8 +205,8 @@ public class UTorrentResponseParser : IUTorrentResponseParser
     {
         try
         {
-            var response = JsonConvert.DeserializeObject<LabelListResponse>(json);
-            
+            LabelListResponse? response = JsonSerializer.Deserialize<LabelListResponse>(json, CleanuparrJsonOptions.ExternalApiRead);
+
             if (response == null)
             {
                 throw new UTorrentParsingException("Failed to deserialize label list response", json);
@@ -208,11 +215,11 @@ public class UTorrentResponseParser : IUTorrentResponseParser
             // Parse labels
             if (response.LabelsRaw != null)
             {
-                foreach (var labelData in response.LabelsRaw)
+                foreach (JsonElement[] labelData in response.LabelsRaw)
                 {
                     if (labelData is { Length: > 0 })
                     {
-                        var labelName = labelData[0]?.ToString();
+                        string? labelName = labelData[0].GetString();
                         if (!string.IsNullOrEmpty(labelName))
                         {
                             response.Labels.Add(labelName);

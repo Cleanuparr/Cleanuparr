@@ -2,8 +2,8 @@
 using System.Text;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 
@@ -20,11 +20,7 @@ public sealed class AppriseProxy : IAppriseProxy
     {
         try
         {
-            string content = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore
-            });
+            string content = JsonSerializer.Serialize(payload, CleanuparrJsonOptions.Notification);
 
             var parsedUrl = config.Uri!;
             UriBuilder uriBuilder = new(parsedUrl);

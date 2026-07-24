@@ -1,9 +1,9 @@
 using System.Text;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 
@@ -24,10 +24,7 @@ public sealed class NotifiarrProxy : INotifiarrProxy
     {
         try
         {
-            string content = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            });
+            string content = JsonSerializer.Serialize(payload, CleanuparrJsonOptions.NotificationIncludeNulls);
             
             _logger.LogTrace("sending notification to Notifiarr: {content}", content);
             

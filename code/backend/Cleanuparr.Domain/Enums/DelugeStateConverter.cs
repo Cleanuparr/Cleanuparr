@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Enums;
 
@@ -7,20 +8,24 @@ namespace Cleanuparr.Domain.Enums;
 /// </summary>
 public sealed class DelugeStateConverter : JsonConverter<DelugeState>
 {
-    public override DelugeState ReadJson(JsonReader reader, Type objectType, DelugeState existingValue, bool hasExistingValue, JsonSerializer serializer)
+    public override bool HandleNull => true;
+
+    public override DelugeState Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType != JsonToken.String || reader.Value is not string raw)
+        if (reader.TokenType != JsonTokenType.String)
         {
             return DelugeState.Unknown;
         }
 
-        return Enum.TryParse<DelugeState>(raw, ignoreCase: true, out var parsed)
+        string? raw = reader.GetString();
+
+        return raw is not null && Enum.TryParse(raw, ignoreCase: true, out DelugeState parsed)
             ? parsed
             : DelugeState.Unknown;
     }
 
-    public override void WriteJson(JsonWriter writer, DelugeState value, JsonSerializer serializer)
+    public override void Write(Utf8JsonWriter writer, DelugeState value, JsonSerializerOptions options)
     {
-        writer.WriteValue(value.ToString());
+        writer.WriteStringValue(value.ToString());
     }
 }

@@ -2,8 +2,8 @@ using System.Text;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Discord;
 
@@ -22,11 +22,7 @@ public sealed class DiscordProxy : IDiscordProxy
     {
         try
         {
-            string content = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore
-            });
+            string content = JsonSerializer.Serialize(payload, CleanuparrJsonOptions.Notification);
 
             _logger.LogTrace("sending notification to Discord: {content}", content);
 

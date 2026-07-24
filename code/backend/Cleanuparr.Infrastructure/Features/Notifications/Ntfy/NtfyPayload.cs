@@ -1,24 +1,24 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 
 public sealed class NtfyPayload
 {
-    [JsonProperty("topic")]
+    [JsonPropertyName("topic")]
     public string Topic { get; init; } = string.Empty;
     
-    [JsonProperty("message")]
+    [JsonPropertyName("message")]
     public string Message { get; init; } = string.Empty;
     
-    [JsonProperty("title")]
+    [JsonPropertyName("title")]
     public string? Title { get; init; }
     
-    [JsonProperty("priority")]
+    [JsonPropertyName("priority")]
     public int? Priority { get; init; }
     
-    [JsonProperty("tags")]
+    [JsonPropertyName("tags")]
     public string[]? Tags { get; init; }
     
-    [JsonProperty("click")]
+    [JsonPropertyName("click")]
     public string? Click { get; init; }
 }

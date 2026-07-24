@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.UTorrent.Response;
 
@@ -11,20 +12,20 @@ public sealed class TorrentListResponse
     /// <summary>
     /// µTorrent build number
     /// </summary>
-    [JsonProperty(PropertyName = "build")]
+    [JsonPropertyName("build")]
     public int Build { get; set; }
 
     /// <summary>
     /// List of torrent data from the API
     /// </summary>
-    [JsonProperty(PropertyName = "torrents")]
-    public object[][]? TorrentsRaw { get; set; }
+    [JsonPropertyName("torrents")]
+    public JsonElement[][]? TorrentsRaw { get; set; }
 
     /// <summary>
     /// Label data from the API
     /// </summary>
-    [JsonProperty(PropertyName = "label")]
-    public object[][]? LabelsRaw { get; set; }
+    [JsonPropertyName("label")]
+    public JsonElement[][]? LabelsRaw { get; set; }
 
     /// <summary>
     /// Parsed torrents as strongly-typed objects

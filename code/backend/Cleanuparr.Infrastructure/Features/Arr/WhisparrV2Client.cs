@@ -8,8 +8,9 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
@@ -58,7 +59,7 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
         {
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
             request.Content = new StringContent(
-                JsonConvert.SerializeObject(command, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }),
+                JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
                 Encoding.UTF8,
                 "application/json"
             );

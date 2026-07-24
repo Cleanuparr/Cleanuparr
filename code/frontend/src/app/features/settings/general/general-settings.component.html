@@ -41,7 +41,7 @@
 
       <div class="form-divider"></div>
 
-      <app-toggle label="Internet Connectivity Check" [formField]="genForm.connectivityCheckEnabled"
+      <app-toggle label="Internet Connectivity Check" featureId="connectivity-check" [formField]="genForm.connectivityCheckEnabled"
         hint="When enabled, the Queue Cleaner skips its run if none of the URLs below are reachable, so genuine downloads are not struck or removed during an internet outage. Only the Queue Cleaner is affected; Download Cleaner and Malware Blocker keep running."
         helpKey="general:connectivityCheckEnabled" />
       @if (genForm.connectivityCheckEnabled().value()) {

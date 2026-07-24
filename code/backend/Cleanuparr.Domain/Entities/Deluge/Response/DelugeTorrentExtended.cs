@@ -1,110 +1,110 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.Deluge.Response;
 
 public sealed record DelugeTorrentExtended : DelugeTorrent
 {
-    [JsonProperty(PropertyName = "total_done")]
+    [JsonPropertyName("total_done")]
     public long TotalDone { get; set; }
 
-    [JsonProperty(PropertyName = "total_payload_download")]
+    [JsonPropertyName("total_payload_download")]
     public long TotalPayloadDownload { get; set; }
 
-    [JsonProperty(PropertyName = "total_uploaded")]
+    [JsonPropertyName("total_uploaded")]
     public long TotalUploaded { get; set; }
 
-    [JsonProperty(PropertyName = "next_announce")]
+    [JsonPropertyName("next_announce")]
     public int NextAnnounce { get; set; }
 
-    [JsonProperty(PropertyName = "tracker_status")]
+    [JsonPropertyName("tracker_status")]
     public string TrackerStatus { get; set; }
 
-    [JsonProperty(PropertyName = "num_pieces")]
+    [JsonPropertyName("num_pieces")]
     public int NumPieces { get; set; }
 
-    [JsonProperty(PropertyName = "piece_length")]
+    [JsonPropertyName("piece_length")]
     public long PieceLength { get; set; }
 
-    [JsonProperty(PropertyName = "is_auto_managed")]
+    [JsonPropertyName("is_auto_managed")]
     public bool IsAutoManaged { get; set; }
 
-    [JsonProperty(PropertyName = "active_time")]
+    [JsonPropertyName("active_time")]
     public long ActiveTime { get; set; }
 
-    [JsonProperty(PropertyName = "seeding_time")]
+    [JsonPropertyName("seeding_time")]
     public long SeedingTime { get; set; }
 
-    [JsonProperty(PropertyName = "time_since_transfer")]
+    [JsonPropertyName("time_since_transfer")]
     public long TimeSinceTransfer { get; set; }
 
-    [JsonProperty(PropertyName = "seed_rank")]
+    [JsonPropertyName("seed_rank")]
     public int SeedRank { get; set; }
 
-    [JsonProperty(PropertyName = "last_seen_complete")]
+    [JsonPropertyName("last_seen_complete")]
     public long LastSeenComplete { get; set; }
 
-    [JsonProperty(PropertyName = "completed_time")]
+    [JsonPropertyName("completed_time")]
     public long CompletedTime { get; set; }
 
-    [JsonProperty(PropertyName = "owner")] public string Owner { get; set; }
+    [JsonPropertyName("owner")] public string Owner { get; set; }
 
-    [JsonProperty(PropertyName = "public")]
+    [JsonPropertyName("public")]
     public bool Public { get; set; }
 
-    [JsonProperty(PropertyName = "shared")]
+    [JsonPropertyName("shared")]
     public bool Shared { get; set; }
 
-    [JsonProperty(PropertyName = "queue")] public int Queue { get; set; }
+    [JsonPropertyName("queue")] public int Queue { get; set; }
 
-    [JsonProperty(PropertyName = "total_wanted")]
+    [JsonPropertyName("total_wanted")]
     public long TotalWanted { get; set; }
 
-    [JsonProperty(PropertyName = "state")] public string State { get; set; }
+    [JsonPropertyName("state")] public string State { get; set; }
 
-    [JsonProperty(PropertyName = "progress")]
+    [JsonPropertyName("progress")]
     public float Progress { get; set; }
 
-    [JsonProperty(PropertyName = "num_seeds")]
+    [JsonPropertyName("num_seeds")]
     public int NumSeeds { get; set; }
 
-    [JsonProperty(PropertyName = "total_seeds")]
+    [JsonPropertyName("total_seeds")]
     public int TotalSeeds { get; set; }
 
-    [JsonProperty(PropertyName = "num_peers")]
+    [JsonPropertyName("num_peers")]
     public int NumPeers { get; set; }
 
-    [JsonProperty(PropertyName = "total_peers")]
+    [JsonPropertyName("total_peers")]
     public int TotalPeers { get; set; }
 
-    [JsonProperty(PropertyName = "download_payload_rate")]
+    [JsonPropertyName("download_payload_rate")]
     public long DownloadPayloadRate { get; set; }
 
-    [JsonProperty(PropertyName = "upload_payload_rate")]
+    [JsonPropertyName("upload_payload_rate")]
     public long UploadPayloadRate { get; set; }
 
-    [JsonProperty(PropertyName = "eta")] public long Eta { get; set; }
+    [JsonPropertyName("eta")] public long Eta { get; set; }
 
-    [JsonProperty(PropertyName = "distributed_copies")]
+    [JsonPropertyName("distributed_copies")]
     public float DistributedCopies { get; set; }
 
-    [JsonProperty(PropertyName = "time_added")]
+    [JsonPropertyName("time_added")]
     public int TimeAdded { get; set; }
 
-    [JsonProperty(PropertyName = "tracker_host")]
+    [JsonPropertyName("tracker_host")]
     public string TrackerHost { get; set; }
 
-    [JsonProperty(PropertyName = "download_location")]
+    [JsonPropertyName("download_location")]
     public string DownloadLocation { get; set; }
 
-    [JsonProperty(PropertyName = "total_remaining")]
+    [JsonPropertyName("total_remaining")]
     public long TotalRemaining { get; set; }
 
-    [JsonProperty(PropertyName = "max_download_speed")]
+    [JsonPropertyName("max_download_speed")]
     public long MaxDownloadSpeed { get; set; }
 
-    [JsonProperty(PropertyName = "max_upload_speed")]
+    [JsonPropertyName("max_upload_speed")]
     public long MaxUploadSpeed { get; set; }
 
-    [JsonProperty(PropertyName = "seeds_peers_ratio")]
+    [JsonPropertyName("seeds_peers_ratio")]
     public float SeedsPeersRatio { get; set; }
 }

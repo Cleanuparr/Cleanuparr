@@ -1,7 +1,7 @@
 using System.Text;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Cleanuparr.Shared.Helpers;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using System.Net;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Telegram;
@@ -53,11 +53,7 @@ public sealed class TelegramProxy : ITelegramProxy
 
         try
         {
-            string content = JsonConvert.SerializeObject(body, new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore
-            });
+            string content = JsonSerializer.Serialize(body, CleanuparrJsonOptions.Notification);
 
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Content = new StringContent(content, Encoding.UTF8, "application/json");

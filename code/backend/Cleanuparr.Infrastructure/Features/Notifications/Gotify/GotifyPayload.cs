@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 
@@ -15,7 +15,7 @@ public class GotifyPayload
 
 public class GotifyExtras
 {
-    [JsonProperty("client::display")]
+    [JsonPropertyName("client::display")]
     public GotifyClientDisplay? ClientDisplay { get; set; }
 }
 

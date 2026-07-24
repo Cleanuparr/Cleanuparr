@@ -1,4 +1,5 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.UTorrent.Response;
 
@@ -11,8 +12,8 @@ public sealed class LabelListResponse
     /// <summary>
     /// Raw label data from the API
     /// </summary>
-    [JsonProperty(PropertyName = "label")]
-    public object[][]? LabelsRaw { get; set; }
+    [JsonPropertyName("label")]
+    public JsonElement[][]? LabelsRaw { get; set; }
 
     /// <summary>
     /// Parsed labels as string list

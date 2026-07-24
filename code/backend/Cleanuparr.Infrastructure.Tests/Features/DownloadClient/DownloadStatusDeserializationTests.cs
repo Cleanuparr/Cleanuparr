@@ -1,6 +1,7 @@
+using System.Text.Json;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
-using Newtonsoft.Json;
+using Cleanuparr.Infrastructure.Json;
 using Shouldly;
 using Xunit;
 
@@ -31,7 +32,7 @@ public class DownloadStatusDeserializationTests
     {
         var json = BaseDelugePayload.Replace("\"hash\": \"abc123\",", "\"hash\": \"abc123\", \"state\": \"FutureNewState\",");
 
-        var result = JsonConvert.DeserializeObject<DownloadStatus>(json);
+        var result = JsonSerializer.Deserialize<DownloadStatus>(json, CleanuparrJsonOptions.ExternalApiRead);
 
         result.ShouldNotBeNull();
         result.State.ShouldBe(DelugeState.Unknown);
@@ -48,7 +49,7 @@ public class DownloadStatusDeserializationTests
     {
         var json = BaseDelugePayload.Replace("\"hash\": \"abc123\",", $"\"hash\": \"abc123\", \"state\": \"{wireValue}\",");
 
-        var result = JsonConvert.DeserializeObject<DownloadStatus>(json);
+        var result = JsonSerializer.Deserialize<DownloadStatus>(json, CleanuparrJsonOptions.ExternalApiRead);
 
         result.ShouldNotBeNull();
         result.State.ShouldBe(DelugeState.Seeding);
@@ -57,7 +58,7 @@ public class DownloadStatusDeserializationTests
     [Fact]
     public void MissingStateField_DeserializesToUnknown()
     {
-        var result = JsonConvert.DeserializeObject<DownloadStatus>(BaseDelugePayload);
+        var result = JsonSerializer.Deserialize<DownloadStatus>(BaseDelugePayload, CleanuparrJsonOptions.ExternalApiRead);
 
         result.ShouldNotBeNull();
         result.State.ShouldBe(DelugeState.Unknown);
@@ -69,7 +70,7 @@ public class DownloadStatusDeserializationTests
     {
         var json = BaseDelugePayload.Replace("\"hash\": \"abc123\",", "\"hash\": \"abc123\", \"state\": null,");
 
-        var result = JsonConvert.DeserializeObject<DownloadStatus>(json);
+        var result = JsonSerializer.Deserialize<DownloadStatus>(json, CleanuparrJsonOptions.ExternalApiRead);
 
         result.ShouldNotBeNull();
         result.State.ShouldBe(DelugeState.Unknown);

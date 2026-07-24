@@ -660,7 +660,7 @@ public class ArrClientTests
 
     private static HttpResponseMessage JsonResponse<T>(T body)
     {
-        var json = Newtonsoft.Json.JsonConvert.SerializeObject(body);
+        var json = System.Text.Json.JsonSerializer.Serialize(body);
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),

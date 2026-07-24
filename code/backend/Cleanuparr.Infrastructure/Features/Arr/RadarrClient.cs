@@ -7,8 +7,9 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
@@ -63,7 +64,7 @@ public class RadarrClient : ArrClient, IRadarrClient
 
         using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
         request.Content = new StringContent(
-            JsonConvert.SerializeObject(command),
+            JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
             Encoding.UTF8,
             "application/json"
         );
@@ -165,11 +166,7 @@ public class RadarrClient : ArrClient, IRadarrClient
         using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
         
-        using Stream stream = await response.Content.ReadAsStreamAsync();
-        using StreamReader sr = new(stream);
-        using JsonTextReader reader = new(sr);
-        JsonSerializer serializer = JsonSerializer.CreateDefault();
-        return serializer.Deserialize<List<Tag>>(reader) ?? [];
+        return await DeserializeStreamAsync<List<Tag>>(response) ?? [];
     }
 
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
