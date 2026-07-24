@@ -228,5 +228,9 @@ begin
   begin
     LogInstaller('=== Uninstall started ===');
     StopAndDeleteService('{#MyServiceName}');
+    if RegDeleteKeyIncludingSubkeys(HKLM, 'SYSTEM\CurrentControlSet\Services\EventLog\Application\{#MyServiceName}') then
+      LogInstaller('Removed EventLog source key')
+    else
+      LogInstaller('EventLog source key not present');
   end;
 end;
