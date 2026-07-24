@@ -152,25 +152,46 @@ end;
 procedure CreateOrUpdateService();
 var
   ResultCode: Integer;
+  Ok: Boolean;
 begin
   if not IsTaskSelected('installservice') then
+  begin
+    if ServiceExists('{#MyServiceName}') then
+    begin
+      LogInstaller('Service task deselected on upgrade, removing existing service');
+      StopAndDeleteService('{#MyServiceName}');
+    end;
     Exit;
+  end;
 
   if ServiceExists('{#MyServiceName}') then
   begin
     LogInstaller('Refreshing existing service definition');
-    Exec(ExpandConstant('{sys}\sc.exe'), ExpandConstant('config "{#MyServiceName}" binPath= "\"{app}\{#MyAppExeName}\"" start= auto'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Ok := Exec(ExpandConstant('{sys}\sc.exe'), ExpandConstant('config "{#MyServiceName}" binPath= "\"{app}\{#MyAppExeName}\"" start= auto'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
   end
   else
   begin
     LogInstaller('Creating service');
-    Exec(ExpandConstant('{sys}\sc.exe'), ExpandConstant('create "{#MyServiceName}" binPath= "\"{app}\{#MyAppExeName}\"" DisplayName= "{#MyAppName}" start= auto'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Ok := Exec(ExpandConstant('{sys}\sc.exe'), ExpandConstant('create "{#MyServiceName}" binPath= "\"{app}\{#MyAppExeName}\"" DisplayName= "{#MyAppName}" start= auto'), '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  end;
+
+  if not Ok then
+  begin
+    LogInstaller('ERROR: failed to create or configure the service, ResultCode=' + IntToStr(ResultCode));
+    if not WizardSilent() then
+      MsgBox('Failed to install the Cleanuparr service (error ' + IntToStr(ResultCode) + '). See ' + ExpandConstant('{app}\cleanuparr-installer.log') + ' for details.', mbError, MB_OK);
+    Exit;
   end;
 
   Exec(ExpandConstant('{sys}\sc.exe'), 'description "{#MyServiceName}" "Cleanuparr download management service"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 
   LogInstaller('Starting service');
-  Exec(ExpandConstant('{sys}\sc.exe'), 'start "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if not (Exec(ExpandConstant('{sys}\sc.exe'), 'start "{#MyServiceName}"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and ((ResultCode = 0) or (ResultCode = 1056))) then
+  begin
+    LogInstaller('ERROR: failed to start the service, ResultCode=' + IntToStr(ResultCode));
+    if not WizardSilent() then
+      MsgBox('The Cleanuparr service was installed but failed to start (error ' + IntToStr(ResultCode) + '). See ' + ExpandConstant('{app}\cleanuparr-installer.log') + ' for details.', mbError, MB_OK);
+  end;
 end;
 
 function InitializeSetup(): Boolean;
