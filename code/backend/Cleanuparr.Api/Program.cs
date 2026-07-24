@@ -1,6 +1,5 @@
 using System.Net;
 using System.Runtime.InteropServices;
-using System.Text.Json.Serialization;
 using Cleanuparr.Api;
 using Cleanuparr.Api.Commands;
 using Cleanuparr.Api.DependencyInjection;
@@ -67,13 +66,6 @@ if (!builder.Environment.IsDevelopment())
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
-});
-
-// Configure JSON options to serialize enums as strings
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.PropertyNameCaseInsensitive = true;
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 // Add services to the container

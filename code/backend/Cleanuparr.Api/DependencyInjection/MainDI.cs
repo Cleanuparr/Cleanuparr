@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+using Cleanuparr.Api.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
@@ -40,9 +40,7 @@ public static class MainDI
                 {
                     cfg.ConfigureJsonSerializerOptions(options =>
                     {
-                        options.PropertyNameCaseInsensitive = true;
-                        options.Converters.Add(new JsonStringEnumConverter());
-                        options.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                        CleanuparrJsonConfiguration.ConfigureCore(options);
 
                         return options;
                     });

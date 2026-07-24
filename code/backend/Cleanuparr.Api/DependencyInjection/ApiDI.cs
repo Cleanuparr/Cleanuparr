@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using Cleanuparr.Api.Filters;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Infrastructure.Health;
@@ -17,14 +15,7 @@ public static class ApiDI
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services)
     {
-        services.Configure<JsonOptions>(options =>
-        {
-            options.SerializerOptions.PropertyNameCaseInsensitive = true;
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-            options.SerializerOptions.TypeInfoResolver = new SensitiveDataResolver(
-                options.SerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver());
-        });
+        services.Configure<JsonOptions>(options => CleanuparrJsonConfiguration.ConfigureApi(options.SerializerOptions));
 
         // Make JsonSerializerOptions available for injection
         services.AddSingleton(sp =>
@@ -33,26 +24,13 @@ public static class ApiDI
         // Add API-specific services
         services
             .AddControllers()
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-                options.JsonSerializerOptions.TypeInfoResolver = new SensitiveDataResolver(
-                    options.JsonSerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver());
-            });
+            .AddJsonOptions(options => CleanuparrJsonConfiguration.ConfigureApi(options.JsonSerializerOptions));
         services.AddEndpointsApiExplorer();
 
         // Add SignalR for real-time updates
         services
             .AddSignalR()
-            .AddJsonProtocol(options =>
-            {
-                options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
-                options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                options.PayloadSerializerOptions.TypeInfoResolver = new SensitiveDataResolver(
-                    options.PayloadSerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver());
-            });
+            .AddJsonProtocol(options => CleanuparrJsonConfiguration.ConfigureApi(options.PayloadSerializerOptions));
         
         // Add health status broadcaster
         services.AddHostedService<HealthStatusBroadcaster>();
