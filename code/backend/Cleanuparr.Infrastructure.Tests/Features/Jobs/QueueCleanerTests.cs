@@ -6,10 +6,12 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -24,6 +26,7 @@ public class QueueCleanerTests : IDisposable
 {
     private readonly JobHandlerFixture _fixture;
     private readonly ILogger<QueueCleanerJob> _logger;
+    private readonly IConnectivityChecker _connectivityChecker;
 
     public QueueCleanerTests(JobHandlerFixture fixture)
     {
@@ -31,6 +34,8 @@ public class QueueCleanerTests : IDisposable
         _fixture.RecreateDataContext();
         _fixture.ResetMocks();
         _logger = _fixture.CreateLogger<QueueCleanerJob>();
+        _connectivityChecker = Substitute.For<IConnectivityChecker>();
+        _connectivityChecker.IsOnlineAsync(Arg.Any<GeneralConfig>(), Arg.Any<CancellationToken>()).Returns(true);
     }
 
     public void Dispose()
@@ -48,11 +53,32 @@ public class QueueCleanerTests : IDisposable
             _fixture.ArrClientFactory,
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
-            _fixture.EventPublisher
+            _fixture.EventPublisher,
+            _connectivityChecker
         );
     }
 
     #region ExecuteInternalAsync Tests
+
+    [Fact]
+    public async Task ExecuteInternalAsync_WhenOffline_SkipsRun()
+    {
+        // Arrange
+        TestDataContextFactory.AddStallRule(_fixture.DataContext, enabled: true);
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        _connectivityChecker.IsOnlineAsync(Arg.Any<GeneralConfig>(), Arg.Any<CancellationToken>()).Returns(false);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        _logger.ReceivedLogContaining(LogLevel.Warning, "no internet connectivity");
+        await _fixture.ArrQueueIterator
+            .DidNotReceive()
+            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>());
+    }
 
     [Fact]
     public async Task ExecuteInternalAsync_LoadsStallRulesFromDatabase()

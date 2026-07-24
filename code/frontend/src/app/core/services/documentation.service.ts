@@ -59,6 +59,8 @@ export class DocumentationService {
       'log.archiveRetainedCount': 'archive-retained-count',
       'log.archiveTimeLimitHours': 'archive-time-limit',
       'ignoredDownloads': 'ignored-downloads',
+      'connectivityCheckEnabled': 'internet-connectivity-check',
+      'connectivityCheckUrls': 'internet-connectivity-check',
       'strikeInactivityWindowHours': 'strike-inactivity-window',
       'historyRetentionDays': 'history-retention',
       'auth.disableLocalAuth': 'disable-auth-for-local-addresses',

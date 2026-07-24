@@ -3,8 +3,10 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -32,6 +34,9 @@ public class QueueCleanerIntegrationTests : IDisposable
 
     private QueueCleanerJob CreateSut()
     {
+        IConnectivityChecker connectivityChecker = Substitute.For<IConnectivityChecker>();
+        connectivityChecker.IsOnlineAsync(Arg.Any<GeneralConfig>(), Arg.Any<CancellationToken>()).Returns(true);
+
         return new QueueCleanerJob(
             Substitute.For<ILogger<QueueCleanerJob>>(),
             _fixture.DataContext,
@@ -40,7 +45,8 @@ public class QueueCleanerIntegrationTests : IDisposable
             _fixture.ArrClientFactory,
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
-            _fixture.EventPublisher);
+            _fixture.EventPublisher,
+            connectivityChecker);
     }
 
     [Fact]

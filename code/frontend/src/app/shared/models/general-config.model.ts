@@ -28,4 +28,6 @@ export interface GeneralConfig {
   log?: LoggingConfig;
   auth?: AuthConfig;
   ignoredDownloads: string[];
+  connectivityCheckEnabled: boolean;
+  connectivityCheckUrls: string[];
 }

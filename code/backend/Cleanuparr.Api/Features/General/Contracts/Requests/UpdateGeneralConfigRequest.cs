@@ -3,7 +3,6 @@ using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Serilog.Events;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Features.General.Contracts.Requests;
 
@@ -25,6 +24,10 @@ public sealed record UpdateGeneralConfigRequest
 
     public List<string> IgnoredDownloads { get; init; } = [];
 
+    public bool ConnectivityCheckEnabled { get; init; }
+
+    public List<string> ConnectivityCheckUrls { get; init; } = [];
+
     public ushort StrikeInactivityWindowHours { get; init; } = 24;
 
     public ushort HistoryRetentionDays { get; init; } = 365;
@@ -43,48 +46,19 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.StatusCheckEnabled = StatusCheckEnabled;
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;
+        existingConfig.ConnectivityCheckEnabled = ConnectivityCheckEnabled;
+        existingConfig.ConnectivityCheckUrls = ConnectivityCheckUrls;
         existingConfig.StrikeInactivityWindowHours = StrikeInactivityWindowHours;
         existingConfig.HistoryRetentionDays = HistoryRetentionDays;
 
         bool loggingChanged = Log.ApplyTo(existingConfig.Log);
         Auth.ApplyTo(existingConfig.Auth);
 
-        Validate(existingConfig);
+        existingConfig.Validate();
 
         ApplySideEffects(existingConfig, services, logger, loggingChanged);
 
         return existingConfig;
-    }
-
-    private static void Validate(GeneralConfig config)
-    {
-        if (config.HttpTimeout is 0)
-        {
-            throw new ValidationException("HTTP_TIMEOUT must be greater than 0");
-        }
-
-        if (config.StrikeInactivityWindowHours is 0)
-        {
-            throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be greater than 0");
-        }
-
-        if (config.StrikeInactivityWindowHours > 168)
-        {
-            throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be less than or equal to 168");
-        }
-
-        if (config.HistoryRetentionDays is 0)
-        {
-            throw new ValidationException("HISTORY_RETENTION_DAYS must be greater than 0");
-        }
-
-        if (config.HistoryRetentionDays > 3650)
-        {
-            throw new ValidationException("HISTORY_RETENTION_DAYS must be less than or equal to 3650");
-        }
-
-        config.Log.Validate();
-        config.Auth.Validate();
     }
 
     private void ApplySideEffects(GeneralConfig config, IServiceProvider services, ILogger logger, bool loggingChanged)

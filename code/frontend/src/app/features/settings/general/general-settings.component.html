@@ -38,6 +38,22 @@
         [formField]="genForm.ignoredDownloads"
         helpKey="general:ignoredDownloads"
       />
+
+      <div class="form-divider"></div>
+
+      <app-toggle label="Internet Connectivity Check" [formField]="genForm.connectivityCheckEnabled"
+        hint="When enabled, the Queue Cleaner skips its run if none of the URLs below are reachable, so genuine downloads are not struck or removed during an internet outage. Only the Queue Cleaner is affected; Download Cleaner and Malware Blocker keep running."
+        helpKey="general:connectivityCheckEnabled" />
+      @if (genForm.connectivityCheckEnabled().value()) {
+        <app-chip-input
+          label="Connectivity Check URLs"
+          placeholder="e.g. https://github.com or http://gluetun:9999"
+          hint="The check passes if at least one URL returns a successful (2xx) response. Gluetun users can point this at their health server (http://<gluetun host>:9999)."
+          [formField]="genForm.connectivityCheckUrls"
+          [error]="genForm.connectivityCheckUrls().errors()[0]?.message"
+          helpKey="general:connectivityCheckUrls"
+        />
+      }
     </div>
   </app-card>
 

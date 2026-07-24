@@ -688,6 +688,15 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("ConnectivityCheckEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("connectivity_check_enabled");
+
+                    b.PrimitiveCollection<List<string>>("ConnectivityCheckUrls")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("connectivity_check_urls");
+
                     b.Property<bool>("DisplaySupportBanner")
                         .HasColumnType("boolean")
                         .HasColumnName("display_support_banner");

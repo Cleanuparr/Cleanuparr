@@ -64,6 +64,7 @@ public static class ServicesDI
             .AddScoped<IArrQueueIterator, ArrQueueIterator>()
             .AddScoped<IDownloadServiceFactory, DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
+            .AddScoped<IConnectivityChecker, ConnectivityChecker>()
             .AddScoped<FileReader>()
             .AddScoped<IQueueRuleManager, QueueRuleManager>()
             .AddScoped<IQueueRuleEvaluator, QueueRuleEvaluator>()
