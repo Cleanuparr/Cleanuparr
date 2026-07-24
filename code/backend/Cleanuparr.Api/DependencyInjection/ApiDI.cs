@@ -15,7 +15,7 @@ public static class ApiDI
 {
     public static IServiceCollection AddApiServices(this IServiceCollection services)
     {
-        services.Configure<JsonOptions>(options => CleanuparrJsonConfiguration.ConfigureApi(options.SerializerOptions));
+        services.Configure<JsonOptions>(options => CleanuparrJsonConfiguration.ConfigureApiInbound(options.SerializerOptions));
 
         // Make JsonSerializerOptions available for injection
         services.AddSingleton(sp =>
@@ -24,7 +24,7 @@ public static class ApiDI
         // Add API-specific services
         services
             .AddControllers()
-            .AddJsonOptions(options => CleanuparrJsonConfiguration.ConfigureApi(options.JsonSerializerOptions));
+            .AddJsonOptions(options => CleanuparrJsonConfiguration.ConfigureApiInbound(options.JsonSerializerOptions));
         services.AddEndpointsApiExplorer();
 
         // Add SignalR for real-time updates
