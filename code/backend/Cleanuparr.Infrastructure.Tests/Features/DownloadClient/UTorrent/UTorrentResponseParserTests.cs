@@ -192,8 +192,7 @@ public class UTorrentResponseParserTests
     [Fact]
     public void ParseProperties_PrivateTorrent_DetectsPexNegativeOne()
     {
-        // Arrange — property names match C# properties (parser uses default Newtonsoft naming;
-        // it does NOT convert snake_case to PascalCase).
+        // Arrange — property names match the C# properties; deserialization is case-insensitive.
         const string json = """
         {
             "props": [{

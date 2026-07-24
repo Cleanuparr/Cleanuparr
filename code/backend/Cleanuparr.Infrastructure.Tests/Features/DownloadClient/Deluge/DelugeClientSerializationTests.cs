@@ -11,11 +11,6 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient.Deluge;
 
-/// <summary>
-/// Characterization tests for the Deluge JSON-RPC request/response handling, driven through the real
-/// <see cref="DelugeClient"/>. Written against the current Newtonsoft behavior; must stay green after the
-/// System.Text.Json migration.
-/// </summary>
 public class DelugeClientSerializationTests
 {
     private static (DelugeClient client, FakeHttpMessageHandler handler) CreateClient(string responseJson)

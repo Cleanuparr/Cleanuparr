@@ -9,7 +9,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using System.Text.Json;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -381,7 +381,7 @@ public class RadarrClientTests
 
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {
-        Content = new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json"),
+        Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
     };
 
     private static HttpResponseMessage JsonNullResponse() => new(HttpStatusCode.OK)

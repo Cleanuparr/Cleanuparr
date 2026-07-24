@@ -16,12 +16,6 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
-/// <summary>
-/// Characterization tests locking the exact outbound JSON body each notification proxy produces.
-/// Written against the current Newtonsoft output and must stay green after the System.Text.Json migration.
-/// Bodies are compared field-by-field on parsed JSON (order-independent); special characters are asserted
-/// on the raw string to pin escaping behavior.
-/// </summary>
 public class NotificationPayloadSerializationTests
 {
     private const string SpecialChars = "Ubuntu & <b>bold</b> it's";
