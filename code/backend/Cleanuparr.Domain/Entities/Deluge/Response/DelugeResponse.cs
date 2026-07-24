@@ -1,15 +1,15 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.Deluge.Response;
 
 public sealed record DelugeResponse<T>
 {
-    [JsonProperty(PropertyName = "id")]
+    [JsonPropertyName("id")]
     public int ResponseId { get; set; }
 
-    [JsonProperty(PropertyName = "result")]
+    [JsonPropertyName("result")]
     public T? Result { get; set; }
 
-    [JsonProperty(PropertyName = "error")]
+    [JsonPropertyName("error")]
     public DelugeError? Error { get; set; }
 }

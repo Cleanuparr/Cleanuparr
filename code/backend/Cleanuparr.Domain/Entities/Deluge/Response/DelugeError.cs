@@ -1,12 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.Deluge.Response;
 
 public sealed record DelugeError
 {
-    [JsonProperty(PropertyName = "message")]
+    [JsonPropertyName("message")]
     public String Message { get; set; }
 
-    [JsonProperty(PropertyName = "code")]
+    [JsonPropertyName("code")]
     public int Code { get; set; }
 }

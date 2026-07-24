@@ -1,10 +1,11 @@
 ﻿using System.Net.Http.Headers;
+using System.Text.Json;
 using Cleanuparr.Domain.Entities.Deluge.Request;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.Extensions;
+using Cleanuparr.Infrastructure.Json;
 using Cleanuparr.Persistence.Models.Configuration;
-using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 
@@ -194,22 +195,11 @@ public sealed class DelugeClient
 
     public async Task<T> SendRequest<T>(DelugeRequest webRequest)
     {
-        var requestJson = JsonConvert.SerializeObject(webRequest, Formatting.None, new JsonSerializerSettings
-        {
-            NullValueHandling = webRequest.NullValueHandling
-        });
+        string requestJson = JsonSerializer.Serialize(webRequest, CleanuparrJsonOptions.Outbound);
 
-        var responseJson = await PostJson(requestJson);
-        var settings = new JsonSerializerSettings
-        {
-            Error = (_, args) =>
-            {
-                // Suppress the error and continue
-                args.ErrorContext.Handled = true;
-            }
-        };
-        
-        DelugeResponse<T>? webResponse = JsonConvert.DeserializeObject<DelugeResponse<T>>(responseJson, settings);
+        string responseJson = await PostJson(requestJson);
+
+        DelugeResponse<T>? webResponse = JsonSerializer.Deserialize<DelugeResponse<T>>(responseJson, CleanuparrJsonOptions.ExternalApiRead);
 
         if (webResponse?.Error != null)
         {

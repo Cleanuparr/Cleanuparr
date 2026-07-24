@@ -1,30 +1,30 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.Deluge.Response;
 
 public record DelugeTorrent
 {
-    [JsonProperty(PropertyName = "comment")]
+    [JsonPropertyName("comment")]
     public string Comment { get; set; }
 
-    [JsonProperty(PropertyName = "is_seed")]
+    [JsonPropertyName("is_seed")]
     public bool IsSeed { get; set; }
 
-    [JsonProperty(PropertyName = "hash")]
+    [JsonPropertyName("hash")]
     public string Hash { get; set; }
 
-    [JsonProperty(PropertyName = "paused")]
+    [JsonPropertyName("paused")]
     public bool Paused { get; set; }
 
-    [JsonProperty(PropertyName = "ratio")]
+    [JsonPropertyName("ratio")]
     public double Ratio { get; set; }
 
-    [JsonProperty(PropertyName = "message")]
+    [JsonPropertyName("message")]
     public string Message { get; set; }
 
-    [JsonProperty(PropertyName = "name")]
+    [JsonPropertyName("name")]
     public string Name { get; set; }
 
-    [JsonProperty(PropertyName = "label")]
+    [JsonPropertyName("label")]
     public string Label { get; set; }
 }

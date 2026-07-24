@@ -1,20 +1,17 @@
-﻿using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.Deluge.Request;
 
 public class DelugeRequest
 {
-    [JsonProperty(PropertyName = "id")]
+    [JsonPropertyName("id")]
     public int RequestId { get; set; }
 
-    [JsonProperty(PropertyName = "method")]
+    [JsonPropertyName("method")]
     public string Method { get; set; }
 
-    [JsonProperty(PropertyName = "params")]
+    [JsonPropertyName("params")]
     public List<object> Params { get; set; }
-
-    [JsonIgnore]
-    public NullValueHandling NullValueHandling { get; set; }
 
     public DelugeRequest(int requestId, string method, params object[]? parameters)
     {
@@ -26,7 +23,5 @@ public class DelugeRequest
         {
             Params.AddRange(parameters);
         }
-
-        NullValueHandling = NullValueHandling.Include;
     }
 }
