@@ -49,7 +49,8 @@ public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFil
 
     /// <inheritdoc/>
     public int MinSeeders { get; set; }
-
+    
+    /// <inheritdoc/>
     public double MaxInactiveDays { get; set; } = -1;
 
     /// <summary>

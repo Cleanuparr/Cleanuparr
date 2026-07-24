@@ -4,6 +4,9 @@ namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
 public interface IInactivityFilterable
 {
+    /// <summary>
+    /// Number of days of having no download or upload activity.
+    /// </summary>
     double MaxInactiveDays { get; set; }
 
     void ValidateMaxInactiveDays()

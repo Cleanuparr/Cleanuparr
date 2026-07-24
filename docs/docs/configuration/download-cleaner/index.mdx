@@ -90,7 +90,7 @@ mytracker.com
 </p>
 
 <Note>
-A download is cleaned when both `Max Ratio` and `Min Seed Time` are reached, OR when `Max Seed Time` is reached regardless of ratio. If `Min Seeders` is configured, the download is kept until that minimum seeder count is also met.
+A download is cleaned when both `Max Ratio` and `Min Seed Time` are reached, OR when `Max Seed Time` is reached regardless of ratio. If `Min Seeders` is configured, the download is kept until that minimum seeder count is also met. If `Max Inactive Days` is configured, the download is kept until it has also been inactive for that many days.
 </Note>
 
 <Important>
@@ -207,6 +207,20 @@ When enabled, this acts as a deletion guard: downloads that have reached their r
 If the selected download client cannot report a seeder count for a download, the download is kept instead of being deleted.
 
 Supported by **qBittorrent**, **Deluge**, **Transmission**, and **µTorrent**.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Max Inactive Days"
+>
+
+Only remove a download once it has been inactive (no upload or download activity) for at least this many days. Set to `-1` to disable.
+
+When enabled, this acts as a deletion guard: downloads that have reached their ratio or seed-time cleanup condition are still kept until the torrent has also been inactive for this many days.
+
+If last-activity data is unavailable for a download, it is kept instead of being deleted.
+
+Supported by **qBittorrent** only.
 
 </ConfigSection>
 
