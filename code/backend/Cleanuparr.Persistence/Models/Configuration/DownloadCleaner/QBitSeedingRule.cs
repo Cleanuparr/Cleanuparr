@@ -5,7 +5,7 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFilterable
+public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFilterable, IInactivityFilterable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -50,6 +50,8 @@ public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFil
     /// <inheritdoc/>
     public int MinSeeders { get; set; }
 
+    public double MaxInactiveDays { get; set; } = -1;
+
     /// <summary>
     /// Whether to delete the source files when cleaning the download.
     /// </summary>
@@ -78,5 +80,7 @@ public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFil
         }
 
         ((ISeedersFilterable)this).ValidateMinSeeders();
+
+        ((IInactivityFilterable)this).ValidateMaxInactiveDays();
     }
 }

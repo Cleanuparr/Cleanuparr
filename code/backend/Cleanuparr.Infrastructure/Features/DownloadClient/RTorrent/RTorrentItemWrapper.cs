@@ -56,6 +56,8 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
 
     public long SeedingTimeSeconds => CalculateSeedingTime();
 
+    public DateTime? LastActivityTime => null;
+
     public string? Category
     {
         get => _category;

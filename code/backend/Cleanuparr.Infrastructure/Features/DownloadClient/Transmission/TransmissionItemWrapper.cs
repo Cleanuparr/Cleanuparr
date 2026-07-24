@@ -63,6 +63,8 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => Info.SecondsSeeding ?? 0;
 
+    public DateTime? LastActivityTime => null;
+
     public string? Category
     {
         get => Info.GetCategory();

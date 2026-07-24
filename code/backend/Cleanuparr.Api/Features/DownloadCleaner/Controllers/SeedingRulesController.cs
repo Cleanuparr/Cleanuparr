@@ -128,6 +128,11 @@ public class SeedingRulesController : ControllerBase
                 seedersFilterable.MinSeeders = ruleDto.MinSeeders;
             }
 
+            if (existingRule is IInactivityFilterable inactivityFilterable)
+            {
+                inactivityFilterable.MaxInactiveDays = ruleDto.MaxInactiveDays;
+            }
+
             existingRule.Validate();
 
             await _dataContext.SaveChangesAsync();
@@ -246,6 +251,7 @@ public class SeedingRulesController : ControllerBase
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
                 MinSeeders = dto.MinSeeders,
+                MaxInactiveDays = dto.MaxInactiveDays,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.Deluge => new DelugeSeedingRule

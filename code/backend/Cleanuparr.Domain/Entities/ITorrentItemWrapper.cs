@@ -28,8 +28,10 @@ public interface ITorrentItemWrapper
     int? SeederCount { get; }
 
     long Eta { get; }
-    
+
     long SeedingTimeSeconds { get; }
+
+    DateTime? LastActivityTime { get; }
 
     string? Category { get; set; }
 
