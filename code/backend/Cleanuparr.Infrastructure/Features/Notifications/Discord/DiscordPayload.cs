@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Discord;
 
@@ -6,7 +6,7 @@ public class DiscordPayload
 {
     public string? Username { get; set; }
 
-    [JsonProperty("avatar_url")]
+    [JsonPropertyName("avatar_url")]
     public string? AvatarUrl { get; set; }
 
     public List<DiscordEmbed> Embeds { get; set; } = new();
@@ -54,6 +54,6 @@ public class DiscordFooter
 {
     public string Text { get; set; } = string.Empty;
 
-    [JsonProperty("icon_url")]
+    [JsonPropertyName("icon_url")]
     public string? IconUrl { get; set; }
 }

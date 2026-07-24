@@ -3,8 +3,8 @@ using System.Text;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 
@@ -21,11 +21,7 @@ public sealed class NtfyProxy : INtfyProxy
     {
         try
         {
-            string content = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore
-            });
+            string content = JsonSerializer.Serialize(payload, CleanuparrJsonOptions.Notification);
 
             var parsedUrl = config.Uri!;
             using HttpRequestMessage request = new(HttpMethod.Post, parsedUrl);

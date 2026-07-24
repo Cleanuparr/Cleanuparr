@@ -1,21 +1,21 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 
 public sealed class TelegramPayload
 {
-    [JsonProperty("chat_id")]
+    [JsonPropertyName("chat_id")]
     public string ChatId { get; init; } = string.Empty;
 
-    [JsonProperty("text")]
+    [JsonPropertyName("text")]
     public string Text { get; init; } = string.Empty;
 
-    [JsonProperty("photo")]
+    [JsonPropertyName("photo")]
     public string? PhotoUrl { get; init; }
 
-    [JsonProperty("message_thread_id")]
+    [JsonPropertyName("message_thread_id")]
     public int? MessageThreadId { get; init; }
 
-    [JsonProperty("disable_notification")]
+    [JsonPropertyName("disable_notification")]
     public bool DisableNotification { get; init; }
 }

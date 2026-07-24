@@ -1,19 +1,19 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 
 public sealed record PushoverResponse
 {
-    [JsonProperty("status")]
+    [JsonPropertyName("status")]
     public int Status { get; init; }
 
-    [JsonProperty("request")]
+    [JsonPropertyName("request")]
     public string? Request { get; init; }
 
-    [JsonProperty("receipt")]
+    [JsonPropertyName("receipt")]
     public string? Receipt { get; init; }
 
-    [JsonProperty("errors")]
+    [JsonPropertyName("errors")]
     public List<string>? Errors { get; init; }
 
     public bool IsSuccess => Status == 1;

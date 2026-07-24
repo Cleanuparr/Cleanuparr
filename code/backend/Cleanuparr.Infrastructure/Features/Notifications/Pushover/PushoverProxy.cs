@@ -1,6 +1,7 @@
 using System.Net;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 using Cleanuparr.Shared.Helpers;
-using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 
@@ -51,7 +52,7 @@ public sealed class PushoverProxy : IPushoverProxy
             using var response = await _httpClient.PostAsync(ApiUrl, content);
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            var pushoverResponse = JsonConvert.DeserializeObject<PushoverResponse>(responseBody);
+            PushoverResponse? pushoverResponse = JsonSerializer.Deserialize<PushoverResponse>(responseBody, CleanuparrJsonOptions.ExternalApiRead);
 
             if (!response.IsSuccessStatusCode || pushoverResponse?.IsSuccess != true)
             {
