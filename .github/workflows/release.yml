@@ -111,7 +111,7 @@ jobs:
 
           published=$(gh release view "$previous_tag" --json publishedAt --jq .publishedAt)
 
-          if ! breaking_list=$(gh api "repos/${{ github.repository }}/issues?labels=breaking&state=closed&since=$published&per_page=100" \
+          if ! breaking_list=$(gh api --paginate "repos/${{ github.repository }}/issues?labels=breaking&state=closed&since=$published&per_page=100" \
             --jq ".[] | select(.pull_request.merged_at > \"$published\") | \"  #\(.number) \(.title)\""); then
             echo "::error::Failed to query pull request labels, cannot verify the version"
             printf '%s\n' "$breaking_list"
@@ -120,8 +120,19 @@ jobs:
 
           breaking=$(printf '%s' "$breaking_list" | grep -c . || true)
 
-          previous_minor=${previous_tag#v}
-          previous_minor=${previous_minor%.*}
+          previous_version=${previous_tag#v}
+
+          if [ "$previous_version" = "$APP_VERSION" ]; then
+            echo "::error::$APP_VERSION is the same version as the previous release $previous_tag."
+            exit 1
+          fi
+
+          if [ "$(printf '%s\n%s\n' "$previous_version" "$APP_VERSION" | sort -V | tail -1)" != "$APP_VERSION" ]; then
+            echo "::error::$APP_VERSION is older than the previous release $previous_tag. Releases must move forward."
+            exit 1
+          fi
+
+          previous_minor=${previous_version%.*}
           new_minor=${APP_VERSION%.*}
 
           echo "Previous release: $previous_tag (published $published)"

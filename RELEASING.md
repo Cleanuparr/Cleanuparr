@@ -1,6 +1,6 @@
 # Releasing Cleanuparr
 
-Versioning rules and the release process are detailed in the user-facing version of this policy at [docs/docs/6_versioning.mdx](docs/docs/6_versioning.mdx) and published under [Versioning](https://cleanuparr.github.io/docs/versioning).
+Versioning rules and the release process are detailed in the user-facing version of this policy at [docs/docs/installation/versioning.mdx](docs/docs/installation/versioning.mdx) and published under [Versioning](https://cleanuparr.github.io/docs/installation/versioning).
 
 ## Versioning
 

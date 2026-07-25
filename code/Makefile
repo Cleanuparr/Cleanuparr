@@ -46,7 +46,7 @@ release-check:
 	published=$$(gh release view --json publishedAt --jq .publishedAt); \
 	echo "Previous release: $$previous ($$published)"; \
 	echo ""; \
-	if ! breaking=$$(gh api "repos/{owner}/{repo}/issues?labels=breaking&state=closed&since=$$published&per_page=100" \
+	if ! breaking=$$(gh api --paginate "repos/{owner}/{repo}/issues?labels=breaking&state=closed&since=$$published&per_page=100" \
 		--jq ".[] | select(.pull_request.merged_at > \"$$published\") | \"  #\(.number) \(.title)\""); then \
 		echo "Failed to query pull request labels:" >&2; \
 		echo "$$breaking" >&2; \
