@@ -391,8 +391,10 @@ public sealed class QBitSeedingRuleTests
         Should.NotThrow(() => config.Validate());
     }
 
-    [Fact]
-    public void Validate_WithMaxInactiveDaysLessThanDisabled_ThrowsValidationException()
+    [Theory]
+    [InlineData(-2)]
+    [InlineData(-0.5)]
+    public void Validate_WithInvalidMaxInactiveDays_ThrowsValidationException(double maxInactiveDays)
     {
         var config = new QBitSeedingRule
         {
@@ -401,12 +403,12 @@ public sealed class QBitSeedingRuleTests
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
-            MaxInactiveDays = -2,
+            MaxInactiveDays = maxInactiveDays,
             DeleteSourceFiles = true
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Max inactive days can not be less than -1");
+        exception.Message.ShouldBe("Max inactive days must be -1 (disabled) or a non-negative number");
     }
 
     #endregion

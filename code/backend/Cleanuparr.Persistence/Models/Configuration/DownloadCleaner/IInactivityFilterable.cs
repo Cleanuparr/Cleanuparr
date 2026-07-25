@@ -11,9 +11,9 @@ public interface IInactivityFilterable
 
     void ValidateMaxInactiveDays()
     {
-        if (MaxInactiveDays < -1)
+        if (MaxInactiveDays is < 0 and not -1)
         {
-            throw new ValidationException("Max inactive days can not be less than -1");
+            throw new ValidationException("Max inactive days must be -1 (disabled) or a non-negative number");
         }
     }
 }
