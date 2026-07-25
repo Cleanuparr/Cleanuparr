@@ -547,6 +547,28 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task SkipsTorrent_WhenMaxInactiveDaysConfigured_AndLastActivityIsUnixEpoch(int epochOffsetSeconds)
+        {
+            QBitService sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            List<Domain.Entities.ITorrentItemWrapper> downloads = new()
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false, lastActivity: DateTime.UnixEpoch.AddSeconds(epochOffsetSeconds))
+            };
+            QBitSeedingRule rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MaxInactiveDays = 30;
+            List<ISeedingRule> rules = new() { rule };
+
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
+        }
+
         [Fact]
         public async Task CleansTorrent_WhenMaxInactiveDaysDisabled_RegardlessOfActivity()
         {

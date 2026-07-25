@@ -353,7 +353,7 @@ public abstract class DownloadService : IDownloadService
 
         string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
 
-        if (!lastActivity.HasValue)
+        if (lastActivity is null || lastActivity <= DateTime.UnixEpoch)
         {
             _logger.LogDebug("skip | download last activity is unavailable | {name}", downloadName);
             return true;
