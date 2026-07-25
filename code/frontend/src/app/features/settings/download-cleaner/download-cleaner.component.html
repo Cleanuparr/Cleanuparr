@@ -143,6 +143,9 @@
                         @if ((rule.minSeeders ?? 0) > 0) {
                           <app-badge>Min Seeders: {{ rule.minSeeders }}</app-badge>
                         }
+                        @if ((rule.maxInactiveDays ?? -1) >= 0) {
+                          <app-badge>Max Inactive: {{ rule.maxInactiveDays }}d</app-badge>
+                        }
                         @if (rule.trackerPatterns.length) {
                           <app-badge severity="warning">{{ rule.trackerPatterns.length }} tracker pattern{{ rule.trackerPatterns.length !== 1 ? 's' : '' }}</app-badge>
                         }
