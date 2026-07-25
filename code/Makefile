@@ -41,6 +41,36 @@ ifndef name
 endif
 	$(PG_DUMMY) dotnet ef migrations add $(name) --context UsersContext --project backend/Cleanuparr.Persistence.Postgres/Cleanuparr.Persistence.Postgres.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Users
 
+release-check:
+	@previous=$$(gh release view --json tagName --jq .tagName) || exit 1; \
+	published=$$(gh release view --json publishedAt --jq .publishedAt); \
+	echo "Previous release: $$previous ($$published)"; \
+	echo ""; \
+	if ! breaking=$$(gh api "repos/{owner}/{repo}/issues?labels=breaking&state=closed&since=$$published&per_page=100" \
+		--jq ".[] | select(.pull_request.merged_at > \"$$published\") | \"  #\(.number) \(.title)\""); then \
+		echo "Failed to query pull request labels:" >&2; \
+		echo "$$breaking" >&2; \
+		exit 1; \
+	fi; \
+	if [ -n "$$breaking" ]; then \
+		echo "Breaking changes merged since $$previous:"; \
+		echo "$$breaking"; \
+		echo ""; \
+		echo "=> the next release must bump the MINOR"; \
+	else \
+		echo "No breaking changes merged since $$previous"; \
+		echo ""; \
+		echo "=> the next release can be a PATCH"; \
+	fi
+
+release-notes:
+ifndef version
+	$(error version is required. Usage: make release-notes version=2.11.0)
+endif
+	@previous=$$(gh release view --json tagName --jq .tagName); \
+	gh api -X POST repos/{owner}/{repo}/releases/generate-notes \
+		-f tag_name=v$(version) -f target_commitish=main -f previous_tag_name=$$previous --jq .body
+
 docker-build:
 ifndef tag
 	$(error tag is required. Usage: make docker-build tag=latest version=1.0.0 user=... pat=...)
