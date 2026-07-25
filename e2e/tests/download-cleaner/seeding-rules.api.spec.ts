@@ -43,6 +43,7 @@ test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
       minSeedTime: 0,
       maxSeedTime: -1,
       minSeeders: 5,
+      maxInactiveDays: 30,
       deleteSourceFiles: true,
     });
     expect(res.status).toBe(201);
@@ -53,6 +54,7 @@ test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
     expect(rule.trackerPatterns).toEqual(['tracker.example.com']);
     expect(rule.tagsAny).toEqual(['hd']);
     expect(rule.tagsAll).toEqual([]);
+    expect(rule.maxInactiveDays).toBe(30);
     expect(rule.priority).toBe(1);
   });
 
@@ -91,7 +93,67 @@ test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
     expect(moviesRule.categories).toEqual(['movies', 'films']);
     expect(moviesRule.trackerPatterns).toEqual(['tracker.example.com']);
     expect(moviesRule.minSeeders).toBe(5);
+    expect(moviesRule.maxInactiveDays).toBe(30);
     expect(moviesRule.priority).toBe(1);
+  });
+
+  test('updates max inactive days and persists it', async ({ api }) => {
+    const rules = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    const rule = rules.find((r: { name: string }) => r.name === 'Movies Rule');
+    expect(rule.maxInactiveDays).toBe(30);
+
+    const updateRes = await api.downloadCleaner.updateSeedingRule(rule.id, {
+      name: rule.name,
+      categories: rule.categories,
+      trackerPatterns: rule.trackerPatterns,
+      privacyType: rule.privacyType,
+      maxRatio: rule.maxRatio,
+      minSeedTime: rule.minSeedTime,
+      maxSeedTime: rule.maxSeedTime,
+      minSeeders: rule.minSeeders,
+      maxInactiveDays: 7,
+      deleteSourceFiles: rule.deleteSourceFiles,
+    });
+    expect(updateRes.status).toBe(200);
+
+    const updated = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    expect(updated.find((r: { id: string }) => r.id === rule.id).maxInactiveDays).toBe(7);
+  });
+
+  test('rejects negative max inactive days on create', async ({ api }) => {
+    const res = await api.downloadCleaner.createSeedingRule(downloadClientId, {
+      name: 'Bad Inactive Rule',
+      categories: ['test'],
+      privacyType: 'Both',
+      maxRatio: 2.0,
+      minSeedTime: 0,
+      maxSeedTime: -1,
+      maxInactiveDays: -5,
+      deleteSourceFiles: true,
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  test('rejects negative max inactive days on update', async ({ api }) => {
+    const rules = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    const rule = rules.find((r: { name: string }) => r.name === 'Movies Rule');
+
+    const res = await api.downloadCleaner.updateSeedingRule(rule.id, {
+      name: rule.name,
+      categories: rule.categories,
+      trackerPatterns: rule.trackerPatterns,
+      privacyType: rule.privacyType,
+      maxRatio: rule.maxRatio,
+      minSeedTime: rule.minSeedTime,
+      maxSeedTime: rule.maxSeedTime,
+      minSeeders: rule.minSeeders,
+      maxInactiveDays: -5,
+      deleteSourceFiles: rule.deleteSourceFiles,
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+
+    const after = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    expect(after.find((r: { id: string }) => r.id === rule.id).maxInactiveDays).toBe(7);
   });
 
   test('reorders seeding rules', async ({ api }) => {
@@ -236,5 +298,46 @@ test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
   test('returns 404 for non-existent download client', async ({ api }) => {
     const res = await api.downloadCleaner.listSeedingRules('00000000-0000-0000-0000-000000000000');
     expect(res.status).toBe(404);
+  });
+});
+
+test.describe.serial('DownloadCleaner: seeding rules for non-qBittorrent clients', () => {
+  let downloadClientId: string;
+
+  test.beforeAll(async ({ api }) => {
+    const res = await api.downloadClient.create(
+      buildDownloadClientPayload('transmission', {
+        name: 'e2e-test-transmission-rules',
+        host: 'http://127.0.0.1:9998',
+        enabled: false,
+      }),
+    );
+    expect(res.status).toBe(201);
+    downloadClientId = (await res.json()).id;
+  });
+
+  test.afterAll(async ({ api }) => {
+    if (downloadClientId) {
+      await api.downloadClient.delete(downloadClientId);
+    }
+  });
+
+  test('omits max inactive days for a client that does not support it', async ({ api }) => {
+    const res = await api.downloadCleaner.createSeedingRule(downloadClientId, {
+      name: 'Transmission Rule',
+      categories: ['movies'],
+      privacyType: 'Both',
+      maxRatio: 2.0,
+      minSeedTime: 0,
+      maxSeedTime: -1,
+      maxInactiveDays: 30,
+      deleteSourceFiles: true,
+    });
+    expect(res.status).toBe(201);
+    expect((await res.json()).maxInactiveDays ?? null).toBeNull();
+
+    const rules = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    expect(rules).toHaveLength(1);
+    expect(rules[0].maxInactiveDays ?? null).toBeNull();
   });
 });
