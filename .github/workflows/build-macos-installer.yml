@@ -1,7 +1,7 @@
 name: Build macOS Installers
 
 permissions:
-  contents: write
+  contents: read
 
 on:
   workflow_call:
