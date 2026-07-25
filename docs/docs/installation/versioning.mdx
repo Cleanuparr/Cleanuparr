@@ -1,0 +1,83 @@
+---
+sidebar_position: 4
+---
+
+import { Note, Important, SectionTitle, ElementNavigator, styles } from '@site/src/components/documentation';
+
+# Versioning
+
+Learn how Cleanuparr's version numbers work and what they mean when it's time to upgrade.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<Important>
+This policy applies from **v2.10.0** onward. Don't use older version numbers as a compatibility guide.
+</Important>
+
+<div className={styles.section}>
+
+<SectionTitle>The three numbers</SectionTitle>
+
+Versions look like `2.10.3`.
+
+| Part | Example | Meaning |
+| --- | --- | --- |
+| Major | **2**.10.3 | The product line. Cleanuparr v2 introduced the web UI, and the major version remains `2` for now. |
+| Minor | 2.**10**.3 | A breaking release. Upgrading may require manual action or prevent you from rolling back afterward. |
+| Patch | 2.10.**3** | Everything else: bug fixes and new features that are backwards compatible. |
+
+Although a backup is always recommended when updating, be sure to create a backup at least before updating to a new minor version.
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Choosing an image tag</SectionTitle>
+
+<Note>
+Although this guide describes the Docker tags, non-Docker users can follow the same guide for the other installation methods' versioning.
+</Note>
+
+Every release publishes several Docker tags that all point to the same image:
+
+| Tag | Does it change? | Can contain breaking changes? |
+| --- | --- | --- |
+| `ghcr.io/cleanuparr/cleanuparr:latest` | Yes, after every release | Yes |
+| `ghcr.io/cleanuparr/cleanuparr:2` | Yes, after every release while the version starts with `2` | Yes |
+| `ghcr.io/cleanuparr/cleanuparr:2.10` | Yes, after every release while the version starts with `2.10` | No breaking changes for versions starting with `2.10` |
+| `ghcr.io/cleanuparr/cleanuparr:2.10.3` | No | No breaking changes for versions starting with `2.10` |
+
+
+If you use automatic container updates, consider pinning to a minor version:
+
+```yaml
+image: ghcr.io/cleanuparr/cleanuparr:2.10
+```
+
+You'll continue to receive every bug fix and new non-breaking feature automatically, without unexpectedly upgrading to a breaking release. When a new minor is released, you can upgrade on your own schedule after reading the release notes.
+
+<Note>
+Pinning a minor version also means you won't receive future minor releases automatically. Check the releases page occasionally so you don't end up staying on an old release line indefinitely.
+</Note>
+
+A release is considered breaking if upgrading requires manual action, or if you can no longer safely roll back to your previous version.
+
+<Important>
+Breaking changes come in different forms, but the most common is a database change (for example, changing the data type of a column) that prevents you from simply downgrading to an earlier version.
+
+**Always back up your configuration and/or database before upgrading.**
+</Important>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Update notifications</SectionTitle>
+
+Cleanuparr periodically checks for new releases and lets you know when one is available. It always compares against the latest published version, so you'll still be notified about new minor releases even if you've intentionally pinned to an older one. You can disable this check under `Settings` → `General`.
+
+</div>
+
+</div>
