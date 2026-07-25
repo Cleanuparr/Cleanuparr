@@ -238,6 +238,44 @@ public sealed class QBitSeedingRuleTests
         exception.Message.ShouldBe("Either max ratio or max seed time must be set to a non-negative value");
     }
 
+    [Theory]
+    [InlineData(-0.5)]
+    [InlineData(-2)]
+    public void Validate_WithInvalidMaxRatio_ThrowsValidationException(double maxRatio)
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = ["test-category"],
+            MaxRatio = maxRatio,
+            MinSeedTime = 0,
+            MaxSeedTime = 24,
+            DeleteSourceFiles = true
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Max ratio must be -1 (disabled) or a non-negative number");
+    }
+
+    [Theory]
+    [InlineData(-0.5)]
+    [InlineData(-2)]
+    public void Validate_WithInvalidMaxSeedTime_ThrowsValidationException(double maxSeedTime)
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = ["test-category"],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = maxSeedTime,
+            DeleteSourceFiles = true
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Max seed time must be -1 (disabled) or a non-negative number");
+    }
+
     #endregion
 
     #region Validate - MinSeedTime Validation

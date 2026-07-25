@@ -78,6 +78,8 @@ public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable, ISe
             throw new ValidationException("Either max ratio or max seed time must be set to a non-negative value");
         }
 
+        ((ISeedingRule)this).ValidateSeedingThresholds();
+
         if (MinSeedTime < 0)
         {
             throw new ValidationException("Min seed time can not be negative");

@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Enums;
+using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
@@ -40,4 +41,17 @@ public interface ISeedingRule : IConfig
     double MaxSeedTime { get; set; }
 
     bool DeleteSourceFiles { get; set; }
+
+    void ValidateSeedingThresholds()
+    {
+        if (MaxRatio is < 0 and not -1)
+        {
+            throw new ValidationException("Max ratio must be -1 (disabled) or a non-negative number");
+        }
+
+        if (MaxSeedTime is < 0 and not -1)
+        {
+            throw new ValidationException("Max seed time must be -1 (disabled) or a non-negative number");
+        }
+    }
 }
