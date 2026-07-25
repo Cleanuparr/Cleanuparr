@@ -29,7 +29,11 @@
     "angularx-qrcode": {
       "@angular/common": "$@angular/common",
       "@angular/core": "$@angular/core"
-    }
+    },
+    "@babel/core": "^7.29.7",
+    "esbuild": "^0.28.1",
+    "brace-expansion": "^5.0.8",
+    "@hono/node-server": "^2.0.11"
   },
   "dependencies": {
     "@angular/cdk": "^22.0.2",
