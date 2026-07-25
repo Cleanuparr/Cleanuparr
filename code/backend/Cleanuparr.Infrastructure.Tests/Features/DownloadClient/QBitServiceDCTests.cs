@@ -309,14 +309,15 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         {
         }
 
-        private static QBitItemWrapper CreateTorrent(string hash, string category, bool isPrivate) =>
+        private static QBitItemWrapper CreateTorrent(string hash, string category, bool isPrivate, DateTime? lastActivity = null) =>
             new(new TorrentInfo
             {
                 Hash = hash,
                 Name = $"Test {hash}",
                 Category = category,
                 Ratio = 2.0,
-                SeedingTime = TimeSpan.FromHours(10)
+                SeedingTime = TimeSpan.FromHours(10),
+                LastActivityTime = lastActivity
             }, Array.Empty<TorrentTracker>(), isPrivate);
 
         private static QBitSeedingRule CreateRule(string name, TorrentPrivacyType privacyType) =>
@@ -482,6 +483,107 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
+        }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenStillActiveWithinInactiveWindow()
+        {
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false, lastActivity: DateTime.UtcNow.AddDays(-5))
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MaxInactiveDays = 30;
+            var rules = new List<ISeedingRule> { rule };
+
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
+        }
+
+        [Fact]
+        public async Task CleansTorrent_WhenInactiveLongerThanWindow()
+        {
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false, lastActivity: DateTime.UtcNow.AddDays(-40))
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MaxInactiveDays = 30;
+            var rules = new List<ISeedingRule> { rule };
+
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
+        }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenMaxInactiveDaysConfigured_AndLastActivityUnavailable()
+        {
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false, lastActivity: null)
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MaxInactiveDays = 30;
+            var rules = new List<ISeedingRule> { rule };
+
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task SkipsTorrent_WhenMaxInactiveDaysConfigured_AndLastActivityIsUnixEpoch(int epochOffsetSeconds)
+        {
+            QBitService sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            List<Domain.Entities.ITorrentItemWrapper> downloads = new()
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false, lastActivity: DateTime.UnixEpoch.AddSeconds(epochOffsetSeconds))
+            };
+            QBitSeedingRule rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MaxInactiveDays = 30;
+            List<ISeedingRule> rules = new() { rule };
+
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
+        }
+
+        [Fact]
+        public async Task CleansTorrent_WhenMaxInactiveDaysDisabled_RegardlessOfActivity()
+        {
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false, lastActivity: DateTime.UtcNow)
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            var rules = new List<ISeedingRule> { rule };
+
+            await sut.CleanDownloadsAsync(downloads, rules);
+
             await _fixture.ClientWrapper.Received(1)
                 .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
         }

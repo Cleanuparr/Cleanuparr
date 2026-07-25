@@ -29,6 +29,8 @@ public sealed record SeedingRuleResponse
 
     public int? MinSeeders { get; init; }
 
+    public double? MaxInactiveDays { get; init; }
+
     public bool DeleteSourceFiles { get; init; }
 
     public static SeedingRuleResponse From(ISeedingRule rule) => new()
@@ -45,6 +47,7 @@ public sealed record SeedingRuleResponse
         MinSeedTime = rule.MinSeedTime,
         MaxSeedTime = rule.MaxSeedTime,
         MinSeeders = (rule as ISeedersFilterable)?.MinSeeders,
+        MaxInactiveDays = (rule as IInactivityFilterable)?.MaxInactiveDays,
         DeleteSourceFiles = rule.DeleteSourceFiles,
     };
 }

@@ -45,6 +45,7 @@ public class SeedingRulesControllerTests : IDisposable
         double minSeedTime = 0,
         double maxSeedTime = -1,
         int minSeeders = 0,
+        double maxInactiveDays = -1,
         bool deleteSourceFiles = true)
     {
         return new SeedingRuleRequest
@@ -60,6 +61,7 @@ public class SeedingRulesControllerTests : IDisposable
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,
             MinSeeders = minSeeders,
+            MaxInactiveDays = maxInactiveDays,
             DeleteSourceFiles = deleteSourceFiles,
         };
     }
@@ -197,6 +199,17 @@ public class SeedingRulesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateSeedingRule_SetsMaxInactiveDays()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        var request = CreateValidRequest(maxInactiveDays: 30);
+
+        var result = await _controller.CreateSeedingRule(client.Id, request);
+
+        GetCreatedRule<QBitSeedingRule>(result).MaxInactiveDays.ShouldBe(30);
+    }
+
+    [Fact]
     public async Task CreateSeedingRule_AutoAssignsSequentialPriority()
     {
         var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
@@ -328,6 +341,21 @@ public class SeedingRulesControllerTests : IDisposable
         var okResult = result.ShouldBeOfType<OkObjectResult>();
         var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
         updated.MinSeeders.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task UpdateSeedingRule_UpdatesMaxInactiveDays()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        var rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
+
+        var request = CreateValidRequest(maxInactiveDays: 30);
+
+        var result = await _controller.UpdateSeedingRule(rule.Id, request);
+
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        updated.MaxInactiveDays.ShouldBe(30);
     }
 
     [Fact]

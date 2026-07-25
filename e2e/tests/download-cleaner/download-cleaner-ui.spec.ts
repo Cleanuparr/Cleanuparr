@@ -12,10 +12,14 @@ import {
   selectOption,
   ensureToggle,
   ensureAccordionExpanded,
+  textInput,
+  numberInput,
+  addChip,
 } from '../helpers/ui';
 
 const CLIENT_A = 'E2E DC One';
 const CLIENT_B = 'E2E DC Two';
+const CLIENT_TRANSMISSION = 'E2E DC Transmission';
 
 function clientPayload(name: string) {
   return {
@@ -32,6 +36,16 @@ function clientPayload(name: string) {
   };
 }
 
+function transmissionClientPayload(name: string) {
+  return {
+    ...clientPayload(name),
+    typeName: 'Transmission',
+    host: 'http://localhost:9091',
+    username: 'transmission',
+    password: 'transmission',
+  };
+}
+
 // Behavior-parity spec for the Download Cleaner form: global config, seeding-rule modal,
 // and the per-client sub-configs (the linkedSignal-backed part with the highest migration risk).
 test.describe.serial('Download Cleaner UI', () => {
@@ -41,9 +55,10 @@ test.describe.serial('Download Cleaner UI', () => {
     const token = await loginAndGetToken();
     await createDownloadClient(token, clientPayload(CLIENT_A));
     await createDownloadClient(token, clientPayload(CLIENT_B));
+    await createDownloadClient(token, transmissionClientPayload(CLIENT_TRANSMISSION));
     const clients = await listDownloadClients(token);
     for (const c of clients) {
-      if (c.name === CLIENT_A || c.name === CLIENT_B) createdIds.push(c.id);
+      if (c.name === CLIENT_A || c.name === CLIENT_B || c.name === CLIENT_TRANSMISSION) createdIds.push(c.id);
     }
   });
 
@@ -90,6 +105,37 @@ test.describe.serial('Download Cleaner UI', () => {
 
     await nameCard.locator('input').fill('My Rule');
     await expect(nameCard.locator('.input-error')).toHaveCount(0);
+  });
+
+  test('saves Max Inactive Days and shows it on the rule card', async ({ page }) => {
+    await enableAndSelect(page);
+    await ensureAccordionExpanded(page, 'Seeding Rules', page.getByRole('button', { name: 'Add Seeding Rule' }));
+    await page.getByRole('button', { name: 'Add Seeding Rule' }).click();
+
+    const modal = page.getByRole('dialog', { name: 'Add Seeding Rule' });
+    await expect(modal).toBeVisible();
+
+    await textInput(modal, 'Rule Name').fill('Inactive Rule');
+    await addChip(modal, 'Categories', 'e2e-inactive');
+    await numberInput(modal, 'Max Ratio').fill('2');
+    await numberInput(modal, 'Max Inactive Days').fill('30');
+
+    await modal.getByRole('button', { name: 'Create', exact: true }).click();
+    await expect(modal).toBeHidden({ timeout: 10_000 });
+
+    const card = page.locator('.rule-card').filter({ hasText: 'Inactive Rule' });
+    await expect(card.getByText('Max Inactive: 30d', { exact: true })).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('Max Inactive Days is hidden for a client that does not support it', async ({ page }) => {
+    await enableAndSelect(page, CLIENT_TRANSMISSION);
+    await ensureAccordionExpanded(page, 'Seeding Rules', page.getByRole('button', { name: 'Add Seeding Rule' }));
+    await page.getByRole('button', { name: 'Add Seeding Rule' }).click();
+
+    const modal = page.getByRole('dialog', { name: 'Add Seeding Rule' });
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('app-number-input').filter({ hasText: 'Min Seeders' })).toBeVisible();
+    await expect(modal.locator('app-number-input').filter({ hasText: 'Max Inactive Days' })).toHaveCount(0);
   });
 
   test('per-client Dead Torrents requires strikes >= 3', async ({ page }) => {

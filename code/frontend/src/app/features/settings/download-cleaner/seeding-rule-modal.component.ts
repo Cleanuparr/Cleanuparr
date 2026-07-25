@@ -22,6 +22,7 @@ interface SeedingRuleFormModel {
   minSeedTime: number | null;
   maxSeedTime: number | null;
   minSeeders: number | null;
+  maxInactiveDays: number | null;
   deleteSourceFiles: boolean;
 }
 
@@ -52,6 +53,7 @@ export class SeedingRuleModalComponent {
   readonly isTagFilterableClient = input(false);
   readonly isSelectedClientTransmission = input(false);
   readonly isSeedersFilterableClient = input(false);
+  readonly isInactivityFilterableClient = input(false);
   readonly saved = output<void>();
 
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
@@ -71,7 +73,7 @@ export class SeedingRuleModalComponent {
   private readonly defaults: SeedingRuleFormModel = {
     name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
     privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
-    maxSeedTime: -1, minSeeders: 0, deleteSourceFiles: true,
+    maxSeedTime: -1, minSeeders: 0, maxInactiveDays: -1, deleteSourceFiles: true,
   };
   readonly model = signal<SeedingRuleFormModel>({ ...this.defaults });
   readonly form = form(this.model, (p) => {
@@ -81,6 +83,7 @@ export class SeedingRuleModalComponent {
     min(p.minSeedTime, 0);
     min(p.maxSeedTime, -1);
     min(p.minSeeders, 0);
+    min(p.maxInactiveDays, -1);
     validate(p.maxSeedTime, () => {
       const m = this.model();
       return (m.maxRatio ?? -1) < 0 && (m.maxSeedTime ?? -1) < 0
@@ -112,6 +115,7 @@ export class SeedingRuleModalComponent {
           minSeedTime: r.minSeedTime,
           maxSeedTime: r.maxSeedTime,
           minSeeders: r.minSeeders ?? 0,
+          maxInactiveDays: r.maxInactiveDays ?? -1,
           deleteSourceFiles: r.deleteSourceFiles,
         } : { ...this.defaults };
         this.model.set(next);
@@ -143,6 +147,7 @@ export class SeedingRuleModalComponent {
       minSeedTime: m.minSeedTime ?? 0,
       maxSeedTime: m.maxSeedTime ?? -1,
       minSeeders: m.minSeeders ?? 0,
+      maxInactiveDays: m.maxInactiveDays ?? -1,
       deleteSourceFiles: m.deleteSourceFiles,
     };
 

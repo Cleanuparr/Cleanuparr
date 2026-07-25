@@ -192,7 +192,7 @@ public abstract class DownloadService : IDownloadService
             SetDownloadClientContext();
 
             TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
-            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, torrent.SeederCount, seedingRule);
+            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, torrent.SeederCount, torrent.LastActivityTime, seedingRule);
 
             if (!result.ShouldClean)
             {
@@ -234,9 +234,14 @@ public abstract class DownloadService : IDownloadService
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
     
-    private SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, ISeedingRule seedingRule)
+    private SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, DateTime? lastActivity, ISeedingRule seedingRule)
     {
         if (BelowMinimumSeeders(seederCount, seedingRule))
+        {
+            return new();
+        }
+
+        if (StillActiveWithinWindow(lastActivity, seedingRule))
         {
             return new();
         }
@@ -339,6 +344,32 @@ public abstract class DownloadService : IDownloadService
 
     }
     
+    private bool StillActiveWithinWindow(DateTime? lastActivity, ISeedingRule seedingRule)
+    {
+        if (seedingRule is not IInactivityFilterable { MaxInactiveDays: >= 0 } inactivityRule)
+        {
+            return false;
+        }
+
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
+
+        if (lastActivity is null || lastActivity <= DateTime.UnixEpoch)
+        {
+            _logger.LogDebug("skip | download last activity is unavailable | {name}", downloadName);
+            return true;
+        }
+
+        double inactiveDays = (DateTime.UtcNow - lastActivity.Value).TotalDays;
+
+        if (inactiveDays < inactivityRule.MaxInactiveDays)
+        {
+            _logger.LogDebug("skip | download still active within MAX_INACTIVE_DAYS | {name}", downloadName);
+            return true;
+        }
+
+        return false;
+    }
+
     private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, ISeedingRule seedingRule)
     {
         if (seedingRule.MaxSeedTime < 0)

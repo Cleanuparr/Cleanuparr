@@ -35,6 +35,11 @@
     <app-number-input label="Max Seed Time" [formField]="form.maxSeedTime" suffix="hours"
       hint="Maximum time to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxSeedTime" />
+    @if (isInactivityFilterableClient()) {
+      <app-number-input label="Max Inactive Days" [formField]="form.maxInactiveDays" [step]="1" suffix="days" featureId="max-inactive-days"
+        hint="Only remove a download once it has also been inactive (no transfer) for at least this many days (-1 means disabled)"
+        helpKey="download-cleaner:maxInactiveDays" />
+    }
     @if (isSeedersFilterableClient()) {
       <app-number-input label="Min Seeders" [formField]="form.minSeeders" [step]="1" featureId="min-seeders"
         hint="Minimum number of seeders required before removing (0 means disabled; unavailable counts keep the download)"

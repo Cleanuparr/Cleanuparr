@@ -64,6 +64,8 @@ public record SeedingRuleRequest
     [Range(0, int.MaxValue, ErrorMessage = "Min seeders must be 0 or greater.")]
     public int MinSeeders { get; init; }
 
+    public double MaxInactiveDays { get; init; } = -1;
+
     /// <summary>
     /// Whether to delete the source files when cleaning the download.
     /// </summary>

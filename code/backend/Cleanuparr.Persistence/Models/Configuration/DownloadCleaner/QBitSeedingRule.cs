@@ -1,11 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFilterable
+public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFilterable, IInactivityFilterable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -49,6 +48,9 @@ public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFil
 
     /// <inheritdoc/>
     public int MinSeeders { get; set; }
+    
+    /// <inheritdoc/>
+    public double MaxInactiveDays { get; set; } = -1;
 
     /// <summary>
     /// Whether to delete the source files when cleaning the download.
@@ -57,26 +59,8 @@ public sealed record QBitSeedingRule : ISeedingRule, ITagFilterable, ISeedersFil
 
     public void Validate()
     {
-        if (string.IsNullOrEmpty(Name.Trim()))
-        {
-            throw new ValidationException("Rule name can not be empty");
-        }
-
-        if (Categories.Count == 0)
-        {
-            throw new ValidationException("At least one category must be specified");
-        }
-
-        if (MaxRatio < 0 && MaxSeedTime < 0)
-        {
-            throw new ValidationException("Either max ratio or max seed time must be set to a non-negative value");
-        }
-
-        if (MinSeedTime < 0)
-        {
-            throw new ValidationException("Min seed time can not be negative");
-        }
-
-        ((ISeedersFilterable)this).ValidateMinSeeders();
+        ((ISeedingRule)this).ValidateRule();
+        ((ISeedersFilterable)this).ValidateRule();
+        ((IInactivityFilterable)this).ValidateRule();
     }
 }

@@ -52,6 +52,8 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => Info.SeedingTime?.TotalSeconds is { } seedTime ? (long)seedTime : 0;
 
+    public DateTime? LastActivityTime => Info.LastActivityTime;
+
     public string? Category
     {
         get => Info.Category;

@@ -51,6 +51,8 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => (long?)Info.SeedingTime?.TotalSeconds ?? 0;
 
+    public DateTime? LastActivityTime => null;
+
     public string? Category
     {
         get => Info.Label;
