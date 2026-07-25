@@ -1,0 +1,29 @@
+name: PR Label
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+concurrency:
+  group: PR Label-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  category:
+    name: Require category label
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fail when no category label is present
+        if: >-
+          !contains(github.event.pull_request.labels.*.name, 'breaking') &&
+          !contains(github.event.pull_request.labels.*.name, 'enhancement') &&
+          !contains(github.event.pull_request.labels.*.name, 'bug') &&
+          !contains(github.event.pull_request.labels.*.name, 'documentation') &&
+          !contains(github.event.pull_request.labels.*.name, 'chore')
+        run: |
+          echo "::error::Add one of these labels so the release notes can be categorised: breaking, enhancement, bug, documentation, chore"
+          exit 1

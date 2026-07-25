@@ -42,6 +42,9 @@ jobs:
   # Validate release
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       app_version: ${{ steps.version.outputs.app_version }}
       release_version: ${{ steps.version.outputs.release_version }}
@@ -93,6 +96,59 @@ jobs:
           echo "✅ Release ${{ steps.version.outputs.release_version }} does not exist. Proceeding."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check the version against PR labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APP_VERSION: ${{ steps.version.outputs.app_version }}
+        run: |
+          previous_tag=$(gh release view --json tagName --jq .tagName 2>/dev/null || echo "")
+
+          if [ -z "$previous_tag" ]; then
+            echo "No previous release found. Skipping the label check."
+            exit 0
+          fi
+
+          published=$(gh release view "$previous_tag" --json publishedAt --jq .publishedAt)
+
+          if ! breaking_list=$(gh api --paginate "repos/${{ github.repository }}/issues?labels=breaking&state=closed&since=$published&per_page=100" \
+            --jq ".[] | select(.pull_request.merged_at > \"$published\") | \"  #\(.number) \(.title)\""); then
+            echo "::error::Failed to query pull request labels, cannot verify the version"
+            printf '%s\n' "$breaking_list"
+            exit 1
+          fi
+
+          breaking=$(printf '%s' "$breaking_list" | grep -c . || true)
+
+          previous_version=${previous_tag#v}
+
+          if [ "$previous_version" = "$APP_VERSION" ]; then
+            echo "::error::$APP_VERSION is the same version as the previous release $previous_tag."
+            exit 1
+          fi
+
+          if [ "$(printf '%s\n%s\n' "$previous_version" "$APP_VERSION" | sort -V | tail -1)" != "$APP_VERSION" ]; then
+            echo "::error::$APP_VERSION is older than the previous release $previous_tag. Releases must move forward."
+            exit 1
+          fi
+
+          previous_minor=${previous_version%.*}
+          new_minor=${APP_VERSION%.*}
+
+          echo "Previous release: $previous_tag (published $published)"
+          echo "Breaking PRs merged since: $breaking"
+
+          if [ "$breaking" -gt 0 ] && [ "$previous_minor" = "$new_minor" ]; then
+            echo "::error::$breaking PR(s) labelled 'breaking' were merged since $previous_tag, so $APP_VERSION cannot be a patch release. Bump the minor, or remove the label if it was applied by mistake. See RELEASING.md."
+            printf '%s\n' "$breaking_list"
+            exit 1
+          fi
+
+          if [ "$breaking" -eq 0 ] && [ "$previous_minor" != "$new_minor" ]; then
+            echo "::warning::$APP_VERSION bumps the minor but no PR merged since $previous_tag carries the 'breaking' label. Intentional for a policy or milestone release, otherwise check the labels."
+          fi
+
+          echo "✅ Version $APP_VERSION is consistent with the PR labels."
 
   # Run tests
   test:
