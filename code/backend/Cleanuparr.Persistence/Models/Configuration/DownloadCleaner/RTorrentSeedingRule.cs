@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
@@ -50,26 +49,6 @@ public sealed record RTorrentSeedingRule : ISeedingRule
 
     public void Validate()
     {
-        if (string.IsNullOrEmpty(Name.Trim()))
-        {
-            throw new ValidationException("Rule name can not be empty");
-        }
-
-        if (Categories.Count == 0)
-        {
-            throw new ValidationException("At least one category must be specified");
-        }
-
-        if (MaxRatio < 0 && MaxSeedTime < 0)
-        {
-            throw new ValidationException("Either max ratio or max seed time must be set to a non-negative value");
-        }
-
-        ((ISeedingRule)this).ValidateSeedingThresholds();
-
-        if (MinSeedTime < 0)
-        {
-            throw new ValidationException("Min seed time can not be negative");
-        }
+        ((ISeedingRule)this).ValidateRule();
     }
 }

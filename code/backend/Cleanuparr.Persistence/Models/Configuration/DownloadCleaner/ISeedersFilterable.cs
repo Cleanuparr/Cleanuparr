@@ -9,7 +9,7 @@ public interface ISeedersFilterable
     /// </summary>
     int MinSeeders { get; set; }
 
-    void ValidateMinSeeders()
+    void ValidateRule()
     {
         if (MinSeeders < 0)
         {

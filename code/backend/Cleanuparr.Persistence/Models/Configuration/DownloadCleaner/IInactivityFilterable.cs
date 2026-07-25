@@ -9,7 +9,7 @@ public interface IInactivityFilterable
     /// </summary>
     double MaxInactiveDays { get; set; }
 
-    void ValidateMaxInactiveDays()
+    void ValidateRule()
     {
         if (MaxInactiveDays is < 0 and not -1)
         {
