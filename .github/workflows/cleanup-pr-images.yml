@@ -1,0 +1,25 @@
+name: Cleanup PR Images
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete PR image and orphaned digests
+        uses: snok/container-retention-policy@v3
+        with:
+          account: ${{ github.repository_owner }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          image-names: cleanuparr
+          image-tags: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'pr-none' }}
+          shas-to-skip: ""
+          tag-selection: both
+          cut-off: 1s
+          dry-run: true

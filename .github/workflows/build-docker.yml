@@ -87,7 +87,7 @@ jobs:
             else
               # Pull request
               branch=$githubHeadRef
-              versionDockerTag="$branch"
+              versionDockerTag="pr-${{ github.event.pull_request.number }}"
             fi
           fi
 
@@ -262,6 +262,8 @@ jobs:
           done
 
           docker buildx imagetools create $tag_args \
+            --annotation "index:org.opencontainers.image.version=${{ needs.prepare.outputs.version_docker_tag }}" \
+            --annotation "index:org.opencontainers.image.revision=${{ needs.prepare.outputs.github_sha }}" \
             $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
 
       - name: Inspect image
