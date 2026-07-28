@@ -360,6 +360,53 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_ActiveDownloadLimit_IgnoresRecordsWithoutDownloadId()
+    {
+        // Arrange — pending releases have no download id and are not in a download client
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            ActiveDownloadLimit = 1
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        QueueRecord[] pendingReleases =
+        [
+            new() { Id = 1, Title = "Pending 1", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, Status = "delay" },
+            new() { Id = 2, Title = "Pending 2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, Status = "delay" }
+        ];
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(pendingReleases));
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — the limit of 1 must not be tripped by records that have no download id
+        var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs.FirstAsync();
+        instanceConfig.LastProcessedAt.ShouldNotBeNull();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_ExcludesMoviesAlreadyInQueue()
     {
         // Arrange — proactive search enabled with 3 movies, one already in queue

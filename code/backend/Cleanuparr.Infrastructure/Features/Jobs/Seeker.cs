@@ -284,7 +284,7 @@ public sealed class Seeker : IHandler
         if (instanceConfig.ActiveDownloadLimit > 0)
         {
             int activeDownloads = queueRecords
-                .Where(r => r.SizeLeft > 0)
+                .Where(r => r.SizeLeft > 0 && !string.IsNullOrEmpty(r.DownloadId))
                 .Select(r => r.DownloadId)
                 .Distinct()
                 .Count();
