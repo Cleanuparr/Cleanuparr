@@ -2,7 +2,7 @@
 
 public sealed record Series
 {
-    public required long Id { get; init; }
-            
-    public required string Title { get; init; }
+    public long Id { get; init; }
+
+    public string Title { get; init; } = string.Empty;
 }

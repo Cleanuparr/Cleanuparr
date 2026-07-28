@@ -2,9 +2,9 @@ namespace Cleanuparr.Domain.Entities.Readarr;
 
 public sealed record Book
 {
-    public required long Id { get; init; }
-    
-    public required string Title { get; init; }
+    public long Id { get; init; }
+
+    public string Title { get; init; } = string.Empty;
     
     public long AuthorId { get; set; }
     

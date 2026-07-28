@@ -2,6 +2,6 @@
 
 public record QueueListResponse
 {
-    public required int TotalRecords { get; init; }
-    public required IReadOnlyList<QueueRecord> Records { get; init; }
+    public int TotalRecords { get; init; }
+    public IReadOnlyList<QueueRecord> Records { get; init; } = [];
 }

@@ -29,14 +29,14 @@ public sealed record QueueRecord
     public QueueBook? Book { get; init; }
     
     // common
-    public required string Title { get; init; }
-    public string Status { get; init; }
-    public string TrackedDownloadStatus { get; init; }
-    public string TrackedDownloadState { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string Status { get; init; } = string.Empty;
+    public string TrackedDownloadStatus { get; init; } = string.Empty;
+    public string TrackedDownloadState { get; init; } = string.Empty;
     public List<TrackedDownloadStatusMessage>? StatusMessages { get; init; }
-    public required string DownloadId { get; init; }
+    public string DownloadId { get; init; } = string.Empty;
     public string? DownloadClient { get; init; }
-    public required string Protocol { get; init; }
-    public required long Id { get; init; }
+    public string Protocol { get; init; } = string.Empty;
+    public long Id { get; init; }
     public long SizeLeft { get; init; }
 }

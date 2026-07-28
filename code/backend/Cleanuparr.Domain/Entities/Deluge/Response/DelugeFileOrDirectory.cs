@@ -5,16 +5,16 @@ namespace Cleanuparr.Domain.Entities.Deluge.Response;
 public class DelugeFileOrDirectory
 {
     [JsonPropertyName("type")]
-    public string Type { get; set; } // "file" or "dir"
+    public string Type { get; set; } = string.Empty; // "file" or "dir"
 
     [JsonPropertyName("contents")]
     public Dictionary<string, DelugeFileOrDirectory>? Contents { get; set; } // Recursive property for directories
 
     [JsonPropertyName("index")]
-    public required int Index { get; set; }
+    public int Index { get; set; }
 
     [JsonPropertyName("path")]
-    public string Path { get; set; }
+    public string Path { get; set; } = string.Empty;
 
     [JsonPropertyName("size")]
     public int? Size { get; set; }
@@ -26,8 +26,8 @@ public class DelugeFileOrDirectory
     public double? Progress { get; set; }
 
     [JsonPropertyName("priority")]
-    public required int Priority { get; set; }
+    public int Priority { get; set; }
 
     [JsonPropertyName("progresses")]
-    public List<double> Progresses { get; set; }
+    public List<double> Progresses { get; set; } = [];
 }

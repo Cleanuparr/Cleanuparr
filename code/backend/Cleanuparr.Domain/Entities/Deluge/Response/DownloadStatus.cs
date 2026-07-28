@@ -37,13 +37,13 @@ public sealed record DownloadStatus
     [JsonPropertyName("total_seeds")]
     public int TotalSeeds { get; init; }
 
-    public required IReadOnlyList<Tracker> Trackers { get; init; }
+    public IReadOnlyList<Tracker> Trackers { get; init; } = [];
 
     [JsonPropertyName("download_location")]
-    public required string DownloadLocation { get; init; }
+    public string DownloadLocation { get; init; } = string.Empty;
 }
 
 public sealed record Tracker
 {
-    public required string Url { get; init; }
+    public string Url { get; init; } = string.Empty;
 }

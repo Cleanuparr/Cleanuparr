@@ -2,7 +2,7 @@
 
 public record Image
 {
-    public required string CoverType { get; init; }
-    
-    public required Uri RemoteUrl { get; init; }
+    public string CoverType { get; init; } = string.Empty;
+
+    public Uri? RemoteUrl { get; init; }
 }

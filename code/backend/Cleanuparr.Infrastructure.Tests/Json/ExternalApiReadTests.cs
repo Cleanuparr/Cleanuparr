@@ -32,7 +32,7 @@ public class ExternalApiReadTests
         result.TotalRecords.ShouldBe(1);
         result.Records.Count.ShouldBe(1);
         result.Records[0].Id.ShouldBe(42);
-        result.Records[0].DownloadId.ShouldBeNull();
+        result.Records[0].DownloadId.ShouldBeEmpty();
     }
 
     [Fact]
@@ -48,6 +48,15 @@ public class ExternalApiReadTests
         QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>(payload, CleanuparrJsonOptions.ExternalApiRead)!;
 
         result.Records[0].DownloadId.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Tag_WithoutLabel_UsesEmptyDefault()
+    {
+        List<Tag> result = JsonSerializer.Deserialize<List<Tag>>("""[{"id": 3}]""", CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result[0].Id.ShouldBe(3);
+        result[0].Label.ShouldBeEmpty();
     }
 
     [Fact]
@@ -73,7 +82,7 @@ public class ExternalApiReadTests
         QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>("{}", CleanuparrJsonOptions.ExternalApiRead)!;
 
         result.TotalRecords.ShouldBe(0);
-        result.Records.ShouldBeNull();
+        result.Records.ShouldBeEmpty();
     }
 
     [Fact]
@@ -83,14 +92,5 @@ public class ExternalApiReadTests
 
         result.Id.ShouldBe(5);
         result.Status.ShouldBeNull();
-    }
-
-    [Fact]
-    public void Tag_WithoutLabel_Deserializes()
-    {
-        List<Tag> result = JsonSerializer.Deserialize<List<Tag>>("""[{"id": 3}]""", CleanuparrJsonOptions.ExternalApiRead)!;
-
-        result[0].Id.ShouldBe(3);
-        result[0].Label.ShouldBeNull();
     }
 }
