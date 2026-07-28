@@ -36,18 +36,35 @@ public class ExternalApiReadTests
     }
 
     [Fact]
-    public void QueueRecord_WithNullDownloadId_Deserializes()
+    public void QueueRecord_WithExplicitNulls_FallsBackToDefaults()
     {
         const string payload = """
         {
             "totalRecords": 1,
-            "records": [{ "id": 1, "title": "T", "downloadId": null, "protocol": "torrent" }]
+            "records": [{ "id": 1, "title": "T", "downloadId": null, "protocol": null, "trackedDownloadState": null }]
         }
         """;
 
         QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>(payload, CleanuparrJsonOptions.ExternalApiRead)!;
 
-        result.Records[0].DownloadId.ShouldBeNull();
+        result.Records[0].DownloadId.ShouldBeEmpty();
+        result.Records[0].Protocol.ShouldBeEmpty();
+        result.Records[0].TrackedDownloadState.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void QueueRecord_WithExplicitNullOnNullableProperty_StaysNull()
+    {
+        const string payload = """
+        {
+            "totalRecords": 1,
+            "records": [{ "id": 1, "title": "T", "downloadId": "ABC", "downloadClient": null }]
+        }
+        """;
+
+        QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>(payload, CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result.Records[0].DownloadClient.ShouldBeNull();
     }
 
     [Fact]

@@ -16,7 +16,7 @@ public static class CleanuparrJsonOptions
         RespectRequiredConstructorParameters = false,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver
         {
-            Modifiers = { IgnoreRequiredProperties },
+            Modifiers = { IgnoreRequiredProperties, IgnoreNullForNonNullable },
         },
     };
 
@@ -49,6 +49,31 @@ public static class CleanuparrJsonOptions
         foreach (JsonPropertyInfo property in typeInfo.Properties)
         {
             property.IsRequired = false;
+        }
+    }
+
+    public static void IgnoreNullForNonNullable(JsonTypeInfo typeInfo)
+    {
+        if (typeInfo.Kind is not JsonTypeInfoKind.Object)
+        {
+            return;
+        }
+
+        foreach (JsonPropertyInfo property in typeInfo.Properties)
+        {
+            if (property.Set is null || property.IsSetNullable)
+            {
+                continue;
+            }
+
+            Action<object, object?> originalSet = property.Set;
+            property.Set = (obj, value) =>
+            {
+                if (value is not null)
+                {
+                    originalSet(obj, value);
+                }
+            };
         }
     }
 }
