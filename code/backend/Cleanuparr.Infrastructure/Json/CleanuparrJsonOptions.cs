@@ -5,8 +5,16 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Cleanuparr.Infrastructure.Json;
 
+/// <summary>
+/// The options that the application uses for JSON.
+/// </summary>
 public static class CleanuparrJsonOptions
 {
+    /// <summary>
+    /// The options to read a response from an external API.
+    /// These options do not make a property necessary, because an external API can omit a field.
+    /// A field that is absent or null gets the default value of the property.
+    /// </summary>
     public static readonly JsonSerializerOptions ExternalApiRead = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -20,12 +28,18 @@ public static class CleanuparrJsonOptions
         },
     };
 
+    /// <summary>
+    /// The options to write a request to an external API.
+    /// </summary>
     public static readonly JsonSerializerOptions Outbound = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <summary>
+    /// The options to write a payload for a notification provider.
+    /// </summary>
     public static readonly JsonSerializerOptions Notification = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -33,6 +47,9 @@ public static class CleanuparrJsonOptions
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <summary>
+    /// The options to write a payload for a notification provider that needs the null fields.
+    /// </summary>
     public static readonly JsonSerializerOptions NotificationIncludeNulls = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -52,6 +69,10 @@ public static class CleanuparrJsonOptions
         }
     }
 
+    /// <summary>
+    /// Keeps the default value of a property that is not nullable if the JSON field is null.
+    /// </summary>
+    /// <param name="typeInfo">The metadata of the type to change.</param>
     public static void IgnoreNullForNonNullable(JsonTypeInfo typeInfo)
     {
         if (typeInfo.Kind is not JsonTypeInfoKind.Object)
