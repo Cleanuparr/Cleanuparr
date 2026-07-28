@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Cleanuparr.Infrastructure.Json;
 
@@ -12,6 +13,11 @@ public static class CleanuparrJsonOptions
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         AllowTrailingCommas = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
+        RespectRequiredConstructorParameters = false,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver
+        {
+            Modifiers = { IgnoreRequiredProperties },
+        },
     };
 
     public static readonly JsonSerializerOptions Outbound = new()
@@ -32,4 +38,17 @@ public static class CleanuparrJsonOptions
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
+
+    private static void IgnoreRequiredProperties(JsonTypeInfo typeInfo)
+    {
+        if (typeInfo.Kind is not JsonTypeInfoKind.Object)
+        {
+            return;
+        }
+
+        foreach (JsonPropertyInfo property in typeInfo.Properties)
+        {
+            property.IsRequired = false;
+        }
+    }
 }

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
@@ -8,14 +9,6 @@ namespace Cleanuparr.Infrastructure.Features.Arr;
 /// </summary>
 internal static class JsonStreamReader
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString,
-        AllowTrailingCommas = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-    };
-
     /// <summary>
     /// Streams items out of a top-level JSON array.
     /// </summary>
@@ -23,7 +16,7 @@ internal static class JsonStreamReader
         Stream stream,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        await foreach (T? item in JsonSerializer.DeserializeAsyncEnumerable<T>(stream, Options, cancellationToken))
+        await foreach (T? item in JsonSerializer.DeserializeAsyncEnumerable<T>(stream, CleanuparrJsonOptions.ExternalApiRead, cancellationToken))
         {
             if (item is not null)
             {
