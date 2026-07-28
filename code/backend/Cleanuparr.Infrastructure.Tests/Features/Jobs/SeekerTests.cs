@@ -392,6 +392,17 @@ public class SeekerTests : IDisposable
             .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(pendingReleases));
 
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
         _fixture.ArrClientFactory
             .GetClient(InstanceType.Radarr, Arg.Any<float>())
             .Returns(mockArrClient);
@@ -402,6 +413,9 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — the limit of 1 must not be tripped by records that have no download id
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs.FirstAsync();
         instanceConfig.LastProcessedAt.ShouldNotBeNull();
     }

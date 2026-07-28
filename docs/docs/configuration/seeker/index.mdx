@@ -203,6 +203,8 @@ manual-only
 
 When the number of items with bytes remaining to download (`SizeLeft > 0`) in the arr queue reaches this limit, the proactive search cycle is skipped for that instance. This prevents Seeker from triggering new searches while the download client is already busy.
 
+Only items that a download client has are counted. Items that are still queued inside the *arr application, such as releases held by a delay profile, are not counted.
+
 Set to `0` to disable this check and always run the proactive search regardless of queue activity.
 
 </ConfigSection>
