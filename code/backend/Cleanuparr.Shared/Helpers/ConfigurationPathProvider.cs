@@ -1,3 +1,5 @@
+using Cleanuparr.Shared.Configuration;
+
 namespace Cleanuparr.Shared.Helpers;
 
 /// <summary>
@@ -27,9 +29,16 @@ public static class ConfigurationPathProvider
 
     private static string InitializeConfigPath()
     {
+        string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.ConfigPath);
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            _configPath = overridePath;
+            return _configPath;
+        }
+
         // Check if running in Docker container
         bool isInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-        
+
         if (isInContainer)
         {
             // Use absolute path for Docker
@@ -54,6 +63,17 @@ public static class ConfigurationPathProvider
     public static string GetConfigFilePath()
     {
         return Path.Combine(GetConfigPath(), ConfigFileName);
+    }
+
+    public static string GetLogPath()
+    {
+        string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.LogsPath);
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            return overridePath;
+        }
+
+        return Path.Combine(GetConfigPath(), "logs");
     }
 
     public static void SetConfigPath(string path)

@@ -12,4 +12,6 @@ public static class ConfigurationKeys
     public const string Port = "PORT";
     public const string BindAddress = "BIND_ADDRESS";
     public const string BasePath = "BASE_PATH";
+    public const string ConfigPath = "CLEANUPARR_CONFIG_PATH";
+    public const string LogsPath = "CLEANUPARR_LOGS_PATH";
 }

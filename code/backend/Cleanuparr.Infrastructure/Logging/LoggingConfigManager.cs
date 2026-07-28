@@ -70,7 +70,7 @@ public static class LoggingConfigManager
             .WriteTo.Console(new ExpressionTemplate(consoleTemplate, theme: TemplateTheme.Literate));
         
         // Create the logs directory
-        string logsPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "logs");
+        string logsPath = ConfigurationPathProvider.GetLogPath();
         if (!Directory.Exists(logsPath))
         {
             try
