@@ -8,6 +8,21 @@ on:
         type: string
         required: false
         default: ''
+      ref:
+        description: 'Git ref to checkout (branch, tag, or SHA). Defaults to github.ref_name.'
+        type: string
+        required: false
+        default: ''
+      platforms:
+        description: 'JSON array of runtime/platform pairs to build. Defaults to all platforms.'
+        type: string
+        required: false
+        default: >-
+          [{"runtime":"win-x64","platform":"win-amd64"},
+           {"runtime":"linux-x64","platform":"linux-amd64"},
+           {"runtime":"linux-arm64","platform":"linux-arm64"},
+           {"runtime":"osx-x64","platform":"osx-amd64"},
+           {"runtime":"osx-arm64","platform":"osx-arm64"}]
 
 permissions:
   contents: read
@@ -19,17 +34,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        include:
-          - runtime: win-x64
-            platform: win-amd64
-          - runtime: linux-x64
-            platform: linux-amd64
-          - runtime: linux-arm64
-            platform: linux-arm64
-          - runtime: osx-x64
-            platform: osx-amd64
-          - runtime: osx-arm64
-            platform: osx-arm64
+        include: ${{ fromJSON(inputs.platforms) }}
 
     steps:
       - name: Set variables
@@ -73,7 +78,7 @@ jobs:
         timeout-minutes: 1
         with:
           repository: ${{ env.githubRepository }}
-          ref: ${{ github.ref_name }}
+          ref: ${{ inputs.ref || github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
           persist-credentials: false
 

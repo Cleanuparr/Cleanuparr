@@ -4,10 +4,6 @@ on:
   issue_comment:
     types: [created]
 
-concurrency:
-  group: pr-build-${{ github.event.issue.number }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
   issues: write
@@ -19,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request != null
     outputs:
-      build_windows: ${{ steps.parse.outputs.build_windows }}
+      build: ${{ steps.parse.outputs.build }}
       pr_ref: ${{ steps.parse.outputs.pr_ref }}
       pr_sha: ${{ steps.parse.outputs.pr_sha }}
       pr_number: ${{ steps.parse.outputs.pr_number }}
@@ -34,13 +30,13 @@ jobs:
 
             // Parse supported commands
             const commands = {
-              '/build-windows': 'build_windows'
+              '/build-windows': 'windows',
+              '/build-linux': 'linux'
             };
 
-            const command = commands[comment];
-            if (!command) {
+            const target = commands[comment];
+            if (!target) {
               console.log(`Comment "${comment}" is not a recognized build command, skipping.`);
-              core.setOutput('build_windows', 'false');
               return;
             }
 
@@ -65,7 +61,6 @@ jobs:
             // Verify PR is open
             if (pr.data.state !== 'open') {
               console.log('PR is not open, skipping.');
-              core.setOutput('build_windows', 'false');
               return;
             }
 
@@ -79,7 +74,6 @@ jobs:
                 issue_number: context.issue.number,
                 body: 'On-demand builds are not available for PRs from forks.'
               });
-              core.setOutput('build_windows', 'false');
               return;
             }
 
@@ -102,12 +96,11 @@ jobs:
                 issue_number: context.issue.number,
                 body: `@${context.payload.comment.user.login} Only collaborators with write access can trigger builds.`
               });
-              core.setOutput('build_windows', 'false');
               return;
             }
 
-            console.log(`User ${context.payload.comment.user.login} has '${permission}' permission — proceeding with ${command}.`);
-            core.setOutput(command, 'true');
+            console.log(`User ${context.payload.comment.user.login} has '${permission}' permission — proceeding with ${comment}.`);
+            core.setOutput('build', target);
 
             // Export PR details for downstream jobs
             core.setOutput('pr_ref', pr.data.head.ref);
@@ -116,7 +109,7 @@ jobs:
 
   build-frontend:
     needs: validate
-    if: needs.validate.outputs.build_windows == 'true'
+    if: needs.validate.outputs.build != ''
     uses: ./.github/workflows/build-frontend.yml
     with:
       ref: ${{ needs.validate.outputs.pr_ref }}
@@ -124,15 +117,30 @@ jobs:
 
   build-windows:
     needs: [validate, build-frontend]
-    if: needs.validate.outputs.build_windows == 'true'
+    if: needs.validate.outputs.build == 'windows'
+    concurrency:
+      group: pr-build-windows-${{ needs.validate.outputs.pr_number }}
+      cancel-in-progress: true
     uses: ./.github/workflows/build-windows-installer.yml
     with:
       ref: ${{ needs.validate.outputs.pr_ref }}
     secrets: inherit
 
+  build-linux:
+    needs: [validate, build-frontend]
+    if: needs.validate.outputs.build == 'linux'
+    concurrency:
+      group: pr-build-linux-${{ needs.validate.outputs.pr_number }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/build-executable.yml
+    with:
+      ref: ${{ needs.validate.outputs.pr_ref }}
+      platforms: '[{"runtime":"linux-x64","platform":"linux-amd64"},{"runtime":"linux-arm64","platform":"linux-arm64"}]'
+    secrets: inherit
+
   post-result:
-    needs: [validate, build-windows]
-    if: always() && needs.validate.outputs.build_windows == 'true'
+    needs: [validate, build-windows, build-linux]
+    if: always() && needs.validate.outputs.build != ''
     runs-on: ubuntu-latest
 
     steps:
@@ -142,7 +150,22 @@ jobs:
           PR_REF: ${{ needs.validate.outputs.pr_ref }}
         with:
           script: |
-            const buildResult = '${{ needs.build-windows.result }}';
+            const target = '${{ needs.validate.outputs.build }}';
+            const builds = {
+              windows: {
+                label: 'Windows installer',
+                result: '${{ needs.build-windows.result }}',
+                artifacts: '`Cleanuparr-windows-installer`'
+              },
+              linux: {
+                label: 'Linux executables',
+                result: '${{ needs.build-linux.result }}',
+                artifacts: '`executable-linux-amd64` and `executable-linux-arm64`'
+              }
+            };
+
+            const build = builds[target];
+            const buildResult = build.result;
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const prRef = process.env.PR_REF;
             const prSha = '${{ needs.validate.outputs.pr_sha }}';
@@ -157,20 +180,20 @@ jobs:
             let body;
             if (buildResult === 'success') {
               body = [
-                `Windows installer build **succeeded** for \`${prRef}\` (\`${shortSha}\`).`,
+                `${build.label} build **succeeded** for \`${prRef}\` (\`${shortSha}\`).`,
                 ``,
                 `**Download:** open the [workflow run](${runUrl}), scroll to the **Artifacts** section at the bottom.`,
-                `The artifact \`Cleanuparr-windows-installer\` is retained for 30 days.`
+                `The ${build.artifacts} artifact(s) are retained for 30 days.`
               ].join('\n');
             } else if (buildResult === 'cancelled') {
               body = [
-                `Windows installer build was **cancelled** for \`${prRef}\` (\`${shortSha}\`).`,
+                `${build.label} build was **cancelled** for \`${prRef}\` (\`${shortSha}\`).`,
                 ``,
                 `See the [workflow run](${runUrl}) for details.`
               ].join('\n');
             } else {
               body = [
-                `Windows installer build **failed** for \`${prRef}\` (\`${shortSha}\`).`,
+                `${build.label} build **failed** for \`${prRef}\` (\`${shortSha}\`).`,
                 ``,
                 `See the [workflow run](${runUrl}) for details.`
               ].join('\n');
