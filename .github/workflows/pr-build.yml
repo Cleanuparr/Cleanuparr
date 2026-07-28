@@ -112,7 +112,7 @@ jobs:
     if: needs.validate.outputs.build != ''
     uses: ./.github/workflows/build-frontend.yml
     with:
-      ref: ${{ needs.validate.outputs.pr_ref }}
+      ref: ${{ needs.validate.outputs.pr_sha }}
     secrets: inherit
 
   build-windows:
@@ -123,7 +123,7 @@ jobs:
       cancel-in-progress: true
     uses: ./.github/workflows/build-windows-installer.yml
     with:
-      ref: ${{ needs.validate.outputs.pr_ref }}
+      ref: ${{ needs.validate.outputs.pr_sha }}
     secrets: inherit
 
   build-linux:
@@ -134,7 +134,7 @@ jobs:
       cancel-in-progress: true
     uses: ./.github/workflows/build-executable.yml
     with:
-      ref: ${{ needs.validate.outputs.pr_ref }}
+      ref: ${{ needs.validate.outputs.pr_sha }}
       platforms: '[{"runtime":"linux-x64","platform":"linux-amd64"},{"runtime":"linux-arm64","platform":"linux-arm64"}]'
     secrets: inherit
 
