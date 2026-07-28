@@ -109,4 +109,47 @@ public class DelugeClientSerializationTests
         status.State.ShouldBe(DelugeState.Seeding);
         status.IsFinished.ShouldBeTrue();
     }
+
+    [Fact]
+    public async Task GetTorrentFiles_WithNestedDirectory_DeserializesWithoutIndex()
+    {
+        const string response = """
+            {
+                "id": 1,
+                "result": {
+                    "type": "dir",
+                    "contents": {
+                        "Some.Release": {
+                            "type": "dir",
+                            "priority": 1,
+                            "progress": 1.0,
+                            "progresses": [1.0],
+                            "size": 200,
+                            "path": "Some.Release",
+                            "contents": {
+                                "video.mkv": {
+                                    "type": "file",
+                                    "index": 0,
+                                    "offset": 0,
+                                    "path": "Some.Release/video.mkv",
+                                    "priority": 1,
+                                    "progress": 1.0,
+                                    "size": 200
+                                }
+                            }
+                        }
+                    }
+                },
+                "error": null
+            }
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        DelugeFileOrDirectory directory = contents.Contents!["Some.Release"];
+        directory.Type.ShouldBe("dir");
+        directory.Contents!["video.mkv"].Index.ShouldBe(0);
+    }
 }
