@@ -30,29 +30,40 @@ public static class ConfigurationPathProvider
     private static string InitializeConfigPath()
     {
         string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.ConfigPath);
-        if (!string.IsNullOrWhiteSpace(overridePath))
-        {
-            _configPath = overridePath;
-            return _configPath;
-        }
+        _configPath = ResolveConfigPath(overridePath, IsInContainer());
+        return _configPath;
+    }
 
-        // Check if running in Docker container
-        bool isInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+    internal static string ResolveConfigPath(string? overridePath, bool isInContainer)
+    {
+        if (!isInContainer && !string.IsNullOrWhiteSpace(overridePath))
+        {
+            return overridePath;
+        }
 
         if (isInContainer)
         {
-            // Use absolute path for Docker
-            _configPath = "/config";
-        }
-        else
-        {
-            // Use path relative to app for normal environment
-            _configPath = Path.Combine(AppContext.BaseDirectory, "config");
+            return "/config";
         }
 
-        return _configPath;
+        return Path.Combine(AppContext.BaseDirectory, "config");
     }
-    
+
+    internal static string ResolveLogPath(string? overridePath, string configPath, bool isInContainer)
+    {
+        if (!isInContainer && !string.IsNullOrWhiteSpace(overridePath))
+        {
+            return overridePath;
+        }
+
+        return Path.Combine(configPath, "logs");
+    }
+
+    private static bool IsInContainer()
+    {
+        return Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+    }
+
     public const string ConfigFileName = "cleanuparr.json";
 
     public static string GetConfigPath()
@@ -68,12 +79,7 @@ public static class ConfigurationPathProvider
     public static string GetLogPath()
     {
         string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.LogsPath);
-        if (!string.IsNullOrWhiteSpace(overridePath))
-        {
-            return overridePath;
-        }
-
-        return Path.Combine(GetConfigPath(), "logs");
+        return ResolveLogPath(overridePath, GetConfigPath(), IsInContainer());
     }
 
     public static void SetConfigPath(string path)
