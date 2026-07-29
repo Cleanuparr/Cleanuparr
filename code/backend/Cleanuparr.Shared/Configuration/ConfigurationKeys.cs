@@ -12,6 +12,13 @@ public static class ConfigurationKeys
     public const string Port = "PORT";
     public const string BindAddress = "BIND_ADDRESS";
     public const string BasePath = "BASE_PATH";
+    /// <summary>
+    /// Sets the configuration directory. This applies outside Docker only.
+    /// </summary>
     public const string ConfigPath = "CLEANUPARR_CONFIG_PATH";
+
+    /// <summary>
+    /// Sets the log directory. This applies outside Docker only.
+    /// </summary>
     public const string LogsPath = "CLEANUPARR_LOGS_PATH";
 }

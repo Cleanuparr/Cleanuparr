@@ -76,6 +76,13 @@ public static class ConfigurationPathProvider
         return Path.Combine(GetConfigPath(), ConfigFileName);
     }
 
+    /// <summary>
+    /// Gets the log directory.
+    /// </summary>
+    /// <returns>
+    /// The override directory when the user sets it outside Docker.
+    /// If the user does not set it, a logs folder in the configuration directory.
+    /// </returns>
     public static string GetLogPath()
     {
         string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.LogsPath);
