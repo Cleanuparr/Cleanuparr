@@ -221,6 +221,20 @@ describe('QueueCleanerComponent', () => {
     expect(component.slowModalVisible()).toBe(true);
   });
 
+  it('shows the empty state copy when a rule list is empty', () => {
+    const { fixture, component } = setup(CONFIG, [], []);
+
+    component.stallExpanded.set(true);
+    component.slowExpanded.set(true);
+    fixture.detectChanges();
+
+    const text: string = fixture.nativeElement.textContent;
+    expect(text).toContain('No Stall Rules');
+    expect(text).toContain('Create a stall rule to detect downloads that have stopped progressing.');
+    expect(text).toContain('No Slow Rules');
+    expect(text).toContain('Create a slow rule to detect downloads that are progressing too slowly.');
+  });
+
   it('refetches the stall rules when the modal reports a save', () => {
     const { fixture, component, api } = setup();
 
