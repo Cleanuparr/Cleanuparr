@@ -21,5 +21,9 @@ public static class Constants
 
     public const string LogoUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/48.png";
 
+    public const string TestImageUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/256.png";
+
+    public const string AppriseTestImageUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr/Logo/256.png";
+
     public const string CustomFormatScoreSyncerCron = "0 0/30 * * * ?";
 }

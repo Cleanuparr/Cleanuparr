@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
@@ -68,7 +69,9 @@ public sealed class NotificationService
                 ["Test time"] = DateTimeOffset.UtcNow.ToString("o"),
                 ["Provider type"] = providerConfig.Type.ToString(),
             },
-            Image = new Uri("https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/256.png")
+            Image = new Uri(providerConfig.Type is NotificationProviderType.Apprise
+                ? Constants.AppriseTestImageUrl
+                : Constants.TestImageUrl)
         };
 
         try
