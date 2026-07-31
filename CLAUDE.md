@@ -72,11 +72,11 @@ Cleanuparr/
 │   │   ├── Cleanuparr.Persistence.Tests/
 │   │   └── Cleanuparr.Shared/           # Shared utilities
 │   ├── frontend/                        # Angular 22 application
-│   ├── e2e/                             # Playwright E2E tests
 │   ├── Dockerfile                       # Multi-stage Docker build
 │   ├── entrypoint.sh                    # Docker entrypoint
 │   └── Makefile                         # Build & migration helpers
 ├── docs/                                # Docusaurus documentation
+├── e2e/                                 # Playwright E2E tests
 ├── .github/workflows/                   # CI/CD pipelines
 ├── blacklist                            # Default malware patterns (strict)
 ├── blacklist_permissive                 # Less strict malware patterns
@@ -113,7 +113,12 @@ Cleanuparr/
 - Always use **NSubstitute** for mocking (Moq is being phased out)
 - Write unit tests for new features and bug fixes
 - Use descriptive test names that explain what is being tested
-- **Frontend**: Vitest via the `@angular/build:unit-test` builder (`cd code/frontend && npm test`), specs live next to the component as `{feature}.component.spec.ts`
+- **Frontend**: Vitest via the `@angular/build:unit-test` builder in jsdom (`cd code/frontend && npm test`). Specs live next to the source as `{feature}.component.spec.ts`
+- Vitest globals are enabled in `tsconfig.spec.json`, so do NOT import `describe`/`it`/`expect`/`vi`
+- `angular.json` sets `skipTests: true` for all schematics, so `ng generate` never creates a spec. Write them by hand
+- Test components through `TestBed.createComponent` and the rendered DOM. For inputs/outputs, declare a standalone host component in the spec. Stub API classes with a plain object of methods returning `of(...)`, never mock `HttpClient` or use `provideHttpClientTesting`
+- Keep stub observables synchronous: an `rxResource` fed by `of(...)` resolves inside one `fixture.detectChanges()`, an async source needs `await fixture.whenStable()`
+- Call `fixture.detectChanges()` after every interaction (zoneless + OnPush). For a bare `effect()`, use `TestBed.runInInjectionContext()` then `TestBed.tick()`
 
 ### Git Commit Messages
 - Use clear, descriptive messages in imperative mood
@@ -140,9 +145,17 @@ UI runs at http://localhost:4200
 
 ### Running Tests
 ```bash
+# Backend
 cd code/backend
 dotnet test
+
+# Frontend (single run; add -- --watch for watch mode)
+cd code/frontend
+npm test
+npm run test:ci   # single run with coverage, written to coverage/ui/
+npm run lint
 ```
+Both run as concurrent `backend` and `frontend` jobs in `.github/workflows/test.yml`.
 
 ## Database Migrations
 
@@ -183,6 +196,10 @@ make migrate-users name=YourMigrationName
 
 - **Custom glassmorphism design system** - Do not introduce external UI frameworks (no PrimeNG, Material, Tailwind)
 - **All frontend components** must be standalone with OnPush change detection
+- **Frontend tests are zoneless**: `fakeAsync`/`tick()`/`flush()` from `@angular/core/testing` require Zone.js and will throw. Use `vi.useFakeTimers()` + `vi.advanceTimersByTime()`, restore with `vi.useRealTimers()`
+- **Vitest `isolate` defaults to false**: module state, `localStorage`, fake timers and `document.documentElement` attributes/inline styles leak between spec files. Undo them in `afterEach`
+- **Node >= 25 shadows jsdom's `localStorage`**: vitest skips copying globals that already exist on `globalThis`, so specs would get an inert object (or `undefined` on Node 26). `src/testing/test-setup.ts` restores jsdom's Storage and is wired via `setupFiles` in `angular.json`. `matchMedia`, `IntersectionObserver`, `ResizeObserver` and `navigator.clipboard` are still absent in jsdom, stub them per spec
+- **Frontend toolchain is pinned high**: Node >= 26 and npm 11.6.2. CI uses `setup-node@v7` with `node-version: '26'`
 - **Database migrations** require awareness of all three contexts (Data, Events, Users)
 - **Malware blocker** is a critical security feature - changes require careful testing
 - **Cross-seed integration** allows keeping torrents that are actively seeding
