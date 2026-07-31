@@ -6,6 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "test": "ng test",
     "lint": "eslint ."
   },
   "prettier": {
@@ -60,8 +61,10 @@
     "angular-eslint": "^22.0.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^29.1.1",
     "prettier": "^3.8.1",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.62.1",
+    "vitest": "^4.1.10"
   }
 }
