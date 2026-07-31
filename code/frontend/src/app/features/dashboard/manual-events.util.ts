@@ -7,13 +7,17 @@ export function mergeUnresolvedManualEvents(
   const byId = new Map<string, ManualEvent>();
 
   for (const event of hubEvents) {
-    if (!event.isResolved) {
+    if (event.isResolved) {
+      byId.delete(event.id);
+    } else {
       byId.set(event.id, event);
     }
   }
 
   for (const event of loadedEvents) {
-    if (!event.isResolved) {
+    if (event.isResolved) {
+      byId.delete(event.id);
+    } else {
       byId.set(event.id, event);
     }
   }
