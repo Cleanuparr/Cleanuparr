@@ -94,6 +94,7 @@
             "tsConfig": "tsconfig.spec.json",
             "setupFiles": ["src/testing/test-setup.ts"],
             "providersFile": "src/testing/test-providers.ts",
+            "isolate": true,
             "coverageExclude": [
               "src/testing/**",
               "src/main.ts",
