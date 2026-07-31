@@ -173,7 +173,7 @@ export class QualityTabComponent {
     }
     const sorted = [...profiles].sort((a, b) => a.localeCompare(b));
     return [
-      { label: 'Any', value: '' },
+      { label: 'All profiles', value: '' },
       ...sorted.map(p => ({ label: p, value: p })),
     ];
   });

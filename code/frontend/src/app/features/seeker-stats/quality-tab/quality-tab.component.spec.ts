@@ -189,7 +189,7 @@ describe('QualityTabComponent', () => {
     const { fixture, component } = setup();
 
     expect(component.qualityProfileOptions()).toEqual([
-      { label: 'Any', value: '' },
+      { label: 'All profiles', value: '' },
       { label: 'HD-1080p', value: 'HD-1080p' },
       { label: 'Standard', value: 'Standard' },
       { label: 'Ultra-HD', value: 'Ultra-HD' },
@@ -200,7 +200,7 @@ describe('QualityTabComponent', () => {
     fixture.detectChanges();
 
     expect(component.qualityProfileOptions()).toEqual([
-      { label: 'Any', value: '' },
+      { label: 'All profiles', value: '' },
       { label: 'Standard', value: 'Standard' },
       { label: 'Ultra-HD', value: 'Ultra-HD' },
     ]);
