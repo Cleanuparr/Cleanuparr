@@ -149,10 +149,10 @@ UI runs at http://localhost:4200
 cd code/backend
 dotnet test
 
-# Frontend (single run; add -- --watch for watch mode)
+# Frontend
 cd code/frontend
-npm test
-npm run test:ci   # single run with coverage, written to coverage/ui/
+npm test            # ng test; watches in an interactive terminal, single run when not a TTY
+npm run test:ci     # single run with coverage, written to coverage/ui/ (what CI runs)
 npm run lint
 ```
 Both run as concurrent `backend` and `frontend` jobs in `.github/workflows/test.yml`.

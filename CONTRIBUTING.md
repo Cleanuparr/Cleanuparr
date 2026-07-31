@@ -167,23 +167,23 @@ Unit tests run on [Vitest](https://vitest.dev/) through the Angular `@angular/bu
 ```bash
 cd code/frontend
 
-# Single run, this is what CI runs
+# Watch mode, re-runs on save
 npm test
 
-# Watch mode, re-runs on save
-npm test -- --watch
+# Single run with a coverage report, written to coverage/ui/. This is what CI runs
+npm run test:ci
+
+# Single run without coverage
+npm test -- --watch=false
 
 # Run a single spec
 npm test -- --include src/app/ui/chip-input/chip-input.component.spec.ts
-
-# Single run with a coverage report, written to coverage/ui/
-npm run test:ci
 
 # Lint, also a CI gate
 npm run lint
 ```
 
-`ng test` watches by default in an interactive terminal and runs once otherwise, so CI needs no extra flag.
+`npm test` is Angular's `ng test`, which watches by default in an interactive terminal and runs once when stdout is not a TTY. CI therefore needs no extra flag, but do not rely on that locally: in your terminal `npm test` stays open until you quit it.
 
 #### Writing specs
 
