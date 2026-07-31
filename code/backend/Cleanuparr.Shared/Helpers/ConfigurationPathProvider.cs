@@ -1,3 +1,5 @@
+using Cleanuparr.Shared.Configuration;
+
 namespace Cleanuparr.Shared.Helpers;
 
 /// <summary>
@@ -27,23 +29,41 @@ public static class ConfigurationPathProvider
 
     private static string InitializeConfigPath()
     {
-        // Check if running in Docker container
-        bool isInContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
-        
-        if (isInContainer)
-        {
-            // Use absolute path for Docker
-            _configPath = "/config";
-        }
-        else
-        {
-            // Use path relative to app for normal environment
-            _configPath = Path.Combine(AppContext.BaseDirectory, "config");
-        }
-
+        string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.ConfigPath);
+        _configPath = ResolveConfigPath(overridePath, IsInContainer());
         return _configPath;
     }
-    
+
+    internal static string ResolveConfigPath(string? overridePath, bool isInContainer)
+    {
+        if (!isInContainer && !string.IsNullOrWhiteSpace(overridePath))
+        {
+            return overridePath;
+        }
+
+        if (isInContainer)
+        {
+            return "/config";
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "config");
+    }
+
+    internal static string ResolveLogPath(string? overridePath, string configPath, bool isInContainer)
+    {
+        if (!isInContainer && !string.IsNullOrWhiteSpace(overridePath))
+        {
+            return overridePath;
+        }
+
+        return Path.Combine(configPath, "logs");
+    }
+
+    private static bool IsInContainer()
+    {
+        return Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+    }
+
     public const string ConfigFileName = "cleanuparr.json";
 
     public static string GetConfigPath()
@@ -54,6 +74,19 @@ public static class ConfigurationPathProvider
     public static string GetConfigFilePath()
     {
         return Path.Combine(GetConfigPath(), ConfigFileName);
+    }
+
+    /// <summary>
+    /// Gets the log directory.
+    /// </summary>
+    /// <returns>
+    /// The override directory when the user sets it outside Docker.
+    /// If the user does not set it, a logs folder in the configuration directory.
+    /// </returns>
+    public static string GetLogPath()
+    {
+        string? overridePath = Environment.GetEnvironmentVariable(ConfigurationKeys.LogsPath);
+        return ResolveLogPath(overridePath, GetConfigPath(), IsInContainer());
     }
 
     public static void SetConfigPath(string path)

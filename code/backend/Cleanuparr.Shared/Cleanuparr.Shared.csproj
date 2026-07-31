@@ -11,4 +11,8 @@
       <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+      <InternalsVisibleTo Include="Cleanuparr.Infrastructure.Tests" />
+    </ItemGroup>
+
 </Project>
