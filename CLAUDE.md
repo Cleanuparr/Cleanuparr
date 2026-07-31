@@ -113,7 +113,7 @@ Cleanuparr/
 - Always use **NSubstitute** for mocking (Moq is being phased out)
 - Write unit tests for new features and bug fixes
 - Use descriptive test names that explain what is being tested
-- No frontend unit tests currently
+- **Frontend**: Vitest via the `@angular/build:unit-test` builder (`cd code/frontend && npm test`), specs live next to the component as `{feature}.component.spec.ts`
 
 ### Git Commit Messages
 - Use clear, descriptive messages in imperative mood
