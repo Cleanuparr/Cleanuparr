@@ -1,18 +1,4 @@
-vi.mock('@unovis/angular', () => {
-  const stubs = new Map<string, unknown>();
-  return new Proxy({} as Record<string, unknown>, {
-    has: () => true,
-    get: (_target, property) => {
-      if (typeof property !== 'string' || property === 'then') {
-        return undefined;
-      }
-      if (!stubs.has(property)) {
-        stubs.set(property, class {});
-      }
-      return stubs.get(property);
-    },
-  });
-});
+vi.mock('@unovis/angular', async () => (await import('../../../testing/unovis.stub')).createUnovisStub());
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -21,22 +7,9 @@ import { EventsApi } from '@core/api/events.api';
 import { AppEvent, EventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { EventsComponent } from './events.component';
+import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
 const PAGE_SIZE_KEY = 'cleanuparr-page-size-events';
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 const EMPTY_TIMELINE: EventTypeTimelineResponse = { types: [], buckets: [] };
 

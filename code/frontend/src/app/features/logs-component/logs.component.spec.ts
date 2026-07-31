@@ -4,6 +4,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { LogEntry } from '@core/models/signalr.models';
 import { LogsComponent } from './logs.component';
+import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
 function entry(timestamp: string, partial: Partial<LogEntry> = {}): LogEntry {
   return {
@@ -40,20 +41,6 @@ const LOGS: LogEntry[] = [
     jobRunId: 'run-a',
   }),
 ];
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 describe('LogsComponent', () => {
   afterEach(() => {

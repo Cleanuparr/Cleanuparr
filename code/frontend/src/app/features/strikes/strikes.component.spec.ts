@@ -5,22 +5,9 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { StrikesComponent } from './strikes.component';
+import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
 const PAGE_SIZE_KEY = 'cleanuparr-page-size-strikes';
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 const ITEMS: DownloadItemStrikes[] = [
   {

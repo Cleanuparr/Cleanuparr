@@ -2,6 +2,7 @@ import { ScheduleUnit } from '@shared/models/enums';
 import {
   generateCronExpression,
   parseCronToJobSchedule,
+  resolveSchedule,
   ScheduleOptions,
 } from './schedule.util';
 
@@ -65,5 +66,34 @@ describe('schedule.util', () => {
     expect(generateCronExpression({ every: 5, type: 'Days' as ScheduleUnit })).toBe(
       '0 0/5 * ? * * *',
     );
+  });
+});
+
+describe('resolveSchedule', () => {
+  const FALLBACK = { every: 5, type: ScheduleUnit.Minutes };
+
+  it('keeps an interval that the options offer', () => {
+    expect(resolveSchedule('0 0/15 * ? * * *', ScheduleOptions, FALLBACK)).toEqual({
+      every: 15,
+      type: ScheduleUnit.Minutes,
+    });
+  });
+
+  it('snaps an interval the options do not offer to the first one', () => {
+    expect(resolveSchedule('0 0/7 * ? * * *', ScheduleOptions, FALLBACK)).toEqual({
+      every: 1,
+      type: ScheduleUnit.Minutes,
+    });
+  });
+
+  it('falls back when the cron cannot be parsed', () => {
+    expect(resolveSchedule('not a cron', ScheduleOptions, FALLBACK)).toEqual(FALLBACK);
+  });
+
+  it('snaps against the unit the cron actually resolved to', () => {
+    expect(resolveSchedule('0 0 0/5 ? * * *', ScheduleOptions, FALLBACK)).toEqual({
+      every: 1,
+      type: ScheduleUnit.Hours,
+    });
   });
 });

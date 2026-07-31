@@ -218,7 +218,7 @@ export class DashboardComponent {
         this.loadedManualEvents.set([]);
         this.totalUnresolvedManualEvents.set(0);
         this.manualEventIndex.set(0);
-        this.hasMoreBacklog.set(true);
+        this.hasMoreBacklog.set(false);
         this.toast.success(`Dismissed ${res.resolvedCount} events`);
       },
       error: () => this.toast.error('Failed to dismiss events'),

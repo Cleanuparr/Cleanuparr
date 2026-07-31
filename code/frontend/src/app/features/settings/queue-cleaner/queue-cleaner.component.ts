@@ -19,7 +19,7 @@ import { StallRuleModalComponent } from './stall-rule-modal.component';
 import { ScheduleUnit, PatternMode } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
-import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
+import { generateCronExpression, resolveSchedule } from '@shared/utils/schedule.util';
 import { analyzeCoverage } from './coverage-analysis.util';
 
 const PATTERN_MODE_OPTIONS: SelectOption[] = [
@@ -213,16 +213,16 @@ export class QueueCleanerComponent implements HasPendingChanges {
       }
       untracked(() => {
         this.config = config;
-        const parsed = parseCronToJobSchedule(config.cronExpression);
-        const scheduleUnit = parsed?.type ?? ScheduleUnit.Minutes;
-        const intervalOptions = ScheduleOptions[scheduleUnit] ?? [];
-        const parsedEvery = parsed?.every ?? 5;
+        const schedule = resolveSchedule(config.cronExpression, ScheduleOptions, {
+          every: 5,
+          type: ScheduleUnit.Minutes,
+        });
         this.model.set({
           enabled: config.enabled,
           useAdvancedScheduling: config.useAdvancedScheduling,
           cronExpression: config.cronExpression,
-          scheduleEvery: intervalOptions.includes(parsedEvery) ? parsedEvery : (intervalOptions[0] ?? parsedEvery),
-          scheduleUnit,
+          scheduleEvery: schedule.every,
+          scheduleUnit: schedule.type,
           ignoredDownloads: config.ignoredDownloads ?? [],
           processNoContentId: config.processNoContentId,
           failedMaxStrikes: config.failedImport.maxStrikes,

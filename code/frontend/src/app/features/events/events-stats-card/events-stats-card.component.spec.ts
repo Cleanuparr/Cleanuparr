@@ -1,18 +1,4 @@
-vi.mock('@unovis/angular', () => {
-  const stubs = new Map<string, unknown>();
-  return new Proxy({} as Record<string, unknown>, {
-    has: () => true,
-    get: (_target, property) => {
-      if (typeof property !== 'string' || property === 'then') {
-        return undefined;
-      }
-      if (!stubs.has(property)) {
-        stubs.set(property, class {});
-      }
-      return stubs.get(property);
-    },
-  });
-});
+vi.mock('@unovis/angular', async () => (await import('../../../../testing/unovis.stub')).createUnovisStub());
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';

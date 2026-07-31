@@ -202,7 +202,7 @@ describe('PlexIntegrationCardComponent', () => {
     expect(verifiedPins).toHaveLength(2);
   });
 
-  it('unlinks only after the destructive confirmation is accepted', async () => {
+  it('keeps the link when the unlink confirmation is declined', async () => {
     const { fixture, toasts, confirmations } = setup({ linked: true, confirmAnswer: false });
     fixture.componentInstance.username.set('ziggy');
     fixture.detectChanges();

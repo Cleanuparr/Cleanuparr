@@ -8,6 +8,7 @@ import type { InstanceSearchStat, SearchEvent, SearchStatsSummary } from '@core/
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { SearchesTabComponent } from './searches-tab.component';
+import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
 const PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-searches';
 
@@ -93,20 +94,6 @@ const EVENTS: PaginatedResult<SearchEvent> = {
   totalCount: 2,
   totalPages: 1,
 };
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 interface Harness {
   fixture: ComponentFixture<SearchesTabComponent>;

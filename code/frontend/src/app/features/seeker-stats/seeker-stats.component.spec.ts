@@ -6,22 +6,9 @@ import { CfScoreApi } from '@core/api/cf-score.api';
 import { SearchStatsApi } from '@core/api/search-stats.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { SeekerStatsComponent } from './seeker-stats.component';
+import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
 const EMPTY_PAGE = { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 };
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 interface Harness {
   fixture: ComponentFixture<SeekerStatsComponent>;

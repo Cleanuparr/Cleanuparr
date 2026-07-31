@@ -1,18 +1,4 @@
-vi.mock('@unovis/angular', () => {
-  const stubs = new Map<string, unknown>();
-  return new Proxy({} as Record<string, unknown>, {
-    has: () => true,
-    get: (_target, property) => {
-      if (typeof property !== 'string' || property === 'then') {
-        return undefined;
-      }
-      if (!stubs.has(property)) {
-        stubs.set(property, class {});
-      }
-      return stubs.get(property);
-    },
-  });
-});
+vi.mock('@unovis/angular', async () => (await import('../../../testing/unovis.stub')).createUnovisStub());
 
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -346,7 +332,8 @@ describe('DashboardComponent', () => {
     expect(component.unresolvedManualEvents()).toEqual([]);
     expect(component.manualEventCount()).toBe(0);
     expect(component.manualEventIndex()).toBe(0);
-    expect(component.hasMoreBacklog()).toBe(true);
+    expect(component.hasMoreBacklog()).toBe(false);
+    expect(component.canNavigateNext()).toBe(false);
     expect(component.currentManualEvent()).toBeNull();
     expect(fixture.nativeElement.querySelector('.manual-event')).toBeNull();
   });

@@ -10,6 +10,7 @@ import type {
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { QualityTabComponent } from './quality-tab.component';
+import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
 const PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-quality';
 
@@ -75,20 +76,6 @@ const HISTORY: CfScoreHistoryResponse = {
     { score: 100, cutoffScore: 200, recordedAt: '2026-07-20T10:00:00Z' },
   ],
 };
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 interface Harness {
   fixture: ComponentFixture<QualityTabComponent>;

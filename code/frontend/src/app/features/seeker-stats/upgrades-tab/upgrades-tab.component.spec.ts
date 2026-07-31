@@ -5,6 +5,7 @@ import { CfScoreApi, CfUpgradesSortBy, SortDirection } from '@core/api/cf-score.
 import type { CfScoreInstance, CfScoreUpgradesQuery, CfScoreUpgradesResponse } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { UpgradesTabComponent } from './upgrades-tab.component';
+import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
 const PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-upgrades';
 
@@ -43,20 +44,6 @@ const UPGRADES: CfScoreUpgradesResponse = {
   totalCount: 2,
   totalPages: 1,
 };
-
-class IntersectionObserverStub {
-  observe(): void {
-    return undefined;
-  }
-
-  unobserve(): void {
-    return undefined;
-  }
-
-  disconnect(): void {
-    return undefined;
-  }
-}
 
 interface Harness {
   fixture: ComponentFixture<UpgradesTabComponent>;

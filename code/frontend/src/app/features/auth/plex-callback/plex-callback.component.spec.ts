@@ -103,6 +103,7 @@ describe('PlexCallbackComponent', () => {
   });
 
   it('reports a rejected verification', () => {
+    vi.useFakeTimers();
     const { fixture, navigations } = setup({
       storedPin: '4242',
       responses: [throwError(() => ({ message: 'Plex rejected the pin' }))],
