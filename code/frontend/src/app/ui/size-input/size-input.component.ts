@@ -36,14 +36,14 @@ export class SizeInputComponent {
   readonly numericValue = signal<number | null>(null);
   readonly selectedUnit = signal('');
 
-  private syncing = false;
-
   constructor() {
     // Parse incoming value string into numeric + unit
     effect(() => {
       const val = this.value();
       const units = this.units();
-      if (this.syncing || units.length === 0) return;
+      if (units.length === 0) {
+        return;
+      }
 
       untracked(() => {
         const parsed = this.parseValue(val, units);
@@ -99,13 +99,11 @@ export class SizeInputComponent {
   private compose(): void {
     const num = this.numericValue();
     const unit = this.selectedUnit();
-    this.syncing = true;
     if (num == null || unit === '') {
       this.value.set('');
     } else {
       this.value.set(`${num}${unit}`);
     }
-    this.syncing = false;
   }
 
   onHelpClick(event: Event): void {

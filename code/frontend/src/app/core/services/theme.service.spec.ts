@@ -70,6 +70,45 @@ describe('ThemeService', () => {
     }
   });
 
+  it('keeps the ramp strictly ordered for accents lighter and darker than the mid stop', () => {
+    const service = setup();
+
+    for (const hex of ['#8b5cf6', '#10b981']) {
+      service.setCustomAccent(hex);
+      TestBed.tick();
+
+      const luminances = BRAND_SHADES.map((shade) => luminance(brandStop(shade)));
+      for (let index = 1; index < luminances.length; index++) {
+        expect(luminances[index]).toBeLessThan(luminances[index - 1]);
+      }
+    }
+  });
+
+  it('never inverts the ramp even for a near-white or near-black accent', () => {
+    const service = setup();
+
+    for (const hex of ['#f8fafc', '#111827']) {
+      service.setCustomAccent(hex);
+      TestBed.tick();
+
+      const luminances = BRAND_SHADES.map((shade) => luminance(brandStop(shade)));
+      for (let index = 1; index < luminances.length; index++) {
+        expect(luminances[index]).toBeLessThanOrEqual(luminances[index - 1]);
+      }
+    }
+  });
+
+  it('anchors the mid stop on the picked hex for a light and a dark accent', () => {
+    const service = setup();
+
+    for (const hex of ['#8b5cf6', '#10b981']) {
+      service.setCustomAccent(hex);
+      TestBed.tick();
+
+      expect(brandStop(500)).toBe(hex);
+    }
+  });
+
   it('keeps chroma in the ramp when the picked color is a near-gray', () => {
     const service = setup();
 

@@ -41,7 +41,7 @@ export class NavSidebarComponent {
   readonly hasUpdate = computed(() => {
     const current = this.currentVersion();
     const latest = this.latestVersion();
-    return current && latest && current !== latest;
+    return !!current && !!latest && current !== latest;
   });
 
   mainNavItems: NavItem[] = [

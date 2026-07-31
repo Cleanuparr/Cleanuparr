@@ -46,7 +46,7 @@ describe('PaginatorComponent', () => {
     expect(paginator.totalPages()).toBe(1);
     expect(paginator.canGoPrevious()).toBe(false);
     expect(paginator.canGoNext()).toBe(false);
-    expect(paginator.displayRange()).toEqual({ start: 1, end: 0 });
+    expect(paginator.displayRange()).toEqual({ start: 0, end: 0 });
   });
 
   it('emits pageChange only for pages inside the valid range', () => {

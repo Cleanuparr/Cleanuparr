@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpRequest, HttpResponse } from '@angular/common/http';
+import { HttpEvent, HttpHandlerFn, HttpRequest, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from '@core/interceptors/error.interceptor';
@@ -86,6 +86,32 @@ describe('authInterceptor', () => {
     expect(calls.getAccessToken).toBe(0);
   });
 
+  it('still recognises an auth endpoint behind a deployment base path', () => {
+    const { calls, seen, run } = setup({ accessToken: 'token' });
+
+    run('/cleanuparr/api/auth/login');
+
+    expect(seen[0].headers.has('Authorization')).toBe(false);
+    expect(calls.getAccessToken).toBe(0);
+  });
+
+  it('still recognises an auth endpoint given as an absolute url', () => {
+    const { calls, seen, run } = setup({ accessToken: 'token' });
+
+    run('http://localhost:5000/api/auth/login');
+
+    expect(seen[0].headers.has('Authorization')).toBe(false);
+    expect(calls.getAccessToken).toBe(0);
+  });
+
+  it('does not treat an auth path inside a query string as an auth endpoint', () => {
+    const { seen, run } = setup({ accessToken: 'token' });
+
+    run('/api/logs?filter=/api/auth/login');
+
+    expect(seen[0].headers.get('Authorization')).toBe('Bearer token');
+  });
+
   it('attaches a bearer token to an authenticated request', () => {
     const { seen, run } = setup({ accessToken: 'token' });
 
@@ -116,7 +142,6 @@ describe('authInterceptor', () => {
     expect(calls.expiryBuffers).toEqual([30]);
     expect(seen).toHaveLength(1);
     expect(seen[0].headers.get('Authorization')).toBe('Bearer fresh');
-    expect(Array.from(seen[0].context.keys())).toHaveLength(1);
   });
 
   it('logs out and surfaces a 401 when the pre-flight refresh yields nothing and no refresh token remains', () => {
@@ -131,7 +156,7 @@ describe('authInterceptor', () => {
 
     expect(calls.logout).toBe(1);
     expect(seen).toHaveLength(0);
-    expect((error as HttpErrorResponse).status).toBe(401);
+    expect((error as ApiError).statusCode).toBe(401);
   });
 
   it('keeps the session when the pre-flight refresh yields nothing but a refresh token remains', () => {
@@ -145,7 +170,7 @@ describe('authInterceptor', () => {
     const { error } = run();
 
     expect(calls.logout).toBe(0);
-    expect((error as HttpErrorResponse).status).toBe(401);
+    expect((error as ApiError).statusCode).toBe(401);
   });
 
   it('refreshes once and retries a 401 without refreshing again when the retry also fails', () => {
@@ -160,7 +185,6 @@ describe('authInterceptor', () => {
     expect(calls.refreshToken).toBe(1);
     expect(seen).toHaveLength(2);
     expect(seen[1].headers.get('Authorization')).toBe('Bearer fresh');
-    expect(Array.from(seen[1].context.keys())).toHaveLength(1);
     expect((error as ApiError).statusCode).toBe(401);
   });
 

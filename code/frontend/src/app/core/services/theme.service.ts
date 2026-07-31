@@ -218,7 +218,7 @@ export class ThemeService {
 
     for (const shade of BRAND_SHADES)
     {
-      const l = shade === 500 ? hsl.l : LIGHTNESS_STOPS[shade];
+      const l = anchorLightness(shade, hsl.l);
       const { r, g, b } = hslToRgb(hsl.h, s, l);
       this.root.style.setProperty(`--brand-${shade}`, rgbToHex(r, g, b));
     }
@@ -233,6 +233,22 @@ export class ThemeService {
     }
     this.root.style.removeProperty('--accent-rgb');
   }
+}
+
+function anchorLightness(shade: (typeof BRAND_SHADES)[number], anchor: number): number {
+  const lightest = LIGHTNESS_STOPS[50];
+  const darkest = LIGHTNESS_STOPS[950];
+  const middle = LIGHTNESS_STOPS[500];
+  const clamped = Math.min(Math.max(anchor, darkest + 2), lightest - 2);
+  const stop = LIGHTNESS_STOPS[shade];
+
+  if (stop === middle) {
+    return clamped;
+  }
+  if (stop > middle) {
+    return clamped + ((stop - middle) / (lightest - middle)) * (lightest - clamped);
+  }
+  return clamped - ((middle - stop) / (middle - darkest)) * (clamped - darkest);
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
