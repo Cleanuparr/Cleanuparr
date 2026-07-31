@@ -188,12 +188,38 @@ describe('TwoFactorCardComponent', () => {
     click(fixture, 'Verify & Enable 2FA');
 
     expect(verifiedCodes).toEqual(['123456']);
-    expect(toasts).toEqual(['success:Two-factor authentication enabled']);
+    expect(toasts).toEqual([
+      'success:Two-factor authentication enabled. Save your recovery codes before dismissing them!',
+    ]);
     expect(fixture.componentInstance.changes).toEqual(['changed']);
     expect(card(fixture).enableSetup()).toBe(false);
-    expect(card(fixture).newRecoveryCodes()).toEqual([]);
     expect(card(fixture).enableVerificationCode()).toBe('');
     expect(secret(fixture)).toBeNull();
+  });
+
+  it('keeps the recovery codes on screen after enabling until they are dismissed', () => {
+    const { fixture } = setup();
+
+    type(fixture, 'Enter your password to enable 2FA', 'my-password');
+    click(fixture, 'Enable 2FA');
+    type(fixture, 'Enter 6-digit code from your app', '123456');
+    click(fixture, 'Verify & Enable 2FA');
+
+    expect(card(fixture).newRecoveryCodes()).toEqual(SETUP.recoveryCodes);
+
+    fixture.componentInstance.enabled.set(true);
+    fixture.detectChanges();
+
+    for (const code of SETUP.recoveryCodes) {
+      expect(fixture.nativeElement.textContent).toContain(code);
+    }
+    expect(secret(fixture)).toBeNull();
+
+    card(fixture).dismissRecoveryCodes();
+    fixture.detectChanges();
+
+    expect(card(fixture).newRecoveryCodes()).toEqual([]);
+    expect(fixture.nativeElement.textContent).not.toContain(SETUP.recoveryCodes[0]);
   });
 
   it('discards the pending setup when it is cancelled', () => {
