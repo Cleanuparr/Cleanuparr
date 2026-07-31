@@ -106,8 +106,8 @@
                   label="Skip Tags"
                   placeholder="Add tag..."
                   hint="Arr tags to exclude from search"
-                  [items]="instance.skipTags"
-                  (itemsChange)="updateInstanceSkipTags($index, $event)"
+                  [value]="instance.skipTags"
+                  (valueChange)="updateInstanceSkipTags($index, $event)"
                   helpKey="seeker:skipTags"
                 />
                 <app-number-input

@@ -12,7 +12,7 @@
   </label>
 }
 <div class="chip-wrapper" [class.chip-wrapper--disabled]="effectiveDisabled()" [class.chip-wrapper--error]="error() || uncommittedError()">
-  @for (item of items(); track item; let i = $index) {
+  @for (item of value(); track item; let i = $index) {
     <span class="chip">
       {{ item }}
       @if (!effectiveDisabled()) {
@@ -24,7 +24,7 @@
     [id]="controlId"
     class="chip-input"
     enterkeyhint="enter"
-    [placeholder]="items().length === 0 ? placeholder() : ''"
+    [placeholder]="value().length === 0 ? placeholder() : ''"
     [disabled]="effectiveDisabled()"
     [(ngModel)]="inputValue"
     (keydown)="onKeydown($event)"
