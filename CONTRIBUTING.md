@@ -203,7 +203,7 @@ House style, follow the existing specs as reference:
 Two consequences of the zoneless, non-isolated test environment are worth knowing before you debug something strange:
 
 - `fakeAsync`, `tick()` and `flush()` from `@angular/core/testing` require Zone.js and **cannot** be used. Use `vi.useFakeTimers()` and `vi.advanceTimersByTime()` instead, and restore with `vi.useRealTimers()`.
-- Vitest runs spec files without isolation, so module-level state, `localStorage`, fake timers and anything written to `document.documentElement` leak into other spec files. Always undo them in `afterEach`.
+- The Angular `@angular/build` unit-test runner sets Vitest's `isolate` option to `false` to match the old Karma behaviour. Vitest's own default is `isolate: true`, so its documentation will tell you the opposite. In practice module-level state, `localStorage`, fake timers and anything written to `document.documentElement` leak into other spec files. Always undo them in `afterEach`.
 
 ## Documentation Development
 

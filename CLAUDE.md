@@ -197,7 +197,7 @@ make migrate-users name=YourMigrationName
 - **Custom glassmorphism design system** - Do not introduce external UI frameworks (no PrimeNG, Material, Tailwind)
 - **All frontend components** must be standalone with OnPush change detection
 - **Frontend tests are zoneless**: `fakeAsync`/`tick()`/`flush()` from `@angular/core/testing` require Zone.js and will throw. Use `vi.useFakeTimers()` + `vi.advanceTimersByTime()`, restore with `vi.useRealTimers()`
-- **Vitest `isolate` defaults to false**: module state, `localStorage`, fake timers and `document.documentElement` attributes/inline styles leak between spec files. Undo them in `afterEach`
+- **`@angular/build`'s unit-test runner sets `isolate: false`** (Vitest's own default is `isolate: true`, so its docs will tell you the opposite): module state, `localStorage`, fake timers and `document.documentElement` attributes/inline styles leak between spec files. Undo them in `afterEach`
 - **Node >= 25 shadows jsdom's `localStorage`**: vitest skips copying globals that already exist on `globalThis`, so specs would get an inert object (or `undefined` on Node 26). `src/testing/test-setup.ts` restores jsdom's Storage and is wired via `setupFiles` in `angular.json`. `matchMedia`, `IntersectionObserver`, `ResizeObserver` and `navigator.clipboard` are still absent in jsdom, stub them per spec
 - **Frontend toolchain is pinned high**: Node >= 26 and npm 11.6.2. CI uses `setup-node@v7` with `node-version: '26'`
 - **Database migrations** require awareness of all three contexts (Data, Events, Users)
