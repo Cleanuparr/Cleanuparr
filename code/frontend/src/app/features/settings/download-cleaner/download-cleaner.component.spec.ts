@@ -138,6 +138,14 @@ describe('DownloadCleanerComponent', () => {
     };
   }
 
+  it('stays clean when the stored interval is not one of the offered options', async () => {
+    const { component } = await setup({ ...CONFIG, cronExpression: '0 0/7 * ? * * *' });
+
+    expect(component.dcForm.scheduleUnit().value()).toBe(ScheduleUnit.Minutes);
+    expect(component.dcForm.scheduleEvery().value()).toBe(1);
+    expect(component.dirty()).toBe(false);
+  });
+
   it('loads the global config, parses the cron into schedule fields and selects the first client', async () => {
     const { fixture, component } = await setup();
 

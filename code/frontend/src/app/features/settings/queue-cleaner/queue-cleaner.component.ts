@@ -214,12 +214,15 @@ export class QueueCleanerComponent implements HasPendingChanges {
       untracked(() => {
         this.config = config;
         const parsed = parseCronToJobSchedule(config.cronExpression);
+        const scheduleUnit = parsed?.type ?? ScheduleUnit.Minutes;
+        const intervalOptions = ScheduleOptions[scheduleUnit] ?? [];
+        const parsedEvery = parsed?.every ?? 5;
         this.model.set({
           enabled: config.enabled,
           useAdvancedScheduling: config.useAdvancedScheduling,
           cronExpression: config.cronExpression,
-          scheduleEvery: parsed?.every ?? 5,
-          scheduleUnit: parsed?.type ?? ScheduleUnit.Minutes,
+          scheduleEvery: intervalOptions.includes(parsedEvery) ? parsedEvery : (intervalOptions[0] ?? parsedEvery),
+          scheduleUnit,
           ignoredDownloads: config.ignoredDownloads ?? [],
           processNoContentId: config.processNoContentId,
           failedMaxStrikes: config.failedImport.maxStrikes,

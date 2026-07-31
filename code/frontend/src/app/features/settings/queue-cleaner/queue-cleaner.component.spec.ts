@@ -121,6 +121,14 @@ describe('QueueCleanerComponent', () => {
     expect(component.hasPendingChanges()).toBe(false);
   });
 
+  it('stays clean when the stored interval is not one of the offered options', () => {
+    const { component } = setup({ ...CONFIG, cronExpression: '0 0/7 * ? * * *' });
+
+    expect(component.qcForm.scheduleUnit().value()).toBe(ScheduleUnit.Minutes);
+    expect(component.qcForm.scheduleEvery().value()).toBe(1);
+    expect(component.dirty()).toBe(false);
+  });
+
   it('disables the failed import sub-fields and stops requiring patterns when max strikes is zero', () => {
     const { fixture, component } = setup();
 
