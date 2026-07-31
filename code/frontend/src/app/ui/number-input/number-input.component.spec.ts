@@ -124,6 +124,7 @@ describe('NumberInputComponent', () => {
     fixture.detectChanges();
 
     expect(host.value()).toBe(3);
+    expect(host.emissions).toEqual([]);
 
     host.value.set(0);
     fixture.detectChanges();
@@ -131,6 +132,7 @@ describe('NumberInputComponent', () => {
     fixture.detectChanges();
 
     expect(host.value()).toBe(0);
+    expect(host.emissions).toEqual([]);
   });
 
   it('ignores increment while disabled', () => {
