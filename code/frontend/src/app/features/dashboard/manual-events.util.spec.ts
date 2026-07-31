@@ -44,13 +44,18 @@ describe('mergeUnresolvedManualEvents', () => {
     expect(merged[0].message).toBe('from backlog');
   });
 
-  it('drops a hub event that the backlog reports as resolved', () => {
-    const merged = mergeUnresolvedManualEvents(
+  it('skips a resolved copy instead of removing the unresolved one from the other source', () => {
+    const backlogResolved = mergeUnresolvedManualEvents(
       [event({ id: 'same' })],
       [event({ id: 'same', isResolved: true })],
     );
+    const hubResolved = mergeUnresolvedManualEvents(
+      [event({ id: 'same', isResolved: true })],
+      [event({ id: 'same' })],
+    );
 
-    expect(merged.map((e) => e.id)).toEqual(['same']);
+    expect(backlogResolved.map((e) => e.id)).toEqual(['same']);
+    expect(hubResolved.map((e) => e.id)).toEqual(['same']);
   });
 
   it('returns an empty list when there is nothing unresolved', () => {
