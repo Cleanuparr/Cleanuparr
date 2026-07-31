@@ -93,6 +93,7 @@
             "runner": "vitest",
             "tsConfig": "tsconfig.spec.json",
             "setupFiles": ["src/testing/test-setup.ts"],
+            "providersFile": "src/testing/test-providers.ts",
             "coverageExclude": [
               "src/testing/**",
               "src/main.ts",
