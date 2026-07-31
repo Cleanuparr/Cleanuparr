@@ -28,6 +28,7 @@ const LOGS: LogEntry[] = [
     category: 'Sonarr',
     exception: 'SocketException: refused',
     instanceName: 'Sonarr Main',
+    jobName: 'MalwareBlocker',
     jobRunId: 'run-b',
   }),
   entry('2026-07-30T11:00:00Z', {
@@ -135,6 +136,23 @@ describe('LogsComponent', () => {
     component.searchQuery.set('run-a');
     fixture.detectChanges();
     expect(messages(fixture)).toEqual(['Torrent stalled', 'Queue scan finished']);
+  });
+
+  it('searches the raw job name and the display name shown on the row', () => {
+    const { fixture } = setup();
+    const component = fixture.componentInstance;
+
+    component.searchQuery.set('malwareblocker');
+    fixture.detectChanges();
+    expect(messages(fixture)).toEqual(['Connection refused']);
+
+    component.searchQuery.set('malware blocker');
+    fixture.detectChanges();
+    expect(messages(fixture)).toEqual(['Connection refused']);
+
+    component.searchQuery.set('queue cleaner');
+    fixture.detectChanges();
+    expect(messages(fixture)).toEqual(['Queue scan finished']);
   });
 
   it('narrows the result when several filters are active at once', () => {

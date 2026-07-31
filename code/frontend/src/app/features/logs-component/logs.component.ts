@@ -93,6 +93,8 @@ export class LogsComponent implements OnInit {
           l.instanceName?.toLowerCase().includes(query) ||
           l.downloadClientType?.toLowerCase().includes(query) ||
           l.downloadClientName?.toLowerCase().includes(query) ||
+          l.jobName?.toLowerCase().includes(query) ||
+          (!!l.jobName && this.jobDisplayName(l.jobName).toLowerCase().includes(query)) ||
           l.jobRunId?.toLowerCase().includes(query)
       );
     }
