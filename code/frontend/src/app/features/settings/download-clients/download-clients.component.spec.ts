@@ -237,6 +237,19 @@ describe('DownloadClientsComponent', () => {
     expect(component.clientModel().urlBase).toBe('/custom/base');
   });
 
+  it('clears an autofilled url base when switching to a type that has no default', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'Transmission');
+    expect(component.clientModel().urlBase).toBe('transmission');
+
+    chooseClientType(fixture, 'qBittorrent');
+    expect(component.clientModel().urlBase).toBe('');
+  });
+
   it('loads an existing client into the modal without clobbering its type specific values', () => {
     const { fixture, component } = setup();
 
