@@ -4,20 +4,16 @@ export function mergeUnresolvedManualEvents(
   hubEvents: readonly ManualEvent[],
   loadedEvents: readonly ManualEvent[],
 ): ManualEvent[] {
-  const byId = new Map<string, ManualEvent>();
-
-  for (const event of hubEvents) {
+  const resolved = new Set<string>();
+  for (const event of [...hubEvents, ...loadedEvents]) {
     if (event.isResolved) {
-      byId.delete(event.id);
-    } else {
-      byId.set(event.id, event);
+      resolved.add(event.id);
     }
   }
 
-  for (const event of loadedEvents) {
-    if (event.isResolved) {
-      byId.delete(event.id);
-    } else {
+  const byId = new Map<string, ManualEvent>();
+  for (const event of [...hubEvents, ...loadedEvents]) {
+    if (!resolved.has(event.id)) {
       byId.set(event.id, event);
     }
   }

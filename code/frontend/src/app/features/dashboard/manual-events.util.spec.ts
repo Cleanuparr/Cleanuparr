@@ -44,36 +44,22 @@ describe('mergeUnresolvedManualEvents', () => {
     expect(merged[0].message).toBe('from backlog');
   });
 
-  it('drops an event once a later source reports it as resolved', () => {
-    const backlogResolved = mergeUnresolvedManualEvents(
-      [event({ id: 'same' })],
-      [event({ id: 'same', isResolved: true })],
-    );
-
-    expect(backlogResolved).toEqual([]);
-  });
-
-  it('keeps an event that a later source still reports as unresolved', () => {
-    const hubResolved = mergeUnresolvedManualEvents(
-      [event({ id: 'same', isResolved: true })],
-      [event({ id: 'same' })],
-    );
-
-    expect(hubResolved.map((e) => e.id)).toEqual(['same']);
-    expect(hubResolved.every((e) => !e.isResolved)).toBe(true);
-  });
-
-  it('never returns a resolved event in any ordering', () => {
+  it('drops an event that either source reports as resolved, whichever side is stale', () => {
     const unresolved = event({ id: 'same' });
     const resolved = event({ id: 'same', isResolved: true });
 
-    for (const merged of [
-      mergeUnresolvedManualEvents([unresolved], [resolved]),
-      mergeUnresolvedManualEvents([resolved], [unresolved]),
-      mergeUnresolvedManualEvents([resolved], [resolved]),
-    ]) {
-      expect(merged.some((e) => e.isResolved)).toBe(false);
-    }
+    expect(mergeUnresolvedManualEvents([unresolved], [resolved])).toEqual([]);
+    expect(mergeUnresolvedManualEvents([resolved], [unresolved])).toEqual([]);
+    expect(mergeUnresolvedManualEvents([resolved], [resolved])).toEqual([]);
+  });
+
+  it('drops a resolved event without hiding the unresolved ones alongside it', () => {
+    const merged = mergeUnresolvedManualEvents(
+      [event({ id: 'resolved-later', isResolved: true }), event({ id: 'kept-hub' })],
+      [event({ id: 'resolved-later' }), event({ id: 'kept-backlog' })],
+    );
+
+    expect(merged.map((e) => e.id).sort()).toEqual(['kept-backlog', 'kept-hub']);
   });
 
   it('returns an empty list when there is nothing unresolved', () => {
