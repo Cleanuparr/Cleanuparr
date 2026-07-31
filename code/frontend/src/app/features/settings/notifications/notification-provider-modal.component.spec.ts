@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { NotificationApi } from '@core/api/notification.api';
 import { ToastService } from '@core/services/toast.service';
-import { NotificationProviderDto } from '@shared/models/notification-provider.model';
+import { AppriseCliStatus, NotificationProviderDto } from '@shared/models/notification-provider.model';
 import {
   NotificationProviderType,
   AppriseMode,
@@ -75,9 +75,10 @@ const GOTIFY_PROVIDER: NotificationProviderDto = {
   },
 };
 
-function createApi() {
+function createApi(cliStatus: Observable<AppriseCliStatus> = of({ available: true, version: '1.9.0' })) {
   const created: NotificationProviderDto = DISCORD_PROVIDER;
   return {
+    getAppriseCliStatus: vi.fn(() => cliStatus),
     createDiscord: vi.fn(() => of(created)),
     createTelegram: vi.fn(() => of(created)),
     createNotifiarr: vi.fn(() => of(created)),
@@ -109,6 +110,7 @@ function createToast() {
 interface SetupOptions {
   initialType?: NotificationProviderType;
   editingProvider?: NotificationProviderDto;
+  appriseCliStatus?: Observable<AppriseCliStatus>;
 }
 
 interface Setup {
@@ -127,7 +129,7 @@ describe('NotificationProviderModalComponent', () => {
   });
 
   function setup(options: SetupOptions = {}): Setup {
-    const api = createApi();
+    const api = createApi(options.appriseCliStatus);
     const toast = createToast();
 
     TestBed.configureTestingModule({
@@ -343,6 +345,49 @@ describe('NotificationProviderModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('reports the detected Apprise CLI version once CLI mode is selected', () => {
+    const { fixture, component, api } = setup({ initialType: NotificationProviderType.Apprise });
+
+    expect(api.getAppriseCliStatus).not.toHaveBeenCalled();
+
+    component.modalModel.update((m) => ({ ...m, appriseMode: AppriseMode.Cli }));
+    fixture.detectChanges();
+
+    expect(api.getAppriseCliStatus).toHaveBeenCalledTimes(1);
+    expect(fixture.nativeElement.textContent).toContain('Apprise CLI detected: 1.9.0');
+  });
+
+  it('warns when the Apprise CLI is missing on the server', () => {
+    const { fixture, component } = setup({
+      initialType: NotificationProviderType.Apprise,
+      appriseCliStatus: of({ available: false }),
+    });
+
+    component.modalModel.update((m) => ({ ...m, appriseMode: AppriseMode.Cli }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Apprise CLI not found');
+  });
+
+  it('treats a failed Apprise CLI probe as unavailable and checks only once per session', () => {
+    const { fixture, component, api } = setup({
+      initialType: NotificationProviderType.Apprise,
+      appriseCliStatus: throwError(() => new Error('offline')),
+    });
+
+    component.modalModel.update((m) => ({ ...m, appriseMode: AppriseMode.Cli }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Apprise CLI not found');
+
+    component.modalModel.update((m) => ({ ...m, appriseMode: AppriseMode.Api }));
+    fixture.detectChanges();
+    component.modalModel.update((m) => ({ ...m, appriseMode: AppriseMode.Cli }));
+    fixture.detectChanges();
+
+    expect(api.getAppriseCliStatus).toHaveBeenCalledTimes(1);
   });
 
   it('requires the ntfy credentials that match the selected authentication type', () => {

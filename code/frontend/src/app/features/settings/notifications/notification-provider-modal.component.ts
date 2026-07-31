@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, signal, computed, input, mo
 import { form, validate, FormField } from '@angular/forms/signals';
 import {
   ButtonComponent, InputComponent, ToggleComponent, SelectComponent,
-  ModalComponent, ChipInputComponent, NumberInputComponent,
+  ModalComponent, ChipInputComponent, NumberInputComponent, BadgeComponent,
   type SelectOption,
 } from '@ui';
 import { NotificationApi } from '@core/api/notification.api';
@@ -16,6 +16,7 @@ import {
   CreateNtfyProviderRequest,
   CreatePushoverProviderRequest,
   CreateGotifyProviderRequest,
+  AppriseCliStatus,
 } from '@shared/models/notification-provider.model';
 import {
   NotificationProviderType,
@@ -208,7 +209,7 @@ const PUSHOVER_SOUND_OPTIONS: SelectOption[] = [
   standalone: true,
   imports: [
     ButtonComponent, InputComponent, ToggleComponent, SelectComponent,
-    ModalComponent, ChipInputComponent, NumberInputComponent, FormField,
+    ModalComponent, ChipInputComponent, NumberInputComponent, FormField, BadgeComponent,
   ],
   templateUrl: './notification-provider-modal.component.html',
   styleUrl: './notification-provider-modal.component.scss',
@@ -226,6 +227,10 @@ export class NotificationProviderModalComponent {
   readonly modalType = signal<NotificationProviderType>(NotificationProviderType.Discord);
   readonly testing = signal(false);
   readonly saving = signal(false);
+
+  readonly checkingAppriseCli = signal(false);
+  readonly appriseCliStatus = signal<AppriseCliStatus | null>(null);
+  private appriseCliChecked = false;
 
   readonly modalModel = signal<NotificationModalModel>(createDefaultModalModel());
 
@@ -348,7 +353,36 @@ export class NotificationProviderModalComponent {
         this.modalType.set(provider ? provider.type : initialType);
         this.modalModel.set(next);
         this.openSnapshot.set(JSON.stringify(next));
+        this.appriseCliChecked = false;
+        this.appriseCliStatus.set(null);
       });
+    });
+
+    effect(() => {
+      const isAppriseCli = this.modalType() === NotificationProviderType.Apprise
+        && this.modalModel().appriseMode === AppriseMode.Cli;
+      if (!this.visible() || !isAppriseCli) {
+        return;
+      }
+      untracked(() => this.checkAppriseCli());
+    });
+  }
+
+  private checkAppriseCli(): void {
+    if (this.appriseCliChecked) {
+      return;
+    }
+    this.appriseCliChecked = true;
+    this.checkingAppriseCli.set(true);
+    this.api.getAppriseCliStatus().subscribe({
+      next: (status) => {
+        this.appriseCliStatus.set(status);
+        this.checkingAppriseCli.set(false);
+      },
+      error: () => {
+        this.appriseCliStatus.set({ available: false });
+        this.checkingAppriseCli.set(false);
+      },
     });
   }
 

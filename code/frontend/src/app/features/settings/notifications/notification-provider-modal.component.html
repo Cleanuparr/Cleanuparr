@@ -69,6 +69,19 @@
           helpKey="notifications/apprise:key" />
       }
       @if (modalForm.appriseMode().value() === 'Cli') {
+        @if (checkingAppriseCli()) {
+          <p class="section-hint">Checking for the Apprise CLI...</p>
+        } @else if (appriseCliStatus(); as cliStatus) {
+          @if (cliStatus.available) {
+            <p class="section-hint">Apprise CLI detected{{ cliStatus.version ? ': ' + cliStatus.version : '' }}.</p>
+          } @else {
+            <app-badge severity="warning">Apprise CLI not found</app-badge>
+            <p class="section-hint">
+              The Apprise CLI could not be found on the server, so notifications sent in CLI mode will fail.
+              Install Apprise on the server or switch to API mode.
+            </p>
+          }
+        }
         <app-chip-input label="Service URLs" placeholder="discord://webhook_id/token" [formField]="modalForm.appriseServiceUrls"
           hint="Add Apprise service URLs. Example: discord://webhook_id/token."
           [error]="modalForm.appriseServiceUrls().errors()[0]?.message"
