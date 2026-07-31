@@ -6,6 +6,9 @@
 /out-tsc
 /bazel-out
 
+# Test coverage
+/coverage
+
 # Node
 /node_modules
 npm-debug.log

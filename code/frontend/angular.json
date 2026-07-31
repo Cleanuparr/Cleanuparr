@@ -91,7 +91,21 @@
           "options": {
             "buildTarget": "ui:build:development",
             "runner": "vitest",
-            "tsConfig": "tsconfig.spec.json"
+            "tsConfig": "tsconfig.spec.json",
+            "coverageExclude": [
+              "src/main.ts",
+              "src/app/app.config.ts",
+              "src/app/app.routes.ts",
+              "src/**/models/**",
+              "src/app/ui/index.ts"
+            ]
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "coverage": true,
+              "coverageReporters": ["text-summary", "lcov"]
+            }
           }
         },
         "serve": {

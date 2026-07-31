@@ -6,10 +6,12 @@ on:
       - main
     paths:
       - 'code/backend/**'
+      - 'code/frontend/**'
       - '.github/workflows/test.yml'
   pull_request:
     paths:
       - 'code/backend/**'
+      - 'code/frontend/**'
       - '.github/workflows/test.yml'
   workflow_call:
 
@@ -22,7 +24,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -103,3 +105,50 @@ jobs:
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Test artifacts have been uploaded for detailed analysis." >> $GITHUB_STEP_SUMMARY
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    defaults:
+      run:
+        working-directory: code/frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        timeout-minutes: 1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: code/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test:ci
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage-report
+          path: code/frontend/coverage/ui/lcov.info
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: code/frontend/coverage/ui/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          flags: frontend
+          name: frontend-coverage

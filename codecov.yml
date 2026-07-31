@@ -3,9 +3,30 @@ coverage:
     project:
       default:
         target: auto
+        threshold: 1%
+      backend:
+        flags:
+          - backend
+        target: auto
+        threshold: 1%
+      frontend:
+        flags:
+          - frontend
+        target: auto
+        threshold: 1%
     patch:
       default:
         target: auto
+
+flags:
+  backend:
+    paths:
+      - code/backend/
+    carryforward: true
+  frontend:
+    paths:
+      - code/frontend/
+    carryforward: true
 
 ignore:
   - "**/Migrations/**"
