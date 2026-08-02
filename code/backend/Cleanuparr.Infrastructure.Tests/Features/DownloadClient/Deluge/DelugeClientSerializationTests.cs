@@ -111,6 +111,48 @@ public class DelugeClientSerializationTests
     }
 
     [Fact]
+    public async Task GetTorrentStatus_WithDisconnectedDaemonError_ReturnsNull()
+    {
+        (DelugeClient client, _) = CreateClient(
+            """{"id":1,"result":null,"error":{"message":"AttributeError: 'NoneType' object has no attribute 'call'","code":4}}""");
+
+        DownloadStatus? status = await client.GetTorrentStatus("abc");
+
+        status.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetTorrentStatus_WithUnknownHashError_ReturnsNull()
+    {
+        const string response = """
+            {
+                "id": 1,
+                "result": null,
+                "error": {
+                    "message": "Failure: [Failure instance: Traceback (failure with no frames): <class 'deluge.error.WrappedException'>: [Errno 32] Broken pipe\nTraceback (most recent call last):\n  File \"/opt/deluge-2.1.1/lib/python3.9/site-packages/deluge/core/torrentmanager.py\", line 308, in __getitem__\n    return self.torrents[torrent_id]\nKeyError: '5a64675bf2d466929fc6a916e3a975fa6940975b'\n]",
+                    "code": 4
+                }
+            }
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DownloadStatus? status = await client.GetTorrentStatus("5a64675bf2d466929fc6a916e3a975fa6940975b");
+
+        status.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetTorrentStatus_WithUnrelatedError_Throws()
+    {
+        (DelugeClient client, _) =
+            CreateClient("""{"id":1,"result":null,"error":{"message":"Not authenticated","code":1}}""");
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.GetTorrentStatus("5a64675bf2d466929fc6a916e3a975fa6940975b"));
+        ex.Message.ShouldBe("Not authenticated");
+    }
+
+    [Fact]
     public async Task GetTorrentFiles_WithNestedDirectory_DeserializesWithoutIndex()
     {
         const string response = """

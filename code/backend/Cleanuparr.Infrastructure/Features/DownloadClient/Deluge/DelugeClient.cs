@@ -121,16 +121,21 @@ public sealed class DelugeClient
                 Fields
             );
         }
-        catch (DelugeClientException e)
+        catch (DelugeClientException e) when (IsTorrentNotFoundError(e.Message, hash))
         {
-            // Deluge returns an error when the torrent is not found
-            if (e.Message == "AttributeError: 'NoneType' object has no attribute 'call'")
-            {
-                return null;
-            }
-
-            throw;
+            return null;
         }
+    }
+
+    private static bool IsTorrentNotFoundError(string? message, string hash)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            return false;
+        }
+
+        return message.Contains("'NoneType' object has no attribute 'call'", StringComparison.Ordinal)
+               || message.Contains($"KeyError: '{hash}'", StringComparison.OrdinalIgnoreCase);
     }
     
     public async Task<List<DownloadStatus>?> GetStatusForAllTorrents()
