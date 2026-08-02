@@ -160,6 +160,51 @@ make migrate-events name=AddAuditLogEvents
 
 The UI will be available at http://localhost:4200
 
+### Testing
+
+Unit tests run on [Vitest](https://vitest.dev/) through the Angular `@angular/build:unit-test` builder, in a jsdom environment. No browser download is required.
+
+```bash
+cd code/frontend
+
+# Watch mode, re-runs on save
+npm test
+
+# Single run with a coverage report, written to coverage/ui/. This is what CI runs
+npm run test:ci
+
+# Single run without coverage
+npm test -- --watch=false
+
+# Run a single spec
+npm test -- --include src/app/ui/chip-input/chip-input.component.spec.ts
+
+# Lint, also a CI gate
+npm run lint
+```
+
+`npm test` is Angular's `ng test`, which watches by default in an interactive terminal and runs once when stdout is not a TTY. CI therefore needs no extra flag, but do not rely on that locally: in your terminal `npm test` stays open until you quit it.
+
+#### Writing specs
+
+Specs live next to the code they cover, named `{feature}.component.spec.ts`. The Angular schematics in `angular.json` are configured with `skipTests: true`, so `ng generate` will not create a spec for you. Write it by hand.
+
+House style, follow the existing specs as reference:
+
+- Vitest globals (`describe`, `it`, `expect`, `vi`) are enabled via `tsconfig.spec.json`. Do not import them.
+- Use `TestBed.createComponent` and drive the rendered DOM. Assert on output, not on private internals.
+- For a component with inputs and outputs, declare a small standalone host component in the spec file and test through it. See `src/app/ui/chip-input/chip-input.component.spec.ts`.
+- Stub API classes with a plain object of methods returning `of(...)` from RxJS. Do not mock `HttpClient` and do not use `provideHttpClientTesting`. See `src/app/features/settings/seeker/seeker.component.spec.ts`.
+- Keep stub observables synchronous. An `rxResource` backed by `of(...)` resolves within a single `fixture.detectChanges()`, while an async source would need `await fixture.whenStable()`.
+- To flush a bare `effect()` outside a component, call it inside `TestBed.runInInjectionContext(...)` and flush with `TestBed.tick()`. See `src/app/core/services/overlay-stack.service.spec.ts`.
+- Put shared setup in a local `function setup()` inside the `describe` rather than in `beforeEach`, so each test reads top to bottom.
+- Components are zoneless and `OnPush`, so call `fixture.detectChanges()` after every interaction that should update the view.
+
+Two consequences of the zoneless, non-isolated test environment are worth knowing before you debug something strange:
+
+- `fakeAsync`, `tick()` and `flush()` from `@angular/core/testing` require Zone.js and **cannot** be used. Use `vi.useFakeTimers()` and `vi.advanceTimersByTime()` instead, and restore with `vi.useRealTimers()`.
+- The Angular `@angular/build` unit-test runner sets Vitest's `isolate` option to `false` to match the old Karma behaviour. Vitest's own default is `isolate: true`, so its documentation will tell you the opposite. In practice module-level state, `localStorage`, fake timers and anything written to `document.documentElement` leak into other spec files. Always undo them in `afterEach`.
+
 ## Documentation Development
 
 ### Setup
@@ -241,7 +286,7 @@ docker buildx build \
 ### Frontend (Angular/TypeScript)
 - Follow existing conventions and the [Angular Style Guide](https://angular.io/guide/styleguide)
 - Use TypeScript strict mode
-- Write unit tests whenever possible
+- Write unit tests whenever possible, see [Frontend Development > Testing](#testing)
 
 ### Documentation
 - Use clear, concise language

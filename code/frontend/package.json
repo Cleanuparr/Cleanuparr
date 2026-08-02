@@ -6,6 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "test:ci": "ng test --configuration ci",
     "lint": "eslint ."
   },
   "prettier": {
@@ -57,11 +59,14 @@
     "@angular/cli": "^22.0.4",
     "@angular/compiler-cli": "^22.0.4",
     "@eslint/js": "^9.39.4",
+    "@vitest/coverage-v8": "^4.1.10",
     "angular-eslint": "^22.0.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^29.1.1",
     "prettier": "^3.8.1",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.62.1",
+    "vitest": "^4.1.10"
   }
 }

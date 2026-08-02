@@ -9,10 +9,9 @@
       }
     </div>
 
-    @if (enabled()) {
-      <!-- 2FA Enabled: Regenerate or Disable -->
-      @if (newRecoveryCodes().length > 0) {
-        <div class="recovery-section">
+    @if (newRecoveryCodes().length > 0 && !enableSetup()) {
+      <div class="recovery-section">
+        @if (newQrCodeUri()) {
           <p class="recovery-title">New Authenticator Setup</p>
           <p class="recovery-desc">Scan this QR code with your authenticator app to complete the setup.</p>
           <div class="qr-section">
@@ -28,19 +27,24 @@
             </details>
           </div>
           <div class="form-divider"></div>
-          <p class="recovery-title">New Recovery Codes</p>
-          <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
-          <div class="recovery-codes">
-            @for (code of newRecoveryCodes(); track code) {
-              <div class="recovery-code">{{ code }}</div>
-            }
-          </div>
-          <div class="recovery-actions">
-            <app-button variant="secondary" size="sm" (clicked)="copyRecoveryCodes()">Copy Codes</app-button>
-            <app-button variant="ghost" size="sm" (clicked)="dismissRecoveryCodes()">Dismiss</app-button>
-          </div>
+        }
+        <p class="recovery-title">New Recovery Codes</p>
+        <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
+        <div class="recovery-codes">
+          @for (code of newRecoveryCodes(); track code) {
+            <div class="recovery-code">{{ code }}</div>
+          }
         </div>
-      } @else {
+        <div class="recovery-actions">
+          <app-button variant="secondary" size="sm" (clicked)="copyRecoveryCodes()">Copy Codes</app-button>
+          <app-button variant="ghost" size="sm" (clicked)="dismissRecoveryCodes()">Dismiss</app-button>
+        </div>
+      </div>
+    }
+
+    @if (enabled()) {
+      <!-- 2FA Enabled: Regenerate or Disable -->
+      @if (newRecoveryCodes().length === 0) {
         <div class="form-divider"></div>
         <p class="section-hint">To regenerate your 2FA, enter your current password and a valid authenticator code.</p>
         <app-input

@@ -17,6 +17,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
 import { StatsCardComponent } from './stats-card/stats-card.component';
+import { mergeUnresolvedManualEvents } from './manual-events.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -100,22 +101,9 @@ export class DashboardComponent {
   readonly loadingMoreManualEvents = signal(false);
 
   // Merge live-pushed hub events with the keyset-paged backlog, newest first
-  readonly unresolvedManualEvents = computed(() => {
-    const byId = new Map<string, ManualEvent>();
-    for (const e of this.hub.manualEvents()) {
-      if (!e.isResolved) {
-        byId.set(e.id, e);
-      }
-    }
-    for (const e of this.loadedManualEvents()) {
-      if (!e.isResolved) {
-        byId.set(e.id, e);
-      }
-    }
-    return [...byId.values()].sort((a, b) =>
-      a.timestamp < b.timestamp ? 1 : a.timestamp > b.timestamp ? -1 : 0
-    );
-  });
+  readonly unresolvedManualEvents = computed(() =>
+    mergeUnresolvedManualEvents(this.hub.manualEvents(), this.loadedManualEvents())
+  );
 
   readonly manualEventIndex = signal(0);
 
@@ -230,7 +218,7 @@ export class DashboardComponent {
         this.loadedManualEvents.set([]);
         this.totalUnresolvedManualEvents.set(0);
         this.manualEventIndex.set(0);
-        this.hasMoreBacklog.set(true);
+        this.hasMoreBacklog.set(false);
         this.toast.success(`Dismissed ${res.resolvedCount} events`);
       },
       error: () => this.toast.error('Failed to dismiss events'),

@@ -46,7 +46,7 @@ export function pollPlexPin<T extends { completed: boolean }>(options: PlexPinPo
     }
 
     inFlight?.unsubscribe();
-    inFlight = verify().subscribe({
+    const subscription = verify().subscribe({
       next: (result) => {
         if (result.completed) {
           stop();
@@ -58,5 +58,6 @@ export function pollPlexPin<T extends { completed: boolean }>(options: PlexPinPo
         onError(error);
       },
     });
+    inFlight = subscription.closed ? null : subscription;
   }, intervalMs);
 }

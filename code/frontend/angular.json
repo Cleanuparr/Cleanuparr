@@ -86,6 +86,32 @@
           },
           "defaultConfiguration": "production"
         },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "ui:build:development",
+            "runner": "vitest",
+            "tsConfig": "tsconfig.spec.json",
+            "setupFiles": ["src/testing/test-setup.ts"],
+            "providersFile": "src/testing/test-providers.ts",
+            "isolate": true,
+            "coverageExclude": [
+              "src/testing/**",
+              "src/main.ts",
+              "src/app/app.config.ts",
+              "src/app/app.routes.ts",
+              "src/**/models/**",
+              "src/app/ui/index.ts"
+            ]
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "coverage": true,
+              "coverageReporters": ["text-summary", "lcov"]
+            }
+          }
+        },
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {

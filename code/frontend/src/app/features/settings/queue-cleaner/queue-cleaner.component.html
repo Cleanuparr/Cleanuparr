@@ -128,8 +128,8 @@
 
       @if (stallRules().length === 0 && !stallRulesLoading()) {
         <app-empty-state
-          title="No Stall Rules"
-          message="Create a stall rule to detect downloads that have stopped progressing."
+          heading="No Stall Rules"
+          description="Create a stall rule to detect downloads that have stopped progressing."
         />
       }
 
@@ -187,8 +187,8 @@
 
       @if (slowRules().length === 0 && !slowRulesLoading()) {
         <app-empty-state
-          title="No Slow Rules"
-          message="Create a slow rule to detect downloads that are progressing too slowly."
+          heading="No Slow Rules"
+          description="Create a slow rule to detect downloads that are progressing too slowly."
         />
       }
 

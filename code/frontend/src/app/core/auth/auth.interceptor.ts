@@ -1,16 +1,27 @@
-import { HttpInterceptorFn, HttpErrorResponse, HttpContextToken, HttpContext } from '@angular/common/http';
+import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
 
-const IS_RETRY = new HttpContextToken<boolean>(() => false);
+// The baseUrl interceptor runs first. It can add a base path prefix to the URL.
+// The auth segment can be at any position in the path.
+function isAuthEndpoint(url: string): boolean {
+  const path = url.startsWith('http') ? new URL(url).pathname : url.split('?')[0];
+  return path.includes('/api/auth/');
+}
+
+function unauthorized(): ApiError {
+  const error = new ApiError('Unauthorized');
+  error.statusCode = 401;
+  return error;
+}
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
 
   // Skip auth header for auth endpoints
-  if (req.url.includes('/api/auth/')) {
+  if (isAuthEndpoint(req.url)) {
     return next(req);
   }
 
@@ -21,14 +32,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         if (result) {
           const freshReq = req.clone({
             setHeaders: { Authorization: `Bearer ${result.accessToken}` },
-            context: new HttpContext().set(IS_RETRY, true),
           });
           return next(freshReq);
         }
         if (!auth.hasRefreshToken()) {
           auth.logout();
         }
-        return throwError(() => new HttpErrorResponse({ status: 401 }));
+        return throwError(() => unauthorized());
       }),
     );
   }
@@ -44,13 +54,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error) => {
       // Fallback: 401 catch for edge cases (e.g., token expired between check and send)
-      if ((error as ApiError).statusCode === 401 && token && !req.context.get(IS_RETRY)) {
+      if ((error as ApiError).statusCode === 401 && token) {
         return auth.refreshToken().pipe(
           switchMap((result) => {
             if (result) {
               const retryReq = req.clone({
                 setHeaders: { Authorization: `Bearer ${result.accessToken}` },
-                context: new HttpContext().set(IS_RETRY, true),
               });
               return next(retryReq);
             }

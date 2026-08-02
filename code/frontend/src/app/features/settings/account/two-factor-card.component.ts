@@ -105,8 +105,12 @@ export class TwoFactorCardComponent {
     this.enabling2fa.set(true);
     this.api.verifyEnable2fa(this.enableVerificationCode()).subscribe({
       next: () => {
-        this.toast.success('Two-factor authentication enabled');
-        this.cancelEnable2fa();
+        this.toast.success('Two-factor authentication enabled. Save your recovery codes before dismissing them!');
+        this.enableSetup.set(false);
+        this.enablePassword.set('');
+        this.enableVerificationCode.set('');
+        this.newQrCodeUri.set('');
+        this.newTotpSecret.set('');
         this.enabling2fa.set(false);
         this.changed.emit();
       },

@@ -127,8 +127,8 @@ export class DownloadClientsComponent implements HasPendingChanges {
     }
     const autofill = AUTOFILL_URL_BASES[newType];
     const replaceable = m.urlBase === '' || Object.values(AUTOFILL_URL_BASES).includes(m.urlBase);
-    if (autofill && replaceable) {
-      patch.urlBase = autofill;
+    if (replaceable && (autofill ?? '') !== m.urlBase) {
+      patch.urlBase = autofill ?? '';
     }
     if (Object.keys(patch).length > 0) {
       this.clientModel.update((mm) => ({ ...mm, ...patch }));

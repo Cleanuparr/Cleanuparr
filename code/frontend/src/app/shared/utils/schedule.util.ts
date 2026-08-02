@@ -25,6 +25,18 @@ export function generateCronExpression(schedule: JobSchedule): string {
   }
 }
 
+export function resolveSchedule(
+  cronExpression: string,
+  options: Record<ScheduleUnit, number[]>,
+  fallback: JobSchedule,
+): JobSchedule {
+  const parsed = parseCronToJobSchedule(cronExpression);
+  const type = parsed?.type ?? fallback.type;
+  const every = parsed?.every ?? fallback.every;
+  const allowed = options[type] ?? [];
+  return { every: allowed.includes(every) ? every : (allowed[0] ?? every), type };
+}
+
 export function parseCronToJobSchedule(cronExpression: string): JobSchedule | undefined {
   try {
     const parts = cronExpression.split(' ');
