@@ -103,13 +103,13 @@ services:
 | `PGID` | 1000 | Group ID for file permissions |
 | `UMASK` | 022 | File creation mask |
 | `TZ` | Etc/UTC | Timezone setting |
-| `DATABASE_PROVIDER` | sqlite | See [Database](./database) for more info |
-| `POSTGRES_HOST` | *(required for postgres)* | See [Database](./database) for more info |
-| `POSTGRES_PORT` | 5432 | See [Database](./database) for more info |
-| `POSTGRES_USER` | *(required for postgres)* | See [Database](./database) for more info |
-| `POSTGRES_PASS` | *(required for postgres)* | See [Database](./database) for more info |
-| `POSTGRES_DB` | *(required for postgres)* | See [Database](./database) for more info |
-| `POSTGRES_EXTRA_PARAMS` | *(empty)* | See [Database](./database) for more info |
+| `DATABASE_PROVIDER` | sqlite | See [Database](/docs/installation/database) for more info |
+| `POSTGRES_HOST` | *(required for postgres)* | See [Database](/docs/installation/database) for more info |
+| `POSTGRES_PORT` | 5432 | See [Database](/docs/installation/database) for more info |
+| `POSTGRES_USER` | *(required for postgres)* | See [Database](/docs/installation/database) for more info |
+| `POSTGRES_PASS` | *(required for postgres)* | See [Database](/docs/installation/database) for more info |
+| `POSTGRES_DB` | *(required for postgres)* | See [Database](/docs/installation/database) for more info |
+| `POSTGRES_EXTRA_PARAMS` | *(empty)* | See [Database](/docs/installation/database) for more info |
 | `CLEANUPARR_CONFIG_PATH` | *(auto)* | Override the config directory. Available only for non-Docker setups. |
 | `CLEANUPARR_LOGS_PATH` | *(config dir)/logs* | Override the log directory. Available only for non-Docker setups. |
 
@@ -126,7 +126,7 @@ Replace `/path/to/config` with your desired configuration directory path on the 
 
 ### Database
 
-Cleanuparr uses SQLite by default, with the database files stored under `/config`. No configuration is needed for this. PostgreSQL is also supported. See the [Database](./database) page for configuration and data migration details.
+Cleanuparr uses SQLite by default, with the database files stored under `/config`. No configuration is needed for this. PostgreSQL is also supported. See the [Database](/docs/installation/database) page for configuration and data migration details.
 </div>
 
 <div className={styles.section}>
@@ -416,7 +416,7 @@ Access via: `http://yourdomain.com:8080/apps/cleanup`
 - Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions
 
 #### Health Checks
-Cleanuparr provides health check endpoints for monitoring and container orchestration. For detailed information about available endpoints and configuration, see the [Health Checks documentation](../configuration/health-checks/).
+Cleanuparr provides health check endpoints for monitoring and container orchestration. For detailed information about available endpoints and configuration, see the [Health Checks documentation](/docs/configuration/health-checks/).
 
 </div>
 
