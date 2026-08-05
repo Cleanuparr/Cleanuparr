@@ -74,6 +74,9 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(InstanceType.Whisparr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Whisparr));
+            ContextProvider.Set(nameof(InstanceType.Sportarr), await _dataContext.ArrConfigs.AsNoTracking()
+                .Include(x => x.Instances)
+                .FirstAsync(x => x.Type == InstanceType.Sportarr));
             ContextProvider.Set(nameof(QueueCleanerConfig), await _dataContext.QueueCleanerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(ContentBlockerConfig), await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(DownloadCleanerConfig), await _dataContext.DownloadCleanerConfigs.AsNoTracking().FirstAsync());
@@ -143,7 +146,7 @@ public abstract class GenericHandler : IHandler
 
         var instanceType = instance.ArrConfig.Type;
 
-        if (instanceType is InstanceType.Sonarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
+        if (instanceType is InstanceType.Sonarr or InstanceType.Sportarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
         {
             QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
             {
@@ -204,6 +207,18 @@ public abstract class GenericHandler : IHandler
                 SearchType = SeriesSearchType.Episode
             },
             InstanceType.Sonarr when isPack => new SeriesSearchItem
+            {
+                Id = record.SeasonNumber,
+                SeriesId = record.SeriesId,
+                SearchType = SeriesSearchType.Season
+            },
+            InstanceType.Sportarr when !isPack => new SeriesSearchItem
+            {
+                Id = record.EpisodeId,
+                SeriesId = record.SeriesId,
+                SearchType = SeriesSearchType.Episode
+            },
+            InstanceType.Sportarr when isPack => new SeriesSearchItem
             {
                 Id = record.SeasonNumber,
                 SeriesId = record.SeriesId,

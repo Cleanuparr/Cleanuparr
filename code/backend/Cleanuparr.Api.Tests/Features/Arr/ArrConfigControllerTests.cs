@@ -50,6 +50,7 @@ public class ArrConfigControllerTests : IDisposable
     [InlineData(InstanceType.Lidarr)]
     [InlineData(InstanceType.Readarr)]
     [InlineData(InstanceType.Whisparr)]
+    [InlineData(InstanceType.Sportarr)]
     public async Task GetArrConfig_AllTypes_ReturnOk(InstanceType type)
     {
         // Act
@@ -385,6 +386,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Lidarr => _controller.GetLidarrConfig(),
         InstanceType.Readarr => _controller.GetReadarrConfig(),
         InstanceType.Whisparr => _controller.GetWhisparrConfig(),
+        InstanceType.Sportarr => _controller.GetSportarrConfig(),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 }

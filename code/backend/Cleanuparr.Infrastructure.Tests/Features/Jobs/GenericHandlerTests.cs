@@ -471,6 +471,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         _handler.CapturedLidarrConfig!.Type.ShouldBe(InstanceType.Lidarr);
         _handler.CapturedReadarrConfig!.Type.ShouldBe(InstanceType.Readarr);
         _handler.CapturedWhisparrConfig!.Type.ShouldBe(InstanceType.Whisparr);
+        _handler.CapturedSportarrConfig!.Type.ShouldBe(InstanceType.Sportarr);
         _handler.CapturedQueueCleanerConfig.ShouldNotBeNull();
         _handler.CapturedContentBlockerConfig.ShouldNotBeNull();
         _handler.CapturedDownloadCleanerConfig.ShouldNotBeNull();
@@ -537,6 +538,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         public ArrConfig? CapturedLidarrConfig { get; private set; }
         public ArrConfig? CapturedReadarrConfig { get; private set; }
         public ArrConfig? CapturedWhisparrConfig { get; private set; }
+        public ArrConfig? CapturedSportarrConfig { get; private set; }
         public QueueCleanerConfig? CapturedQueueCleanerConfig { get; private set; }
         public ContentBlockerConfig? CapturedContentBlockerConfig { get; private set; }
         public DownloadCleanerConfig? CapturedDownloadCleanerConfig { get; private set; }
@@ -564,6 +566,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             CapturedLidarrConfig = ContextProvider.Get(nameof(InstanceType.Lidarr)) as ArrConfig;
             CapturedReadarrConfig = ContextProvider.Get(nameof(InstanceType.Readarr)) as ArrConfig;
             CapturedWhisparrConfig = ContextProvider.Get(nameof(InstanceType.Whisparr)) as ArrConfig;
+            CapturedSportarrConfig = ContextProvider.Get(nameof(InstanceType.Sportarr)) as ArrConfig;
             CapturedQueueCleanerConfig = ContextProvider.Get(nameof(QueueCleanerConfig)) as QueueCleanerConfig;
             CapturedContentBlockerConfig = ContextProvider.Get(nameof(ContentBlockerConfig)) as ContentBlockerConfig;
             CapturedDownloadCleanerConfig = ContextProvider.Get(nameof(DownloadCleanerConfig)) as DownloadCleanerConfig;

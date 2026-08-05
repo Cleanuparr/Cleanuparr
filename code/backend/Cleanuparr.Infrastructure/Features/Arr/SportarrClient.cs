@@ -1,0 +1,393 @@
+﻿using System.Runtime.CompilerServices;
+using System.Text;
+using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Entities.Sonarr;
+using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
+using System.Text.Json;
+using Cleanuparr.Infrastructure.Json;
+using Microsoft.Extensions.Logging;
+using Series = Cleanuparr.Domain.Entities.Sonarr.Series;
+
+namespace Cleanuparr.Infrastructure.Features.Arr;
+
+public class SportarrClient : ArrClient, ISportarrClient
+{
+    public SportarrClient(
+        ILogger<SportarrClient> logger,
+        IHttpClientFactory httpClientFactory,
+        IStriker striker,
+        IDryRunInterceptor dryRunInterceptor
+    ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
+    {
+    }
+    
+    protected override string GetSystemStatusUrlPath()
+    {
+        return "/api/v3/system/status";
+    }
+    
+    protected override string GetQueueUrlPath()
+    {
+        return "/api/v3/queue";
+    }
+
+    protected override string GetQueueUrlQuery(int page)
+    {
+        return $"page={page}&pageSize=200&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
+    }
+
+    protected override string GetQueueDeleteUrlPath(long recordId)
+    {
+        return $"/api/v3/queue/{recordId}";
+    }
+
+    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
+    {
+        if (items?.Count is null or 0)
+        {
+            return [];
+        }
+
+        List<long> commandIds = [];
+
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+
+        foreach (SonarrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
+        {
+            using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
+                Encoding.UTF8,
+                "application/json"
+            );
+            SetApiKey(request, arrInstance.ApiKey);
+
+            string? logContext = await ComputeCommandLogContextAsync(arrInstance, command, command.SearchType);
+
+            try
+            {
+                HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
+
+                if (response is not null)
+                {
+                    long? commandId = await ReadCommandIdAsync(response);
+                    response.Dispose();
+
+                    if (commandId.HasValue)
+                    {
+                        commandIds.Add(commandId.Value);
+                    }
+                }
+
+                _logger.LogInformation("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, true, logContext));
+            }
+            catch
+            {
+                _logger.LogError("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, false, logContext));
+                throw;
+            }
+        }
+
+        return commandIds;
+    }
+
+    public override bool HasContentId(QueueRecord record) => record.EpisodeId is not 0 && record.SeriesId is not 0;
+
+    private static string GetSearchLog(
+        SeriesSearchType searchType,
+        Uri instanceUrl,
+        SonarrCommand command,
+        bool success,
+        string? logContext
+    )
+    {
+        string status = success ? "triggered" : "failed";
+        
+        return searchType switch
+        {
+            SeriesSearchType.Episode =>
+                $"episodes search {status} | {instanceUrl} | {logContext ?? $"episode ids: {string.Join(',', command.EpisodeIds)}"}",
+            SeriesSearchType.Season =>
+                $"season search {status} | {instanceUrl} | {logContext ?? $"season: {command.SeasonNumber} series id: {command.SeriesId}"}",
+            SeriesSearchType.Series => $"series search {status} | {instanceUrl} | {logContext ?? $"series id: {command.SeriesId}"}",
+            _ => throw new ArgumentOutOfRangeException(nameof(searchType), searchType, null)
+        };
+    }
+
+    private async Task<string?> ComputeCommandLogContextAsync(ArrInstance arrInstance, SonarrCommand command, SeriesSearchType searchType)
+    {
+        try
+        {
+            StringBuilder log = new();
+
+            if (searchType is SeriesSearchType.Episode)
+            {
+                var episodes = await GetEpisodesAsync(arrInstance, command.EpisodeIds);
+
+                if (episodes?.Count is null or 0)
+                {
+                    return null;
+                }
+
+                var seriesIds = episodes
+                    .Select(x => x.SeriesId)
+                    .Distinct()
+                    .ToList();
+
+                List<Series> series = [];
+
+                foreach (long id in seriesIds)
+                {
+                    Series? show = await GetSeriesAsync(arrInstance, id);
+
+                    if (show is null)
+                    {
+                        return null;
+                    }
+
+                    series.Add(show);
+                }
+
+                foreach (var group in command.EpisodeIds.GroupBy(id => episodes.First(x => x.Id == id).SeriesId))
+                {
+                    var show = series.First(x => x.Id == group.Key);
+                    var episode = episodes
+                        .Where(ep => group.Any(x => x == ep.Id))
+                        .OrderBy(x => x.SeasonNumber)
+                        .ThenBy(x => x.EpisodeNumber)
+                        .Select(x => $"S{x.SeasonNumber.ToString().PadLeft(2, '0')}E{x.EpisodeNumber.ToString().PadLeft(2, '0')}")
+                        .ToList();
+
+                    log.Append($"[{show.Title} {string.Join(',', episode)}]");
+                }
+            }
+
+            if (searchType is SeriesSearchType.Season)
+            {
+                Series? show = await GetSeriesAsync(arrInstance, command.SeriesId.Value);
+
+                if (show is null)
+                {
+                    return null;
+                }
+
+                log.Append($"[{show.Title} season {command.SeasonNumber}]");
+            }
+
+            if (searchType is SeriesSearchType.Series)
+            {
+                Series? show = await GetSeriesAsync(arrInstance, command.SeriesId.Value);
+
+                if (show is null)
+                {
+                    return null;
+                }
+
+                log.Append($"[{show.Title}]");
+            }
+
+            return log.ToString();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "failed to compute log context");
+        }
+
+        return null;
+    }
+
+    public async IAsyncEnumerable<SearchableSeries> StreamAllSeriesAsync(
+        ArrInstance arrInstance,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await foreach (SearchableSeries series in JsonStreamReader.StreamArrayAsync<SearchableSeries>(stream, cancellationToken))
+        {
+            yield return series;
+        }
+    }
+
+    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/tag";
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+        
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+        
+        return await DeserializeStreamAsync<List<Tag>>(response) ?? [];
+    }
+
+    public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
+        uriBuilder.Query = $"seriesId={seriesId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<SearchableEpisode>>(response, cancellationToken) ?? [];
+    }
+
+    public async Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+        uriBuilder.Query = $"seriesId={seriesId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrEpisodeFile>>(response, cancellationToken) ?? [];
+    }
+
+    public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/qualityprofile";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrQualityProfile>>(response) ?? [];
+    }
+
+    public async Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds)
+    {
+        Dictionary<long, int> scores = new();
+
+        // Batch in chunks of 100 to avoid 414 URI Too Long
+        foreach (long[] batch in episodeFileIds.Chunk(100))
+        {
+            UriBuilder uriBuilder = new(arrInstance.Url);
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+            uriBuilder.Query = string.Join('&', batch.Select(id => $"episodeFileIds={id}"));
+
+            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+            SetApiKey(request, arrInstance.ApiKey);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            List<MediaFileScore> files = await DeserializeStreamAsync<List<MediaFileScore>>(response) ?? [];
+
+            foreach (MediaFileScore file in files)
+            {
+                scores[file.Id] = file.CustomFormatScore;
+            }
+        }
+
+        return scores;
+    }
+
+    private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
+        uriBuilder.Query = string.Join('&', episodeIds.Select(x => $"episodeIds={x}"));
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<Episode>>(response);
+    }
+
+    private async Task<Series?> GetSeriesAsync(ArrInstance arrInstance, long seriesId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series/{seriesId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<Series>(response);
+    }
+
+    private List<SonarrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
+    {
+        const string episodeSearch = "EpisodeSearch";
+        const string seasonSearch = "SeasonSearch";
+        const string seriesSearch = "SeriesSearch";
+        
+        List<SonarrCommand> commands = new();
+
+        foreach (SeriesSearchItem item in items)
+        {
+            SonarrCommand command = item.SearchType is SeriesSearchType.Episode
+                ? commands.FirstOrDefault() ?? new() { Name = episodeSearch, EpisodeIds = new() }
+                : new();
+            
+            switch (item.SearchType)
+            {
+                case SeriesSearchType.Episode when command.EpisodeIds is null:
+                    command.EpisodeIds = [item.Id];
+                    break;
+                
+                case SeriesSearchType.Episode when command.EpisodeIds is not null:
+                    command.EpisodeIds.Add(item.Id);
+                    break;
+                
+                case SeriesSearchType.Season:
+                    command.Name = seasonSearch;
+                    command.SeasonNumber = item.Id;
+                    command.SeriesId = ((SeriesSearchItem)item).SeriesId;
+                    break;
+                
+                case SeriesSearchType.Series:
+                    command.Name = seriesSearch;
+                    command.SeriesId = item.Id;
+                    break;
+                
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(item.SearchType), item.SearchType, null);
+            }
+
+            if (item.SearchType is SeriesSearchType.Episode && commands.Count > 0)
+            {
+                // only one command will be generated for episodes search
+                continue;
+            }
+            
+            command.SearchType = item.SearchType;
+            commands.Add(command);
+        }
+        
+        return commands;
+    }
+}
