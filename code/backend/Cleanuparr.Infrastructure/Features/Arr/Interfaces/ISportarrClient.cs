@@ -6,17 +6,17 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 public interface ISportarrClient : IArrClient
 {
     /// <summary>
-    /// Streams series from a Sonarr instance one item at a time
+    /// Streams series from a Sportarr instance one item at a time
     /// </summary>
     IAsyncEnumerable<SearchableSeries> StreamAllSeriesAsync(ArrInstance arrInstance, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Fetches all episodes for a specific series from a Sonarr instance
+    /// Fetches all episodes for a specific series from a Sportarr instance
     /// </summary>
     Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Fetches quality profiles from a Sonarr instance
+    /// Fetches quality profiles from a Sportarr instance
     /// </summary>
     Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance);
 

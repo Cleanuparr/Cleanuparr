@@ -41,6 +41,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DeleteData(
+                table: "arr_configs",
+                keyColumn: "id",
+                keyValue: new Guid("3f6cd06a-98b4-45f1-8f0e-1c2d7a5b9e04"));
+
             migrationBuilder.DropColumn(
                 name: "sportarr_blocklist_path",
                 table: "content_blocker_configs");
