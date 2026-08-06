@@ -16,6 +16,16 @@ on:
         type: string
         required: false
         default: ''
+      ref:
+        description: 'Git ref to checkout (branch, tag, or SHA). Defaults to the derived branch.'
+        type: string
+        required: false
+        default: ''
+      pr_number:
+        description: 'PR number to tag the image with (pr-N). Required when called outside a pull_request event.'
+        type: string
+        required: false
+        default: ''
 
 # Cancel in-progress runs for the same PR
 concurrency:
@@ -40,7 +50,7 @@ jobs:
       version_docker_tag: ${{ steps.build-info.outputs.version_docker_tag }}
       branch: ${{ steps.build-info.outputs.branch }}
       push: ${{ steps.build-info.outputs.push }}
-      github_sha: ${{ github.sha }}
+      github_sha: ${{ inputs.ref || github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Initialize build info
         id: build-info
@@ -49,11 +59,15 @@ jobs:
           GITHUB_HEAD_REF: ${{ github.head_ref }}
           GITHUB_REF: ${{ github.ref }}
           INPUT_VERSION: ${{ inputs.app_version }}
+          INPUT_REF: ${{ inputs.ref }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           githubHeadRef="$GITHUB_HEAD_REF"
           githubRef="$GITHUB_REF"
           inputVersion="$INPUT_VERSION"
+          inputRef="$INPUT_REF"
+          inputPrNumber="$INPUT_PR_NUMBER"
           latestDockerTag=""
           versionDockerTag=""
           majorVersionDockerTag=""
@@ -85,7 +99,11 @@ jobs:
               minorVersionDockerTag="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
             fi
           else
-            if [[ -z "$githubHeadRef" ]]; then
+            if [[ -n "$inputPrNumber" ]]; then
+              # Pull request built outside a pull_request event (no head_ref available)
+              branch="$inputRef"
+              versionDockerTag="pr-$inputPrNumber"
+            elif [[ -z "$githubHeadRef" ]]; then
               # Main branch
               branch=${githubRef##*/}
               versionDockerTag="$branch"
