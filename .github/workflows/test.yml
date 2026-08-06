@@ -14,10 +14,16 @@ on:
       - 'code/frontend/**'
       - '.github/workflows/test.yml'
   workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to checkout (branch, tag, or SHA). Defaults to the triggering ref.'
+        type: string
+        required: false
+        default: ''
 
 # Cancel in-progress runs for the same PR
 concurrency:
-  group: Tests-${{ github.event.pull_request.number || github.ref }}
+  group: Tests-${{ inputs.ref || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -34,6 +40,7 @@ jobs:
         uses: actions/checkout@v7
         timeout-minutes: 1
         with:
+          ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
 
       - name: Setup .NET
@@ -86,6 +93,7 @@ jobs:
           retention-days: 30
 
       - name: Upload coverage to Codecov
+        if: inputs.ref == ''
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage/**/coverage.cobertura.xml
@@ -119,6 +127,7 @@ jobs:
         uses: actions/checkout@v7
         timeout-minutes: 1
         with:
+          ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
 
       - name: Setup Node.js
@@ -145,6 +154,7 @@ jobs:
           retention-days: 30
 
       - name: Upload coverage to Codecov
+        if: inputs.ref == ''
         uses: codecov/codecov-action@v7
         with:
           files: code/frontend/coverage/ui/lcov.info

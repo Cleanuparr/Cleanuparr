@@ -16,6 +16,7 @@ jobs:
     if: github.event.issue.pull_request != null
     outputs:
       build: ${{ steps.parse.outputs.build }}
+      meta: ${{ steps.parse.outputs.meta }}
       pr_ref: ${{ steps.parse.outputs.pr_ref }}
       pr_sha: ${{ steps.parse.outputs.pr_sha }}
       pr_number: ${{ steps.parse.outputs.pr_number }}
@@ -28,15 +29,46 @@ jobs:
           script: |
             const comment = context.payload.comment.body.trim();
 
+            const ALLOWED_USERS = ['flaminel'];
+
             // Parse supported commands
             const commands = {
-              '/build-windows': 'windows',
-              '/build-linux': 'linux'
+              '/build-windows': {
+                target: 'windows',
+                label: 'Windows installer',
+                artifacts: '`Cleanuparr-windows-installer`'
+              },
+              '/build-linux': {
+                target: 'linux',
+                label: 'Linux executables',
+                artifacts: '`executable-linux-amd64` and `executable-linux-arm64`'
+              },
+              '/test': {
+                target: 'test',
+                label: 'Unit tests',
+                artifacts: '`test-results`, `coverage-report` and `frontend-coverage-report`'
+              },
+              '/e2e': {
+                target: 'e2e',
+                label: 'E2E tests',
+                artifacts: '`e2e-test-results-core` and `e2e-test-results-clients`'
+              },
+              '/build-docker': {
+                target: 'docker',
+                label: 'Docker image',
+                artifacts: ''
+              }
             };
 
-            const target = commands[comment];
-            if (!target) {
+            const command = commands[comment];
+            if (!command) {
               console.log(`Comment "${comment}" is not a recognized build command, skipping.`);
+              return;
+            }
+
+            const login = context.payload.comment.user.login;
+            if (!ALLOWED_USERS.includes(login.toLowerCase())) {
+              console.log(`User ${login} is not allowed to trigger builds, skipping.`);
               return;
             }
 
@@ -64,43 +96,9 @@ jobs:
               return;
             }
 
-            // Block fork PRs — fork code should not run with access to secrets
-            const isFork = pr.data.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo;
-            if (isFork) {
-              console.log(`PR is from fork ${pr.data.head.repo.full_name}, blocking build.`);
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: 'On-demand builds are not available for PRs from forks.'
-              });
-              return;
-            }
-
-            // Verify commenter has write access
-            let permission = 'none';
-            try {
-              const resp = await github.rest.repos.getCollaboratorPermissionLevel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                username: context.payload.comment.user.login
-              });
-              permission = resp.data.permission;
-            } catch (_) {}
-
-            if (!['admin', 'write'].includes(permission)) {
-              console.log(`User ${context.payload.comment.user.login} has '${permission}' permission — insufficient.`);
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: `@${context.payload.comment.user.login} Only collaborators with write access can trigger builds.`
-              });
-              return;
-            }
-
-            console.log(`User ${context.payload.comment.user.login} has '${permission}' permission — proceeding with ${comment}.`);
-            core.setOutput('build', target);
+            console.log(`${login} triggered ${comment} on PR #${pr.data.number} @ ${pr.data.head.sha}.`);
+            core.setOutput('build', command.target);
+            core.setOutput('meta', JSON.stringify({ label: command.label, artifacts: command.artifacts }));
 
             // Export PR details for downstream jobs
             core.setOutput('pr_ref', pr.data.head.ref);
@@ -109,7 +107,7 @@ jobs:
 
   build-frontend:
     needs: validate
-    if: needs.validate.outputs.build != ''
+    if: needs.validate.outputs.build == 'windows' || needs.validate.outputs.build == 'linux'
     uses: ./.github/workflows/build-frontend.yml
     with:
       ref: ${{ needs.validate.outputs.pr_sha }}
@@ -138,8 +136,43 @@ jobs:
       platforms: '[{"runtime":"linux-x64","platform":"linux-amd64"},{"runtime":"linux-arm64","platform":"linux-arm64"}]'
     secrets: inherit
 
+  test:
+    needs: validate
+    if: needs.validate.outputs.build == 'test'
+    concurrency:
+      group: pr-test-${{ needs.validate.outputs.pr_number }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.validate.outputs.pr_sha }}
+    secrets: inherit
+
+  e2e:
+    needs: validate
+    if: needs.validate.outputs.build == 'e2e'
+    concurrency:
+      group: pr-e2e-${{ needs.validate.outputs.pr_number }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/e2e.yml
+    with:
+      ref: ${{ needs.validate.outputs.pr_sha }}
+    secrets: inherit
+
+  build-docker:
+    needs: validate
+    if: needs.validate.outputs.build == 'docker'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-docker.yml
+    with:
+      ref: ${{ needs.validate.outputs.pr_sha }}
+      pr_number: ${{ needs.validate.outputs.pr_number }}
+      push_docker: true
+    secrets: inherit
+
   post-result:
-    needs: [validate, build-windows, build-linux]
+    needs: [validate, build-windows, build-linux, test, e2e, build-docker]
     if: always() && needs.validate.outputs.build != ''
     runs-on: ubuntu-latest
 
@@ -148,52 +181,45 @@ jobs:
         uses: actions/github-script@v9
         env:
           PR_REF: ${{ needs.validate.outputs.pr_ref }}
+          META: ${{ needs.validate.outputs.meta }}
         with:
           script: |
             const target = '${{ needs.validate.outputs.build }}';
-            const builds = {
-              windows: {
-                label: 'Windows installer',
-                result: '${{ needs.build-windows.result }}',
-                artifacts: '`Cleanuparr-windows-installer`'
-              },
-              linux: {
-                label: 'Linux executables',
-                result: '${{ needs.build-linux.result }}',
-                artifacts: '`executable-linux-amd64` and `executable-linux-arm64`'
-              }
+
+            // needs.* is only readable inside this job, so the result lookup has to live here.
+            const results = {
+              windows: '${{ needs.build-windows.result }}',
+              linux: '${{ needs.build-linux.result }}',
+              test: '${{ needs.test.result }}',
+              e2e: '${{ needs.e2e.result }}',
+              docker: '${{ needs.build-docker.result }}'
             };
 
-            const build = builds[target];
-            const buildResult = build.result;
-            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const prRef = process.env.PR_REF;
-            const prSha = '${{ needs.validate.outputs.pr_sha }}';
-            const shortSha = prSha.substring(0, 7);
-
-            // Skip comment for skipped builds
-            if (buildResult === 'skipped') {
-              console.log('Build was skipped, no comment needed.');
+            const result = results[target];
+            if (!result || result === 'skipped') {
+              console.log(`Nothing to report for target "${target}" (${result}).`);
               return;
             }
 
+            const { label, artifacts } = JSON.parse(process.env.META);
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const prRef = process.env.PR_REF;
+            const prNumber = parseInt('${{ needs.validate.outputs.pr_number }}');
+            const shortSha = '${{ needs.validate.outputs.pr_sha }}'.substring(0, 7);
+
             let body;
-            if (buildResult === 'success') {
-              body = [
-                `${build.label} build **succeeded** for \`${prRef}\` (\`${shortSha}\`).`,
-                ``,
-                `**Download:** open the [workflow run](${runUrl}), scroll to the **Artifacts** section at the bottom.`,
-                `The ${build.artifacts} artifact(s) are retained for 30 days.`
-              ].join('\n');
-            } else if (buildResult === 'cancelled') {
-              body = [
-                `${build.label} build was **cancelled** for \`${prRef}\` (\`${shortSha}\`).`,
-                ``,
-                `See the [workflow run](${runUrl}) for details.`
-              ].join('\n');
+            if (result === 'success') {
+              const how = target === 'docker'
+                ? [`**Pull:** \`docker pull ghcr.io/cleanuparr/cleanuparr:pr-${prNumber}\``]
+                : [
+                    `**Download:** open the [workflow run](${runUrl}), scroll to the **Artifacts** section at the bottom.`,
+                    `The ${artifacts} artifact(s) are attached to that run.`
+                  ];
+              body = [`${label} **succeeded** for \`${prRef}\` (\`${shortSha}\`).`, ``, ...how].join('\n');
             } else {
+              const verb = result === 'cancelled' ? 'was **cancelled**' : '**failed**';
               body = [
-                `${build.label} build **failed** for \`${prRef}\` (\`${shortSha}\`).`,
+                `${label} ${verb} for \`${prRef}\` (\`${shortSha}\`).`,
                 ``,
                 `See the [workflow run](${runUrl}) for details.`
               ].join('\n');
@@ -202,6 +228,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: parseInt('${{ needs.validate.outputs.pr_number }}'),
+              issue_number: prNumber,
               body
             });

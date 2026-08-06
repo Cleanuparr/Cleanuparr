@@ -1,23 +1,23 @@
-.PHONY: up up-api up-dc down test install setup
+.PHONY: up up-core up-clients down test install setup
 
 setup:
 	bash ./scripts/setup-test-data.sh
 
 up: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans
+	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300
 
-up-api: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans app keycloak nginx
+up-core: down setup
+	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx
 
-up-dc: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans app keycloak nginx tracker qbittorrent transmission deluge utorrent rutorrent
+up-clients: down setup
+	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx tracker qbittorrent transmission deluge utorrent rutorrent
 
 down:
 	docker compose -f docker-compose.e2e.yml down -v
 
 install:
 	npm install
-	npx playwright install chromium
+	npx playwright install --with-deps chromium
 
 test:
 	npx playwright test
