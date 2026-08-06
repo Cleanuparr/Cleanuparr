@@ -48,4 +48,6 @@ make down
 
 E2E tests do not run automatically. Trigger them on a pull request by commenting `/e2e`, which dispatches `.github/workflows/e2e.yml` through `.github/workflows/pr-build.yml`. The result is posted back as a PR comment; reports land in the `e2e-test-results-core` and `e2e-test-results-clients` artifacts of that run.
 
+Only the accounts in the allowlist in `.github/workflows/pr-build.yml` can trigger a run. A command from any other account does nothing and gets no reply. Ask a maintainer to run the suite for you.
+
 The suite runs as two matrix legs split by service dependency: `core` covers the 13 folders that need only the app and its mocks, and `clients` covers `download-cleaner` and `malware-blocker`, which drive the real torrent clients.
