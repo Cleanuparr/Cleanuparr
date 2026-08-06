@@ -17,7 +17,7 @@ on:
         required: false
         default: ''
       ref:
-        description: 'Git ref to checkout (branch, tag, or SHA). Defaults to the derived branch.'
+        description: 'Commit SHA to build. The image revision metadata uses this value. Defaults to the ref derived from the event.'
         type: string
         required: false
         default: ''
@@ -62,6 +62,7 @@ jobs:
           INPUT_REF: ${{ inputs.ref }}
           INPUT_PR_NUMBER: ${{ inputs.pr_number }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           githubHeadRef="$GITHUB_HEAD_REF"
           githubRef="$GITHUB_REF"
@@ -109,7 +110,7 @@ jobs:
               versionDockerTag="$branch"
             else
               # Pull request
-              branch=$githubHeadRef
+              branch="$PR_HEAD_SHA"
               versionDockerTag="pr-$PR_NUMBER"
             fi
           fi
