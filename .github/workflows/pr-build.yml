@@ -42,6 +42,16 @@ jobs:
                 target: 'linux',
                 label: 'Linux executables',
                 artifacts: '`executable-linux-amd64` and `executable-linux-arm64`'
+              },
+              '/test': {
+                target: 'test',
+                label: 'Unit tests',
+                artifacts: '`test-results`, `coverage-report` and `frontend-coverage-report`'
+              },
+              '/build-docker': {
+                target: 'docker',
+                label: 'Docker image',
+                artifacts: ''
               }
             };
 
@@ -92,7 +102,7 @@ jobs:
 
   build-frontend:
     needs: validate
-    if: needs.validate.outputs.build != ''
+    if: needs.validate.outputs.build == 'windows' || needs.validate.outputs.build == 'linux'
     uses: ./.github/workflows/build-frontend.yml
     with:
       ref: ${{ needs.validate.outputs.pr_sha }}
@@ -121,8 +131,32 @@ jobs:
       platforms: '[{"runtime":"linux-x64","platform":"linux-amd64"},{"runtime":"linux-arm64","platform":"linux-arm64"}]'
     secrets: inherit
 
+  test:
+    needs: validate
+    if: needs.validate.outputs.build == 'test'
+    concurrency:
+      group: pr-test-${{ needs.validate.outputs.pr_number }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ needs.validate.outputs.pr_sha }}
+    secrets: inherit
+
+  build-docker:
+    needs: validate
+    if: needs.validate.outputs.build == 'docker'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-docker.yml
+    with:
+      ref: ${{ needs.validate.outputs.pr_sha }}
+      pr_number: ${{ needs.validate.outputs.pr_number }}
+      push_docker: true
+    secrets: inherit
+
   post-result:
-    needs: [validate, build-windows, build-linux]
+    needs: [validate, build-windows, build-linux, test, build-docker]
     if: always() && needs.validate.outputs.build != ''
     runs-on: ubuntu-latest
 
@@ -131,52 +165,44 @@ jobs:
         uses: actions/github-script@v9
         env:
           PR_REF: ${{ needs.validate.outputs.pr_ref }}
+          META: ${{ needs.validate.outputs.meta }}
         with:
           script: |
             const target = '${{ needs.validate.outputs.build }}';
-            const builds = {
-              windows: {
-                label: 'Windows installer',
-                result: '${{ needs.build-windows.result }}',
-                artifacts: '`Cleanuparr-windows-installer`'
-              },
-              linux: {
-                label: 'Linux executables',
-                result: '${{ needs.build-linux.result }}',
-                artifacts: '`executable-linux-amd64` and `executable-linux-arm64`'
-              }
+
+            // needs.* is only readable inside this job, so the result lookup has to live here.
+            const results = {
+              windows: '${{ needs.build-windows.result }}',
+              linux: '${{ needs.build-linux.result }}',
+              test: '${{ needs.test.result }}',
+              docker: '${{ needs.build-docker.result }}'
             };
 
-            const build = builds[target];
-            const buildResult = build.result;
-            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const prRef = process.env.PR_REF;
-            const prSha = '${{ needs.validate.outputs.pr_sha }}';
-            const shortSha = prSha.substring(0, 7);
-
-            // Skip comment for skipped builds
-            if (buildResult === 'skipped') {
-              console.log('Build was skipped, no comment needed.');
+            const result = results[target];
+            if (!result || result === 'skipped') {
+              console.log(`Nothing to report for target "${target}" (${result}).`);
               return;
             }
 
+            const { label, artifacts } = JSON.parse(process.env.META);
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const prRef = process.env.PR_REF;
+            const prNumber = parseInt('${{ needs.validate.outputs.pr_number }}');
+            const shortSha = '${{ needs.validate.outputs.pr_sha }}'.substring(0, 7);
+
             let body;
-            if (buildResult === 'success') {
-              body = [
-                `${build.label} build **succeeded** for \`${prRef}\` (\`${shortSha}\`).`,
-                ``,
-                `**Download:** open the [workflow run](${runUrl}), scroll to the **Artifacts** section at the bottom.`,
-                `The ${build.artifacts} artifact(s) are retained for 30 days.`
-              ].join('\n');
-            } else if (buildResult === 'cancelled') {
-              body = [
-                `${build.label} build was **cancelled** for \`${prRef}\` (\`${shortSha}\`).`,
-                ``,
-                `See the [workflow run](${runUrl}) for details.`
-              ].join('\n');
+            if (result === 'success') {
+              const how = target === 'docker'
+                ? [`**Pull:** \`docker pull ghcr.io/cleanuparr/cleanuparr:pr-${prNumber}\``]
+                : [
+                    `**Download:** open the [workflow run](${runUrl}), scroll to the **Artifacts** section at the bottom.`,
+                    `The ${artifacts} artifact(s) are attached to that run.`
+                  ];
+              body = [`${label} **succeeded** for \`${prRef}\` (\`${shortSha}\`).`, ``, ...how].join('\n');
             } else {
+              const verb = result === 'cancelled' ? 'was **cancelled**' : '**failed**';
               body = [
-                `${build.label} build **failed** for \`${prRef}\` (\`${shortSha}\`).`,
+                `${label} ${verb} for \`${prRef}\` (\`${shortSha}\`).`,
                 ``,
                 `See the [workflow run](${runUrl}) for details.`
               ].join('\n');
@@ -185,6 +211,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: parseInt('${{ needs.validate.outputs.pr_number }}'),
+              issue_number: prNumber,
               body
             });
