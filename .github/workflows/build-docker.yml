@@ -45,10 +45,15 @@ jobs:
       - name: Initialize build info
         id: build-info
         timeout-minutes: 1
+        env:
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+          GITHUB_REF: ${{ github.ref }}
+          INPUT_VERSION: ${{ inputs.app_version }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          githubHeadRef="${{ github.head_ref }}"
-          githubRef="${{ github.ref }}"
-          inputVersion="${{ inputs.app_version }}"
+          githubHeadRef="$GITHUB_HEAD_REF"
+          githubRef="$GITHUB_REF"
+          inputVersion="$INPUT_VERSION"
           latestDockerTag=""
           versionDockerTag=""
           majorVersionDockerTag=""
@@ -87,7 +92,7 @@ jobs:
             else
               # Pull request
               branch=$githubHeadRef
-              versionDockerTag="pr-${{ github.event.pull_request.number }}"
+              versionDockerTag="pr-$PR_NUMBER"
             fi
           fi
 
