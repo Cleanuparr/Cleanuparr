@@ -16,6 +16,7 @@ jobs:
     if: github.event.issue.pull_request != null
     outputs:
       build: ${{ steps.parse.outputs.build }}
+      meta: ${{ steps.parse.outputs.meta }}
       pr_ref: ${{ steps.parse.outputs.pr_ref }}
       pr_sha: ${{ steps.parse.outputs.pr_sha }}
       pr_number: ${{ steps.parse.outputs.pr_number }}
@@ -28,15 +29,31 @@ jobs:
           script: |
             const comment = context.payload.comment.body.trim();
 
+            const ALLOWED_USERS = ['flaminel'];
+
             // Parse supported commands
             const commands = {
-              '/build-windows': 'windows',
-              '/build-linux': 'linux'
+              '/build-windows': {
+                target: 'windows',
+                label: 'Windows installer',
+                artifacts: '`Cleanuparr-windows-installer`'
+              },
+              '/build-linux': {
+                target: 'linux',
+                label: 'Linux executables',
+                artifacts: '`executable-linux-amd64` and `executable-linux-arm64`'
+              }
             };
 
-            const target = commands[comment];
-            if (!target) {
+            const command = commands[comment];
+            if (!command) {
               console.log(`Comment "${comment}" is not a recognized build command, skipping.`);
+              return;
+            }
+
+            const login = context.payload.comment.user.login;
+            if (!ALLOWED_USERS.includes(login.toLowerCase())) {
+              console.log(`User ${login} is not allowed to trigger builds, skipping.`);
               return;
             }
 
@@ -64,43 +81,9 @@ jobs:
               return;
             }
 
-            // Block fork PRs — fork code should not run with access to secrets
-            const isFork = pr.data.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo;
-            if (isFork) {
-              console.log(`PR is from fork ${pr.data.head.repo.full_name}, blocking build.`);
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: 'On-demand builds are not available for PRs from forks.'
-              });
-              return;
-            }
-
-            // Verify commenter has write access
-            let permission = 'none';
-            try {
-              const resp = await github.rest.repos.getCollaboratorPermissionLevel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                username: context.payload.comment.user.login
-              });
-              permission = resp.data.permission;
-            } catch (_) {}
-
-            if (!['admin', 'write'].includes(permission)) {
-              console.log(`User ${context.payload.comment.user.login} has '${permission}' permission — insufficient.`);
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: `@${context.payload.comment.user.login} Only collaborators with write access can trigger builds.`
-              });
-              return;
-            }
-
-            console.log(`User ${context.payload.comment.user.login} has '${permission}' permission — proceeding with ${comment}.`);
-            core.setOutput('build', target);
+            console.log(`${login} triggered ${comment} on PR #${pr.data.number} @ ${pr.data.head.sha}.`);
+            core.setOutput('build', command.target);
+            core.setOutput('meta', JSON.stringify({ label: command.label, artifacts: command.artifacts }));
 
             // Export PR details for downstream jobs
             core.setOutput('pr_ref', pr.data.head.ref);
