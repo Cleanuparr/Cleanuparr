@@ -23,7 +23,7 @@ on:
 
 # Cancel in-progress runs for the same PR
 concurrency:
-  group: Tests-${{ github.event.pull_request.number || github.ref }}
+  group: Tests-${{ inputs.ref || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:

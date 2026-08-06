@@ -29,7 +29,7 @@ on:
 
 # Cancel in-progress runs for the same PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: build-docker-${{ inputs.pr_number || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
