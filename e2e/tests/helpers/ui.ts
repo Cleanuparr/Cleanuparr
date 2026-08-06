@@ -26,11 +26,12 @@ export async function loginAndGotoSettings(page: Page, path: string): Promise<vo
 }
 
 // --- Form-control locators ---------------------------------------------------
-// The shared UI inputs/selects now associate their <label> with the control via
-// for/id, but the label also contains a help button and a "new" badge, so the
-// accessible name is polluted and getByLabel is brittle. We instead scope by the
-// stable custom-element tag plus the label text, then the inner native control.
-// Toggles are located by their aria-label (role=switch).
+// The shared inputs and selects link their <label> to the control with for/id.
+// The label also holds a help button and a "new" badge. Thus the accessible name
+// contains more words than the label, and getByLabel is not reliable.
+// Most helpers find the custom element by its tag and its label text.
+// Then they find the native control in that element.
+// The toggle helper finds the control by its aria-label.
 
 /** A toggle (role=switch) located by its label (aria-label). */
 export function toggle(scope: Scope, label: string): Locator {
@@ -42,9 +43,13 @@ export function textInput(scope: Scope, label: string): Locator {
   return scope.locator('app-input').filter({ hasText: label }).locator('input');
 }
 
-/** The native number <input> inside an app-number-input whose label contains `label`. */
+/** The native number <input> whose accessible name starts with `label`. Hints are excluded because they name other fields. */
 export function numberInput(scope: Scope, label: string): Locator {
-  return scope.locator('app-number-input').filter({ hasText: label }).locator('input');
+  return scope.getByRole('spinbutton', { name: new RegExp(`^${escapeRegExp(label)}\\b`) });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /** The text entry <input> inside an app-chip-input whose label contains `label`. */
