@@ -15,6 +15,7 @@ mkdir -p \
   "$TEST_DATA/downloads/deluge" \
   "$TEST_DATA/downloads/utorrent" \
   "$TEST_DATA/downloads/rtorrent" \
+  "$TEST_DATA/orphaned-xdev" \
   "$TEST_DATA/qbittorrent-config/qBittorrent" \
   "$TEST_DATA/transmission-config" \
   "$TEST_DATA/deluge-config" \

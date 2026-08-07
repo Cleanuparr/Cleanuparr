@@ -267,7 +267,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
         if (Directory.Exists(path))
         {
-            Directory.Move(path, destination);
+            MoveDirectory(path, destination);
             Directory.SetLastWriteTimeUtc(destination, now.UtcDateTime);
         }
         else
@@ -277,6 +277,45 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         }
 
         _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, destination);
+    }
+
+    private void MoveDirectory(string source, string destination)
+    {
+        try
+        {
+            Directory.Move(source, destination);
+            return;
+        }
+        catch (IOException exception)
+        {
+            _logger.LogDebug(
+                exception,
+                "Failed to move the directory, falling back to copy and delete | {source} -> {dest}",
+                source, destination);
+        }
+
+        MoveDirectoryByCopy(source, destination);
+    }
+
+    internal static void MoveDirectoryByCopy(string source, string destination)
+    {
+        CopyDirectory(source, destination);
+        Directory.Delete(source, recursive: true);
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+
+        foreach (string file in Directory.EnumerateFiles(source))
+        {
+            File.Copy(file, Path.Combine(destination, Path.GetFileName(file)));
+        }
+
+        foreach (string directory in Directory.EnumerateDirectories(source))
+        {
+            CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
+        }
     }
 
     private void PurgeOrphanedDirectory(OrphanedFilesConfig clientConfig, CancellationToken cancellationToken)

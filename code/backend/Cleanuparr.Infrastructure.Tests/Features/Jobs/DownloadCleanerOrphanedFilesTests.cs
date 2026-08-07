@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Interceptors;
@@ -244,6 +245,202 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         var files = Directory.GetFiles(orphanedDir).Select(Path.GetFileName).ToList();
         files.ShouldContain("dupe.mkv");
         files.Count(f => f!.StartsWith("dupe.mkv_")).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_OrphanedDirectory_IsMovedWithNestedContents()
+    {
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string orphanedDir = Path.Combine(_tempRoot, "orphaned");
+        string orphanTree = Path.Combine(scanDir, "some show");
+        Directory.CreateDirectory(Path.Combine(orphanTree, "season 1"));
+        File.WriteAllText(Path.Combine(orphanTree, "season 1", "episode.mkv"), "episode");
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: orphanedDir);
+
+        SetupDownloadService(dbClient, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        Directory.Exists(orphanTree).ShouldBeFalse();
+        File.ReadAllText(Path.Combine(orphanedDir, "some show", "season 1", "episode.mkv")).ShouldBe("episode");
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_EntriesInsideClaimedDirectory_AreNotScannedIndividually()
+    {
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string claimedDir = Path.Combine(scanDir, "claimed-show");
+        Directory.CreateDirectory(claimedDir);
+        string strayInsideClaimed = Path.Combine(claimedDir, "stray.nfo");
+        File.WriteAllText(strayInsideClaimed, "stray");
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        SetupDownloadService(dbClient, [MakeTorrent("claimed-show", scanDir)]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        File.Exists(strayInsideClaimed).ShouldBeTrue();
+    }
+
+    [SkippableFact]
+    public async Task OrphanedFiles_SymlinkEntry_IsSkipped()
+    {
+        Skip.If(OperatingSystem.IsWindows(), "Creating symlinks requires elevation on Windows");
+
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string outside = Path.Combine(_tempRoot, "library");
+        Directory.CreateDirectory(scanDir);
+        Directory.CreateDirectory(outside);
+        string target = Path.Combine(outside, "real.mkv");
+        File.WriteAllText(target, "real");
+        string link = Path.Combine(scanDir, "link.mkv");
+        File.CreateSymbolicLink(link, target);
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        SetupDownloadService(dbClient, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        File.Exists(link).ShouldBeTrue();
+        File.Exists(target).ShouldBeTrue();
+        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "reparse point");
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_MissingScanDirectory_IsWarnedAndRemainingDirectoriesAreScanned()
+    {
+        string missingDir = Path.Combine(_tempRoot, "gone");
+        string presentDir = Path.Combine(_tempRoot, "downloads");
+        string orphanedDir = Path.Combine(_tempRoot, "orphaned");
+        Directory.CreateDirectory(presentDir);
+        string orphan = Path.Combine(presentDir, "orphan.mkv");
+        File.WriteAllText(orphan, "x");
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [missingDir, presentDir],
+            orphanedDirectory: orphanedDir);
+
+        SetupDownloadService(dbClient, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "Scan directory does not exist");
+        File.Exists(orphan).ShouldBeFalse();
+        Directory.GetFiles(orphanedDir).ShouldContain(f => Path.GetFileName(f) == "orphan.mkv");
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_PurgeAfterHours_DeletesAgedFilesAndDirectoriesButKeepsRecentOnes()
+    {
+        _fixture.TimeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string orphanedDir = Path.Combine(_tempRoot, "orphaned");
+        Directory.CreateDirectory(scanDir);
+        Directory.CreateDirectory(orphanedDir);
+
+        string agedFile = Path.Combine(orphanedDir, "aged.bin");
+        File.WriteAllText(agedFile, "old");
+        File.SetLastWriteTimeUtc(agedFile, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        string agedDir = Path.Combine(orphanedDir, "aged-show");
+        Directory.CreateDirectory(agedDir);
+        File.WriteAllText(Path.Combine(agedDir, "episode.mkv"), "old");
+        Directory.SetLastWriteTimeUtc(agedDir, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        string recentFile = Path.Combine(orphanedDir, "recent.bin");
+        File.WriteAllText(recentFile, "new");
+        File.SetLastWriteTimeUtc(recentFile, new DateTime(2026, 1, 1, 11, 0, 0, DateTimeKind.Utc));
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: orphanedDir,
+            purgeAfterHours: 24);
+
+        SetupDownloadService(dbClient, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        File.Exists(agedFile).ShouldBeFalse();
+        Directory.Exists(agedDir).ShouldBeFalse();
+        File.Exists(recentFile).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_PurgeAfterHoursNotConfigured_NothingIsPurged()
+    {
+        _fixture.TimeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string orphanedDir = Path.Combine(_tempRoot, "orphaned");
+        Directory.CreateDirectory(scanDir);
+        Directory.CreateDirectory(orphanedDir);
+
+        string ancient = Path.Combine(orphanedDir, "ancient.bin");
+        File.WriteAllText(ancient, "old");
+        File.SetLastWriteTimeUtc(ancient, new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: orphanedDir,
+            purgeAfterHours: null);
+
+        SetupDownloadService(dbClient, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        File.Exists(ancient).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void MoveDirectoryByCopy_CrossDeviceFallback_MovesWholeTreeAndDeletesSource()
+    {
+        string source = Path.Combine(_tempRoot, "torrent");
+        string nested = Path.Combine(source, "season 1", "extras");
+        Directory.CreateDirectory(nested);
+        File.WriteAllText(Path.Combine(source, "root.mkv"), "root");
+        File.WriteAllText(Path.Combine(nested, "extra.mkv"), "extra");
+
+        string destination = Path.Combine(_tempRoot, "orphaned", "torrent");
+
+        OrphanedFilesCleanupService.MoveDirectoryByCopy(source, destination);
+
+        Directory.Exists(source).ShouldBeFalse();
+        File.ReadAllText(Path.Combine(destination, "root.mkv")).ShouldBe("root");
+        File.ReadAllText(Path.Combine(destination, "season 1", "extras", "extra.mkv")).ShouldBe("extra");
     }
 
     [Fact]
