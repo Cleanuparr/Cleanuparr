@@ -17,6 +17,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using MassTransit;
+using Cleanuparr.Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -43,7 +44,8 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             _fixture.ArrClientFactory,
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
-            _fixture.EventPublisher);
+            _fixture.EventPublisher,
+            _fixture.DryRunInterceptor);
     }
 
     #region GetRecordSearchItem
@@ -550,8 +552,9 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             IArrClientFactory arrClientFactory,
             IArrQueueIterator arrQueueIterator,
             IDownloadServiceFactory downloadServiceFactory,
-            IEventPublisher eventPublisher)
-            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher)
+            IEventPublisher eventPublisher,
+            IDryRunInterceptor dryRunInterceptor)
+            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor)
         {
         }
 

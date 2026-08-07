@@ -82,11 +82,11 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
             string hash = request.Record.DownloadId.ToLowerInvariant();
             var isRecurring = Striker.RecurringHashes.ContainsKey(hash);
-            
+
             if (isRecurring || request.SkipSearch)
             {
                 await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
-                
+
                 if (isRecurring)
                 {
                     Striker.RecurringHashes.Remove(hash, out _);

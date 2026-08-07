@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -40,10 +41,11 @@ public sealed class DownloadCleaner : GenericHandler
         ISeedingRulesCleanupService seedingRulesService,
         IUnlinkedDownloadsService unlinkedService,
         IDeadTorrentService deadTorrentService,
-        IOrphanedFilesCleanupService orphanedFilesService
+        IOrphanedFilesCleanupService orphanedFilesService,
+        IDryRunInterceptor dryRunInterceptor
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
+        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
     )
     {
         _timeProvider = timeProvider;
@@ -128,6 +130,7 @@ public sealed class DownloadCleaner : GenericHandler
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), true);
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), true);
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), true);
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian)), true);
 
             foreach (KeyValuePair<IDownloadService, List<ITorrentItemWrapper>> pair in downloadServiceToDownloadsMap)
             {

@@ -30,6 +30,7 @@ public partial class RTorrentService
         // Get trackers for ignore check
         var trackers = await _client.GetTrackersAsync(hash);
         RTorrentItemWrapper torrent = new(download, trackers);
+        result.Torrent = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
