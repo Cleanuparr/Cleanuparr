@@ -9,6 +9,7 @@ permissions:
   issues: write
   pull-requests: write
   actions: read
+  statuses: write
 
 jobs:
   validate:
@@ -97,6 +98,21 @@ jobs:
             }
 
             console.log(`${login} triggered ${comment} on PR #${pr.data.number} @ ${pr.data.head.sha}.`);
+
+            try {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: pr.data.head.sha,
+                state: 'pending',
+                context: `pr-build / ${command.target}`,
+                description: `${command.label} running`,
+                target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              });
+            } catch (e) {
+              console.log(`Could not create commit status: ${e}`);
+            }
+
             core.setOutput('build', command.target);
             core.setOutput('meta', JSON.stringify({ label: command.label, artifacts: command.artifacts }));
 
@@ -203,6 +219,21 @@ jobs:
 
             const { label, artifacts } = JSON.parse(process.env.META);
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            try {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: '${{ needs.validate.outputs.pr_sha }}',
+                state: result === 'success' ? 'success' : result === 'cancelled' ? 'error' : 'failure',
+                context: `pr-build / ${target}`,
+                description: `${label} ${result}`,
+                target_url: runUrl
+              });
+            } catch (e) {
+              console.log(`Could not update commit status: ${e}`);
+            }
+
             const prRef = process.env.PR_REF;
             const prNumber = parseInt('${{ needs.validate.outputs.pr_number }}');
             const shortSha = '${{ needs.validate.outputs.pr_sha }}'.substring(0, 7);
