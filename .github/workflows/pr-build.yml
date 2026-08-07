@@ -189,7 +189,7 @@ jobs:
     secrets: inherit
 
   post-result:
-    needs: [validate, build-windows, build-linux, test, e2e, build-docker]
+    needs: [validate, build-frontend, build-windows, build-linux, test, e2e, build-docker]
     if: always() && needs.validate.outputs.build != ''
     runs-on: ubuntu-latest
     permissions:
@@ -216,7 +216,13 @@ jobs:
               docker: '${{ needs.build-docker.result }}'
             };
 
-            const result = results[target];
+            const frontend = '${{ needs.build-frontend.result }}';
+
+            let result = results[target];
+            if (result === 'skipped' && (frontend === 'failure' || frontend === 'cancelled')) {
+              result = frontend;
+            }
+
             if (!result || result === 'skipped') {
               console.log(`Nothing to report for target "${target}" (${result}).`);
               return;
