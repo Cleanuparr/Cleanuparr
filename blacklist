@@ -352,6 +352,7 @@
 *.lzo
 *.lzr
 *.lzx
+*.m2ts
 *.m3u
 *.m4a
 *.mac
@@ -646,7 +647,6 @@
 *.sqz
 *.srec
 *.srep
-*.srt
 *.ssm
 *.stg
 *.stkdoodlz
