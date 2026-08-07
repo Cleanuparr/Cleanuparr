@@ -93,6 +93,10 @@ services:
       - /config
     volumes:
       - ./test-data/downloads:/e2e-downloads
+      # This is a different bind mount on purpose. A rename operation between
+      # two mounts fails with the EXDEV error. The cross-device orphaned-files
+      # test uses this behavior.
+      - ./test-data/orphaned-xdev:/e2e-orphaned
 
   nginx:
     image: nginx:1.27-alpine
