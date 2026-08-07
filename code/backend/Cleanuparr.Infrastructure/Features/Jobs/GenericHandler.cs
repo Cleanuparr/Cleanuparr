@@ -76,7 +76,7 @@ public abstract class GenericHandler : IHandler
                 .FirstAsync(x => x.Type == InstanceType.Whisparr));
             ContextProvider.Set(nameof(InstanceType.Sportarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
-                .FirstAsync(x => x.Type == InstanceType.Sportarr));
+                .FirstAsync(x => x.Type == InstanceType.Sportarr, cancellationToken));
             ContextProvider.Set(nameof(QueueCleanerConfig), await _dataContext.QueueCleanerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(ContentBlockerConfig), await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(DownloadCleanerConfig), await _dataContext.DownloadCleanerConfigs.AsNoTracking().FirstAsync());
