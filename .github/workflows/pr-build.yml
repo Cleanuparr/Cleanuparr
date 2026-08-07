@@ -231,27 +231,45 @@ jobs:
             const { label, artifacts } = JSON.parse(process.env.META);
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
-            if (result === 'cancelled') {
-              console.log('Run was superseded, leaving the commit status to the newer run.');
-            } else {
+            const prSha = '${{ needs.validate.outputs.pr_sha }}';
+            const statusContext = `pr-build / ${target}`;
+            let publishStatus = result !== 'cancelled';
+
+            if (publishStatus) {
+              try {
+                const combined = await github.rest.repos.getCombinedStatusForRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: prSha
+                });
+                const current = combined.data.statuses.find(s => s.context === statusContext);
+                publishStatus = !current || current.state !== 'pending' || current.target_url === runUrl;
+              } catch (e) {
+                console.log(`Could not read the current commit status: ${e}`);
+              }
+            }
+
+            if (publishStatus) {
               try {
                 await github.rest.repos.createCommitStatus({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  sha: '${{ needs.validate.outputs.pr_sha }}',
+                  sha: prSha,
                   state: result === 'success' ? 'success' : 'failure',
-                  context: `pr-build / ${target}`,
+                  context: statusContext,
                   description: `${label} ${result}`,
                   target_url: runUrl
                 });
               } catch (e) {
                 console.log(`Could not update commit status: ${e}`);
               }
+            } else {
+              console.log(`A newer run owns "${statusContext}", skipping the status update.`);
             }
 
             const prRef = process.env.PR_REF;
             const prNumber = parseInt('${{ needs.validate.outputs.pr_number }}');
-            const shortSha = '${{ needs.validate.outputs.pr_sha }}'.substring(0, 7);
+            const shortSha = prSha.substring(0, 7);
 
             let body;
             if (result === 'success') {
