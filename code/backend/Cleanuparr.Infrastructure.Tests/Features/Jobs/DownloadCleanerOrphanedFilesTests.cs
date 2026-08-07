@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Interceptors;
@@ -244,6 +245,24 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         var files = Directory.GetFiles(orphanedDir).Select(Path.GetFileName).ToList();
         files.ShouldContain("dupe.mkv");
         files.Count(f => f!.StartsWith("dupe.mkv_")).ShouldBe(1);
+    }
+
+    [Fact]
+    public void MoveDirectoryByCopy_CrossDeviceFallback_MovesWholeTreeAndDeletesSource()
+    {
+        string source = Path.Combine(_tempRoot, "torrent");
+        string nested = Path.Combine(source, "season 1", "extras");
+        Directory.CreateDirectory(nested);
+        File.WriteAllText(Path.Combine(source, "root.mkv"), "root");
+        File.WriteAllText(Path.Combine(nested, "extra.mkv"), "extra");
+
+        string destination = Path.Combine(_tempRoot, "orphaned", "torrent");
+
+        OrphanedFilesCleanupService.MoveDirectoryByCopy(source, destination);
+
+        Directory.Exists(source).ShouldBeFalse();
+        File.ReadAllText(Path.Combine(destination, "root.mkv")).ShouldBe("root");
+        File.ReadAllText(Path.Combine(destination, "season 1", "extras", "extra.mkv")).ShouldBe("extra");
     }
 
     [Fact]
