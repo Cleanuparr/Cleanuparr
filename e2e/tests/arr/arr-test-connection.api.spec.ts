@@ -2,7 +2,7 @@ import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { ArrType } from '../helpers/api/arr';
 import { ArrStubs } from '../helpers/mocks';
 
-const ARR_TYPES: ArrType[] = ['sonarr', 'radarr', 'lidarr', 'readarr', 'whisparr'];
+const ARR_TYPES: ArrType[] = ['sonarr', 'radarr', 'lidarr', 'readarr', 'whisparr', 'sportarr'];
 
 test.describe('Arr — test connection', () => {
   for (const type of ARR_TYPES) {

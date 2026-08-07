@@ -9,6 +9,7 @@ public sealed class ArrClientFactory : IArrClientFactory
     private readonly IRadarrClient _radarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IReadarrClient _readarrClient;
+    private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
 
@@ -17,6 +18,7 @@ public sealed class ArrClientFactory : IArrClientFactory
         IRadarrClient radarrClient,
         ILidarrClient lidarrClient,
         IReadarrClient readarrClient,
+        ISportarrClient sportarrClient,
         IWhisparrV2Client whisparrV2Client,
         IWhisparrV3Client whisparrV3Client
     )
@@ -25,6 +27,7 @@ public sealed class ArrClientFactory : IArrClientFactory
         _radarrClient = radarrClient;
         _lidarrClient = lidarrClient;
         _readarrClient = readarrClient;
+        _sportarrClient = sportarrClient;
         _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
     }
@@ -33,6 +36,7 @@ public sealed class ArrClientFactory : IArrClientFactory
         type switch
         {
             InstanceType.Sonarr => _sonarrClient,
+            InstanceType.Sportarr => _sportarrClient,
             InstanceType.Radarr => _radarrClient,
             InstanceType.Lidarr => _lidarrClient,
             InstanceType.Readarr => _readarrClient,

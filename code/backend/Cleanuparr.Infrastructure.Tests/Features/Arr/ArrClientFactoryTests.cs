@@ -13,6 +13,7 @@ public class ArrClientFactoryTests
     private readonly IRadarrClient _radarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IReadarrClient _readarrClient;
+    private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly ArrClientFactory _factory;
@@ -23,6 +24,7 @@ public class ArrClientFactoryTests
         _radarrClient = Substitute.For<IRadarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
         _readarrClient = Substitute.For<IReadarrClient>();
+        _sportarrClient = Substitute.For<ISportarrClient>();
         _whisparrClient = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
 
@@ -31,6 +33,7 @@ public class ArrClientFactoryTests
             _radarrClient,
             _lidarrClient,
             _readarrClient,
+            _sportarrClient,
             _whisparrClient,
             _whisparrV3Client
         );
@@ -76,6 +79,16 @@ public class ArrClientFactoryTests
 
         // Assert
         result.ShouldBeSameAs(_readarrClient);
+    }
+
+    [Fact]
+    public void GetClient_Sportarr_ReturnsSportarrClient()
+    {
+        // Act
+        var result = _factory.GetClient(InstanceType.Sportarr, 0);
+
+        // Assert
+        result.ShouldBeSameAs(_sportarrClient);
     }
 
     [Fact]

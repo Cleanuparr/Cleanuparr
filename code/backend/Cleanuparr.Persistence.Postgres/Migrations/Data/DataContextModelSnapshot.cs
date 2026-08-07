@@ -915,6 +915,24 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                                 .HasColumnName("sonarr_enabled");
                         });
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Sportarr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Sportarr#BlocklistSettings", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("BlocklistPath")
+                                .HasColumnType("text")
+                                .HasColumnName("sportarr_blocklist_path");
+
+                            b1.Property<string>("BlocklistType")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("sportarr_blocklist_type");
+
+                            b1.Property<bool>("Enabled")
+                                .HasColumnType("boolean")
+                                .HasColumnName("sportarr_enabled");
+                        });
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Whisparr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Whisparr#BlocklistSettings", b1 =>
                         {
                             b1.IsRequired();

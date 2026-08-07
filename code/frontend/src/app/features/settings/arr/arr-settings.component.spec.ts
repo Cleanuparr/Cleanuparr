@@ -148,6 +148,23 @@ describe('ArrSettingsComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.select-option').length).toBe(0);
   });
 
+  it('shows sonarr\'s own default port and example url as placeholders', () => {
+    const { component } = setup('sonarr');
+    expect(component.urlPlaceholder()).toBe('http://localhost:8989');
+    expect(component.externalUrlPlaceholder()).toBe('https://sonarr.example.com');
+  });
+
+  it('shows sportarr\'s own default port and example url as placeholders, not sonarr\'s', () => {
+    const { component } = setup('sportarr');
+    expect(component.urlPlaceholder()).toBe('http://localhost:1867');
+    expect(component.externalUrlPlaceholder()).toBe('https://sportarr.example.com');
+  });
+
+  it('falls back to the sonarr default port for an unknown arr type url placeholder', () => {
+    const { component } = setup('bogusarr');
+    expect(component.urlPlaceholder()).toBe('http://localhost:8989');
+  });
+
   it('opens a blank add modal and blocks saving until name, url and api key are filled in', () => {
     const { fixture, component, api } = setup('sonarr');
 
