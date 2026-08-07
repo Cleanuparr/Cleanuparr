@@ -42,4 +42,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'events-stats-card' },
   { id: 'connectivity-check' },
   { id: 'ignore-alt-speed' },
+  { id: 'sportarr-blocklist' },
 ];
