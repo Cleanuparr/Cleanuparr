@@ -24,6 +24,15 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   sportarr: [{ label: 'v3', value: 3 }],
 };
 
+const ARR_DEFAULT_PORT: Record<string, number> = {
+  sonarr: 8989,
+  radarr: 7878,
+  lidarr: 8686,
+  readarr: 8787,
+  whisparr: 6969,
+  sportarr: 1867,
+};
+
 interface ArrInstanceFormModel {
   name: string;
   url: string;
@@ -56,6 +65,8 @@ export class ArrSettingsComponent implements HasPendingChanges {
     return t.charAt(0).toUpperCase() + t.slice(1);
   });
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.type()] ?? []);
+  readonly urlPlaceholder = computed(() => `http://localhost:${ARR_DEFAULT_PORT[this.type()] ?? 8989}`);
+  readonly externalUrlPlaceholder = computed(() => `https://${this.type()}.example.com`);
 
   private readonly configResource = rxResource({
     params: () => this.type(),
