@@ -21,7 +21,7 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   lidarr:  [{ label: 'v3', value: 3 }],
   readarr: [{ label: 'v0.4', value: 0.4 }],
   whisparr: [{ label: 'v2', value: 2 }, { label: 'v3', value: 3 }],
-  sportarr: [{ label: 'v4', value: 4 }],
+  sportarr: [{ label: 'v3', value: 3 }],
 };
 
 interface ArrInstanceFormModel {
