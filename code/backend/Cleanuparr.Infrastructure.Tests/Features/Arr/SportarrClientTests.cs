@@ -17,14 +17,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
-/// <summary>
-/// SportarrClient inherits nearly all of its behavior from <see cref="SonarrClient"/> (see the
-/// class doc comment on SportarrClient.cs) since Sportarr speaks the same wire protocol as
-/// Sonarr. That shared behavior — queue URLs, health check, tag/episode/quality-profile
-/// fetching, dry-run handling, etc. — is already covered by <see cref="SonarrClientTests"/>
-/// against the same code path. These tests only cover what's actually different: the
-/// <c>GetSearchCommands</c> override and the fact that DI resolves a working SportarrClient.
-/// </summary>
+// covers the GetSearchCommands override only; shared behavior is covered by SonarrClientTests
 public class SportarrClientTests
 {
     private readonly IDryRunInterceptor _dryRunInterceptor;
@@ -70,7 +63,7 @@ public class SportarrClientTests
         // Act
         await _client.HealthCheckAsync(_arrInstance);
 
-        // Assert — proves the SonarrClient base implementation runs correctly for a Sportarr instance
+        // Assert
         var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/system/status");
     }
@@ -80,9 +73,7 @@ public class SportarrClientTests
     [Fact]
     public async Task SearchItemsAsync_SeasonThenEpisode_StillSearchesEpisode()
     {
-        // Arrange — regression test: a season item processed before an episode item used to
-        // cause the episode search to be merged into the season command and dropped
-        // (commands.FirstOrDefault() picked whichever command was first, regardless of type).
+        // Arrange
         RouteResponses(commandIdForPost: 11);
         var items = new HashSet<SearchItem>
         {
@@ -93,7 +84,7 @@ public class SportarrClientTests
         // Act
         var ids = await _client.SearchItemsAsync(_arrInstance, items);
 
-        // Assert — two distinct commands should be posted, one per search type
+        // Assert
         ids.ShouldBe(new long[] { 11, 11 });
         var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
         posts.Count.ShouldBe(2);
@@ -105,7 +96,7 @@ public class SportarrClientTests
     [Fact]
     public async Task SearchItemsAsync_SeriesThenEpisode_StillSearchesEpisode()
     {
-        // Arrange — same regression, series item ahead of the episode item this time.
+        // Arrange
         RouteResponses(commandIdForPost: 22);
         var items = new HashSet<SearchItem>
         {
@@ -128,8 +119,7 @@ public class SportarrClientTests
     [Fact]
     public async Task SearchItemsAsync_MultipleEpisodesAcrossOtherTypes_BundlesIntoSingleEpisodeCommand()
     {
-        // Arrange — a season command sits between two episode items; both episodes must still
-        // land in the same, single episode command rather than being split or dropped.
+        // Arrange
         RouteResponses(commandIdForPost: 33);
         var items = new HashSet<SearchItem>
         {

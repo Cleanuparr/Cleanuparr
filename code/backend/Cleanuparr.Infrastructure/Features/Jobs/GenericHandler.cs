@@ -61,19 +61,19 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(GeneralConfig), await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(InstanceType.Sonarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
-                .FirstAsync(x => x.Type == InstanceType.Sonarr));
+                .FirstAsync(x => x.Type == InstanceType.Sonarr, cancellationToken));
             ContextProvider.Set(nameof(InstanceType.Radarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
-                .FirstAsync(x => x.Type == InstanceType.Radarr));
+                .FirstAsync(x => x.Type == InstanceType.Radarr, cancellationToken));
             ContextProvider.Set(nameof(InstanceType.Lidarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
-                .FirstAsync(x => x.Type == InstanceType.Lidarr));
+                .FirstAsync(x => x.Type == InstanceType.Lidarr, cancellationToken));
             ContextProvider.Set(nameof(InstanceType.Readarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
-                .FirstAsync(x => x.Type == InstanceType.Readarr));
+                .FirstAsync(x => x.Type == InstanceType.Readarr, cancellationToken));
             ContextProvider.Set(nameof(InstanceType.Whisparr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
-                .FirstAsync(x => x.Type == InstanceType.Whisparr));
+                .FirstAsync(x => x.Type == InstanceType.Whisparr, cancellationToken));
             ContextProvider.Set(nameof(InstanceType.Sportarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Sportarr, cancellationToken));

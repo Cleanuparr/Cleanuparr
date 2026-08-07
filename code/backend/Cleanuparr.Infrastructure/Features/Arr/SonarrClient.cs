@@ -391,17 +391,8 @@ public class SonarrClient : ArrClient, ISonarrClient
         return commands;
     }
 
-    /// <summary>
-    /// Finds the command an episode search item should be merged into, if one already exists in
-    /// the batch being built. Sonarr's own behavior (kept as-is here) is to reuse whichever
-    /// command happens to be first, regardless of its type — see
-    /// <see cref="SportarrClient"/>'s override for the scoped, non-buggy version.
-    /// </summary>
+    // kept as-is for Sonarr; see SportarrClient for the episode-scoped override
     protected virtual SonarrCommand? FindExistingEpisodeCommand(List<SonarrCommand> commands) => commands.FirstOrDefault();
 
-    /// <summary>
-    /// Whether an existing command should absorb this episode item instead of a new command
-    /// being added for it. Mirrors the same imprecision as <see cref="FindExistingEpisodeCommand"/>.
-    /// </summary>
     protected virtual bool HasExistingEpisodeCommand(List<SonarrCommand> commands) => commands.Count > 0;
 }
