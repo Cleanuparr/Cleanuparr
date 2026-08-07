@@ -339,7 +339,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         return await DeserializeStreamAsync<Series>(response);
     }
 
-    private List<SonarrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
+    protected virtual List<SonarrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
     {
         const string episodeSearch = "EpisodeSearch";
         const string seasonSearch = "SeasonSearch";
