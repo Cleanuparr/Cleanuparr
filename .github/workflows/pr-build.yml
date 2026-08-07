@@ -6,15 +6,16 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
-  actions: read
-  statuses: write
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request != null
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
     outputs:
       build: ${{ steps.parse.outputs.build }}
       meta: ${{ steps.parse.outputs.meta }}
@@ -191,6 +192,10 @@ jobs:
     needs: [validate, build-windows, build-linux, test, e2e, build-docker]
     if: always() && needs.validate.outputs.build != ''
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      statuses: write
 
     steps:
       - name: Post result comment
