@@ -6,14 +6,16 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
-  actions: read
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     if: github.event.issue.pull_request != null
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      statuses: write
     outputs:
       build: ${{ steps.parse.outputs.build }}
       meta: ${{ steps.parse.outputs.meta }}
@@ -97,6 +99,21 @@ jobs:
             }
 
             console.log(`${login} triggered ${comment} on PR #${pr.data.number} @ ${pr.data.head.sha}.`);
+
+            try {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: pr.data.head.sha,
+                state: 'pending',
+                context: `pr-build / ${command.target}`,
+                description: `${command.label} running`,
+                target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              });
+            } catch (e) {
+              console.log(`Could not create commit status: ${e}`);
+            }
+
             core.setOutput('build', command.target);
             core.setOutput('meta', JSON.stringify({ label: command.label, artifacts: command.artifacts }));
 
@@ -172,9 +189,13 @@ jobs:
     secrets: inherit
 
   post-result:
-    needs: [validate, build-windows, build-linux, test, e2e, build-docker]
+    needs: [validate, build-frontend, build-windows, build-linux, test, e2e, build-docker]
     if: always() && needs.validate.outputs.build != ''
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      statuses: write
 
     steps:
       - name: Post result comment
@@ -195,7 +216,13 @@ jobs:
               docker: '${{ needs.build-docker.result }}'
             };
 
-            const result = results[target];
+            const frontend = '${{ needs.build-frontend.result }}';
+
+            let result = results[target];
+            if (result === 'skipped' && (frontend === 'failure' || frontend === 'cancelled')) {
+              result = frontend;
+            }
+
             if (!result || result === 'skipped') {
               console.log(`Nothing to report for target "${target}" (${result}).`);
               return;
@@ -203,9 +230,46 @@ jobs:
 
             const { label, artifacts } = JSON.parse(process.env.META);
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const prSha = '${{ needs.validate.outputs.pr_sha }}';
+            const statusContext = `pr-build / ${target}`;
+            let publishStatus = result !== 'cancelled';
+
+            if (publishStatus) {
+              try {
+                const combined = await github.rest.repos.getCombinedStatusForRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: prSha
+                });
+                const current = combined.data.statuses.find(s => s.context === statusContext);
+                publishStatus = !current || current.state !== 'pending' || current.target_url === runUrl;
+              } catch (e) {
+                console.log(`Could not read the current commit status: ${e}`);
+              }
+            }
+
+            if (publishStatus) {
+              try {
+                await github.rest.repos.createCommitStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  sha: prSha,
+                  state: result === 'success' ? 'success' : 'failure',
+                  context: statusContext,
+                  description: `${label} ${result}`,
+                  target_url: runUrl
+                });
+              } catch (e) {
+                console.log(`Could not update commit status: ${e}`);
+              }
+            } else {
+              console.log(`A newer run owns "${statusContext}", skipping the status update.`);
+            }
+
             const prRef = process.env.PR_REF;
             const prNumber = parseInt('${{ needs.validate.outputs.pr_number }}');
-            const shortSha = '${{ needs.validate.outputs.pr_sha }}'.substring(0, 7);
+            const shortSha = prSha.substring(0, 7);
 
             let body;
             if (result === 'success') {
