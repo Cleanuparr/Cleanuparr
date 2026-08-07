@@ -24,21 +24,45 @@ services:
     image: wiremock/wiremock:3.10.0
     network_mode: host
     command: ["--port", "9100", "--disable-banner"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9100/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
   wiremock-dlc:
     image: wiremock/wiremock:3.10.0
     network_mode: host
     command: ["--port", "9200", "--disable-banner"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
   wiremock-notify:
     image: wiremock/wiremock:3.10.0
     network_mode: host
     command: ["--port", "9300", "--disable-banner"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9300/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
   wiremock-blocklist:
     image: wiremock/wiremock:3.10.0
     network_mode: host
     command: ["--port", "9400", "--disable-banner"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9400/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
   app:
     build:
@@ -116,7 +140,7 @@ services:
       - ./test-data/transmission-config:/config
       - ./test-data/downloads/transmission:/downloads
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:9091/transmission/rpc > /dev/null 2>&1 ; [ $$? -eq 8 ] || [ $$? -eq 0 ]"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9091/transmission/rpc || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60
@@ -158,7 +182,7 @@ services:
       - ./test-data/utorrent-config:/data
       - ./test-data/downloads/utorrent:/downloads
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/gui/ > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8080/gui/ || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60
@@ -176,7 +200,7 @@ services:
       - ./test-data/rutorrent-config:/config
       - ./test-data/downloads/rtorrent:/downloads
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60

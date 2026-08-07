@@ -196,6 +196,120 @@ These patterns can be any substring of the failed import messages. These messsag
   style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: '100%' }}
 />
 
+Patterns are matched as plain, case-insensitive substrings. No regex, no wildcards.
+
+<Important>
+Some messages contain values that are filled in at runtime: file paths, quality names, episode numbers, dates. In the lists below these are shown as placeholders such as `{0}` or `{1}`. Never include a placeholder in a pattern, because the actual message contains the real value instead and the pattern will never match. Use only the fixed part of the message, for example `was not found in the grabbed release` instead of `Episode {0} was not found in the grabbed release: {1}`.
+</Important>
+
+Sonarr and Radarr do not publish a list of these messages, so the lists below were collected from their source code. They are not guaranteed to be exhaustive and may change between *arr releases, so always confirm against the messages shown in your own queue.
+
+<details>
+<summary>Known Sonarr messages</summary>
+
+**Whole download** (from [CompletedDownloadService.cs](https://github.com/Sonarr/Sonarr/blob/develop/src/NzbDrone.Core/Download/CompletedDownloadService.cs)):
+
+- `Series title mismatch; automatic import is not possible. Check the download troubleshooting entry on the wiki for common causes.`
+- `Found matching series via grab history, but release was matched to series by ID. Automatic import is not possible. See the FAQ for details.`
+- `Unable to parse download, automatic import is not possible.`
+- `No files found are eligible for import in {0}`
+- `One or more episodes expected in this release were not imported or missing from the release`
+- `Download wasn't grabbed by Sonarr and not in a category, Skipping.`
+- `Download doesn't contain intermediate path, Skipping.`
+- `[{0}] is not a valid local path. You may need a Remote Path Mapping. Check the download troubleshooting entry on the wiki for details.`
+
+**Individual files** (from [ImportDecisionMaker.cs](https://github.com/Sonarr/Sonarr/blob/develop/src/NzbDrone.Core/MediaFiles/EpisodeImport/ImportDecisionMaker.cs) and the [import specifications](https://github.com/Sonarr/Sonarr/tree/develop/src/NzbDrone.Core/MediaFiles/EpisodeImport/Specifications)):
+
+- `Invalid season or episode`
+- `Partial season packs are not supported`
+- `Extras are not supported`
+- `Unable to parse file`
+- `Unexpected error processing file`
+- `Episode {0} was unexpected considering the {1} folder name`
+- `Episodes {0} were unexpected considering the {1} folder name`
+- `Episode {0} was not found in the grabbed release: {1}`
+- `Episodes {0} were not found in the grabbed release: {1}`
+- `Sample`
+- `Unable to determine if file is a sample`
+- `File is still being unpacked`
+- `Not an upgrade for existing episode file(s). Existing quality: {0}. New Quality {1}.`
+- `Not a quality revision upgrade for existing episode file(s)`
+- `Not a Custom Format upgrade for existing episode file(s). New: [{0}] ({1}) do not improve on Existing: [{2}] ({3})`
+- `Not enough free space`
+- `No audio tracks detected`
+- `Episode file already imported at {0}`
+- `Single episode file contains all episodes in seasons. Review file name or manually import`
+- `Single episode split into multiple files`
+- `Episode file on disk contains more episodes than this file contains`
+- `Episode does not have a title and recently aired`
+- `Episode has a TBA title and recently aired`
+- `Episode does not have an absolute episode number and recently aired`
+- `This show has individual episode mappings on TheXEM but the mapping for this episode has not been confirmed yet by their administrators. TheXEM needs manual input.`
+
+</details>
+
+<details>
+<summary>Known Radarr messages</summary>
+
+**Whole download** (from [CompletedDownloadService.cs](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/Download/CompletedDownloadService.cs)):
+
+- `Movie title mismatch, automatic import is not possible. Manual Import required.`
+- `Found matching movie via grab history, but release was matched to movie by ID. Manual Import required.`
+- `Unable to parse download, automatic import is not possible.`
+- `No files found are eligible for import in {0}`
+- `One or more movies expected in this release were not imported or missing`
+- `Download wasn't grabbed by Radarr and not in a category, Skipping.`
+- `Download doesn't contain intermediate path, Skipping.`
+- `[{0}] is not a valid local path. You may need a Remote Path Mapping.`
+
+**Individual files** (from [ImportDecisionMaker.cs](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/MediaFiles/MovieImport/ImportDecisionMaker.cs) and the [import specifications](https://github.com/Radarr/Radarr/tree/develop/src/NzbDrone.Core/MediaFiles/MovieImport/Specifications)):
+
+- `Invalid movie`
+- `Unable to parse file`
+- `Unexpected error processing file`
+- `Movie {0} was not found in the grabbed release: {1}`
+- `Not an upgrade for existing movie file. Existing quality: {0}. New Quality {1}.`
+- `Not a quality revision upgrade for existing movie file(s)`
+- `Not a Custom Format upgrade for existing movie file(s). New: [{0}] ({1}) do not improve on Existing: [{2}] ({3})`
+- `Sample`
+- `Unable to determine if file is a sample`
+- `File is still being unpacked`
+- `File is suspected multi-part file, Radarr doesn't support this`
+- `Not enough free space`
+- `No audio tracks detected`
+- `Movie file already imported at {0}`
+
+</details>
+
+<details>
+<summary>Choosing patterns for each mode</summary>
+
+Wording differs between Sonarr and Radarr, so prefer substrings that match both applications.
+
+Failures that a new release can fix, useful with the `Include` mode:
+
+- `title mismatch`
+- `not found in the grabbed release`
+- `was unexpected considering`
+- `No files found are eligible for import`
+- `not imported or missing`
+- `Unable to parse`
+
+Failures that a new release will not fix, because they are temporary or caused by your setup, useful with the `Exclude` mode:
+
+- `still being unpacked`
+- `Not enough free space`
+- `recently aired`
+- `TBA title`
+- `already imported`
+- `Not an upgrade`
+- `Not a Custom Format upgrade`
+- `Sample`
+- `TheXEM`
+- `is not a valid local path`
+
+</details>
+
 </ConfigSection>
 
 </div>
