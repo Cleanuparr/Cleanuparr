@@ -220,18 +220,22 @@ jobs:
             const { label, artifacts } = JSON.parse(process.env.META);
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
-            try {
-              await github.rest.repos.createCommitStatus({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                sha: '${{ needs.validate.outputs.pr_sha }}',
-                state: result === 'success' ? 'success' : result === 'cancelled' ? 'error' : 'failure',
-                context: `pr-build / ${target}`,
-                description: `${label} ${result}`,
-                target_url: runUrl
-              });
-            } catch (e) {
-              console.log(`Could not update commit status: ${e}`);
+            if (result === 'cancelled') {
+              console.log('Run was superseded, leaving the commit status to the newer run.');
+            } else {
+              try {
+                await github.rest.repos.createCommitStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  sha: '${{ needs.validate.outputs.pr_sha }}',
+                  state: result === 'success' ? 'success' : 'failure',
+                  context: `pr-build / ${target}`,
+                  description: `${label} ${result}`,
+                  target_url: runUrl
+                });
+              } catch (e) {
+                console.log(`Could not update commit status: ${e}`);
+              }
             }
 
             const prRef = process.env.PR_REF;
