@@ -15,6 +15,9 @@ using Series = Cleanuparr.Domain.Entities.Sonarr.Series;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
+/// <summary>
+/// Arr client for Sportarr instances, speaking the same wire protocol as Sonarr.
+/// </summary>
 public class SportarrClient : ArrClient, ISportarrClient
 {
     public SportarrClient(
@@ -350,7 +353,7 @@ public class SportarrClient : ArrClient, ISportarrClient
         foreach (SeriesSearchItem item in items)
         {
             SonarrCommand command = item.SearchType is SeriesSearchType.Episode
-                ? commands.FirstOrDefault() ?? new() { Name = episodeSearch, EpisodeIds = new() }
+                ? commands.FirstOrDefault(x => x.SearchType is SeriesSearchType.Episode) ?? new() { Name = episodeSearch, EpisodeIds = new() }
                 : new();
             
             switch (item.SearchType)
@@ -378,7 +381,7 @@ public class SportarrClient : ArrClient, ISportarrClient
                     throw new ArgumentOutOfRangeException(nameof(item.SearchType), item.SearchType, null);
             }
 
-            if (item.SearchType is SeriesSearchType.Episode && commands.Count > 0)
+            if (item.SearchType is SeriesSearchType.Episode && commands.Any(x => x.SearchType is SeriesSearchType.Episode))
             {
                 // only one command will be generated for episodes search
                 continue;
