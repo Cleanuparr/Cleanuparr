@@ -346,4 +346,30 @@ public class PushoverProxyTests
     }
 
     #endregion
+
+    #region Bodies that are not JSON
+
+    [Fact]
+    public async Task SendNotification_WithAnHtmlErrorPage_ThrowsPushoverException()
+    {
+        // A proxy or a gateway sends an error page that is not JSON.
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.BadGateway, "<html><body>502 Bad Gateway</body></html>");
+
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+        ex.Message.ShouldContain("BadGateway");
+    }
+
+    [Fact]
+    public async Task SendNotification_WithAnEmptyBody_ThrowsPushoverException()
+    {
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.InternalServerError, string.Empty);
+
+        await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+    }
+
+    #endregion
 }

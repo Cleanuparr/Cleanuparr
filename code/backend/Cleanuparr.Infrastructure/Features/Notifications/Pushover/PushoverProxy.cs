@@ -52,7 +52,7 @@ public sealed class PushoverProxy : IPushoverProxy
             using var response = await _httpClient.PostAsync(ApiUrl, content);
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            PushoverResponse? pushoverResponse = JsonSerializer.Deserialize<PushoverResponse>(responseBody, CleanuparrJsonOptions.ExternalApiRead);
+            PushoverResponse? pushoverResponse = ReadResponse(responseBody);
 
             if (!response.IsSuccessStatusCode || pushoverResponse?.IsSuccess != true)
             {
@@ -75,6 +75,31 @@ public sealed class PushoverProxy : IPushoverProxy
         catch (HttpRequestException ex)
         {
             throw new PushoverException("Unable to connect to Pushover API", ex);
+        }
+    }
+
+    /// <summary>
+    /// Reads the body of a response from Pushover.
+    /// </summary>
+    /// <remarks>
+    /// A proxy or a gateway can send an error page that is not JSON. A body that
+    /// this method cannot read gives null, and the status code of the response
+    /// then gives the error message.
+    /// </remarks>
+    private static PushoverResponse? ReadResponse(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<PushoverResponse>(responseBody, CleanuparrJsonOptions.ExternalApiRead);
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 }
