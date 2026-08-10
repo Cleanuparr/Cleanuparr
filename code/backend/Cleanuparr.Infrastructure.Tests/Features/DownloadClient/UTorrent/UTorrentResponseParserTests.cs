@@ -137,6 +137,53 @@ public class UTorrentResponseParserTests
         Should.Throw<UTorrentParsingException>(() => _parser.ParseTorrentList(json));
     }
 
+    [Fact]
+    public void ParseTorrentList_RowWithUnexpectedTypes_KeepsTheTorrent()
+    {
+        // A row holds a number for a text value, text for a number, and a null.
+        // One row of this shape must not stop the parse of the full list.
+        const string json = """
+        {
+            "build": 45816,
+            "torrents": [
+                [12345, "137", "Ubuntu.iso", "1024000", 1000, 1024000, 0, 1000, 0, 0, null, 7,
+                 5, 50, 5, 50, 1, 0, 0, null, null, null, null, 1700000000, 1700001000, null, "/downloads"]
+            ],
+            "label": []
+        }
+        """;
+
+        var response = _parser.ParseTorrentList(json);
+
+        var torrent = response.Torrents.ShouldHaveSingleItem();
+        torrent.Hash.ShouldBe("12345");
+        torrent.Status.ShouldBe(137);
+        torrent.Size.ShouldBe(1024000);
+        torrent.ETA.ShouldBe(0);
+        torrent.Label.ShouldBe("7");
+        torrent.StatusMessage.ShouldBe(string.Empty);
+        torrent.SavePath.ShouldBe("/downloads");
+    }
+
+    [Fact]
+    public void ParseTorrentList_RowWithFractionalNumber_KeepsTheTorrent()
+    {
+        const string json = """
+        {
+            "build": 45816,
+            "torrents": [
+                ["HASH123", 137, "Ubuntu.iso", 1024000.0, 1000, 1024000, 0, 1000, 0, 0, -1, "linux",
+                 5, 50, 5, 50, 1, 0, 0, "", "", "", "stream-id", 1700000000, 1700001000, "", "/downloads"]
+            ],
+            "label": []
+        }
+        """;
+
+        var response = _parser.ParseTorrentList(json);
+
+        response.Torrents.ShouldHaveSingleItem().Size.ShouldBe(1024000);
+    }
+
     #endregion
 
     #region ParseFileList
