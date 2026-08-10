@@ -52,7 +52,7 @@ public partial class DelugeService
 
         bool shouldRemove = contents?.Contents?.Count > 0;
         
-        ProcessFiles(contents.Contents, (_, file) =>
+        ProcessFiles(contents?.Contents, (_, file) =>
         {
             if (file.Priority > 0)
             {
