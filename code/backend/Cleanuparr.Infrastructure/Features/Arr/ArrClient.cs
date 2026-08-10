@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -307,8 +308,20 @@ public abstract class ArrClient : IArrClient
         return response;
     }
     
+    /// <summary>
+    /// Reads the body of a response from an arr.
+    /// </summary>
+    /// <remarks>
+    /// An arr answers some requests with an empty body. An empty body gives null,
+    /// because each caller has a value for a null result.
+    /// </remarks>
     protected static async Task<T?> DeserializeStreamAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
+        if (response.StatusCode is HttpStatusCode.NoContent || response.Content.Headers.ContentLength is 0)
+        {
+            return default;
+        }
+
         await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await JsonSerializer.DeserializeAsync<T>(stream, CleanuparrJsonOptions.ExternalApiRead, cancellationToken);
     }
