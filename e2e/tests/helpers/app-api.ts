@@ -318,6 +318,20 @@ export async function createDownloadClient(
   });
 }
 
+export async function testDownloadClient(
+  accessToken: string,
+  client: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/download_client/test`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(client),
+  });
+}
+
 export async function deleteDownloadClient(accessToken: string, clientId: string): Promise<Response> {
   return fetch(`${API}/api/configuration/download_client/${clientId}`, {
     method: 'DELETE',

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { chmodSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -204,6 +204,65 @@ export function buildSingleFileTorrent(savePath: string, fileName: string, sizeB
   const infoHash = createHash('sha1').update(bencode(info)).digest('hex');
 
   return { metainfo, infoHash, name: fileName, contentPath: join(savePath, fileName) };
+}
+
+/**
+ * Makes a torrent that contains one file larger than 2 GiB.
+ *
+ * The data file is sparse. It reads as zeros and uses no disk space. The piece
+ * hashes are the correct SHA-1 hashes of zero-filled pieces. The torrent is
+ * valid, and the client does not skip the verification.
+ *
+ * Deluge gives the size of a file, and the offset of a file, in bytes. A file
+ * larger than 2 GiB makes these two values too large for a 32-bit integer.
+ */
+export function buildLargeSparseTorrent(
+  savePath: string,
+  name: string,
+  sizeBytes: number,
+  announce = 'http://tracker.invalid/announce',
+): GeneratedTorrent {
+  const pieceLength = 4 * 1024 * 1024;
+
+  if (sizeBytes <= 0) {
+    throw new Error('buildLargeSparseTorrent: sizeBytes must be positive');
+  }
+
+  const contentPath = join(savePath, name);
+  mkdirSync(contentPath, { recursive: true });
+  chmodIgnoringEPERM(contentPath, 0o777);
+
+  const dataPath = join(contentPath, 'data.bin');
+  writeFileSync(dataPath, Buffer.alloc(0));
+  truncateSync(dataPath, sizeBytes);
+  chmodIgnoringEPERM(dataPath, 0o666);
+
+  const fullPieceHash = createHash('sha1').update(Buffer.alloc(pieceLength)).digest();
+  const wholePieces = Math.floor(sizeBytes / pieceLength);
+  const remainder = sizeBytes % pieceLength;
+  const pieceHashes: Buffer[] = Array.from({ length: wholePieces }, () => fullPieceHash);
+  if (remainder > 0) {
+    pieceHashes.push(createHash('sha1').update(Buffer.alloc(remainder)).digest());
+  }
+
+  const info = {
+    name,
+    'piece length': pieceLength,
+    pieces: Buffer.concat(pieceHashes),
+    files: [
+      { length: sizeBytes, path: ['data.bin'] },
+    ],
+    private: 1,
+  };
+  const metainfo = bencode({
+    announce,
+    'created by': 'cleanuparr-e2e',
+    'creation date': 0,
+    info,
+  });
+  const infoHash = createHash('sha1').update(bencode(info)).digest('hex');
+
+  return { metainfo, infoHash, name, contentPath };
 }
 
 /**
