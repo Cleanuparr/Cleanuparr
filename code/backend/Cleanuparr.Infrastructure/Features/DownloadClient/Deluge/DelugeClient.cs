@@ -68,34 +68,44 @@ public sealed class DelugeClient
         return await SendRequest<bool>("auth.delete_session");
     }
 
+    /// <summary>
+    /// Gives the id of the single daemon that the Deluge Web UI knows.
+    /// </summary>
+    /// <remarks>
+    /// Deluge gives one row of values for each host: the id, the host name, the
+    /// port and the user name. The port is a number. A host row is not a list of
+    /// strings. This method uses only the id.
+    /// </remarks>
     public async Task<string?> GetHost()
     {
-        var hosts = await SendRequest<List<List<string>?>?>("web.get_hosts");
+        List<List<JsonElement>?>? hosts = await SendRequest<List<List<JsonElement>?>?>("web.get_hosts");
 
         if (hosts?.Count > 1)
         {
             throw new FatalException("multiple Deluge hosts found - please connect to only one host");
         }
-        
-        return hosts?.FirstOrDefault()?.FirstOrDefault();
+
+        JsonElement? id = hosts?.FirstOrDefault()?.FirstOrDefault();
+
+        return id is { ValueKind: JsonValueKind.String } hostId ? hostId.GetString() : null;
     }
 
     public async Task<List<DelugeTorrent>> ListTorrents(Dictionary<string, string>? filters = null)
     {
         filters ??= new Dictionary<string, string>();
         var keys = typeof(DelugeTorrent).GetAllJsonPropertyFromType();
-        Dictionary<string, DelugeTorrent> result =
+        Dictionary<string, DelugeTorrent>? result =
             await SendRequest<Dictionary<string, DelugeTorrent>>("core.get_torrents_status", filters, keys);
-        return result.Values.ToList();
+        return result?.Values.ToList() ?? [];
     }
 
     public async Task<List<DelugeTorrentExtended>> ListTorrentsExtended(Dictionary<string, string>? filters = null)
     {
         filters ??= new Dictionary<string, string>();
         var keys = typeof(DelugeTorrentExtended).GetAllJsonPropertyFromType();
-        Dictionary<string, DelugeTorrentExtended> result =
+        Dictionary<string, DelugeTorrentExtended>? result =
             await SendRequest<Dictionary<string, DelugeTorrentExtended>>("core.get_torrents_status", filters, keys);
-        return result.Values.ToList();
+        return result?.Values.ToList() ?? [];
     }
 
     public async Task<DelugeTorrent?> GetTorrent(string hash)
@@ -161,12 +171,12 @@ public sealed class DelugeClient
             { "file_priorities", priorities }
         };
 
-        await SendRequest<DelugeResponse<object>>("core.set_torrent_options", hash, filePriorities);
+        await SendRequest("core.set_torrent_options", hash, filePriorities);
     }
 
     public async Task DeleteTorrents(List<string> hashes, bool removeData)
     {
-        await SendRequest<DelugeResponse<object>>("core.remove_torrents", hashes, removeData);
+        await SendRequest("core.remove_torrents", hashes, removeData);
     }
 
     private async Task<String> PostJson(String json)
@@ -193,27 +203,45 @@ public sealed class DelugeClient
         return new DelugeRequest(1, method, parameters);
     }
     
-    public async Task<T> SendRequest<T>(string method, params object[] parameters)
+    /// <summary>
+    /// Sends a request and ignores the result.
+    /// </summary>
+    public async Task SendRequest(string method, params object[] parameters)
+    {
+        await SendRequest<JsonElement?>(CreateRequest(method, parameters));
+    }
+
+    public async Task<T?> SendRequest<T>(string method, params object[] parameters)
     {
         return await SendRequest<T>(CreateRequest(method, parameters));
     }
 
-    public async Task<T> SendRequest<T>(DelugeRequest webRequest)
+    /// <summary>
+    /// Sends a request and reads the result as <typeparamref name="T"/>.
+    /// </summary>
+    /// <remarks>
+    /// Deluge answers each request with an envelope. The envelope holds an id, a
+    /// result and an error. This method reads the envelope first, then it reads
+    /// the result. An error from Deluge keeps its message. A result that does not
+    /// agree with <typeparamref name="T"/> does not hide that message.
+    /// </remarks>
+    public async Task<T?> SendRequest<T>(DelugeRequest webRequest)
     {
         string requestJson = JsonSerializer.Serialize(webRequest, CleanuparrJsonOptions.Outbound);
 
         string responseJson = await PostJson(requestJson);
 
-        DelugeResponse<T>? webResponse;
+        DelugeResponse<JsonElement>? webResponse;
 
         try
         {
-            webResponse = JsonSerializer.Deserialize<DelugeResponse<T>>(responseJson, CleanuparrJsonOptions.ExternalApiRead);
+            webResponse = JsonSerializer.Deserialize<DelugeResponse<JsonElement>>(responseJson, CleanuparrJsonOptions.ExternalApiRead);
         }
         catch (JsonException exception)
         {
-            string truncated = responseJson.Length > 2000 ? responseJson[..2000] : responseJson;
-            throw new DelugeClientException($"failed to deserialize Deluge response for method '{webRequest.Method}': {truncated}", exception);
+            throw new DelugeClientException(
+                $"failed to deserialize Deluge response for method '{webRequest.Method}': {Truncate(responseJson)}",
+                exception);
         }
 
         if (webResponse?.Error != null)
@@ -226,21 +254,38 @@ public sealed class DelugeClient
             throw new DelugeClientException("desync");
         }
 
-        return webResponse.Result;
+        if (webResponse.Result is not { ValueKind: not (JsonValueKind.Null or JsonValueKind.Undefined) } result)
+        {
+            return default;
+        }
+
+        try
+        {
+            return result.Deserialize<T>(CleanuparrJsonOptions.ExternalApiRead);
+        }
+        catch (JsonException exception)
+        {
+            throw new DelugeClientException(
+                $"failed to deserialize the result of Deluge method '{webRequest.Method}': {Truncate(responseJson)}",
+                exception);
+        }
     }
+
+    private static string Truncate(string responseJson) =>
+        responseJson.Length > 2000 ? responseJson[..2000] : responseJson;
 
     public async Task<IReadOnlyList<string>> GetLabels()
     {
-        return await SendRequest<IReadOnlyList<string>>("label.get_labels");
+        return await SendRequest<IReadOnlyList<string>>("label.get_labels") ?? [];
     }
-    
+
     public async Task CreateLabel(string label)
     {
-        await SendRequest<DelugeResponse<object>>("label.add", label);
+        await SendRequest("label.add", label);
     }
 
     public async Task SetTorrentLabel(string hash, string newLabel)
     {
-        await SendRequest<DelugeResponse<object>>("label.set_torrent", hash, newLabel);
+        await SendRequest("label.set_torrent", hash, newLabel);
     }
 }
