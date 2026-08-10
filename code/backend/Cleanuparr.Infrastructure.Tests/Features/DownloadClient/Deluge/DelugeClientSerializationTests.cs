@@ -194,4 +194,150 @@ public class DelugeClientSerializationTests
         directory.Type.ShouldBe("dir");
         directory.Contents!["video.mkv"].Index.ShouldBe(0);
     }
+
+    // Each response below comes from a Deluge 2.2.0 daemon.
+
+    [Fact]
+    public async Task DeleteTorrents_WithEmptyFailureList_DoesNotThrow()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": [], "error": null, "id": 1}""");
+
+        await client.DeleteTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"], true);
+    }
+
+    [Fact]
+    public async Task DeleteTorrents_WithFailedHashes_DoesNotThrow()
+    {
+        const string response = """
+            {"result": [["0000000000000000000000000000000000000000", "torrent_id 0000000000000000000000000000000000000000 not in session."]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        await client.DeleteTorrents(["0000000000000000000000000000000000000000"], true);
+    }
+
+    [Fact]
+    public async Task ChangeFilesPriority_WithNullResult_DoesNotThrow()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": null, "error": null, "id": 1}""");
+
+        await client.ChangeFilesPriority("abc", [1, 0]);
+    }
+
+    [Fact]
+    public async Task GetHost_WithNumericPort_ReturnsHostId()
+    {
+        const string response = """
+            {"result": [["a0de4463cfe441f2be873bde7cdf2d22", "127.0.0.1", 58846, "localclient"]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        string? hostId = await client.GetHost();
+
+        hostId.ShouldBe("a0de4463cfe441f2be873bde7cdf2d22");
+    }
+
+    [Fact]
+    public async Task GetHost_WithNoHosts_ReturnsNull()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": [], "error": null, "id": 1}""");
+
+        string? hostId = await client.GetHost();
+
+        hostId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetTorrentFiles_WithFileLargerThan2Gib_Deserializes()
+    {
+        const string response = """
+            {
+                "result": {
+                    "contents": {
+                        "big.mkv": {"type": "file", "index": 0, "path": "big.mkv", "size": 3221225472, "offset": 0, "progress": 0.0, "priority": 4},
+                        "second.mkv": {"type": "file", "index": 1, "path": "second.mkv", "size": 1024, "offset": 3221225472, "progress": 0.0, "priority": 4}
+                    },
+                    "type": "dir"
+                },
+                "error": null,
+                "id": 1
+            }
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        contents.Contents!["big.mkv"].Size.ShouldBe(3221225472);
+        contents.Contents["second.mkv"].Offset.ShouldBe(3221225472);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-3600)]
+    public async Task GetStatusForAllTorrents_WithNegativeEta_Deserializes(long eta)
+    {
+        // Deluge gives -1 if the download needs more than one year.
+        string response = $$"""
+            {
+                "result": {
+                    "abc": {
+                        "hash": "abc",
+                        "state": "Downloading",
+                        "name": "T",
+                        "eta": {{eta}},
+                        "private": true,
+                        "total_done": 0,
+                        "is_finished": false,
+                        "seeding_time": 0,
+                        "ratio": -1.0,
+                        "total_seeds": -1,
+                        "download_payload_rate": 1,
+                        "total_size": 3221225472,
+                        "download_location": "/downloads",
+                        "trackers": []
+                    }
+                },
+                "error": null,
+                "id": 1
+            }
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        List<DownloadStatus>? statuses = await client.GetStatusForAllTorrents();
+
+        DownloadStatus status = statuses.ShouldNotBeNull().ShouldHaveSingleItem();
+        status.Eta.ShouldBe(eta);
+        status.Size.ShouldBe(3221225472);
+    }
+
+    [Fact]
+    public void ItemWrapper_WithNegativeEta_ReportsZero()
+    {
+        DelugeItemWrapper wrapper = new(new DownloadStatus { Hash = "abc", Eta = -1 });
+
+        wrapper.Eta.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Response_WithErrorAndUnexpectedResultShape_KeepsTheErrorMessage()
+    {
+        (DelugeClient client, _) =
+            CreateClient("""{"id":1,"result":[],"error":{"message":"boom","code":3}}""");
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.GetStatusForAllTorrents());
+        ex.Message.ShouldBe("boom");
+    }
+
+    [Fact]
+    public async Task Response_WithUnexpectedResultShape_ThrowsWithTheMethodAndTheBody()
+    {
+        (DelugeClient client, _) = CreateClient("""{"id":1,"result":"not-a-map","error":null}""");
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.GetStatusForAllTorrents());
+        ex.Message.ShouldContain("core.get_torrents_status");
+        ex.Message.ShouldContain("not-a-map");
+    }
 }
