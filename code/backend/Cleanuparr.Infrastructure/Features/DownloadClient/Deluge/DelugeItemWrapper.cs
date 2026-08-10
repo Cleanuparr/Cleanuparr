@@ -46,7 +46,12 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
     /// <inheritdoc/>
     public int? SeederCount => Info.TotalSeeds;
 
-    public long Eta => (long)Info.Eta;
+    /// <summary>
+    /// The number of seconds that the download needs to finish.
+    /// A negative value from Deluge shows an unknown time.
+    /// This property gives 0 for a negative value.
+    /// </summary>
+    public long Eta => Info.Eta < 0 ? 0 : Info.Eta;
     
     public long SeedingTimeSeconds => Info.SeedingTime;
 

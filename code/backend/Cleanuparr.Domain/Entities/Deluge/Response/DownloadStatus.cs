@@ -26,8 +26,10 @@ public sealed record DownloadStatus
 
     /// <summary>
     /// The number of seconds that the download needs to finish.
+    /// Deluge gives -1 if the download needs more than one year.
+    /// Deluge also gives a negative value for a seed that is above its stop ratio.
     /// </summary>
-    public ulong Eta { get; init; }
+    public long Eta { get; init; }
 
     /// <summary>
     /// The download speed in bytes each second.
