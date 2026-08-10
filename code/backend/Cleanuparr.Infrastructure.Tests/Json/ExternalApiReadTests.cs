@@ -94,6 +94,23 @@ public class ExternalApiReadTests
     }
 
     [Fact]
+    public void QueueRecord_WithFractionalSizeLeft_Deserializes()
+    {
+        // Sizeleft is a decimal in each arr. Sonarr v3 writes its JSON with
+        // Newtonsoft. A whole value then gets a decimal point: 4467066880.0.
+        const string payload = """
+        {
+            "totalRecords": 1,
+            "records": [{ "id": 1, "title": "T", "downloadId": "ABC", "protocol": "torrent", "sizeleft": 4467066880.0 }]
+        }
+        """;
+
+        QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>(payload, CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result.Records[0].SizeLeft.ShouldBe(4467066880);
+    }
+
+    [Fact]
     public void EmptyQueueResponse_Deserializes()
     {
         QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>("{}", CleanuparrJsonOptions.ExternalApiRead)!;
