@@ -272,6 +272,43 @@ public class DelugeClientSerializationTests
         contents.Contents["second.mkv"].Offset.ShouldBe(3221225472);
     }
 
+    [Fact]
+    public async Task GetTorrentFiles_WithA5GbFileAtTheRoot_Deserializes()
+    {
+        // The response of issue #706, with the size that Deluge sent.
+        const string response = """
+            {"result": {"contents": {"Drive (2011) GBR MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay DDP 7.1 x265-QTZ.mkv": {"type": "file", "index": 0, "path": "Drive (2011) GBR MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay DDP 7.1 x265-QTZ.mkv", "size": 5010493964, "offset": 0, "progress": 1.0, "priority": 1}}, "type": "dir"}, "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        DelugeFileOrDirectory file = contents.Contents!.Values.ShouldHaveSingleItem();
+        file.Size.ShouldBe(5010493964);
+        file.Priority.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetTorrentFiles_WithA6GbFileInADirectory_Deserializes()
+    {
+        // The response of issue #707. The directory node also holds a large size.
+        const string response = """
+            {"result": {"contents": {"a-release": {"type": "dir", "contents": {"a-release.mkv": {"type": "file", "index": 2, "path": "a-release/a-release.mkv", "size": 6116913821, "offset": 497025, "progress": 0.9986286163330078, "priority": 4}}, "size": 6117415095, "priority": 4, "progress": 0.9986287287071014}}, "type": "dir"}, "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        DelugeFileOrDirectory directory = contents.Contents!["a-release"];
+        directory.Size.ShouldBe(6117415095);
+        DelugeFileOrDirectory file = directory.Contents!["a-release.mkv"];
+        file.Size.ShouldBe(6116913821);
+        file.Offset.ShouldBe(497025);
+        file.Index.ShouldBe(2);
+    }
+
     [Theory]
     [InlineData(-1)]
     [InlineData(-3600)]
