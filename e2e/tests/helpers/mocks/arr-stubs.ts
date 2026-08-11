@@ -57,6 +57,25 @@ export interface QueueRecord {
   estimatedCompletionTime?: string;
 }
 
+/**
+ * Serves a queue page from a raw JSON body.
+ *
+ * WireMock writes a `jsonBody` with a JSON serializer, and the serializer drops
+ * the decimal point of a whole number. A raw body keeps each number as written.
+ * Sonarr v3 sends `sizeleft` as `4467066880.0`, and a test needs that exact
+ * shape.
+ */
+export function arrRawQueueStub(body: string): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api/v3/queue' },
+    response: {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    },
+  };
+}
+
 export function arrQueueStub(records: QueueRecord[]): Mapping {
   return {
     request: { method: 'GET', urlPath: '/api/v3/queue' },
