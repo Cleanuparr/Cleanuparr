@@ -96,8 +96,8 @@ public class ExternalApiReadTests
     [Fact]
     public void QueueRecord_WithFractionalSizeLeft_Deserializes()
     {
-        // Sizeleft is a decimal in each arr. Sonarr v3 writes its JSON with
-        // Newtonsoft. A whole value then gets a decimal point: 4467066880.0.
+        // Sizeleft is a decimal in each arr. Sonarr writes its JSON with Newtonsoft.
+        // A whole value then gets a decimal point: 4467066880.0.
         const string payload = """
         {
             "totalRecords": 1,

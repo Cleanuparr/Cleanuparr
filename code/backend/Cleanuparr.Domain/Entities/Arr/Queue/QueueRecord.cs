@@ -123,8 +123,8 @@ public sealed record QueueRecord
     /// The number of bytes that the download client must still get.
     /// </summary>
     /// <remarks>
-    /// Each arr holds this value in a decimal. Sonarr v3 writes its JSON with
-    /// Newtonsoft. A whole value then gets a decimal point: 4467066880.0.
+    /// Each arr holds this value in a decimal. Sonarr writes its JSON with Newtonsoft.
+    /// A whole value then gets a decimal point: 4467066880.0.
     /// </remarks>
     public decimal SizeLeft { get; init; }
 }
