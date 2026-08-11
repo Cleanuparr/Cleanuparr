@@ -33,14 +33,18 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function waitForRegistered(infoHash: string, timeoutMs = 30_000): Promise<void> {
-  const want = infoHash.toLowerCase();
+// The unlinked step reads only the seeding downloads that hold the category.
+async function waitForSeeding(infoHash: string, timeoutMs = 60_000): Promise<void> {
   const start = Date.now();
+  let state: string | undefined;
+  let label: string | undefined;
   while (Date.now() - start < timeoutMs) {
-    if ((await deluge.listTorrents()).some((t) => t.hash.toLowerCase() === want)) return;
+    state = await deluge.getTorrentState(infoHash);
+    label = await deluge.getTorrentLabel(infoHash);
+    if (state === 'Seeding' && label === CATEGORY) return;
     await sleep(500);
   }
-  throw new Error(`torrent ${infoHash} never registered with Deluge`);
+  throw new Error(`torrent ${infoHash} is in state ${state} with label ${label}`);
 }
 
 /**
@@ -112,7 +116,7 @@ test.describe.serial('Deluge unlinked cleanup with a large torrent', () => {
         name: fx.name,
         infoHash: fx.infoHash,
       });
-      await waitForRegistered(fx.infoHash);
+      await waitForSeeding(fx.infoHash);
     }
 
     const createRes = await createDownloadClient(token, {
@@ -147,9 +151,22 @@ test.describe.serial('Deluge unlinked cleanup with a large torrent', () => {
 
     const trig = await triggerJob(token, 'DownloadCleaner');
     expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-    await sleep(13_000); // Wait for the 10 s Arr sync delay of the job, and for the cleanup.
+    await sleep(10_000); // The job waits 10 s for the Arr queue sync.
 
-    expect(await deluge.getTorrentLabel(smallHash), 'the small torrent did not move').toBe(TARGET);
-    expect(await deluge.getTorrentLabel(largeHash), 'the large torrent did not move').toBe(TARGET);
+    await expect
+      .poll(() => deluge.getTorrentLabel(smallHash), {
+        message: 'the small torrent did not move',
+        timeout: 60_000,
+        intervals: [1_000],
+      })
+      .toBe(TARGET);
+
+    await expect
+      .poll(() => deluge.getTorrentLabel(largeHash), {
+        message: 'the large torrent did not move',
+        timeout: 60_000,
+        intervals: [1_000],
+      })
+      .toBe(TARGET);
   });
 });

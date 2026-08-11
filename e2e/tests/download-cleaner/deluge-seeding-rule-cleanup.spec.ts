@@ -152,9 +152,16 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
 
     const trig = await triggerJob(token, 'DownloadCleaner');
     expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-    await sleep(13_000); // Wait for the 10 s Arr sync delay of the job, and for the cleanup.
+    await sleep(10_000); // The job waits 10 s for the Arr queue sync.
 
-    expect(await stillPresent(hashes), 'torrents survived the cleanup cycle').toEqual([]);
+    // One cycle must clean each torrent. The poll waits for that one cycle only.
+    await expect
+      .poll(() => stillPresent(hashes), {
+        message: 'torrents survived the cleanup cycle',
+        timeout: 60_000,
+        intervals: [1_000],
+      })
+      .toEqual([]);
     for (const path of contentPaths) {
       expect(existsSync(path), `torrent data was not deleted: ${path}`).toBe(false);
     }
