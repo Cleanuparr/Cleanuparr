@@ -430,6 +430,9 @@ public class DelugeItemWrapperTests
     [InlineData(DelugeState.Seeding, 0, 0UL, false)]
     [InlineData(DelugeState.Paused, 0, 0UL, false)]
     [InlineData(DelugeState.Unknown, 0, 0UL, false)]
+    // An unknown eta is not a stalled download.
+    [InlineData(DelugeState.Downloading, 0, -1L, false)]
+    [InlineData(DelugeState.Downloading, 0, -3600L, false)]
     public void IsStalled_ReturnsCorrectValue(DelugeState state, long downloadSpeed, long eta, bool expected)
     {
         // Arrange

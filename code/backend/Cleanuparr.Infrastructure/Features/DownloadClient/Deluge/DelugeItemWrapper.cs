@@ -71,7 +71,13 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     public bool IsDownloading() => Info is { State: DelugeState.Downloading };
 
-    public bool IsStalled() => Info is { State: DelugeState.Downloading, DownloadSpeed: <= 0, Eta: <= 0 };
+    /// <summary>
+    /// True if the download makes no progress.
+    /// </summary>
+    /// <remarks>
+    /// A negative eta shows an unknown time, and it is not a stalled download.
+    /// </remarks>
+    public bool IsStalled() => Info is { State: DelugeState.Downloading, DownloadSpeed: <= 0, Eta: 0 };
 
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {
