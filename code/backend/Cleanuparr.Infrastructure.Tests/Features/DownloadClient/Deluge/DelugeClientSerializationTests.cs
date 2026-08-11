@@ -202,7 +202,8 @@ public class DelugeClientSerializationTests
     {
         (DelugeClient client, _) = CreateClient("""{"result": [], "error": null, "id": 1}""");
 
-        await client.DeleteTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"], true);
+        await Should.NotThrowAsync(
+            () => client.DeleteTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"], true));
     }
 
     [Fact]
@@ -213,7 +214,8 @@ public class DelugeClientSerializationTests
             """;
         (DelugeClient client, _) = CreateClient(response);
 
-        await client.DeleteTorrents(["0000000000000000000000000000000000000000"], true);
+        await Should.NotThrowAsync(
+            () => client.DeleteTorrents(["0000000000000000000000000000000000000000"], true));
     }
 
     [Fact]
@@ -221,7 +223,7 @@ public class DelugeClientSerializationTests
     {
         (DelugeClient client, _) = CreateClient("""{"result": null, "error": null, "id": 1}""");
 
-        await client.ChangeFilesPriority("abc", [1, 0]);
+        await Should.NotThrowAsync(() => client.ChangeFilesPriority("abc", [1, 0]));
     }
 
     [Fact]
