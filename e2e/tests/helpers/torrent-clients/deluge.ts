@@ -136,22 +136,23 @@ export class DelugeDriver implements TorrentClientDriver {
     }
   }
 
-  /** Gives the state of the torrent, for example "Seeding". */
-  async getTorrentState(infoHash: string): Promise<string | undefined> {
-    const result = await this.call<Record<string, { state?: string }>>(
+  /** Gives one status field of the torrent, or undefined. */
+  private async getTorrentField(infoHash: string, field: string): Promise<string | undefined> {
+    const result = await this.call<Record<string, Record<string, string | undefined>>>(
       'core.get_torrents_status',
-      [{ id: [infoHash] }, ['state']],
+      [{ id: [infoHash] }, [field]],
     );
-    return result?.[infoHash]?.state || undefined;
+    return result?.[infoHash]?.[field] || undefined;
+  }
+
+  /** Gives the state of the torrent, for example "Seeding". */
+  getTorrentState(infoHash: string): Promise<string | undefined> {
+    return this.getTorrentField(infoHash, 'state');
   }
 
   /** Returns the torrent's Label-plugin label, or undefined. */
-  async getTorrentLabel(infoHash: string): Promise<string | undefined> {
-    const result = await this.call<Record<string, { label?: string }>>(
-      'core.get_torrents_status',
-      [{ id: [infoHash] }, ['label']],
-    );
-    return result?.[infoHash]?.label || undefined;
+  getTorrentLabel(infoHash: string): Promise<string | undefined> {
+    return this.getTorrentField(infoHash, 'label');
   }
 
   async deleteTorrent(infoHash: string): Promise<void> {
