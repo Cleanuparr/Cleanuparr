@@ -31,8 +31,9 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                 return number;
             }
 
-            // A decimal keeps a fractional or very large number exact.
+            // A whole number with a decimal point, for example 1024000.0.
             if (element.TryGetDecimal(out decimal exact)
+                && decimal.Truncate(exact) == exact
                 && exact >= long.MinValue
                 && exact <= long.MaxValue)
             {

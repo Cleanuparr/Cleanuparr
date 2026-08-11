@@ -170,6 +170,8 @@ public class UTorrentResponseParserTests
     [InlineData("\"not a number\"")]
     [InlineData("9223372036854775808")]
     [InlineData("1e400")]
+    [InlineData("0.5")]
+    [InlineData("-0.5")]
     public void ParseTorrentList_RowWithAnUnreadableNumber_ThrowsUTorrentParsingException(string value)
     {
         // An unreadable number must not become 0, because a priority of 0 removes a torrent.
@@ -187,14 +189,18 @@ public class UTorrentResponseParserTests
         Should.Throw<UTorrentParsingException>(() => _parser.ParseTorrentList(json));
     }
 
-    [Fact]
-    public void ParseFileList_WithAnUnreadablePriority_ThrowsUTorrentParsingException()
+    [Theory]
+    [InlineData("null")]
+    [InlineData("false")]
+    [InlineData("\"low\"")]
+    [InlineData("0.5")]
+    public void ParseFileList_WithAnUnreadablePriority_ThrowsUTorrentParsingException(string priority)
     {
         // An unreadable priority must not look like an unwanted file.
-        const string json = """
+        string json = $$"""
         {
             "build": 45816,
-            "files": ["HASH123", [["movie.mkv", 1024000, 1024000, null]]]
+            "files": ["HASH123", [["movie.mkv", 1024000, 1024000, {{priority}}]]]
         }
         """;
 
@@ -202,7 +208,20 @@ public class UTorrentResponseParserTests
     }
 
     [Fact]
-    public void ParseTorrentList_RowWithFractionalNumber_KeepsTheTorrent()
+    public void ParseFileList_WithAPriorityWithADecimalPoint_KeepsTheFile()
+    {
+        const string json = """
+        {
+            "build": 45816,
+            "files": ["HASH123", [["movie.mkv", 1024000, 1024000, 2.0]]]
+        }
+        """;
+
+        _parser.ParseFileList(json).Files.ShouldHaveSingleItem().Priority.ShouldBe(2);
+    }
+
+    [Fact]
+    public void ParseTorrentList_RowWithADecimalPoint_KeepsTheTorrent()
     {
         const string json = """
         {
