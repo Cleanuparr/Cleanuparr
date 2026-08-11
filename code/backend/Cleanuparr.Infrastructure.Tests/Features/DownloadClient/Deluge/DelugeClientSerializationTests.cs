@@ -219,6 +219,22 @@ public class DelugeClientSerializationTests
     }
 
     [Fact]
+    public async Task DeleteTorrents_WithARealFailure_Throws()
+    {
+        // The torrent stays in Deluge. The caller must not report a success.
+        const string response = """
+            {"result": [["5a64675bf2d466929fc6a916e3a975fa6940975b", "[Errno 13] Permission denied"]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.DeleteTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"], true));
+
+        ex.Message.ShouldContain("5a64675bf2d466929fc6a916e3a975fa6940975b");
+        ex.Message.ShouldContain("Permission denied");
+    }
+
+    [Fact]
     public async Task ChangeFilesPriority_WithNullResult_DoesNotThrow()
     {
         (DelugeClient client, _) = CreateClient("""{"result": null, "error": null, "id": 1}""");

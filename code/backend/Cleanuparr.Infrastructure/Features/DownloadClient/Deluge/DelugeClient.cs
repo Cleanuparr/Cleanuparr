@@ -145,6 +145,7 @@ public sealed class DelugeClient
         }
 
         return message.Contains("'NoneType' object has no attribute 'call'", StringComparison.Ordinal)
+               || message.Contains("not in session", StringComparison.OrdinalIgnoreCase)
                || message.Contains($"KeyError: '{hash}'", StringComparison.OrdinalIgnoreCase);
     }
     
@@ -174,10 +175,43 @@ public sealed class DelugeClient
         await SendRequest("core.set_torrent_options", hash, filePriorities);
     }
 
+    /// <summary>
+    /// Removes the torrents from Deluge.
+    /// </summary>
+    /// <remarks>
+    /// Deluge answers with one row for each hash that it did not remove. A row holds
+    /// the hash and the reason. A hash that is not in the session is already gone.
+    /// Each other row keeps the torrent in Deluge, and it is an error.
+    /// </remarks>
     public async Task DeleteTorrents(List<string> hashes, bool removeData)
     {
-        await SendRequest("core.remove_torrents", hashes, removeData);
+        List<List<JsonElement>?>? failures =
+            await SendRequest<List<List<JsonElement>?>?>("core.remove_torrents", hashes, removeData);
+
+        List<string> errors = [];
+
+        foreach (List<JsonElement>? failure in failures ?? [])
+        {
+            string hash = failure?.Count > 0 ? AsText(failure[0]) : string.Empty;
+            string message = failure?.Count > 1 ? AsText(failure[1]) : string.Empty;
+
+            if (IsTorrentNotFoundError(message, hash))
+            {
+                continue;
+            }
+
+            errors.Add($"{hash}: {message}");
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new DelugeClientException(
+                $"Deluge did not remove {errors.Count} torrent(s) | {string.Join(" | ", errors)}");
+        }
     }
+
+    private static string AsText(JsonElement element) =>
+        element.ValueKind is JsonValueKind.String ? element.GetString() ?? string.Empty : element.ToString();
 
     private async Task<String> PostJson(String json)
     {
