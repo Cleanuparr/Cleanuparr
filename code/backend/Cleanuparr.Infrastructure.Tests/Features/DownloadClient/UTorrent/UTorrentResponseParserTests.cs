@@ -194,6 +194,8 @@ public class UTorrentResponseParserTests
     [InlineData("false")]
     [InlineData("\"low\"")]
     [InlineData("0.5")]
+    [InlineData("-99999999999")]
+    [InlineData("99999999999")]
     public void ParseFileList_WithAnUnreadablePriority_ThrowsUTorrentParsingException(string priority)
     {
         // An unreadable priority must not look like an unwanted file.

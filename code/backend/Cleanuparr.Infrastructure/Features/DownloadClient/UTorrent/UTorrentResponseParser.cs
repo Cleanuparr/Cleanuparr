@@ -53,12 +53,12 @@ public class UTorrentResponseParser : IUTorrentResponseParser
     {
         long value = AsInt64(element);
 
-        return value switch
+        if (value is > int.MaxValue or < int.MinValue)
         {
-            > int.MaxValue => int.MaxValue,
-            < int.MinValue => int.MinValue,
-            _ => (int)value,
-        };
+            throw new JsonException($"the number {value} does not fit in a 32-bit integer");
+        }
+
+        return (int)value;
     }
 
     /// <summary>
