@@ -56,8 +56,10 @@ public sealed class PushoverProxy : IPushoverProxy
 
             if (!response.IsSuccessStatusCode || pushoverResponse?.IsSuccess != true)
             {
-                var errorMessage = pushoverResponse?.Errors?.FirstOrDefault()
-                    ?? $"Pushover API error: {response.StatusCode}";
+                string errorMessage = pushoverResponse?.Errors?.FirstOrDefault()
+                    ?? (pushoverResponse is null
+                        ? $"unreadable response body ({response.StatusCode}): {Truncate(responseBody)}"
+                        : $"Pushover API error: {response.StatusCode}");
 
                 throw response.StatusCode switch
                 {
@@ -79,13 +81,8 @@ public sealed class PushoverProxy : IPushoverProxy
     }
 
     /// <summary>
-    /// Reads the body of a response from Pushover.
+    /// Reads the body of a response from Pushover. A body that is not JSON gives null.
     /// </summary>
-    /// <remarks>
-    /// A proxy or a gateway can send an error page that is not JSON. A body that
-    /// this method cannot read gives null, and the status code of the response
-    /// then gives the error message.
-    /// </remarks>
     private static PushoverResponse? ReadResponse(string responseBody)
     {
         if (string.IsNullOrWhiteSpace(responseBody))
@@ -101,5 +98,15 @@ public sealed class PushoverProxy : IPushoverProxy
         {
             return null;
         }
+    }
+
+    private static string Truncate(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return "<empty>";
+        }
+
+        return responseBody.Length > 200 ? responseBody[..200] : responseBody;
     }
 }
