@@ -60,6 +60,22 @@ export class DelugeDriver implements TorrentClientDriver {
     }
   }
 
+  /**
+   * Disconnects the Web UI from the daemon.
+   *
+   * A new Web UI starts in this state. The Web UI goes to this state again when
+   * the daemon restarts. Each `core.*` call fails until a client connects the
+   * Web UI to the daemon with `web.get_hosts` and `web.connect`. Use `ready()`
+   * to connect the Web UI again.
+   */
+  async disconnectWebUi(): Promise<void> {
+    await this.call('web.disconnect', []);
+  }
+
+  async isWebUiConnected(): Promise<boolean> {
+    return this.call<boolean>('web.connected', []);
+  }
+
   private async call<T>(method: string, params: unknown[]): Promise<T> {
     const res = await fetch(this.directJson, {
       method: 'POST',
@@ -120,13 +136,23 @@ export class DelugeDriver implements TorrentClientDriver {
     }
   }
 
-  /** Returns the torrent's Label-plugin label, or undefined. */
-  async getTorrentLabel(infoHash: string): Promise<string | undefined> {
-    const result = await this.call<Record<string, { label?: string }>>(
+  /** Gives one status field of the torrent, or undefined. */
+  private async getTorrentField(infoHash: string, field: string): Promise<string | undefined> {
+    const result = await this.call<Record<string, Record<string, string | undefined>>>(
       'core.get_torrents_status',
-      [{ id: [infoHash] }, ['label']],
+      [{ id: [infoHash] }, [field]],
     );
-    return result?.[infoHash]?.label || undefined;
+    return result?.[infoHash]?.[field] || undefined;
+  }
+
+  /** Gives the state of the torrent, for example "Seeding". */
+  getTorrentState(infoHash: string): Promise<string | undefined> {
+    return this.getTorrentField(infoHash, 'state');
+  }
+
+  /** Returns the torrent's Label-plugin label, or undefined. */
+  getTorrentLabel(infoHash: string): Promise<string | undefined> {
+    return this.getTorrentField(infoHash, 'label');
   }
 
   async deleteTorrent(infoHash: string): Promise<void> {

@@ -205,7 +205,7 @@ public class DelugeItemWrapperTests
     [InlineData(3600UL, 3600L)] // 1 hour
     [InlineData(0UL, 0L)]
     [InlineData(86400UL, 86400L)] // 1 day
-    public void Eta_ReturnsCorrectValue(ulong eta, long expected)
+    public void Eta_ReturnsCorrectValue(long eta, long expected)
     {
         // Arrange
         var downloadStatus = new DownloadStatus
@@ -430,7 +430,10 @@ public class DelugeItemWrapperTests
     [InlineData(DelugeState.Seeding, 0, 0UL, false)]
     [InlineData(DelugeState.Paused, 0, 0UL, false)]
     [InlineData(DelugeState.Unknown, 0, 0UL, false)]
-    public void IsStalled_ReturnsCorrectValue(DelugeState state, long downloadSpeed, ulong eta, bool expected)
+    // An unknown eta is not a stalled download.
+    [InlineData(DelugeState.Downloading, 0, -1L, false)]
+    [InlineData(DelugeState.Downloading, 0, -3600L, false)]
+    public void IsStalled_ReturnsCorrectValue(DelugeState state, long downloadSpeed, long eta, bool expected)
     {
         // Arrange
         var downloadStatus = new DownloadStatus

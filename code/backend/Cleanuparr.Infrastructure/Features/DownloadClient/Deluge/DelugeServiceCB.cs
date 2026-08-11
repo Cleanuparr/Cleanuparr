@@ -52,7 +52,7 @@ public partial class DelugeService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "failed to find files in the download client | {name}", download.Name);
+            _logger.LogWarning(exception, "failed to find files in the download client | {name}", download.Name);
         }
 
         if (contents is null)

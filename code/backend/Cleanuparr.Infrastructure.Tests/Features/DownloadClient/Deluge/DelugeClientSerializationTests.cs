@@ -194,4 +194,205 @@ public class DelugeClientSerializationTests
         directory.Type.ShouldBe("dir");
         directory.Contents!["video.mkv"].Index.ShouldBe(0);
     }
+
+    // Each response below comes from a Deluge 2.2.0 daemon.
+
+    [Fact]
+    public async Task DeleteTorrents_WithEmptyFailureList_DoesNotThrow()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": [], "error": null, "id": 1}""");
+
+        await Should.NotThrowAsync(
+            () => client.DeleteTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"], true));
+    }
+
+    [Fact]
+    public async Task DeleteTorrents_WithFailedHashes_DoesNotThrow()
+    {
+        const string response = """
+            {"result": [["0000000000000000000000000000000000000000", "torrent_id 0000000000000000000000000000000000000000 not in session."]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        await Should.NotThrowAsync(
+            () => client.DeleteTorrents(["0000000000000000000000000000000000000000"], true));
+    }
+
+    [Fact]
+    public async Task DeleteTorrents_WithARealFailure_Throws()
+    {
+        // The torrent stays in Deluge. The caller must not report a success.
+        const string response = """
+            {"result": [["5a64675bf2d466929fc6a916e3a975fa6940975b", "[Errno 13] Permission denied"]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.DeleteTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"], true));
+
+        ex.Message.ShouldContain("5a64675bf2d466929fc6a916e3a975fa6940975b");
+        ex.Message.ShouldContain("Permission denied");
+    }
+
+    [Fact]
+    public async Task ChangeFilesPriority_WithNullResult_DoesNotThrow()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": null, "error": null, "id": 1}""");
+
+        await Should.NotThrowAsync(() => client.ChangeFilesPriority("abc", [1, 0]));
+    }
+
+    [Fact]
+    public async Task GetHost_WithNumericPort_ReturnsHostId()
+    {
+        const string response = """
+            {"result": [["a0de4463cfe441f2be873bde7cdf2d22", "127.0.0.1", 58846, "localclient"]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        string? hostId = await client.GetHost();
+
+        hostId.ShouldBe("a0de4463cfe441f2be873bde7cdf2d22");
+    }
+
+    [Fact]
+    public async Task GetHost_WithNoHosts_ReturnsNull()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": [], "error": null, "id": 1}""");
+
+        string? hostId = await client.GetHost();
+
+        hostId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetTorrentFiles_WithFileLargerThan2Gib_Deserializes()
+    {
+        const string response = """
+            {
+                "result": {
+                    "contents": {
+                        "big.mkv": {"type": "file", "index": 0, "path": "big.mkv", "size": 3221225472, "offset": 0, "progress": 0.0, "priority": 4},
+                        "second.mkv": {"type": "file", "index": 1, "path": "second.mkv", "size": 1024, "offset": 3221225472, "progress": 0.0, "priority": 4}
+                    },
+                    "type": "dir"
+                },
+                "error": null,
+                "id": 1
+            }
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        contents.Contents!["big.mkv"].Size.ShouldBe(3221225472);
+        contents.Contents["second.mkv"].Offset.ShouldBe(3221225472);
+    }
+
+    [Fact]
+    public async Task GetTorrentFiles_WithA5GbFileAtTheRoot_Deserializes()
+    {
+        // The response of issue #706, with the size that Deluge sent.
+        const string response = """
+            {"result": {"contents": {"Drive (2011) GBR MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay DDP 7.1 x265-QTZ.mkv": {"type": "file", "index": 0, "path": "Drive (2011) GBR MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay DDP 7.1 x265-QTZ.mkv", "size": 5010493964, "offset": 0, "progress": 1.0, "priority": 1}}, "type": "dir"}, "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        DelugeFileOrDirectory file = contents.Contents!.Values.ShouldHaveSingleItem();
+        file.Size.ShouldBe(5010493964);
+        file.Priority.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetTorrentFiles_WithA6GbFileInADirectory_Deserializes()
+    {
+        // The response of issue #707. The directory node also holds a large size.
+        const string response = """
+            {"result": {"contents": {"a-release": {"type": "dir", "contents": {"a-release.mkv": {"type": "file", "index": 2, "path": "a-release/a-release.mkv", "size": 6116913821, "offset": 497025, "progress": 0.9986286163330078, "priority": 4}}, "size": 6117415095, "priority": 4, "progress": 0.9986287287071014}}, "type": "dir"}, "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeContents? contents = await client.GetTorrentFiles("abc");
+
+        contents.ShouldNotBeNull();
+        DelugeFileOrDirectory directory = contents.Contents!["a-release"];
+        directory.Size.ShouldBe(6117415095);
+        DelugeFileOrDirectory file = directory.Contents!["a-release.mkv"];
+        file.Size.ShouldBe(6116913821);
+        file.Offset.ShouldBe(497025);
+        file.Index.ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-3600)]
+    public async Task GetStatusForAllTorrents_WithNegativeEta_Deserializes(long eta)
+    {
+        // Deluge gives -1 if the download needs more than one year.
+        string response = $$"""
+            {
+                "result": {
+                    "abc": {
+                        "hash": "abc",
+                        "state": "Downloading",
+                        "name": "T",
+                        "eta": {{eta}},
+                        "private": true,
+                        "total_done": 0,
+                        "is_finished": false,
+                        "seeding_time": 0,
+                        "ratio": -1.0,
+                        "total_seeds": -1,
+                        "download_payload_rate": 1,
+                        "total_size": 3221225472,
+                        "download_location": "/downloads",
+                        "trackers": []
+                    }
+                },
+                "error": null,
+                "id": 1
+            }
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        List<DownloadStatus>? statuses = await client.GetStatusForAllTorrents();
+
+        DownloadStatus status = statuses.ShouldNotBeNull().ShouldHaveSingleItem();
+        status.Eta.ShouldBe(eta);
+        status.Size.ShouldBe(3221225472);
+    }
+
+    [Fact]
+    public void ItemWrapper_WithNegativeEta_ReportsZero()
+    {
+        DelugeItemWrapper wrapper = new(new DownloadStatus { Hash = "abc", Eta = -1 });
+
+        wrapper.Eta.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Response_WithErrorAndUnexpectedResultShape_KeepsTheErrorMessage()
+    {
+        (DelugeClient client, _) =
+            CreateClient("""{"id":1,"result":[],"error":{"message":"boom","code":3}}""");
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.GetStatusForAllTorrents());
+        ex.Message.ShouldBe("boom");
+    }
+
+    [Fact]
+    public async Task Response_WithUnexpectedResultShape_ThrowsWithTheMethodAndTheBody()
+    {
+        (DelugeClient client, _) = CreateClient("""{"id":1,"result":"not-a-map","error":null}""");
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.GetStatusForAllTorrents());
+        ex.Message.ShouldContain("core.get_torrents_status");
+        ex.Message.ShouldContain("not-a-map");
+    }
 }

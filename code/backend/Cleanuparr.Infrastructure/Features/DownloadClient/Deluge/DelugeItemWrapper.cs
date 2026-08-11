@@ -46,7 +46,12 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
     /// <inheritdoc/>
     public int? SeederCount => Info.TotalSeeds;
 
-    public long Eta => (long)Info.Eta;
+    /// <summary>
+    /// The number of seconds that the download needs to finish.
+    /// A negative value from Deluge shows an unknown time.
+    /// This property gives 0 for a negative value.
+    /// </summary>
+    public long Eta => Info.Eta < 0 ? 0 : Info.Eta;
     
     public long SeedingTimeSeconds => Info.SeedingTime;
 
@@ -66,7 +71,13 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     public bool IsDownloading() => Info is { State: DelugeState.Downloading };
 
-    public bool IsStalled() => Info is { State: DelugeState.Downloading, DownloadSpeed: <= 0, Eta: <= 0 };
+    /// <summary>
+    /// True if the download makes no progress.
+    /// </summary>
+    /// <remarks>
+    /// A negative eta shows an unknown time, and it is not a stalled download.
+    /// </remarks>
+    public bool IsStalled() => Info is { State: DelugeState.Downloading, DownloadSpeed: <= 0, Eta: 0 };
 
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {

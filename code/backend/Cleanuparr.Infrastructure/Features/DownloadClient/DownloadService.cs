@@ -199,7 +199,16 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
+            try
+            {
+                await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
+            }
+            catch (Exception exception)
+            {
+                // The download stays in the client. The run continues with the next download.
+                _logger.LogError(exception, "failed to clean download | {name}", torrent.Name);
+                continue;
+            }
 
             _logger.LogInformation(
                 "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",

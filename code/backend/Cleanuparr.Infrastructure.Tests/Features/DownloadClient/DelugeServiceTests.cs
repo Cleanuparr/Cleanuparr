@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
@@ -43,6 +44,48 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             result.Found.ShouldBeFalse();
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
+        public async Task GetTorrentFilesThrows_StillEvaluatesTheDownload()
+        {
+            // A failure here must not stop the check of the download, and it must
+            // not report the download as absent from the client.
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var downloadStatus = new DownloadStatus
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                State = DelugeState.Downloading,
+                DownloadSpeed = 1000,
+                Trackers = new List<Tracker>(),
+                DownloadLocation = "/downloads"
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles(hash)
+                .Returns<DelugeContents?>(_ => throw new DelugeClientException("failed to deserialize"));
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false, false));
+
+            _fixture.RuleEvaluator
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false, false));
+
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+            await _fixture.RuleEvaluator.Received(1).EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>());
         }
 
         [Fact]

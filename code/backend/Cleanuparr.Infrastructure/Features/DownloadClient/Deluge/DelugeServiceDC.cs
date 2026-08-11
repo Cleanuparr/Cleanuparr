@@ -120,7 +120,7 @@ public partial class DelugeService
             }
             catch (Exception exception)
             {
-                _logger.LogDebug(exception, "failed to find torrent files for {name}", torrent.Name);
+                _logger.LogWarning(exception, "failed to find torrent files for {name}", torrent.Name);
                 continue;
             }
 

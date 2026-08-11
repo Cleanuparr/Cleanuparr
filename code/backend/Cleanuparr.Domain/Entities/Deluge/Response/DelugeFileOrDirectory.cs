@@ -37,15 +37,16 @@ public class DelugeFileOrDirectory
 
     /// <summary>
     /// The size of the node in bytes.
+    /// A file larger than 2 GiB makes this value too large for a 32-bit integer.
     /// </summary>
     [JsonPropertyName("size")]
-    public int? Size { get; set; }
+    public long? Size { get; set; }
 
     /// <summary>
     /// The offset of the file in the data of the torrent.
     /// </summary>
     [JsonPropertyName("offset")]
-    public int? Offset { get; set; }
+    public long? Offset { get; set; }
 
     /// <summary>
     /// The part of the node that Deluge has, as a value from 0 to 100.
