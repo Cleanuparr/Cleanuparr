@@ -144,6 +144,28 @@ public class RadarrClientTests
     }
 
     [Fact]
+    public async Task SearchItemsAsync_WithAnEmptyCommandBody_ReturnsEmpty()
+    {
+        // An arr answers some commands with an empty body.
+        _httpMessageHandler.SetupResponse((req, _) =>
+        {
+            if (req.Method == HttpMethod.Post && req.RequestUri!.AbsolutePath.EndsWith("/command"))
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(string.Empty, Encoding.UTF8, "application/json"),
+                });
+            }
+
+            return Task.FromResult(JsonNullResponse());
+        });
+
+        var ids = await _client.SearchItemsAsync(_arrInstance, new HashSet<SearchItem> { new() { Id = 10 } });
+
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_PostsMoviesSearchCommandWithAllIds()
     {
         // Arrange
