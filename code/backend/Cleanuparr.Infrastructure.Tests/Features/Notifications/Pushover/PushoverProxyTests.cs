@@ -346,4 +346,67 @@ public class PushoverProxyTests
     }
 
     #endregion
+
+    #region Bodies that are not JSON
+
+    [Fact]
+    public async Task SendNotification_WithAnHtmlErrorPage_ThrowsPushoverException()
+    {
+        // A proxy or a gateway sends an error page that is not JSON.
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.BadGateway, "<html><body>502 Bad Gateway</body></html>");
+
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+        ex.Message.ShouldContain("BadGateway");
+    }
+
+    [Fact]
+    public async Task SendNotification_WithAnEmptyBody_ThrowsPushoverException()
+    {
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.InternalServerError, string.Empty);
+
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+        ex.Message.ShouldContain("<empty>");
+    }
+
+    [Fact]
+    public async Task SendNotification_WithAnUnreadableBodyAndStatusOk_NamesTheBody()
+    {
+        // "Pushover API error: OK" hides the reason for the failure.
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.OK, "<html><body>Gateway timeout</body></html>");
+
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+        ex.Message.ShouldContain("unreadable response body");
+        ex.Message.ShouldContain("Gateway timeout");
+    }
+
+    [Fact]
+    public async Task SendNotification_WithAJsonNullBody_NamesTheBody()
+    {
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.OK, "null");
+
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+        ex.Message.ShouldContain("unreadable response body");
+    }
+
+    [Fact]
+    public async Task SendNotification_WithApiErrors_KeepsTheApiMessage()
+    {
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.OK, """{"status":0,"errors":["user key is invalid"]}""");
+
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
+            proxy.SendNotification(CreatePayload()));
+        ex.Message.ShouldContain("user key is invalid");
+        ex.Message.ShouldNotContain("unreadable");
+    }
+
+    #endregion
 }

@@ -52,12 +52,14 @@ public sealed class PushoverProxy : IPushoverProxy
             using var response = await _httpClient.PostAsync(ApiUrl, content);
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            PushoverResponse? pushoverResponse = JsonSerializer.Deserialize<PushoverResponse>(responseBody, CleanuparrJsonOptions.ExternalApiRead);
+            PushoverResponse? pushoverResponse = ReadResponse(responseBody);
 
             if (!response.IsSuccessStatusCode || pushoverResponse?.IsSuccess != true)
             {
-                var errorMessage = pushoverResponse?.Errors?.FirstOrDefault()
-                    ?? $"Pushover API error: {response.StatusCode}";
+                string errorMessage = pushoverResponse?.Errors?.FirstOrDefault()
+                    ?? (pushoverResponse is null
+                        ? $"unreadable response body ({response.StatusCode}): {Truncate(responseBody)}"
+                        : $"Pushover API error: {response.StatusCode}");
 
                 throw response.StatusCode switch
                 {
@@ -76,5 +78,35 @@ public sealed class PushoverProxy : IPushoverProxy
         {
             throw new PushoverException("Unable to connect to Pushover API", ex);
         }
+    }
+
+    /// <summary>
+    /// Reads the body of a response from Pushover. A body that is not JSON gives null.
+    /// </summary>
+    private static PushoverResponse? ReadResponse(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<PushoverResponse>(responseBody, CleanuparrJsonOptions.ExternalApiRead);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string Truncate(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return "<empty>";
+        }
+
+        return responseBody.Length > 200 ? responseBody[..200] : responseBody;
     }
 }
