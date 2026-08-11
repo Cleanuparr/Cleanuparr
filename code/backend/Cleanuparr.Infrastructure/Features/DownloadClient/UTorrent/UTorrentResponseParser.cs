@@ -19,9 +19,58 @@ public class UTorrentResponseParser : IUTorrentResponseParser
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    private static long AsInt64(JsonElement element) => element.Deserialize<long>(CleanuparrJsonOptions.ExternalApiRead);
+    /// <summary>
+    /// Reads a number. An unreadable value gives an error, because a priority of 0 removes a torrent.
+    /// </summary>
+    private static long AsInt64(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Number)
+        {
+            if (element.TryGetInt64(out long number))
+            {
+                return number;
+            }
 
-    private static int AsInt32(JsonElement element) => element.Deserialize<int>(CleanuparrJsonOptions.ExternalApiRead);
+            // A whole number with a decimal point, for example 1024000.0.
+            if (element.TryGetDecimal(out decimal exact)
+                && decimal.Truncate(exact) == exact
+                && exact >= long.MinValue
+                && exact <= long.MaxValue)
+            {
+                return (long)exact;
+            }
+        }
+        else if (element.ValueKind is JsonValueKind.String
+                 && long.TryParse(element.GetString(), out long text))
+        {
+            return text;
+        }
+
+        throw new JsonException($"cannot read a {element.ValueKind} value as a number");
+    }
+
+    private static int AsInt32(JsonElement element)
+    {
+        long value = AsInt64(element);
+
+        if (value is > int.MaxValue or < int.MinValue)
+        {
+            throw new JsonException($"the number {value} does not fit in a 32-bit integer");
+        }
+
+        return (int)value;
+    }
+
+    /// <summary>
+    /// Reads text. A number gives its JSON text, and a null value gives an empty string.
+    /// </summary>
+    private static string AsString(JsonElement element) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Null or JsonValueKind.Undefined => string.Empty,
+            _ => element.ToString(),
+        };
 
     /// <inheritdoc/>
     public TorrentListResponse ParseTorrentList(string json)
@@ -44,9 +93,9 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                     {
                         response.Torrents.Add(new UTorrentItem
                         {
-                            Hash = data[0].GetString() ?? string.Empty,
+                            Hash = AsString(data[0]),
                             Status = AsInt32(data[1]),
-                            Name = data[2].GetString() ?? string.Empty,
+                            Name = AsString(data[2]),
                             Size = AsInt64(data[3]),
                             Progress = AsInt32(data[4]),
                             Downloaded = AsInt64(data[5]),
@@ -55,7 +104,7 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                             UploadSpeed = AsInt32(data[8]),
                             DownloadSpeed = AsInt32(data[9]),
                             ETA = AsInt32(data[10]),
-                            Label = data[11].GetString() ?? string.Empty,
+                            Label = AsString(data[11]),
                             PeersConnected = AsInt32(data[12]),
                             PeersInSwarm = AsInt32(data[13]),
                             SeedsConnected = AsInt32(data[14]),
@@ -63,14 +112,14 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                             Availability = AsInt32(data[16]),
                             QueueOrder = AsInt32(data[17]),
                             Remaining = AsInt64(data[18]),
-                            DownloadUrl = data[19].GetString() ?? string.Empty,
-                            RssFeedUrl = data[20].GetString() ?? string.Empty,
-                            StatusMessage = data[21].GetString() ?? string.Empty,
-                            StreamId = data[22].GetString() ?? string.Empty,
+                            DownloadUrl = AsString(data[19]),
+                            RssFeedUrl = AsString(data[20]),
+                            StatusMessage = AsString(data[21]),
+                            StreamId = AsString(data[22]),
                             DateAdded = AsInt64(data[23]),
                             DateCompleted = AsInt64(data[24]),
-                            AppUpdateUrl = data[25].GetString() ?? string.Empty,
-                            SavePath = data[26].GetString() ?? string.Empty
+                            AppUpdateUrl = AsString(data[25]),
+                            SavePath = AsString(data[26])
                         });
                     }
                 }
@@ -83,7 +132,7 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                 {
                     if (labelData is { Length: > 0 })
                     {
-                        string? labelName = labelData[0].GetString();
+                        string labelName = AsString(labelData[0]);
 
                         if (!string.IsNullOrEmpty(labelName))
                         {
@@ -124,7 +173,7 @@ public class UTorrentResponseParser : IUTorrentResponseParser
             // Parse files from the nested array structure
             if (rawResponse.FilesRaw is { Length: >= 2 })
             {
-                response.Hash = rawResponse.FilesRaw[0].GetString() ?? string.Empty;
+                response.Hash = AsString(rawResponse.FilesRaw[0]);
 
                 JsonElement filesElement = rawResponse.FilesRaw[1];
 
@@ -140,7 +189,7 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                             {
                                 response.Files.Add(new UTorrentFile
                                 {
-                                    Name = fileData[0].GetString() ?? string.Empty,
+                                    Name = AsString(fileData[0]),
                                     Size = AsInt64(fileData[1]),
                                     Downloaded = AsInt64(fileData[2]),
                                     Priority = AsInt32(fileData[3]),
@@ -219,7 +268,7 @@ public class UTorrentResponseParser : IUTorrentResponseParser
                 {
                     if (labelData is { Length: > 0 })
                     {
-                        string? labelName = labelData[0].GetString();
+                        string labelName = AsString(labelData[0]);
                         if (!string.IsNullOrEmpty(labelName))
                         {
                             response.Labels.Add(labelName);

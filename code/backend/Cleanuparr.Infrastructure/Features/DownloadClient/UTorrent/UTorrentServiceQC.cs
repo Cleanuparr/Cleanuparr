@@ -45,7 +45,7 @@ public partial class UTorrentService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "Failed to get files for torrent {hash} in the download client", hash);
+            _logger.LogWarning(exception, "Failed to get files for torrent {hash} in the download client", hash);
         }
 
         bool shouldRemove = files?.Count > 0;
