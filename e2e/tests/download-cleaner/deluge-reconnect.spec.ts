@@ -58,5 +58,6 @@ test.describe.serial('Deluge reconnect', () => {
 
     const res = await testDownloadClient(token, payload());
     expect(res.ok, `test connection failed: ${res.status} ${await res.text()}`).toBe(true);
+    expect(await deluge.isWebUiConnected(), 'the Web UI did not reattach to the daemon').toBe(true);
   });
 });
