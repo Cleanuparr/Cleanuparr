@@ -20,21 +20,33 @@ public class UTorrentResponseParser : IUTorrentResponseParser
     }
 
     /// <summary>
-    /// Reads a value of a row as a number.
+    /// Reads a number. An unreadable value gives an error, because a priority of 0 removes a torrent.
     /// </summary>
-    /// <remarks>
-    /// µTorrent sends each torrent as a row of values. A build can send a value
-    /// with a type that this parser does not expect. A bad value gives 0, because
-    /// an error here stops the parse of the full torrent list.
-    /// </remarks>
-    private static long AsInt64(JsonElement element) =>
-        element.ValueKind switch
+    private static long AsInt64(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Number)
         {
-            JsonValueKind.Number => element.TryGetInt64(out long number) ? number : (long)element.GetDouble(),
-            JsonValueKind.String => long.TryParse(element.GetString(), out long text) ? text : 0,
-            JsonValueKind.True => 1,
-            _ => 0,
-        };
+            if (element.TryGetInt64(out long number))
+            {
+                return number;
+            }
+
+            // A decimal keeps a fractional or very large number exact.
+            if (element.TryGetDecimal(out decimal exact)
+                && exact >= long.MinValue
+                && exact <= long.MaxValue)
+            {
+                return (long)exact;
+            }
+        }
+        else if (element.ValueKind is JsonValueKind.String
+                 && long.TryParse(element.GetString(), out long text))
+        {
+            return text;
+        }
+
+        throw new JsonException($"cannot read a {element.ValueKind} value as a number");
+    }
 
     private static int AsInt32(JsonElement element)
     {
@@ -49,12 +61,8 @@ public class UTorrentResponseParser : IUTorrentResponseParser
     }
 
     /// <summary>
-    /// Reads a value of a row as text.
+    /// Reads text. A number gives its JSON text, and a null value gives an empty string.
     /// </summary>
-    /// <remarks>
-    /// A number or a boolean gives its JSON text. A null value gives an empty
-    /// string.
-    /// </remarks>
     private static string AsString(JsonElement element) =>
         element.ValueKind switch
         {

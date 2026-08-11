@@ -140,13 +140,12 @@ public class UTorrentResponseParserTests
     [Fact]
     public void ParseTorrentList_RowWithUnexpectedTypes_KeepsTheTorrent()
     {
-        // A row holds a number for a text value, text for a number, and a null.
-        // One row of this shape must not stop the parse of the full list.
+        // Unexpected types in a row must not stop the parse of the list.
         const string json = """
         {
             "build": 45816,
             "torrents": [
-                [12345, "137", "Ubuntu.iso", "1024000", 1000, 1024000, 0, 1000, 0, 0, null, 7,
+                [12345, "137", "Ubuntu.iso", "1024000", 1000, 1024000, 0, 1000, 0, 0, -1, 7,
                  5, 50, 5, 50, 1, 0, 0, null, null, null, null, 1700000000, 1700001000, null, "/downloads"]
             ],
             "label": []
@@ -159,10 +158,47 @@ public class UTorrentResponseParserTests
         torrent.Hash.ShouldBe("12345");
         torrent.Status.ShouldBe(137);
         torrent.Size.ShouldBe(1024000);
-        torrent.ETA.ShouldBe(0);
+        torrent.ETA.ShouldBe(-1);
         torrent.Label.ShouldBe("7");
         torrent.StatusMessage.ShouldBe(string.Empty);
         torrent.SavePath.ShouldBe("/downloads");
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("false")]
+    [InlineData("\"not a number\"")]
+    [InlineData("9223372036854775808")]
+    [InlineData("1e400")]
+    public void ParseTorrentList_RowWithAnUnreadableNumber_ThrowsUTorrentParsingException(string value)
+    {
+        // An unreadable number must not become 0, because a priority of 0 removes a torrent.
+        string json = $$"""
+        {
+            "build": 45816,
+            "torrents": [
+                ["HASH123", 137, "Ubuntu.iso", {{value}}, 1000, 1024000, 0, 1000, 0, 0, -1, "linux",
+                 5, 50, 5, 50, 1, 0, 0, "", "", "", "stream-id", 1700000000, 1700001000, "", "/downloads"]
+            ],
+            "label": []
+        }
+        """;
+
+        Should.Throw<UTorrentParsingException>(() => _parser.ParseTorrentList(json));
+    }
+
+    [Fact]
+    public void ParseFileList_WithAnUnreadablePriority_ThrowsUTorrentParsingException()
+    {
+        // An unreadable priority must not look like an unwanted file.
+        const string json = """
+        {
+            "build": 45816,
+            "files": ["HASH123", [["movie.mkv", 1024000, 1024000, null]]]
+        }
+        """;
+
+        Should.Throw<UTorrentParsingException>(() => _parser.ParseFileList(json));
     }
 
     [Fact]
