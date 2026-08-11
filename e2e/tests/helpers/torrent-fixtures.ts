@@ -237,12 +237,13 @@ export function buildLargeSparseTorrent(
   truncateSync(dataPath, sizeBytes);
   chmodIgnoringEPERM(dataPath, 0o666);
 
-  const fullPieceHash = createHash('sha1').update(Buffer.alloc(pieceLength)).digest();
+  // Each full piece holds the same zeros, and it gets the same hash.
+  const fullPieceHash = computePieces(Buffer.alloc(pieceLength), pieceLength);
   const wholePieces = Math.floor(sizeBytes / pieceLength);
   const remainder = sizeBytes % pieceLength;
   const pieceHashes: Buffer[] = Array.from({ length: wholePieces }, () => fullPieceHash);
   if (remainder > 0) {
-    pieceHashes.push(createHash('sha1').update(Buffer.alloc(remainder)).digest());
+    pieceHashes.push(computePieces(Buffer.alloc(remainder), pieceLength));
   }
 
   const info = {
