@@ -46,7 +46,7 @@ public partial class DelugeService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "failed to find files in the download client | {name}", torrent.Name);
+            _logger.LogWarning(exception, "failed to find files in the download client | {name}", torrent.Name);
         }
         
 
