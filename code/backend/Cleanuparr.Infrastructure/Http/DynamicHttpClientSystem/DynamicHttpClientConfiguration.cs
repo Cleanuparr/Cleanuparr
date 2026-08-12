@@ -103,15 +103,7 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
         var retryPolicy = HttpPolicyExtensions
             .HandleTransientHttpError();
 
-        if (retryConfig.ExcludeUnauthorized)
-        {
-            retryPolicy = retryPolicy.OrResult(response => 
-                !response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.Unauthorized);
-        }
-        else
-        {
-            retryPolicy = retryPolicy.OrResult(response => !response.IsSuccessStatusCode);
-        }
+        retryPolicy = retryPolicy.OrResult(response => IsRetryable(response, retryConfig.ExcludeUnauthorized));
 
         var policy = retryPolicy.WaitAndRetryAsync(
             retryConfig.MaxRetries, 
@@ -119,6 +111,21 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
         );
 
         builder.AdditionalHandlers.Add(new PolicyHttpMessageHandler(policy));
+    }
+
+    internal static bool IsRetryable(HttpResponseMessage response, bool excludeUnauthorized)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return false;
+        }
+
+        if (response.StatusCode is HttpStatusCode.Conflict)
+        {
+            return false;
+        }
+
+        return !excludeUnauthorized || response.StatusCode != HttpStatusCode.Unauthorized;
     }
 
     public void Configure(HttpClientFactoryOptions options)
