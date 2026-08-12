@@ -124,7 +124,7 @@ services:
       - ./test-data/qbittorrent-config:/config
       - ./test-data/downloads/qbittorrent:/downloads
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:8090/api/v2/app/version > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8090/api/v2/app/version > /dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60
@@ -162,7 +162,7 @@ services:
       - ./test-data/deluge-config:/config
       - ./test-data/downloads/deluge:/downloads
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://localhost:8112 > /dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8112 > /dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60
