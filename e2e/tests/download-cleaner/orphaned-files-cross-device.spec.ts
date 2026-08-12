@@ -125,11 +125,14 @@ test.describe.serial('Orphaned files cleanup — cross-device move', () => {
     resetDirectory(HOST_SCAN_DIR);
     resetDirectory(HOST_ORPHANED_MOUNT);
 
-    const orphanTree = join(HOST_SCAN_DIR, 'xdev-show', 'season 1');
+    const orphanRoot = join(HOST_SCAN_DIR, 'xdev-show');
+    const orphanTree = join(orphanRoot, 'season 1');
     mkdirSync(orphanTree, { recursive: true });
     writeFileSync(join(orphanTree, 'episode.mkv'), 'episode');
     writeFileSync(join(HOST_SCAN_DIR, 'loose.bin'), 'loose');
     chmodIgnoringEPERM(HOST_SCAN_DIR, 0o777);
+    chmodIgnoringEPERM(orphanRoot, 0o777);
+    chmodIgnoringEPERM(orphanTree, 0o777);
 
     const res = await updateOrphanedFilesConfig(token, clientId, {
       enabled: true,
