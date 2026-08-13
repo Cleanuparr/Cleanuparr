@@ -20,7 +20,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 /// </summary>
 public class SeekerCommandMonitor : BackgroundService
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan IdleInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan AbandonAfter = TimeSpan.FromMinutes(30);
