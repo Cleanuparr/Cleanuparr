@@ -194,7 +194,7 @@ public class SeekerIntegrationTests : IDisposable
         searchEvent.JobRunId.ShouldBe(_fixture.JobRunId);
         searchEvent.ArrInstanceId.ShouldBe(instance.Id);
         searchEvent.IsDryRun.ShouldBe(true);
-        searchEvent.SearchStatus.ShouldBe(SearchCommandStatus.Pending);
+        searchEvent.SearchStatus.ShouldBeNull();
         searchEvent.CompletedAt.ShouldBeNull();
         searchEvent.CycleId.ShouldBeNull();
         searchEvent.StrikeId.ShouldBeNull();

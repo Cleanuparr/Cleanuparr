@@ -695,6 +695,20 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
+    public async Task PublishSearchTriggered_ForDryRun_LeavesSearchStatusUnset()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered(
+            "Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing, isDryRun: true);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.IsDryRun.ShouldBeTrue();
+        savedEvent.SearchStatus.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task PublishSearchTriggered_SetsCycleId()
     {
         // Arrange

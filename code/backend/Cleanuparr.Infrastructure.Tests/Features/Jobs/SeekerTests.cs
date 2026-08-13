@@ -71,7 +71,8 @@ public class SeekerTests : IDisposable
                 Arg.Any<string>(),
                 Arg.Any<SeekerSearchType>(),
                 Arg.Any<SeekerSearchReason>(),
-                Arg.Any<Guid?>())
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>())
             .Returns(Guid.NewGuid());
     }
 
@@ -139,7 +140,8 @@ public class SeekerTests : IDisposable
                 Arg.Any<string>(),
                 Arg.Any<SeekerSearchType>(),
                 Arg.Any<SeekerSearchReason>(),
-                Arg.Any<Guid?>());
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     [Fact]
@@ -165,7 +167,8 @@ public class SeekerTests : IDisposable
                 Arg.Any<string>(),
                 Arg.Any<SeekerSearchType>(),
                 Arg.Any<SeekerSearchReason>(),
-                Arg.Any<Guid?>());
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     [Fact]
@@ -207,7 +210,8 @@ public class SeekerTests : IDisposable
                 "Test Movie",
                 SeekerSearchType.Replacement,
                 SeekerSearchReason.Replacement,
-                Arg.Any<Guid?>());
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
 
         // Replacement item should be removed from the queue
         var remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
@@ -307,7 +311,8 @@ public class SeekerTests : IDisposable
                 Arg.Any<string>(),
                 SeekerSearchType.Proactive,
                 Arg.Any<SeekerSearchReason>(),
-                Arg.Any<Guid?>());
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     [Fact]
@@ -1436,7 +1441,8 @@ public class SeekerTests : IDisposable
                 Arg.Any<string>(),
                 Arg.Any<SeekerSearchType>(),
                 Arg.Any<SeekerSearchReason>(),
-                Arg.Any<Guid?>());
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     #endregion
@@ -2659,7 +2665,8 @@ public class SeekerTests : IDisposable
                 "Missing Movie",
                 SeekerSearchType.Proactive,
                 SeekerSearchReason.Missing,
-                Arg.Any<Guid?>());
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     [Fact]

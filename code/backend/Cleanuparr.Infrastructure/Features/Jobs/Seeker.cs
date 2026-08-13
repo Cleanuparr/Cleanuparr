@@ -162,7 +162,8 @@ public sealed class Seeker : IHandler
 
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
 
-            Guid eventId = await _eventPublisher.PublishSearchTriggered(item.Title, SeekerSearchType.Replacement, SeekerSearchReason.Replacement);
+            Guid eventId = await _eventPublisher.PublishSearchTriggered(
+                item.Title, SeekerSearchType.Replacement, SeekerSearchReason.Replacement, isDryRun: isDryRun);
 
             if (!isDryRun)
             {
@@ -400,7 +401,7 @@ public sealed class Seeker : IHandler
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
-                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, instanceConfig.CurrentCycleId);
+                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, instanceConfig.CurrentCycleId, isDryRun);
 
             _logger.LogInformation("Search triggered for {Item} ({Reason}) | {InstanceUrl}", candidate.Name, candidate.Reason, arrInstance.Url);
 

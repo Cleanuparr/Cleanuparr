@@ -23,7 +23,8 @@ public interface IEventPublisher
 
     Task PublishSearchNotTriggered(string hash, string itemName);
 
-    Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null);
+    Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null);
 
     Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, InstanceType instanceType, string instanceUrl, List<string>? grabbedItems = null);
+
 }

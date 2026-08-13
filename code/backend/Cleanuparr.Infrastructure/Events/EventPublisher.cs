@@ -314,14 +314,16 @@ public class EventPublisher : IEventPublisher
     /// Publishes a search triggered event with context data and notifications.
     /// Returns the event ID so the SeekerCommandMonitor can update it on completion.
     /// </summary>
-    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null)
+    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null)
     {
+        bool dryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
+
         AppEvent eventEntity = new()
         {
             EventType = EventType.SearchTriggered,
             Message = $"Search triggered for {itemTitle}",
             Severity = EventSeverity.Information,
-            SearchStatus = SearchCommandStatus.Pending,
+            SearchStatus = dryRun ? null : SearchCommandStatus.Pending,
             JobRunId = ContextProvider.TryGetJobRunId(),
             ArrInstanceId = ContextProvider.Get(ContextProvider.Keys.ArrInstanceId) as Guid?,
             DownloadClientId = ContextProvider.Get(ContextProvider.Keys.DownloadClientId) as Guid?,
@@ -335,7 +337,7 @@ public class EventPublisher : IEventPublisher
             SearchReason = searchReason,
         };
 
-        eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+        eventEntity.IsDryRun = dryRun;
 
         _context.Events.Add(eventEntity);
         await _context.SaveChangesAsync();
