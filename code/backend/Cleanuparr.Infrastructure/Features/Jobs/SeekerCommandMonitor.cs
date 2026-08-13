@@ -89,11 +89,6 @@ public class SeekerCommandMonitor : BackgroundService
 
         foreach (SeekerCommandTracker tracker in timedOut)
         {
-            string instanceName = instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? inst)
-                ? inst.Name
-                : tracker.ArrInstanceId.ToString();
-            _logger.LogWarning("Search command {CommandId} timed out for '{Title}' on {Instance}",
-                tracker.CommandId, tracker.ItemTitle, instanceName);
             tracker.Status = SearchCommandStatus.TimedOut;
         }
 
@@ -137,6 +132,9 @@ public class SeekerCommandMonitor : BackgroundService
             if (!terminalInstances.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
             {
                 // Instance was deleted; drop the orphaned tracker
+                _logger.LogDebug(
+                    "Dropping orphaned search command {CommandId} for '{Title}': arr instance {ArrInstanceId} no longer exists (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, tracker.ArrInstanceId, tracker.EventId);
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
                 continue;
             }
@@ -146,8 +144,10 @@ public class SeekerCommandMonitor : BackgroundService
 
             if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut)
             {
-                await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Failed, instanceType, instanceUrl);
-                _logger.LogWarning("Search command failed for event {EventId}", tracker.EventId);
+                await eventPublisher.PublishSearchCompleted(tracker.EventId, tracker.Status, instanceType, instanceUrl);
+                _logger.LogWarning(
+                    "Search command {CommandId} for '{Title}' on {Instance} finished with status {Status} (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, arrInstance.Name, tracker.Status, tracker.EventId);
             }
             else
             {
