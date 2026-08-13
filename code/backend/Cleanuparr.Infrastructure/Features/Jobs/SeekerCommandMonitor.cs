@@ -129,10 +129,11 @@ public class SeekerCommandMonitor : BackgroundService
 
         foreach (SeekerCommandTracker tracker in trackers.Where(t => IsTerminal(t.Status)))
         {
+            didWork = true;
+
             if (await TryPublishOutcomeAsync(tracker, instancesById, arrClientFactory, eventPublisher))
             {
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
-                didWork = true;
                 continue;
             }
 
