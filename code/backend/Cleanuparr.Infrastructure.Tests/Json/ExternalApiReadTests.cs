@@ -138,6 +138,9 @@ public class ExternalApiReadTests
     [InlineData("cancelled", ArrCommandState.Cancelled)]
     [InlineData("orphaned", ArrCommandState.Orphaned)]
     [InlineData("something-new", ArrCommandState.Unknown)]
+    [InlineData("3", ArrCommandState.Unknown)]
+    [InlineData("999", ArrCommandState.Unknown)]
+    [InlineData("completed,failed", ArrCommandState.Unknown)]
     public void CommandStatus_DeserializesState(string wireValue, ArrCommandState expected)
     {
         ArrCommandStatus result = JsonSerializer.Deserialize<ArrCommandStatus>(

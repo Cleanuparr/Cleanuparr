@@ -19,7 +19,9 @@ public sealed class ArrCommandStateConverter : JsonConverter<ArrCommandState>
 
         string? raw = reader.GetString();
 
-        return raw is not null && Enum.TryParse(raw, ignoreCase: true, out ArrCommandState parsed)
+        return raw is not null
+               && raw.All(char.IsAsciiLetter)
+               && Enum.TryParse(raw, ignoreCase: true, out ArrCommandState parsed)
             ? parsed
             : ArrCommandState.Unknown;
     }
