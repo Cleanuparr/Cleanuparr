@@ -65,7 +65,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
         _dataContext.SaveChanges();
     }
 
-    private static ITorrentItemWrapper CreateTorrent(string hash, string category, int? seederCount, string[]? tags = null)
+    private static ITorrentItemWrapper CreateTorrent(string hash, string category, int? seederCount, string[]? tags = null, double completionPercentage = 0)
     {
         var torrent = Substitute.For<ITorrentItemWrapper>();
         torrent.Hash.Returns(hash);
@@ -73,6 +73,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
         torrent.Category.Returns(category);
         torrent.SeederCount.Returns(seederCount);
         torrent.Tags.Returns(tags ?? Array.Empty<string>());
+        torrent.CompletionPercentage.Returns(completionPercentage);
         return torrent;
     }
 
@@ -136,6 +137,49 @@ public sealed class DeadTorrentServiceTests : IDisposable
 
         await _striker.Received(1).ResetStrikeAsync("hash1", Arg.Any<string>(), StrikeType.DeadTorrent);
         await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+        await _downloadService.DidNotReceiveWithAnyArgs().ChangeTorrentCategoryAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task CompletedTorrent_WithZeroSeeders_DoesNotStrikeOrMove()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(true);
+        var downloads = new List<ITorrentItemWrapper> { CreateTorrent("hash1", "movies", 0, completionPercentage: 100) };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+        await _downloadService.DidNotReceiveWithAnyArgs().ChangeTorrentCategoryAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task CompletedTorrent_WithUnavailableSeederCount_DoesNotStrikeOrMove()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(true);
+        var downloads = new List<ITorrentItemWrapper> { CreateTorrent("hash1", "movies", null, completionPercentage: 100) };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+        await _downloadService.DidNotReceiveWithAnyArgs().ChangeTorrentCategoryAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task CompletedTorrent_WithSeeders_DoesNotResetStrikes()
+    {
+        AddConfig();
+        var downloads = new List<ITorrentItemWrapper> { CreateTorrent("hash1", "movies", 5, completionPercentage: 100) };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
         await _downloadService.DidNotReceiveWithAnyArgs().ChangeTorrentCategoryAsync(default!, default!, default);
     }
 

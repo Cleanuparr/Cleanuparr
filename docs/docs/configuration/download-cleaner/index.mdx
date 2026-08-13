@@ -420,10 +420,13 @@ Categories to check for unlinked downloads. Only downloads in these categories w
 
 <p className={styles.sectionDescription}>
   A dead torrent is one whose tracker reports no seeders for a prolonged period — typically because it was removed from the tracker, or the tracker host itself is gone — so it can never reach a ratio or seed-time threshold. Instead of deleting such torrents, this feature moves them to a target category (or adds a tag/label) so you can decide what to do next via a seeding rule for that category/tag. It runs as part of the Download Cleaner job. Configured per download client in the <strong>Dead Torrents</strong> accordion.
+
+Only **partial downloads** are ever considered dead — completed torrents are excluded entirely, since a finished torrent is seeding and should keep seeding regardless of its current upload rate. So a completed torrent that has simply not been leeched yet (idle seeders, no active connections) is never flagged.
+
 </p>
 
 <Note>
-A torrent is considered dead on a run when the client reports **no seeders** — a count of `0`, an unknown count (e.g. qBittorrent's `-1`), or no count at all because the tracker is unreachable. It is only moved after it has been dead for the configured number of consecutive runs (the strike count), and **strikes reset to zero as soon as the client reports seeders again**. Supported for **qBittorrent**, **Transmission**, **Deluge**, and **µTorrent** — not **rTorrent**, which does not report a seeder count.
+A torrent is considered dead on a run when the client reports **no seeders** — a count of `0`, an unknown count (e.g. qBittorrent's `-1`), or no count at all because the tracker is unreachable. **Completed torrents are never considered dead** — only partial downloads are scanned. A torrent is moved after it has been dead for the configured number of consecutive runs (the strike count), and **strikes reset to zero as soon as the client reports seeders again**. Supported for **qBittorrent**, **Transmission**, **Deluge**, and **µTorrent** — not **rTorrent**, which does not report a seeder count.
 </Note>
 
 <ConfigSection

@@ -47,6 +47,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
         List<ITorrentItemWrapper> candidates = clientDownloads
             .Where(t => !string.IsNullOrEmpty(t.Hash))
             .Where(t => config.Categories.Any(cat => cat.Equals(t.Category, StringComparison.OrdinalIgnoreCase)))
+            .Where(t => t.CompletionPercentage < 100)
             .Where(t => config.UseTag
                 ? !t.Tags.Contains(config.TargetCategory, StringComparer.OrdinalIgnoreCase)
                 : !config.TargetCategory.Equals(t.Category, StringComparison.OrdinalIgnoreCase))
