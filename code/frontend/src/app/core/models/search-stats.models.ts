@@ -40,6 +40,7 @@ export enum SearchCommandStatus {
   Completed = 'Completed',
   Failed = 'Failed',
   TimedOut = 'TimedOut',
+  Unknown = 'Unknown',
 }
 
 export interface SearchEvent {

@@ -73,7 +73,8 @@ public class SeekerCommandMonitor : BackgroundService
         List<SeekerCommandTracker> pendingTrackers = await eventsContext.SeekerCommandTrackers
             .Where(t => t.Status != SearchCommandStatus.Completed
                 && t.Status != SearchCommandStatus.Failed
-                && t.Status != SearchCommandStatus.TimedOut)
+                && t.Status != SearchCommandStatus.TimedOut
+                && t.Status != SearchCommandStatus.Unknown)
             .ToListAsync(stoppingToken);
 
         if (pendingTrackers.Count == 0)
@@ -113,9 +114,9 @@ public class SeekerCommandMonitor : BackgroundService
             catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
             {
                 _logger.LogDebug(
-                    "Command {CommandId} is no longer known to {Instance}, treating '{Title}' as completed",
+                    "Command {CommandId} is no longer known to {Instance}, the outcome of the search for '{Title}' is unknown",
                     tracker.CommandId, arrInstance.Name, tracker.ItemTitle);
-                tracker.Status = SearchCommandStatus.Completed;
+                tracker.Status = SearchCommandStatus.Unknown;
             }
             catch (Exception ex)
             {
@@ -130,7 +131,8 @@ public class SeekerCommandMonitor : BackgroundService
         var terminalTrackers = await eventsContext.SeekerCommandTrackers
             .Where(t => t.Status == SearchCommandStatus.Completed
                 || t.Status == SearchCommandStatus.Failed
-                || t.Status == SearchCommandStatus.TimedOut)
+                || t.Status == SearchCommandStatus.TimedOut
+                || t.Status == SearchCommandStatus.Unknown)
             .ToListAsync(stoppingToken);
 
         Dictionary<Guid, ArrInstance> terminalInstances = await LoadInstancesAsync(dataContext, terminalTrackers, stoppingToken);
@@ -150,7 +152,7 @@ public class SeekerCommandMonitor : BackgroundService
             InstanceType instanceType = arrInstance.ArrConfig.Type;
             string instanceUrl = arrInstance.ExternalOrInternalUrl.ToString();
 
-            if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut)
+            if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut or SearchCommandStatus.Unknown)
             {
                 await eventPublisher.PublishSearchCompleted(tracker.EventId, tracker.Status, instanceType, instanceUrl);
                 _logger.LogWarning(
