@@ -50,6 +50,9 @@ public sealed class ArrConfigController : ControllerBase
     [HttpGet("whisparr")]
     public Task<IActionResult> GetWhisparrConfig() => GetArrConfig(InstanceType.Whisparr);
 
+    [HttpGet("sportarr")]
+    public Task<IActionResult> GetSportarrConfig() => GetArrConfig(InstanceType.Sportarr);
+
     [HttpPut("sonarr")]
     public Task<IActionResult> UpdateSonarrConfig([FromBody] UpdateArrConfigRequest request)
         => UpdateArrConfig(InstanceType.Sonarr, request);
@@ -69,6 +72,10 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPut("whisparr")]
     public Task<IActionResult> UpdateWhisparrConfig([FromBody] UpdateArrConfigRequest request)
         => UpdateArrConfig(InstanceType.Whisparr, request);
+
+    [HttpPut("sportarr")]
+    public Task<IActionResult> UpdateSportarrConfig([FromBody] UpdateArrConfigRequest request)
+        => UpdateArrConfig(InstanceType.Sportarr, request);
 
     [HttpPost("sonarr/instances")]
     public Task<IActionResult> CreateSonarrInstance([FromBody] ArrInstanceRequest request)
@@ -130,6 +137,18 @@ public sealed class ArrConfigController : ControllerBase
     public Task<IActionResult> DeleteWhisparrInstance(Guid id)
         => DeleteArrInstance(InstanceType.Whisparr, id);
 
+    [HttpPost("sportarr/instances")]
+    public Task<IActionResult> CreateSportarrInstance([FromBody] ArrInstanceRequest request)
+        => CreateArrInstance(InstanceType.Sportarr, request);
+
+    [HttpPut("sportarr/instances/{id}")]
+    public Task<IActionResult> UpdateSportarrInstance(Guid id, [FromBody] ArrInstanceRequest request)
+        => UpdateArrInstance(InstanceType.Sportarr, id, request);
+
+    [HttpDelete("sportarr/instances/{id}")]
+    public Task<IActionResult> DeleteSportarrInstance(Guid id)
+        => DeleteArrInstance(InstanceType.Sportarr, id);
+
     [HttpPost("sonarr/instances/test")]
     public Task<IActionResult> TestSonarrInstance([FromBody] TestArrInstanceRequest request)
         => TestArrInstance(InstanceType.Sonarr, request);
@@ -149,6 +168,10 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPost("whisparr/instances/test")]
     public Task<IActionResult> TestWhisparrInstance([FromBody] TestArrInstanceRequest request)
         => TestArrInstance(InstanceType.Whisparr, request);
+
+    [HttpPost("sportarr/instances/test")]
+    public Task<IActionResult> TestSportarrInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.Sportarr, request);
 
     private async Task<IActionResult> GetArrConfig(InstanceType type)
     {
@@ -375,6 +398,7 @@ public sealed class ArrConfigController : ControllerBase
         InstanceType.Lidarr => nameof(GetLidarrConfig),
         InstanceType.Readarr => nameof(GetReadarrConfig),
         InstanceType.Whisparr => nameof(GetWhisparrConfig),
+        InstanceType.Sportarr => nameof(GetSportarrConfig),
         _ => nameof(GetSonarrConfig),
     };
 }

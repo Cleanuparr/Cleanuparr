@@ -344,50 +344,55 @@ public class SonarrClient : ArrClient, ISonarrClient
         const string episodeSearch = "EpisodeSearch";
         const string seasonSearch = "SeasonSearch";
         const string seriesSearch = "SeriesSearch";
-        
+
         List<SonarrCommand> commands = new();
 
         foreach (SeriesSearchItem item in items)
         {
             SonarrCommand command = item.SearchType is SeriesSearchType.Episode
-                ? commands.FirstOrDefault() ?? new() { Name = episodeSearch, EpisodeIds = new() }
+                ? FindExistingEpisodeCommand(commands) ?? new() { Name = episodeSearch, EpisodeIds = new() }
                 : new();
-            
+
             switch (item.SearchType)
             {
                 case SeriesSearchType.Episode when command.EpisodeIds is null:
                     command.EpisodeIds = [item.Id];
                     break;
-                
+
                 case SeriesSearchType.Episode when command.EpisodeIds is not null:
                     command.EpisodeIds.Add(item.Id);
                     break;
-                
+
                 case SeriesSearchType.Season:
                     command.Name = seasonSearch;
                     command.SeasonNumber = item.Id;
                     command.SeriesId = ((SeriesSearchItem)item).SeriesId;
                     break;
-                
+
                 case SeriesSearchType.Series:
                     command.Name = seriesSearch;
                     command.SeriesId = item.Id;
                     break;
-                
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(item.SearchType), item.SearchType, null);
             }
 
-            if (item.SearchType is SeriesSearchType.Episode && commands.Count > 0)
+            if (item.SearchType is SeriesSearchType.Episode && HasExistingEpisodeCommand(commands))
             {
                 // only one command will be generated for episodes search
                 continue;
             }
-            
+
             command.SearchType = item.SearchType;
             commands.Add(command);
         }
-        
+
         return commands;
     }
+
+    // kept as-is for Sonarr; see SportarrClient for the episode-scoped override
+    protected virtual SonarrCommand? FindExistingEpisodeCommand(List<SonarrCommand> commands) => commands.FirstOrDefault();
+
+    protected virtual bool HasExistingEpisodeCommand(List<SonarrCommand> commands) => commands.Count > 0;
 }

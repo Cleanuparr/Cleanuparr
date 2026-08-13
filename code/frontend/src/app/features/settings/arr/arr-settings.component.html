@@ -62,11 +62,11 @@
       hint="A unique name to identify this instance"
       [error]="instanceForm.name().errors()[0]?.message"
       helpKey="arr:name" />
-    <app-input label="URL" placeholder="http://localhost:8989" type="url" [formField]="instanceForm.url"
+    <app-input label="URL" [placeholder]="urlPlaceholder()" type="url" [formField]="instanceForm.url"
       hint="Full URL including protocol and port"
       [error]="instanceForm.url().errors()[0]?.message"
       helpKey="arr:url" />
-    <app-input label="External URL" placeholder="https://sonarr.example.com" type="url" [formField]="instanceForm.externalUrl"
+    <app-input label="External URL" [placeholder]="externalUrlPlaceholder()" type="url" [formField]="instanceForm.externalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
       helpKey="arr:externalUrl" />
     <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [formField]="instanceForm.apiKey"

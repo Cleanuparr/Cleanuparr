@@ -40,6 +40,7 @@ public static class ServicesDI
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<CertificateValidationService>()
             .AddScoped<ISonarrClient, SonarrClient>()
+            .AddScoped<ISportarrClient, SportarrClient>()
             .AddScoped<IRadarrClient, RadarrClient>()
             .AddScoped<ILidarrClient, LidarrClient>()
             .AddScoped<IReadarrClient, ReadarrClient>()
