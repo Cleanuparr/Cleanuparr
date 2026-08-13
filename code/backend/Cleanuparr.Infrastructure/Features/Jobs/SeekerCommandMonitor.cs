@@ -23,6 +23,7 @@ public class SeekerCommandMonitor : BackgroundService
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan IdleInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan AbandonAfter = TimeSpan.FromMinutes(30);
 
     private readonly ILogger<SeekerCommandMonitor> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -70,41 +71,39 @@ public class SeekerCommandMonitor : BackgroundService
         var arrClientFactory = scope.ServiceProvider.GetRequiredService<IArrClientFactory>();
         var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
-        List<SeekerCommandTracker> pendingTrackers = await eventsContext.SeekerCommandTrackers
-            .Where(t => t.Status != SearchCommandStatus.Completed
-                && t.Status != SearchCommandStatus.Failed
-                && t.Status != SearchCommandStatus.TimedOut
-                && t.Status != SearchCommandStatus.Unknown)
+        List<SeekerCommandTracker> trackers = await eventsContext.SeekerCommandTrackers
+            .OrderBy(t => t.CreatedAt)
             .ToListAsync(stoppingToken);
 
-        if (pendingTrackers.Count == 0)
+        if (trackers.Count == 0)
         {
             return false;
         }
 
-        Dictionary<Guid, ArrInstance> instancesById = await LoadInstancesAsync(dataContext, pendingTrackers, stoppingToken);
+        Dictionary<Guid, ArrInstance> instancesById = await LoadInstancesAsync(dataContext, trackers, stoppingToken);
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        bool didWork = false;
 
-        // Handle timed-out commands
-        var timedOut = pendingTrackers
-            .Where(t => _timeProvider.GetUtcNow() - t.CreatedAt > CommandTimeout)
-            .ToList();
-
-        foreach (SeekerCommandTracker tracker in timedOut)
+        foreach (SeekerCommandTracker tracker in trackers)
         {
-            tracker.Status = SearchCommandStatus.TimedOut;
-        }
+            if (IsTerminal(tracker.Status))
+            {
+                continue;
+            }
 
-        // Poll command status for active trackers
-        var activeTrackers = pendingTrackers.Except(timedOut).ToList();
+            if (now - tracker.CreatedAt > CommandTimeout)
+            {
+                tracker.Status = SearchCommandStatus.TimedOut;
+                continue;
+            }
 
-        foreach (SeekerCommandTracker tracker in activeTrackers)
-        {
             if (!instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
             {
                 continue;
             }
 
             IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
+            didWork = true;
 
             try
             {
@@ -127,26 +126,51 @@ public class SeekerCommandMonitor : BackgroundService
 
         await eventsContext.SaveChangesAsync(stoppingToken);
 
-        // Process terminal trackers
-        var terminalTrackers = await eventsContext.SeekerCommandTrackers
-            .Where(t => t.Status == SearchCommandStatus.Completed
-                || t.Status == SearchCommandStatus.Failed
-                || t.Status == SearchCommandStatus.TimedOut
-                || t.Status == SearchCommandStatus.Unknown)
-            .ToListAsync(stoppingToken);
-
-        Dictionary<Guid, ArrInstance> terminalInstances = await LoadInstancesAsync(dataContext, terminalTrackers, stoppingToken);
-
-        foreach (SeekerCommandTracker tracker in terminalTrackers)
+        foreach (SeekerCommandTracker tracker in trackers.Where(t => IsTerminal(t.Status)))
         {
-            if (!terminalInstances.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
+            if (await TryPublishOutcomeAsync(tracker, instancesById, arrClientFactory, eventPublisher))
             {
-                // Instance was deleted; drop the orphaned tracker
-                _logger.LogDebug(
-                    "Dropping orphaned search command {CommandId} for '{Title}': arr instance {ArrInstanceId} no longer exists (event {EventId})",
-                    tracker.CommandId, tracker.ItemTitle, tracker.ArrInstanceId, tracker.EventId);
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
+                didWork = true;
                 continue;
+            }
+
+            if (now - tracker.CreatedAt > AbandonAfter)
+            {
+                _logger.LogWarning(
+                    "Abandoning search command {CommandId} for '{Title}' after repeated publish failures (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, tracker.EventId);
+                eventsContext.SeekerCommandTrackers.Remove(tracker);
+            }
+        }
+
+        try
+        {
+            await eventsContext.SaveChangesAsync(stoppingToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex, "Search command trackers changed while they were being processed");
+        }
+
+        return didWork;
+    }
+
+    private async Task<bool> TryPublishOutcomeAsync(
+        SeekerCommandTracker tracker,
+        Dictionary<Guid, ArrInstance> instancesById,
+        IArrClientFactory arrClientFactory,
+        IEventPublisher eventPublisher)
+    {
+        try
+        {
+            if (!instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
+            {
+                _logger.LogWarning(
+                    "Failing search command {CommandId} for '{Title}': arr instance {ArrInstanceId} no longer exists (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, tracker.ArrInstanceId, tracker.EventId);
+                await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Failed, default, string.Empty);
+                return true;
             }
 
             InstanceType instanceType = arrInstance.ArrConfig.Type;
@@ -158,20 +182,33 @@ public class SeekerCommandMonitor : BackgroundService
                 _logger.LogWarning(
                     "Search command {CommandId} for '{Title}' on {Instance} finished with status {Status} (event {EventId})",
                     tracker.CommandId, tracker.ItemTitle, arrInstance.Name, tracker.Status, tracker.EventId);
-            }
-            else
-            {
-                List<string>? grabbedItems = await InspectDownloadQueueAsync(tracker, arrInstance, arrClientFactory);
-                await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
-                _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);
+                return true;
             }
 
-            eventsContext.SeekerCommandTrackers.Remove(tracker);
+            List<string>? grabbedItems = await InspectDownloadQueueAsync(tracker, arrInstance, arrClientFactory);
+            await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
+            _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);
+
+            return true;
         }
-
-        await eventsContext.SaveChangesAsync(stoppingToken);
-        return true;
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to publish the outcome of search command {CommandId} for '{Title}' (event {EventId})",
+                tracker.CommandId, tracker.ItemTitle, tracker.EventId);
+            return false;
+        }
     }
+
+    private static bool IsTerminal(SearchCommandStatus status) =>
+        status is SearchCommandStatus.Completed
+            or SearchCommandStatus.Failed
+            or SearchCommandStatus.TimedOut
+            or SearchCommandStatus.Unknown;
 
     private static async Task<Dictionary<Guid, ArrInstance>> LoadInstancesAsync(
         DataContext dataContext,

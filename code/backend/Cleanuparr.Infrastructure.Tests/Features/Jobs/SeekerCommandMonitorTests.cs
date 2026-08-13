@@ -380,7 +380,134 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         tracker.Status.ShouldBe(SearchCommandStatus.Pending);
     }
 
-    private void AddTracker(Guid arrInstanceId, Guid eventId, long commandId = 1, TimeSpan? age = null)
+    [Fact]
+    public async Task Removes_the_tracker_after_publishing_the_outcome()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid());
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Completed, null));
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        await WaitForTrackerCountAsync(0);
+    }
+
+    [Fact]
+    public async Task Keeps_the_tracker_when_publishing_the_outcome_fails()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid());
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Completed, null));
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task publishAttempt = FailNextPublish();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishAttempt.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        await WaitForTrackerCountAsync(1);
+    }
+
+    [Fact]
+    public async Task Publishes_a_terminal_tracker_left_over_from_a_previous_cycle()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId, status: SearchCommandStatus.Completed);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Completed);
+        await _arrClient.DidNotReceive().GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>());
+    }
+
+    [Fact]
+    public async Task Abandons_a_tracker_that_keeps_failing_to_publish()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid(), status: SearchCommandStatus.Completed, age: TimeSpan.FromMinutes(31));
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task publishAttempt = FailNextPublish();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishAttempt.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        await WaitForTrackerCountAsync(0);
+    }
+
+    [Fact]
+    public async Task Fails_the_event_when_the_arr_instance_no_longer_exists()
+    {
+        // Arrange
+        Guid eventId = Guid.NewGuid();
+        AddTracker(Guid.NewGuid(), eventId, status: SearchCommandStatus.Completed);
+        await _eventsContext.SaveChangesAsync();
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Failed);
+
+        await _eventPublisher.Received(1).PublishSearchCompleted(
+            eventId, SearchCommandStatus.Failed, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        await WaitForTrackerCountAsync(0);
+    }
+
+    private void AddTracker(
+        Guid arrInstanceId,
+        Guid eventId,
+        long commandId = 1,
+        TimeSpan? age = null,
+        SearchCommandStatus status = SearchCommandStatus.Pending)
     {
         _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
@@ -390,9 +517,46 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             ExternalItemId = 300,
             ItemTitle = "Test Item",
             SeasonNumber = 0,
-            Status = SearchCommandStatus.Pending,
+            Status = status,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime - (age ?? TimeSpan.Zero)
         });
+    }
+
+    private Task FailNextPublish()
+    {
+        TaskCompletionSource tcs = new();
+
+        _eventPublisher.PublishSearchCompleted(
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
+            .Returns<Task>(_ =>
+            {
+                tcs.TrySetResult();
+                throw new InvalidOperationException("publish failed");
+            });
+
+        return tcs.Task;
+    }
+
+    private async Task WaitForTrackerCountAsync(int expected)
+    {
+        for (int attempt = 0; attempt < 200; attempt++)
+        {
+            try
+            {
+                if (await _eventsContext.SeekerCommandTrackers.CountAsync() == expected)
+                {
+                    return;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // the monitor is mid-cycle on the shared context
+            }
+
+            await Task.Delay(10);
+        }
+
+        (await _eventsContext.SeekerCommandTrackers.CountAsync()).ShouldBe(expected);
     }
 
     private Task<SearchCommandStatus> CaptureNextPublishedStatus()
