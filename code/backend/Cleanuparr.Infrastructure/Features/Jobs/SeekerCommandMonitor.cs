@@ -177,12 +177,15 @@ public class SeekerCommandMonitor : BackgroundService
 
     private static void UpdateTrackerStatus(SeekerCommandTracker tracker, ArrCommandStatus commandStatus)
     {
-        tracker.Status = commandStatus.Status.ToLowerInvariant() switch
+        tracker.Status = commandStatus.Status switch
         {
-            "completed" => SearchCommandStatus.Completed,
-            "failed" => SearchCommandStatus.Failed,
-            "started" => SearchCommandStatus.Started,
-            _ => tracker.Status // Keep current status for queued/other states
+            ArrCommandState.Completed => SearchCommandStatus.Completed,
+            ArrCommandState.Failed => SearchCommandStatus.Failed,
+            ArrCommandState.Aborted => SearchCommandStatus.Failed,
+            ArrCommandState.Cancelled => SearchCommandStatus.Failed,
+            ArrCommandState.Orphaned => SearchCommandStatus.Failed,
+            ArrCommandState.Started => SearchCommandStatus.Started,
+            _ => tracker.Status
         };
     }
 

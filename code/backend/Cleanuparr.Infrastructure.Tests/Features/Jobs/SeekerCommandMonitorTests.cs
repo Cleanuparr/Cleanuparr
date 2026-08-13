@@ -11,6 +11,7 @@ using Cleanuparr.Persistence.Models.State;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -90,7 +91,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventsContext.SaveChangesAsync();
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
-            .Returns(new ArrCommandStatus(1, "completed", null));
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Completed, null));
 
         // 3 episodes from same season pack share the same DownloadId
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
@@ -146,7 +147,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventsContext.SaveChangesAsync();
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
-            .Returns(new ArrCommandStatus(1, "completed", null));
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Completed, null));
 
         // Queue has records with empty DownloadId and one valid record
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
@@ -200,7 +201,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventsContext.SaveChangesAsync();
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
-            .Returns(new ArrCommandStatus(1, "completed", null));
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Completed, null));
 
         // Two different downloads for the same movie
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
@@ -251,16 +252,15 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _dataContext.SaveChangesAsync();
         await _eventsContext.SaveChangesAsync();
 
-        var publishTcs = new TaskCompletionSource<SearchCommandStatus>();
-        _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
-            .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<SearchCommandStatus>(1)));
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .Returns(new ArrCommandStatus(7, ArrCommandState.Started, null));
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
 
         // Act
         await _sut.StartAsync(_cts.Token);
         _timeProvider.Advance(TimeSpan.FromSeconds(11));
-        var publishedStatus = await publishTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
         publishedStatus.ShouldBe(SearchCommandStatus.TimedOut);
@@ -268,7 +268,145 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventPublisher.Received(1).PublishSearchCompleted(
             eventId, SearchCommandStatus.TimedOut, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
 
+        await _arrClient.DidNotReceive().GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>());
         await _arrClient.DidNotReceive().GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>());
     }
 
+    [Fact]
+    public async Task Publishes_failed_status_when_the_command_reports_failed()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Failed, null));
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Failed);
+        await _arrClient.DidNotReceive().GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>());
+    }
+
+    [Theory]
+    [InlineData(ArrCommandState.Aborted)]
+    [InlineData(ArrCommandState.Cancelled)]
+    [InlineData(ArrCommandState.Orphaned)]
+    public async Task Publishes_failed_status_for_every_unsuccessful_arr_command_state(ArrCommandState state)
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .Returns(new ArrCommandStatus(1, state, null));
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Failed);
+    }
+
+    [Fact]
+    public async Task Keeps_polling_when_the_arr_command_state_is_not_recognized()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .Returns(new ArrCommandStatus(1, ArrCommandState.Unknown, null));
+
+        Task secondPoll = CaptureNthPoll(2);
+        CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        await AdvanceUntilAsync(secondPoll);
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        SeekerCommandTracker tracker = _eventsContext.SeekerCommandTrackers.AsNoTracking().Single();
+        tracker.Status.ShouldBe(SearchCommandStatus.Pending);
+    }
+
+    private void AddTracker(Guid arrInstanceId, Guid eventId, long commandId = 1, TimeSpan? age = null)
+    {
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        {
+            ArrInstanceId = arrInstanceId,
+            CommandId = commandId,
+            EventId = eventId,
+            ExternalItemId = 300,
+            ItemTitle = "Test Item",
+            SeasonNumber = 0,
+            Status = SearchCommandStatus.Pending,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime - (age ?? TimeSpan.Zero)
+        });
+    }
+
+    private Task<SearchCommandStatus> CaptureNextPublishedStatus()
+    {
+        TaskCompletionSource<SearchCommandStatus> tcs = new();
+
+        _eventPublisher.PublishSearchCompleted(
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => tcs.TrySetResult(ci.ArgAt<SearchCommandStatus>(1)));
+
+        return tcs.Task;
+    }
+
+    private Task CaptureNthPoll(int count)
+    {
+        TaskCompletionSource tcs = new();
+        int seen = 0;
+
+        _arrClient
+            .When(client => client.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>()))
+            .Do(_ =>
+            {
+                if (Interlocked.Increment(ref seen) >= count)
+                {
+                    tcs.TrySetResult();
+                }
+            });
+
+        return tcs.Task;
+    }
+
+    private async Task AdvanceUntilAsync(Task signal)
+    {
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+
+        for (int attempt = 0; attempt < 100 && !signal.IsCompleted; attempt++)
+        {
+            await Task.Delay(10);
+            _timeProvider.Advance(TimeSpan.FromSeconds(15));
+        }
+
+        await signal.WaitAsync(TimeSpan.FromSeconds(5));
+    }
 }
