@@ -224,6 +224,55 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public async Task SearchItemsAsync_SeriesThenEpisode_PostsBothCommands()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 11);
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 10, SeriesId = 10, SearchType = SeriesSearchType.Series },
+            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 11, 11 });
+        var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
+        posts.Count.ShouldBe(2);
+        var bodies = posts
+            .Select(p => _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(p)])
+            .ToList();
+        bodies.ShouldContain(b => b != null && b.Contains("\"name\":\"SeriesSearch\"", StringComparison.OrdinalIgnoreCase) && !b.Contains("episodeIds", StringComparison.OrdinalIgnoreCase));
+        bodies.ShouldContain(b => b != null && b.Contains("\"name\":\"EpisodeSearch\"", StringComparison.OrdinalIgnoreCase) && b.Contains("\"episodeIds\":[1]", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_EpisodesAroundOtherTypes_BundlesEpisodesIntoSingleCommand()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 33);
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+            new SeriesSearchItem { Id = 4, SeriesId = 10, SearchType = SeriesSearchType.Season },
+            new SeriesSearchItem { Id = 2, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+        };
+
+        // Act
+        await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
+        posts.Count.ShouldBe(2);
+        var episodeBody = posts
+            .Select(p => _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(p)])
+            .Single(b => b != null && b.Contains("\"name\":\"EpisodeSearch\"", StringComparison.OrdinalIgnoreCase));
+        episodeBody!.ShouldContain("\"episodeIds\":[1,2]", Case.Insensitive);
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_DryRun_ReturnsEmptyAndDoesNotPost()
     {
         // Arrange — interceptor returns null on dry run

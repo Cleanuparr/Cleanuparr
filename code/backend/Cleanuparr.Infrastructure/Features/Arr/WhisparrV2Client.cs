@@ -229,7 +229,7 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
         foreach (SeriesSearchItem item in items)
         {
             WhisparrV2Command v2Command = item.SearchType is SeriesSearchType.Episode
-                ? commands.FirstOrDefault() ?? new() { Name = episodeSearch, EpisodeIds = new() }
+                ? commands.FirstOrDefault(x => x.SearchType is SeriesSearchType.Episode) ?? new() { Name = episodeSearch, EpisodeIds = new() }
                 : new();
             
             switch (item.SearchType)
@@ -257,7 +257,7 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
                     throw new ArgumentOutOfRangeException(nameof(item.SearchType), item.SearchType, null);
             }
 
-            if (item.SearchType is SeriesSearchType.Episode && commands.Count > 0)
+            if (item.SearchType is SeriesSearchType.Episode && commands.Any(x => x.SearchType is SeriesSearchType.Episode))
             {
                 // only one command will be generated for episodes search
                 continue;

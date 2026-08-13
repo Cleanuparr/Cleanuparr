@@ -17,7 +17,6 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
-// covers the GetSearchCommands override only; shared behavior is covered by SonarrClientTests
 public class SportarrClientTests
 {
     private readonly IDryRunInterceptor _dryRunInterceptor;
@@ -68,7 +67,7 @@ public class SportarrClientTests
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/system/status");
     }
 
-    #region GetSearchCommands override
+    #region GetSearchCommands
 
     [Fact]
     public async Task SearchItemsAsync_SeasonThenEpisode_StillSearchesEpisode()
