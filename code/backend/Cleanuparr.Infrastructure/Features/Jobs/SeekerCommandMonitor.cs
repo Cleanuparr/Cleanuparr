@@ -99,6 +99,7 @@ public class SeekerCommandMonitor : BackgroundService
 
             if (!instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
             {
+                tracker.Status = SearchCommandStatus.Failed;
                 continue;
             }
 

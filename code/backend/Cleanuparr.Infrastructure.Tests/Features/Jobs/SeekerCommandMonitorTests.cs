@@ -502,6 +502,32 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await WaitForTrackerCountAsync(0);
     }
 
+    [Fact]
+    public async Task Fails_a_pending_tracker_whose_arr_instance_no_longer_exists()
+    {
+        // Arrange
+        Guid eventId = Guid.NewGuid();
+        AddTracker(Guid.NewGuid(), eventId);
+        await _eventsContext.SaveChangesAsync();
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Failed);
+
+        await _eventPublisher.Received(1).PublishSearchCompleted(
+            eventId, SearchCommandStatus.Failed, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        await _arrClient.DidNotReceive().GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>());
+
+        await WaitForTrackerCountAsync(0);
+    }
+
     private void AddTracker(
         Guid arrInstanceId,
         Guid eventId,
