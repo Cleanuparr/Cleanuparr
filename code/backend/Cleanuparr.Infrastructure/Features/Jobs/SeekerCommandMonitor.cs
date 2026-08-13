@@ -94,6 +94,7 @@ public class SeekerCommandMonitor : BackgroundService
         bool didWork = false;
 
         List<SeekerCommandTracker> toPoll = [];
+        List<SeekerCommandTracker> expired = [];
 
         foreach (SeekerCommandTracker tracker in trackers)
         {
@@ -102,16 +103,17 @@ public class SeekerCommandMonitor : BackgroundService
                 continue;
             }
 
-            if (now - tracker.CreatedAt > CommandTimeout)
-            {
-                tracker.Status = SearchCommandStatus.TimedOut;
-                continue;
-            }
+            bool timedOut = now - tracker.CreatedAt > CommandTimeout;
 
             if (!instancesById.ContainsKey(tracker.ArrInstanceId))
             {
                 tracker.Status = SearchCommandStatus.Failed;
                 continue;
+            }
+
+            if (timedOut)
+            {
+                expired.Add(tracker);
             }
 
             toPoll.Add(tracker);
@@ -124,6 +126,14 @@ public class SeekerCommandMonitor : BackgroundService
             didWork = true;
 
             await PollInstanceCommandsAsync(arrClient, arrInstance, group.ToList(), eventPublisher);
+        }
+
+        foreach (SeekerCommandTracker tracker in expired.Where(tracker => !IsTerminal(tracker.Status)))
+        {
+            _logger.LogDebug(
+                "Command {CommandId} for '{Title}' is still running after {Timeout}, giving up",
+                tracker.CommandId, tracker.ItemTitle, CommandTimeout);
+            tracker.Status = SearchCommandStatus.TimedOut;
         }
 
         await eventsContext.SaveChangesAsync(stoppingToken);
