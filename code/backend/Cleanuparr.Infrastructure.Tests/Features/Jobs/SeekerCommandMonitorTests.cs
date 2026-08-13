@@ -230,4 +230,45 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         resultData!.Count.ShouldBe(2);
     }
 
+    [Fact]
+    public async Task Publishes_timed_out_status_when_command_exceeds_timeout()
+    {
+        // Arrange
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        var eventId = Guid.NewGuid();
+
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        {
+            ArrInstanceId = radarrInstance.Id,
+            CommandId = 7,
+            EventId = eventId,
+            ExternalItemId = 300,
+            ItemTitle = "Stuck Movie",
+            SeasonNumber = 0,
+            Status = SearchCommandStatus.Pending,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime - TimeSpan.FromMinutes(11)
+        });
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        var publishTcs = new TaskCompletionSource<SearchCommandStatus>();
+        _eventPublisher.PublishSearchCompleted(
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<SearchCommandStatus>(1)));
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        var publishedStatus = await publishTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.TimedOut);
+
+        await _eventPublisher.Received(1).PublishSearchCompleted(
+            eventId, SearchCommandStatus.TimedOut, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        await _arrClient.DidNotReceive().GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>());
+    }
+
 }
