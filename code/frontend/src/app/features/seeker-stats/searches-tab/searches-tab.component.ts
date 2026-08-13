@@ -50,7 +50,6 @@ const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] =
   { value: SearchCommandStatus.Completed, label: 'Completed' },
   { value: SearchCommandStatus.Failed, label: 'Failed' },
   { value: SearchCommandStatus.TimedOut, label: 'Timed Out' },
-  { value: SearchCommandStatus.Unknown, label: 'Unknown' },
 ];
 
 @Component({

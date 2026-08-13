@@ -947,6 +947,7 @@ public sealed class Seeker : IHandler
             ExternalItemId = externalItemId,
             ItemTitle = itemTitle,
             SeasonNumber = seasonNumber,
+            CreatedAt = _timeProvider.GetUtcNow(),
         });
 
         await _eventsContext.SaveChangesAsync();

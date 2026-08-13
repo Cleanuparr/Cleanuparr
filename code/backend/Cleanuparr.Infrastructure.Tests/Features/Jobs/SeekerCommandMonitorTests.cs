@@ -327,7 +327,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Publishes_unknown_status_when_arr_no_longer_knows_the_command()
+    public async Task Publishes_completed_status_when_arr_no_longer_knows_the_command()
     {
         // Arrange
         ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
@@ -338,6 +338,8 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
 
         Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
 
@@ -347,9 +349,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
-        publishedStatus.ShouldBe(SearchCommandStatus.Unknown);
-
-        await _arrClient.DidNotReceive().GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>());
+        publishedStatus.ShouldBe(SearchCommandStatus.Completed);
     }
 
     [Fact]

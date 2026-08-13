@@ -113,9 +113,9 @@ public class SeekerCommandMonitor : BackgroundService
             catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
             {
                 _logger.LogDebug(
-                    "Command {CommandId} is no longer known to {Instance}, the outcome of the search for '{Title}' is unknown",
+                    "Command {CommandId} is no longer known to {Instance}, treating '{Title}' as completed",
                     tracker.CommandId, arrInstance.Name, tracker.ItemTitle);
-                tracker.Status = SearchCommandStatus.Unknown;
+                tracker.Status = SearchCommandStatus.Completed;
             }
             catch (Exception ex)
             {
@@ -176,7 +176,7 @@ public class SeekerCommandMonitor : BackgroundService
             InstanceType instanceType = arrInstance.ArrConfig.Type;
             string instanceUrl = arrInstance.ExternalOrInternalUrl.ToString();
 
-            if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut or SearchCommandStatus.Unknown)
+            if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut)
             {
                 await eventPublisher.PublishSearchCompleted(tracker.EventId, tracker.Status, instanceType, instanceUrl);
                 _logger.LogWarning(
@@ -205,10 +205,7 @@ public class SeekerCommandMonitor : BackgroundService
     }
 
     private static bool IsTerminal(SearchCommandStatus status) =>
-        status is SearchCommandStatus.Completed
-            or SearchCommandStatus.Failed
-            or SearchCommandStatus.TimedOut
-            or SearchCommandStatus.Unknown;
+        status is SearchCommandStatus.Completed or SearchCommandStatus.Failed or SearchCommandStatus.TimedOut;
 
     private static async Task<Dictionary<Guid, ArrInstance>> LoadInstancesAsync(
         DataContext dataContext,

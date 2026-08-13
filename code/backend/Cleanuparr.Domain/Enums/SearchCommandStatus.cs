@@ -9,6 +9,5 @@ public enum SearchCommandStatus
     Started,
     Completed,
     Failed,
-    TimedOut,
-    Unknown
+    TimedOut
 }
