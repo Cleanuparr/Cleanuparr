@@ -237,8 +237,8 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     public async Task Publishes_timed_out_status_when_command_exceeds_timeout()
     {
         // Arrange
-        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
-        var eventId = Guid.NewGuid();
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
 
         _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
