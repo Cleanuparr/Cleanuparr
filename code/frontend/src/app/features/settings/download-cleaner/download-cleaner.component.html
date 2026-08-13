@@ -55,7 +55,7 @@
       }
       <div class="form-actions">
         <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasGlobalErrors() || !dirty()" (clicked)="save()">
-          {{ saved() ? 'Saved!' : 'Save' }}
+          {{ saved() ? 'Saved!' : 'Save Settings' }}
         </app-button>
       </div>
     </div>

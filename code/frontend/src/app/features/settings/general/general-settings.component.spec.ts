@@ -89,6 +89,22 @@ describe('GeneralSettingsComponent', () => {
     };
   }
 
+  function saveButton(fixture: ComponentFixture<GeneralSettingsComponent>): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('.form-actions button') as HTMLButtonElement;
+  }
+
+  it('keeps the save button disabled until an edit makes the form dirty', () => {
+    const { fixture, component } = setup();
+
+    expect(saveButton(fixture).disabled).toBe(true);
+
+    component.genForm.httpTimeout().value.set(60);
+    fixture.detectChanges();
+
+    expect(component.dirty()).toBe(true);
+    expect(saveButton(fixture).disabled).toBe(false);
+  });
+
   it('flattens the nested auth and log config into the form and stays clean', () => {
     const { component } = setup();
 

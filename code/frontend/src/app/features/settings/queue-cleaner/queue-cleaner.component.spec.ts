@@ -105,6 +105,22 @@ describe('QueueCleanerComponent', () => {
     };
   }
 
+  function saveButton(fixture: ComponentFixture<QueueCleanerComponent>): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('.form-actions button') as HTMLButtonElement;
+  }
+
+  it('keeps the save button disabled until an edit makes the form dirty', () => {
+    const { fixture, component } = setup();
+
+    expect(saveButton(fixture).disabled).toBe(true);
+
+    component.qcForm.metadataMaxStrikes().value.set(9);
+    fixture.detectChanges();
+
+    expect(component.dirty()).toBe(true);
+    expect(saveButton(fixture).disabled).toBe(false);
+  });
+
   it('loads the config into the form, parses the cron and defaults the pattern mode', () => {
     const { component } = setup();
 
