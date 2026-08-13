@@ -27,4 +27,9 @@ public interface IEventPublisher
 
     Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, InstanceType instanceType, string instanceUrl, List<string>? grabbedItems = null);
 
+    Task PublishSearchProgressed(Guid eventId, SearchCommandStatus status);
+
+    Task<int> FailStrandedSearchEvents(Guid arrInstanceId);
+
+    Task<int> FailAbandonedSearchEvents(DateTimeOffset cutoff);
 }
