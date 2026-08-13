@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -108,6 +109,13 @@ public class SeekerCommandMonitor : BackgroundService
             {
                 ArrCommandStatus status = await arrClient.GetCommandStatusAsync(arrInstance, tracker.CommandId);
                 UpdateTrackerStatus(tracker, status);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug(
+                    "Command {CommandId} is no longer known to {Instance}, treating '{Title}' as completed",
+                    tracker.CommandId, arrInstance.Name, tracker.ItemTitle);
+                tracker.Status = SearchCommandStatus.Completed;
             }
             catch (Exception ex)
             {

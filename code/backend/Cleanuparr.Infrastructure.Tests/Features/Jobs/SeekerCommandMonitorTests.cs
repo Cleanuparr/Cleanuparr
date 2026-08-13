@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Shouldly;
 using Xunit;
 
@@ -322,6 +324,32 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         // Assert
         publishedStatus.ShouldBe(SearchCommandStatus.Failed);
+    }
+
+    [Fact]
+    public async Task Publishes_completed_status_when_arr_no_longer_knows_the_command()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Completed);
     }
 
     [Fact]
