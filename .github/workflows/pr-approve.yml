@@ -1,0 +1,74 @@
+name: PR Approve (Comment Triggered)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  approve:
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request != null
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Approve PR
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const comment = context.payload.comment.body.trim();
+
+            const ALLOWED_USERS = ['flaminel'];
+
+            if (comment !== '/approve') {
+              console.log(`Comment "${comment}" is not the approve command, skipping.`);
+              return;
+            }
+
+            const login = context.payload.comment.user.login;
+            if (!ALLOWED_USERS.includes(login.toLowerCase())) {
+              console.log(`User ${login} is not allowed to approve, skipping.`);
+              return;
+            }
+
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            if (pr.data.state !== 'open') {
+              console.log('PR is not open, skipping.');
+              return;
+            }
+
+            if (pr.data.draft) {
+              console.log('PR is a draft, skipping.');
+              return;
+            }
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.data.number,
+              event: 'APPROVE',
+              body: `Approved on behalf of @${login}.`
+            });
+
+            console.log(`${login} approved PR #${pr.data.number} @ ${pr.data.head.sha}.`);
+
+            try {
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: '+1'
+              });
+            } catch (e) {
+              console.log(`Could not add reaction: ${e}`);
+            }
