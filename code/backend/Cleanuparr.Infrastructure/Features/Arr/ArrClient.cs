@@ -270,6 +270,23 @@ public abstract class ArrClient : IArrClient
         return result ?? new ArrCommandStatus(commandId, ArrCommandState.Unknown, null);
     }
 
+    /// <inheritdoc/>
+    public async Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        List<ArrCommandStatus>? result = await DeserializeStreamAsync<List<ArrCommandStatus>>(response);
+
+        return result ?? [];
+    }
+
     protected abstract string GetSystemStatusUrlPath();
     
     protected abstract string GetQueueUrlPath();

@@ -36,6 +36,11 @@ public interface IArrClient
     /// </summary>
     Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId);
 
+    /// <summary>
+    /// Gets every command the arr instance currently knows about
+    /// </summary>
+    Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance);
+
     bool IsRecordValid(QueueRecord record);
 
     /// <summary>
