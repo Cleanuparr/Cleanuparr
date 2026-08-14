@@ -380,6 +380,63 @@ public class ArrClientTests
 
     #endregion
 
+    #region GetCommandsAsync
+
+    [Fact]
+    public async Task GetCommandsAsync_SendsGetWithApiKeyAndExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new[]
+        {
+            new ArrCommandStatus(1, ArrCommandState.Started, null),
+            new ArrCommandStatus(2, ArrCommandState.Completed, "done"),
+        })));
+
+        // Act
+        List<ArrCommandStatus> commands = await _client.GetCommandsAsync(_arrInstance);
+
+        // Assert
+        commands.Count.ShouldBe(2);
+        commands[0].Id.ShouldBe(1);
+        commands[0].Status.ShouldBe(ArrCommandState.Started);
+        commands[1].Id.ShouldBe(2);
+        commands[1].Status.ShouldBe(ArrCommandState.Completed);
+        commands[1].Message.ShouldBe("done");
+
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.Method.ShouldBe(HttpMethod.Get);
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command");
+        request.Headers.GetValues("x-api-key").ShouldHaveSingleItem().ShouldBe("secret-key");
+    }
+
+    [Fact]
+    public async Task GetCommandsAsync_NullResponseBody_ReturnsEmptyList()
+    {
+        // Arrange — body deserializes to null
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("null", Encoding.UTF8, "application/json"),
+        }));
+
+        // Act
+        List<ArrCommandStatus> commands = await _client.GetCommandsAsync(_arrInstance);
+
+        // Assert
+        commands.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetCommandsAsync_NonSuccessStatus_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act / Assert
+        await Should.ThrowAsync<HttpRequestException>(() => _client.GetCommandsAsync(_arrInstance));
+    }
+
+    #endregion
+
     #region ShouldRemoveFromQueue
 
     [Fact]
