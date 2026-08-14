@@ -393,6 +393,11 @@ public class EventPublisher : IEventPublisher
             return;
         }
 
+        if (existingEvent.SearchStatus is not SearchCommandStatus.Pending)
+        {
+            return;
+        }
+
         existingEvent.SearchStatus = SearchCommandStatus.Started;
 
         await _context.SaveChangesAsync();

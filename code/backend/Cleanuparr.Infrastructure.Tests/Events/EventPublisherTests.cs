@@ -725,6 +725,24 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
+    public async Task PublishSearchStarted_ForEventThatAlreadyFailed_KeepsTheTerminalStatus()
+    {
+        // Arrange
+        Guid arrInstanceId = Guid.NewGuid();
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstanceId);
+
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        await _publisher.FailStrandedSearchEvents(arrInstanceId);
+
+        // Act
+        await _publisher.PublishSearchStarted(eventId);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstAsync(e => e.Id == eventId);
+        savedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Failed);
+    }
+
+    [Fact]
     public async Task PublishSearchStarted_ForMissingEvent_DoesNotNotifyClients()
     {
         // Act
