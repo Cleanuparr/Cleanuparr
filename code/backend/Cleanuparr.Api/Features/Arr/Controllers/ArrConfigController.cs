@@ -25,6 +25,9 @@ public sealed class ArrConfigController : ControllerBase
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IEventPublisher _eventPublisher;
 
+    /// <summary>
+    /// Creates the controller with its injected dependencies.
+    /// </summary>
     public ArrConfigController(
         ILogger<ArrConfigController> logger,
         DataContext dataContext,
