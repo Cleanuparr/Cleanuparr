@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
+  SCHEDULED_SEARCH_INTERVAL_MINUTES,
   SCHEDULED_SEARCH_TIMEOUT,
   SONARR,
   TRANSITION_TIMEOUT,
@@ -23,6 +24,9 @@ import { grabbableRelease, torznabSearchStub } from '../helpers/mocks/torznab-st
 
 const TEST_TIMEOUT = SCHEDULED_SEARCH_TIMEOUT + TRANSITION_TIMEOUT + 120_000;
 
+/** This folder exists to exercise the real schedule, so it uses the shortest one. */
+const SCHEDULED = { config: { searchInterval: SCHEDULED_SEARCH_INTERVAL_MINUTES } };
+
 /** Every arr command state Cleanuparr knows how to map. */
 const KNOWN_COMMAND_STATES = ['queued', 'started', 'completed', 'failed', 'aborted', 'cancelled', 'orphaned'];
 
@@ -43,7 +47,7 @@ test.describe('Seeker against a live arr', () => {
       const release = grabbableRelease(target.searchMode, target.release, target.category);
       await indexerMock.stubMany(release.mappings);
 
-      const instanceId = await arrangeInstance(api, target);
+      const instanceId = await arrangeInstance(api, target, SCHEDULED);
 
       await waitForArrQueue(target.arr, release.downloadId, SCHEDULED_SEARCH_TIMEOUT);
 
@@ -61,7 +65,7 @@ test.describe('Seeker against a live arr', () => {
 
     await indexerMock.stub(torznabSearchStub(SONARR.searchMode, []));
 
-    const instanceId = await arrangeInstance(api, SONARR);
+    const instanceId = await arrangeInstance(api, SONARR, SCHEDULED);
 
     await expect
       .poll(async () => (await firstSearchEvent(api, instanceId))?.searchStatus, {

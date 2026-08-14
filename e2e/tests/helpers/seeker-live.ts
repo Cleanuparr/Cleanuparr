@@ -1,5 +1,7 @@
+import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { TEST_CONFIG } from './test-config';
+import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
 import type { ArrType } from './api/arr';
 import { LiveArr, indexerMock, liveRadarr, liveSonarr } from './live-arr';
@@ -14,7 +16,15 @@ import { TORZNAB_MOVIE_CATEGORY, TORZNAB_TV_CATEGORY } from './mocks/torznab-stu
  */
 
 /** Shortest interval the Seeker config accepts, see Constants.MinSearchIntervalMinutes. */
-export const SEARCH_INTERVAL_MINUTES = 2;
+export const SCHEDULED_SEARCH_INTERVAL_MINUTES = 2;
+
+/**
+ * Longest interval the Seeker config accepts.
+ *
+ * A spec that triggers runs itself must not race a scheduled one.
+ * At six hours the schedule never fires inside a test.
+ */
+export const MANUAL_SEARCH_INTERVAL_MINUTES = 360;
 
 /**
  * How long a scheduled search takes to reach the indexer.
@@ -46,6 +56,12 @@ export interface SeededArr {
   release: string;
   /** Id of the seeded library item, which is always 1 in a freshly restored seed. */
   itemId: number;
+  /** The arr endpoint holding that item. */
+  itemPath: 'series' | 'movie';
+  /** Title the seed gave that item. */
+  seededTitle: string;
+  /** Download client category the arr grabs into, set by the seed. */
+  downloadCategory: string;
 }
 
 export const SONARR: SeededArr = {
@@ -58,6 +74,9 @@ export const SONARR: SeededArr = {
   category: TORZNAB_TV_CATEGORY,
   release: `Agatha.All.Along.S01E01.1080p.WEB-DL.DDP5.1.H.264-E2E${RUN_TAG}`,
   itemId: 1,
+  itemPath: 'series',
+  seededTitle: TEST_CONFIG.liveArr.seededSeriesTitle,
+  downloadCategory: 'tv-sonarr',
 };
 
 export const RADARR: SeededArr = {
@@ -70,9 +89,15 @@ export const RADARR: SeededArr = {
   category: TORZNAB_MOVIE_CATEGORY,
   release: `F1.2025.1080p.WEB-DL.DDP5.1.H.264-E2E${RUN_TAG}`,
   itemId: 1,
+  itemPath: 'movie',
+  seededTitle: TEST_CONFIG.liveArr.seededMovieTitle,
+  downloadCategory: 'radarr',
 };
 
 export const qbittorrent = new QBittorrentDriver();
+
+/** Outside the qBittorrent save path, so a decoy download never finds its data. */
+const DECOY_DIR = resolve(__dirname, '..', '..', 'test-data', 'torznab-src');
 
 export interface SearchEvent {
   id: string;
@@ -80,7 +105,7 @@ export interface SearchEvent {
   searchStatus: string | null;
   isDryRun: boolean;
   grabbedItems: string[] | null;
-  reason?: string;
+  searchReason: string;
 }
 
 export async function listSearchEvents(api: CleanuparrApi, instanceId: string): Promise<SearchEvent[]> {
@@ -121,10 +146,11 @@ export async function arrangeInstance(
   createdInstances.push({ type: target.type, id: instance.id });
 
   const config = await (await api.seeker.getConfig()).json();
+  // searchInterval is deliberately absent.
+  // Restoring a short one re-arms the cron between tests, which then races them.
   savedConfig ??= {
     searchEnabled: config.searchEnabled,
     proactiveSearchEnabled: config.proactiveSearchEnabled,
-    searchInterval: config.searchInterval,
     selectionStrategy: config.selectionStrategy,
     useRoundRobin: config.useRoundRobin,
     postReleaseGraceHours: config.postReleaseGraceHours,
@@ -141,13 +167,27 @@ export async function arrangeInstance(
     instances,
     searchEnabled: true,
     proactiveSearchEnabled: true,
-    searchInterval: SEARCH_INTERVAL_MINUTES,
+    searchInterval: MANUAL_SEARCH_INTERVAL_MINUTES,
     ...overrides.config,
   });
 
   // A rejected update leaves the Seeker on its old settings and the test just times out.
   if (!updated.ok) {
     throw new Error(`Seeker config update failed: ${await updated.text()}`);
+  }
+
+  // An override the API drops would make a test pass for the wrong reason.
+  const stored = await (await api.seeker.getConfig()).json();
+  const storedInstance = stored.instances.find(
+    (i: { arrInstanceId: string }) => i.arrInstanceId === instance.id,
+  );
+
+  expect(storedInstance, `the Seeker config lost instance ${instance.id}`).toBeTruthy();
+  for (const [key, value] of Object.entries(overrides.instance ?? {})) {
+    expect(storedInstance[key], `instance override ${key} did not persist`).toEqual(value);
+  }
+  for (const [key, value] of Object.entries(overrides.config ?? {})) {
+    expect(stored[key], `config override ${key} did not persist`).toEqual(value);
   }
 
   return instance.id;
@@ -199,7 +239,7 @@ export async function resetDownloads(): Promise<void> {
   await Promise.all([waitForEmptyQueue(liveSonarr), waitForEmptyQueue(liveRadarr)]);
 }
 
-async function waitForEmptyQueue(arr: LiveArr, timeoutMs = 60_000): Promise<void> {
+async function waitForEmptyQueue(arr: LiveArr, timeoutMs = 120_000): Promise<void> {
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {
@@ -221,6 +261,54 @@ export async function resetLiveArrState(): Promise<void> {
   await indexerMock.resetAll();
   await qbittorrent.ready();
   await resetDownloads();
+}
+
+/**
+ * Fills an arr's queue with downloads that belong to nothing in its library.
+ *
+ * The arr lists them because Cleanuparr asks for unknown items too.
+ * They stall with everything left to download, so they count as active.
+ */
+export async function addDecoyDownloads(target: SeededArr, count: number): Promise<void> {
+  for (let i = 0; i < count; i++) {
+    const torrent = buildSingleFileTorrent(
+      DECOY_DIR,
+      `E2E.Decoy.${RUN_TAG}.${i}`,
+      16_384,
+      'http://127.0.0.1:6969/announce',
+    );
+
+    await qbittorrent.addStalledTorrent({
+      metainfo: torrent.metainfo,
+      savePath: '/downloads',
+      category: target.downloadCategory,
+    });
+  }
+
+  // totalRecords, not the record count: a page holds at most 200.
+  await expect
+    .poll(async () => {
+      await target.arr.refreshMonitoredDownloads();
+      return (await target.arr.queuePage(1)).totalRecords;
+    }, { timeout: 90_000 })
+    .toBeGreaterThanOrEqual(count);
+
+  // Cleanuparr only counts a record with bytes left, so a complete decoy is useless.
+  const page = await target.arr.queuePage(1);
+  const active = (page.records ?? []).filter((record) => record.sizeleft > 0);
+  expect(active.length, 'the decoy downloads should still have bytes left').toBeGreaterThan(0);
+}
+
+/**
+ * Runs the Seeker and asserts it searched nothing.
+ *
+ * With the jitter patch a run reaches its search within seconds.
+ */
+export async function expectNoSearch(api: CleanuparrApi, instanceId: string, waitMs = 20_000): Promise<void> {
+  await triggerSeeker(api);
+  await new Promise((resolve) => setTimeout(resolve, waitMs));
+
+  expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
 }
 
 /**

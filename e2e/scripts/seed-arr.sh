@@ -33,6 +33,9 @@ QBIT_PORT=8090
 SONARR_TVDB_ID=412429
 # F1: recent, and its releases parse cleanly against the movie title plus year.
 RADARR_TMDB_ID=911430
+# The Wild Robot, added second and left unmonitored.
+# The specs that need two candidates monitor it themselves and restore it after.
+RADARR_SECOND_TMDB_ID=1184918
 
 log() {
   echo "[seed-arr] $*"
@@ -81,7 +84,7 @@ arr_get() {
 # An arr validates the posted item before it enriches it from its metadata provider.
 # An add therefore carries the whole lookup result, not just the id.
 merge_add_options() {
-  local root_folder="$1" add_options="$2"
+  local root_folder="$1" add_options="$2" monitored="${3:-true}"
 
   python3 -c '
 import json
@@ -91,13 +94,13 @@ item = json.load(sys.stdin)[0]
 item.update({
     "qualityProfileId": 1,
     "rootFolderPath": sys.argv[1],
-    "monitored": True,
+    "monitored": sys.argv[3] == "true",
     "seasonFolder": True,
     "minimumAvailability": "released",
     "addOptions": json.loads(sys.argv[2]),
 })
 print(json.dumps(item))
-' "$root_folder" "$add_options"
+' "$root_folder" "$add_options" "$monitored"
 }
 
 wait_for_arr() {
@@ -228,6 +231,12 @@ seed_radarr() {
   movie=$(arr_get "$RADARR_URL" "$RADARR_API_KEY" "/api/v3/movie/lookup?term=tmdb%3A$RADARR_TMDB_ID" \
     | merge_add_options '/movies' '{"searchForMovie":false}')
   arr_post "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' "$movie" > /dev/null
+
+  log "adding the second movie"
+  local second
+  second=$(arr_get "$RADARR_URL" "$RADARR_API_KEY" "/api/v3/movie/lookup?term=tmdb%3A$RADARR_SECOND_TMDB_ID" \
+    | merge_add_options '/movies' '{"searchForMovie":false}' 'false')
+  arr_post "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' "$second" > /dev/null
 
   wait_for_items "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' 'radarr movies'
 }

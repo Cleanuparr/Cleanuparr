@@ -13,6 +13,8 @@ export interface LiveArrQueueRecord {
   title: string;
   downloadId: string;
   status: string;
+  /** Bytes still to download. Cleanuparr counts a record as active only above zero. */
+  sizeleft: number;
   seriesId?: number;
   seasonNumber?: number;
   movieId?: number;
@@ -28,7 +30,36 @@ export class LiveArr {
   constructor(
     readonly url: string,
     private readonly apiKey: string,
+    private readonly queueQuery: string,
   ) {}
+
+  get<T>(path: string): Promise<T> {
+    return this.request(path) as Promise<T>;
+  }
+
+  post<T>(path: string, body: unknown): Promise<T> {
+    return this.request(path, { method: 'POST', body: JSON.stringify(body) }) as Promise<T>;
+  }
+
+  put<T>(path: string, body: unknown): Promise<T> {
+    return this.request(path, { method: 'PUT', body: JSON.stringify(body) }) as Promise<T>;
+  }
+
+  delete(path: string): Promise<unknown> {
+    return this.request(path, { method: 'DELETE' });
+  }
+
+  /** Creates the tag if the arr does not have it yet, and returns its id. */
+  async ensureTag(label: string): Promise<number> {
+    const tags = await this.get<Array<{ id: number; label: string }>>('/api/v3/tag');
+    const existing = tags.find((tag) => tag.label === label);
+
+    if (existing) {
+      return existing.id;
+    }
+
+    return (await this.post<{ id: number }>('/api/v3/tag', { label })).id;
+  }
 
   private async request(path: string, init?: RequestInit): Promise<unknown> {
     const res = await fetch(`${this.url}${path}`, {
@@ -44,9 +75,17 @@ export class LiveArr {
     return text ? JSON.parse(text) : null;
   }
 
-  async queue(): Promise<LiveArrQueueRecord[]> {
-    const body = (await this.request('/api/v3/queue?pageSize=200')) as { records?: LiveArrQueueRecord[] };
+  /** Mirrors the query Cleanuparr sends, so a spec sees the same records it does. */
+  async queue(page = 1): Promise<LiveArrQueueRecord[]> {
+    const body = await this.queuePage(page);
     return body.records ?? [];
+  }
+
+  async queuePage(page = 1): Promise<{ records?: LiveArrQueueRecord[]; totalRecords: number }> {
+    return (await this.request(`/api/v3/queue?page=${page}&pageSize=200&${this.queueQuery}`)) as {
+      records?: LiveArrQueueRecord[];
+      totalRecords: number;
+    };
   }
 
   async commands(): Promise<LiveArrCommand[]> {
@@ -89,8 +128,17 @@ export class LiveArr {
   }
 }
 
-export const liveSonarr = new LiveArr(TEST_CONFIG.liveArr.sonarrUrl, TEST_CONFIG.liveArr.sonarrApiKey);
-export const liveRadarr = new LiveArr(TEST_CONFIG.liveArr.radarrUrl, TEST_CONFIG.liveArr.radarrApiKey);
+export const liveSonarr = new LiveArr(
+  TEST_CONFIG.liveArr.sonarrUrl,
+  TEST_CONFIG.liveArr.sonarrApiKey,
+  'includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true',
+);
+
+export const liveRadarr = new LiveArr(
+  TEST_CONFIG.liveArr.radarrUrl,
+  TEST_CONFIG.liveArr.radarrApiKey,
+  'includeUnknownMovieItems=true&includeMovie=true',
+);
 
 /** The fake Torznab indexer, kept out of MockServers: other suites lack its container. */
 export const indexerMock = new WireMockClient(TEST_CONFIG.mocks.indexerAdminUrl);
