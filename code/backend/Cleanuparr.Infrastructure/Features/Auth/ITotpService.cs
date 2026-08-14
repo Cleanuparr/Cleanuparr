@@ -1,3 +1,5 @@
+using Cleanuparr.Persistence.Models.Auth;
+
 namespace Cleanuparr.Infrastructure.Features.Auth;
 
 public interface ITotpService
@@ -8,4 +10,5 @@ public interface ITotpService
     List<string> GenerateRecoveryCodes(int count = 10);
     string HashRecoveryCode(string code);
     bool VerifyRecoveryCode(string code, string hash);
+    bool VerifySecondFactor(User user, string code);
 }

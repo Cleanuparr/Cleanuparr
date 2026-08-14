@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Cleanuparr.Persistence.Models.Auth;
 using OtpNet;
 
 namespace Cleanuparr.Infrastructure.Features.Auth;
@@ -72,5 +73,16 @@ public sealed class TotpService : ITotpService
         {
             return false;
         }
+    }
+
+    public bool VerifySecondFactor(User user, string code)
+    {
+        if (ValidateCode(user.TotpSecret, code))
+        {
+            return true;
+        }
+
+        return user.RecoveryCodes
+            .Any(recoveryCode => !recoveryCode.IsUsed && VerifyRecoveryCode(code, recoveryCode.CodeHash));
     }
 }

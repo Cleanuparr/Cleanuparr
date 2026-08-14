@@ -118,9 +118,9 @@ public sealed class AccountController : ControllerBase
             return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
         }
 
-        if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
+        if (!_totpService.VerifySecondFactor(user, request.TotpCode))
         {
-            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid 2FA code");
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid authenticator or recovery code");
         }
 
         // Generate new TOTP
@@ -262,9 +262,9 @@ public sealed class AccountController : ControllerBase
             return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
         }
 
-        if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
+        if (!_totpService.VerifySecondFactor(user, request.TotpCode))
         {
-            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid 2FA code");
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid authenticator or recovery code");
         }
 
         user.TotpEnabled = false;
