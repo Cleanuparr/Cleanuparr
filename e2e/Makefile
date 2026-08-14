@@ -1,4 +1,6 @@
-.PHONY: up up-core up-clients up-arr down test install setup seed-arr
+.PHONY: up up-core up-clients up-arr up-arr-fast down test install setup seed-arr
+
+ARR_SERVICES = app keycloak nginx wiremock-indexer tracker qbittorrent sonarr radarr
 
 setup:
 	bash ./scripts/setup-test-data.sh
@@ -13,7 +15,13 @@ up-clients: down setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx tracker qbittorrent transmission deluge utorrent rutorrent
 
 up-arr: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx wiremock-indexer tracker qbittorrent sonarr radarr
+	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 $(ARR_SERVICES)
+
+# Same stack, built from patched sources so the Seeker can be triggered on demand.
+# The app image is built first, then `up` reuses it instead of rebuilding it clean.
+up-arr-fast: down setup
+	bash ./scripts/with-patches.sh docker compose -f docker-compose.e2e.yml build app
+	docker compose -f docker-compose.e2e.yml up -d --remove-orphans --wait --wait-timeout 300 $(ARR_SERVICES)
 
 # Rebuilds e2e/arr-seed from scratch.
 # Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.

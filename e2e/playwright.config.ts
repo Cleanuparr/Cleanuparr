@@ -13,6 +13,7 @@ const FOLDERS = [
   'download-client',
   'general',
   'live-arr',
+  'live-arr-fast',
   'malware-blocker',
   'notifications',
   'oidc',

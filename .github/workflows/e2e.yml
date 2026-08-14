@@ -43,6 +43,11 @@ jobs:
           - name: live-arr
             make-target: up-arr
             projects: '--project=live-arr'
+          # Same stack, but the app is built from patched sources.
+          # See e2e/patches: the Seeker can be triggered instead of waited for.
+          - name: live-arr-fast
+            make-target: up-arr-fast
+            projects: '--project=live-arr-fast'
 
     name: e2e (${{ matrix.suite.name }})
 

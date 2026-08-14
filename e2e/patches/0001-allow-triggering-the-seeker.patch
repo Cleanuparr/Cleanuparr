@@ -1,0 +1,16 @@
+diff --git a/code/backend/Cleanuparr.Api/Controllers/JobsController.cs b/code/backend/Cleanuparr.Api/Controllers/JobsController.cs
+index 404d045ba..d6a5f69ac 100644
+--- a/code/backend/Cleanuparr.Api/Controllers/JobsController.cs
++++ b/code/backend/Cleanuparr.Api/Controllers/JobsController.cs
+@@ -62,11 +62,6 @@ public class JobsController : ControllerBase
+     [HttpPost("{jobType}/trigger")]
+     public async Task<IActionResult> TriggerJob(JobType jobType)
+     {
+-        if (jobType == JobType.Seeker)
+-        {
+-            return this.ProblemResult(StatusCodes.Status400BadRequest, "The Seeker job cannot be manually triggered");
+-        }
+-
+         var result = await _jobManagementService.TriggerJobOnce(jobType);
+ 
+         if (!result)
