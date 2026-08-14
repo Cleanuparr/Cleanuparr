@@ -1,0 +1,15 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPath": "/api",
+    "queryParameters": {
+      "t": { "equalTo": "caps" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/xml" },
+    "bodyFileName": "torznab-caps.xml"
+  }
+}

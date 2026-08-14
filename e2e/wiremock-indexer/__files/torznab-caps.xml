@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server version="1.0" title="E2E Indexer" strapline="" email="" url="http://127.0.0.1:9500/" image="" />
+  <limits max="100" default="50" />
+  <searching>
+    <search available="yes" supportedParams="q" />
+    <tv-search available="yes" supportedParams="q,season,ep,tvdbid" />
+    <movie-search available="yes" supportedParams="q,imdbid,tmdbid" />
+    <music-search available="no" supportedParams="q" />
+    <audio-search available="no" supportedParams="q" />
+    <book-search available="no" supportedParams="q" />
+  </searching>
+  <categories>
+    <category id="2000" name="Movies">
+      <subcat id="2040" name="Movies/HD" />
+    </category>
+    <category id="5000" name="TV">
+      <subcat id="5040" name="TV/HD" />
+    </category>
+  </categories>
+</caps>

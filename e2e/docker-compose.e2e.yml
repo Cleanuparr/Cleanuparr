@@ -64,9 +64,15 @@ services:
       retries: 30
       start_period: 10s
 
+  # The fake Torznab indexer the real Sonarr and Radarr search against. Its caps
+  # document and an empty result feed are file-based mappings, so they survive
+  # the per-test `resetAll()` and the arrs can always validate the indexer. Tests
+  # add their own higher-priority stubs for the releases they want returned.
   wiremock-indexer:
     image: wiremock/wiremock:3.10.0
     network_mode: host
+    volumes:
+      - ./wiremock-indexer:/home/wiremock
     command: ["--port", "9500", "--disable-banner"]
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9500/__admin/health || exit 1"]
