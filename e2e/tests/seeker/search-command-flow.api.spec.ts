@@ -202,7 +202,7 @@ test.describe('Seeker: search command status flow', () => {
       const event = await findSearchEvent(api, instanceId, title);
       expect(event?.searchStatus ?? null).toBeNull();
     } finally {
-      await api.general.updateConfig({ ...general, dryRun: false });
+      await api.general.updateConfig(general);
     }
   });
 });
