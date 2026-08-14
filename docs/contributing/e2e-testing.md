@@ -45,6 +45,25 @@ The containers start with a library already in place. `e2e/arr-seed/` holds a co
 
 Regenerate the seed with `make seed-arr`. That is the only step needing internet: Sonarr resolves the series through Skyhook and Radarr resolves the movie through TMDB. Re-run it when the pinned `sonarr` or `radarr` image tag changes, because a seed database is only valid for the version that wrote it.
 
+The seed holds one Sonarr series with its first season monitored, and two Radarr movies. The second movie is left unmonitored on purpose, so a spec that wants a single candidate gets one. The specs that need two monitor it themselves and put it back.
+
+### The two live folders
+
+`tests/live-arr` runs against the shipped image. It waits for the real cron schedule, which is the only place that path is exercised.
+
+`tests/live-arr-fast` runs against an image built from patched sources, started with `make up-arr-fast`. The patches live in `e2e/patches`:
+
+| Patch | What it removes |
+|-------|-----------------|
+| `0001-allow-triggering-the-seeker` | the guard that rejects `POST /api/jobs/Seeker/trigger` |
+| `0002-drop-the-seeker-jitter` | the random delay a run waits before searching |
+
+Together they turn a two-to-four minute wait per test into seconds, which is what makes a behaviour matrix affordable. `scripts/with-patches.sh` applies the patches, builds, and reverts from a `trap`, so an aborted build cannot leave the tree dirty.
+
+The split matters: the patched image is not the shipped one, so anything that depends on scheduling or timing has to stay in `tests/live-arr`. Put behaviour in `live-arr-fast` and timing in `live-arr`.
+
+Specs in `live-arr-fast` must never rely on the schedule. Its setup project parks `searchInterval` at its 360-minute maximum, and `arrangeInstance` verifies every override it sends actually persisted, so a silently dropped setting fails loudly instead of making a test pass for the wrong reason.
+
 ## How It Works
 
 1. **Docker Compose** starts Keycloak (with a pre-configured realm), the Cleanuparr app, nginx and four WireMock servers standing in for the *arr, download client, notification and blocklist endpoints
@@ -58,4 +77,4 @@ E2E tests do not run automatically. Trigger them on a pull request by commenting
 
 Only the accounts in the allowlist in `.github/workflows/pr-build.yml` can trigger a run. A command from any other account does nothing and gets no reply. Ask a maintainer to run the suite for you.
 
-The suite runs as three matrix legs split by service dependency: `core` covers the 13 folders that need only the app and its mocks, `clients` covers `download-cleaner` and `malware-blocker`, which drive the real torrent clients, and `live-arr` covers the folder that drives real Sonarr and Radarr containers.
+The suite runs as four matrix legs split by service dependency: `core` covers the 13 folders that need only the app and its mocks, `clients` covers `download-cleaner` and `malware-blocker`, which drive the real torrent clients, and `live-arr` plus `live-arr-fast` cover the folders that drive real Sonarr and Radarr containers. The `live-arr-fast` leg builds the app from patched sources; every other leg builds it clean.
