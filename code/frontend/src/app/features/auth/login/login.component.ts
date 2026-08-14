@@ -127,6 +127,11 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.error.set(err.message || 'Invalid code');
         this.loading.set(false);
+
+        const retryAfter = (err as ApiError).retryAfterSeconds;
+        if (retryAfter && retryAfter > 0) {
+          this.startCountdown(retryAfter);
+        }
       },
     });
   }
@@ -142,6 +147,11 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.error.set(err.message || 'Invalid recovery code');
         this.loading.set(false);
+
+        const retryAfter = (err as ApiError).retryAfterSeconds;
+        if (retryAfter && retryAfter > 0) {
+          this.startCountdown(retryAfter);
+        }
       },
     });
   }
