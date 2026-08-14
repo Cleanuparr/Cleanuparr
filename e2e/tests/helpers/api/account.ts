@@ -11,20 +11,20 @@ export class AccountApi {
     return this.client.put('/api/account/password', { currentPassword, newPassword });
   }
 
-  generate2fa(): Promise<Response> {
-    return this.client.post('/api/account/2fa/regenerate');
+  regenerate2fa(password: string, totpCode: string): Promise<Response> {
+    return this.client.post('/api/account/2fa/regenerate', { password, totpCode });
   }
 
   enable2fa(password: string): Promise<Response> {
     return this.client.post('/api/account/2fa/enable', { password });
   }
 
-  enable2faVerify(token: string): Promise<Response> {
-    return this.client.post('/api/account/2fa/enable/verify', { token });
+  enable2faVerify(code: string): Promise<Response> {
+    return this.client.post('/api/account/2fa/enable/verify', { code });
   }
 
-  disable2fa(password: string, code: string): Promise<Response> {
-    return this.client.post('/api/account/2fa/disable', { password, code });
+  disable2fa(password: string, totpCode: string): Promise<Response> {
+    return this.client.post('/api/account/2fa/disable', { password, totpCode });
   }
 
   getApiKey(): Promise<Response> {
