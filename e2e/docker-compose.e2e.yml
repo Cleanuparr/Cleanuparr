@@ -64,6 +64,17 @@ services:
       retries: 30
       start_period: 10s
 
+  wiremock-indexer:
+    image: wiremock/wiremock:3.10.0
+    network_mode: host
+    command: ["--port", "9500", "--disable-banner"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9500/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
   app:
     build:
       context: ../code
@@ -187,6 +198,45 @@ services:
       - ./test-data/downloads/utorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8080/gui/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  # Real Sonarr and Radarr. Their /config is restored from the committed seed in
+  # e2e/arr-seed by setup-test-data.sh, so each run starts with the same library,
+  # API key, indexer and download client. Regenerate the seed with `make seed-arr`.
+  # The image tags are pinned because the seed database is only valid for the
+  # version that wrote it.
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:4.0.19
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/sonarr-config:/config
+      - ./test-data/sonarr-tv:/tv
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:8989/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:6.3.0
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/radarr-config:/config
+      - ./test-data/radarr-movies:/movies
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:7878/ping || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60

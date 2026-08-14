@@ -9,7 +9,11 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_DATA="$HERE/test-data"
 
+ARR_SEED="$HERE/arr-seed"
+
 mkdir -p \
+  "$TEST_DATA/sonarr-tv" \
+  "$TEST_DATA/radarr-movies" \
   "$TEST_DATA/downloads/qbittorrent" \
   "$TEST_DATA/downloads/transmission" \
   "$TEST_DATA/downloads/deluge" \
@@ -41,5 +45,17 @@ WebUI\Username=admin
 WebUI\Password_PBKDF2="@ByteArray(ARQ77eY1NUZ366igo9pHIQ==:Bn3qWLqOY3qE6Z+sCx2NoO5q4nhgxhUL3eRD4Zw3+5p9C7+RmrI20bzAjcwHKqcWa+5z6QBQGckCB8sFCnVTGw==)"
 Downloads\SavePath=/downloads
 EOF
+
+# Restore Sonarr and Radarr from the committed seed. The arrs write to /config on
+# every start, so the run gets a throwaway copy and the seed stays clean.
+for arr in sonarr radarr; do
+  if [ -d "$ARR_SEED/$arr" ]; then
+    rm -rf "$TEST_DATA/$arr-config"
+    cp -R "$ARR_SEED/$arr" "$TEST_DATA/$arr-config"
+    chmod -R a+rwX "$TEST_DATA/$arr-config"
+  else
+    mkdir -p "$TEST_DATA/$arr-config"
+  fi
+done
 
 echo "test-data ready under $TEST_DATA"
