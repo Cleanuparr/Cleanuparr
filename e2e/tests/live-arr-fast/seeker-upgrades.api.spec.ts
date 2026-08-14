@@ -24,7 +24,7 @@ import { torznabSearchStub } from '../helpers/mocks/torznab-stubs';
 /** Radarr's stock HD-1080p profile, whose cutoff is Bluray-1080p. */
 const HD_1080P_PROFILE = 4;
 
-/** Below the profile cutoff, and still an allowed quality so the import succeeds. */
+/** Allowed by that profile and below its cutoff, so the import counts as upgradable. */
 const IMPORTED_FILE = 'F1 (2025) WEBDL-1080p.mkv';
 
 /** Radarr ignores a file small enough to look like a sample. */
@@ -41,39 +41,51 @@ interface Movie {
   movieFile?: { id: number; qualityCutoffNotMet: boolean };
 }
 
-/** Gives the seeded movie a real file that sits below the profile cutoff. */
+/**
+ * Gives the seeded movie a real file that sits below the profile cutoff.
+ *
+ * The stock profiles ship with upgrades turned off, and Radarr reports the
+ * cutoff as met whenever it will not upgrade, so this turns them on.
+ */
 async function importLowQualityFile(): Promise<() => Promise<void>> {
-  const original = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
+  const movie = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
+  const profile = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`);
+  const folder = join(MOVIES_DIR, movie.path.replace(/^\/movies\/?/, ''));
 
-  await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, {
-    ...original,
-    qualityProfileId: HD_1080P_PROFILE,
-  });
-
-  const folder = join(MOVIES_DIR, original.path.replace(/^\/movies\/?/, ''));
-  const file = join(folder, IMPORTED_FILE);
-  mkdirSync(folder, { recursive: true });
-  writeFileSync(file, Buffer.alloc(0));
-  truncateSync(file, FILE_SIZE_BYTES);
-
-  await RADARR.arr.post('/api/v3/command', { name: 'RescanMovie', movieIds: [RADARR.itemId] });
-
-  await expect
-    .poll(async () => (await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`)).hasFile, { timeout: 90_000 })
-    .toBe(true);
-
-  const imported = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
-  expect(imported.movieFile?.qualityCutoffNotMet, 'the imported file should not meet the cutoff').toBe(true);
-
-  return async () => {
+  const restore = async (): Promise<void> => {
     const current = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
     if (current.movieFile) {
       await RADARR.arr.delete(`/api/v3/moviefile/${current.movieFile.id}`);
     }
 
     rmSync(folder, { recursive: true, force: true });
-    await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, original);
+    await RADARR.arr.put(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`, profile);
+    await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, movie);
   };
+
+  try {
+    await RADARR.arr.put(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`, { ...profile, upgradeAllowed: true });
+    await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, { ...movie, qualityProfileId: HD_1080P_PROFILE });
+
+    mkdirSync(folder, { recursive: true });
+    const file = join(folder, IMPORTED_FILE);
+    writeFileSync(file, Buffer.alloc(0));
+    truncateSync(file, FILE_SIZE_BYTES);
+
+    await RADARR.arr.post('/api/v3/command', { name: 'RescanMovie', movieIds: [RADARR.itemId] });
+
+    await expect
+      .poll(async () => (await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`)).hasFile, { timeout: 90_000 })
+      .toBe(true);
+
+    const imported = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
+    expect(imported.movieFile?.qualityCutoffNotMet, 'the imported file should not meet the cutoff').toBe(true);
+  } catch (error) {
+    await restore();
+    throw error;
+  }
+
+  return restore;
 }
 
 test.describe('Seeker quality upgrades', () => {

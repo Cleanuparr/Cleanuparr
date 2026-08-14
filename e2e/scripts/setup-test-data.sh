@@ -15,6 +15,9 @@ ARR_SEED="$HERE/arr-seed"
 # Rebuilt on every run so the tree does not grow.
 rm -rf "$TEST_DATA/torznab-src"
 
+# Media an arr imports during a run, wiped so its library always starts empty.
+rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies"
+
 mkdir -p \
   "$TEST_DATA/torznab-src" \
   "$TEST_DATA/sonarr-tv" \
