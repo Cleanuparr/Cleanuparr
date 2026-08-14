@@ -19,6 +19,7 @@ export interface MappingRequest {
 export interface MappingResponse {
   status?: number;
   body?: string;
+  base64Body?: string;
   jsonBody?: unknown;
   bodyFileName?: string;
   headers?: Record<string, string>;
