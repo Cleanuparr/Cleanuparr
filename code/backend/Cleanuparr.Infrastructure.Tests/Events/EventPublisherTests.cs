@@ -725,6 +725,42 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
+    public async Task PublishSearchStarted_ForMissingEvent_DoesNotNotifyClients()
+    {
+        // Act
+        await _publisher.PublishSearchStarted(Guid.NewGuid());
+
+        // Assert
+        await _clientProxy.DidNotReceive().SendCoreAsync(
+            Arg.Any<string>(),
+            Arg.Any<object[]>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FailStrandedSearchEvents_WithNothingInProgress_ReturnsZero()
+    {
+        // Arrange
+        Guid arrInstanceId = Guid.NewGuid();
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstanceId);
+
+        Guid completedEventId = await _publisher.PublishSearchTriggered("Completed", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        await _publisher.PublishSearchCompleted(completedEventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://radarr");
+        _clientProxy.ClearReceivedCalls();
+
+        // Act
+        int failed = await _publisher.FailStrandedSearchEvents(arrInstanceId);
+
+        // Assert
+        failed.ShouldBe(0);
+
+        await _clientProxy.DidNotReceive().SendCoreAsync(
+            Arg.Any<string>(),
+            Arg.Any<object[]>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task FailStrandedSearchEvents_OnlyFailsEventsThatNeverCompleted()
     {
         // Arrange
