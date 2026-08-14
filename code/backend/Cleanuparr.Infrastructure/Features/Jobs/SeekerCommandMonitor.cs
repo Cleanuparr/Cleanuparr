@@ -251,7 +251,7 @@ public class SeekerCommandMonitor : BackgroundService
 
         if (tracker.Status is SearchCommandStatus.Started && previousStatus is not SearchCommandStatus.Started)
         {
-            await eventPublisher.PublishSearchProgressed(tracker.EventId, SearchCommandStatus.Started);
+            await eventPublisher.PublishSearchStarted(tracker.EventId);
         }
     }
 

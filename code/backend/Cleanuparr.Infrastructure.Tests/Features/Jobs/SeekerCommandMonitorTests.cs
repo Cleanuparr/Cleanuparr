@@ -721,7 +721,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         StubCommandState(ArrCommandState.Started);
 
         TaskCompletionSource progressTcs = new();
-        _eventPublisher.PublishSearchProgressed(Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>())
+        _eventPublisher.PublishSearchStarted(Arg.Any<Guid>())
             .Returns(Task.CompletedTask)
             .AndDoes(_ => progressTcs.TrySetResult());
 
@@ -731,7 +731,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await progressTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
-        await _eventPublisher.Received(1).PublishSearchProgressed(eventId, SearchCommandStatus.Started);
+        await _eventPublisher.Received(1).PublishSearchStarted(eventId);
 
         await _eventPublisher.DidNotReceive().PublishSearchCompleted(
             Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());

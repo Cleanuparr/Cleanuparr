@@ -710,13 +710,13 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchProgressed_UpdatesStatusWithoutCompletingTheEvent()
+    public async Task PublishSearchStarted_UpdatesStatusWithoutCompletingTheEvent()
     {
         // Arrange
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
-        await _publisher.PublishSearchProgressed(eventId, SearchCommandStatus.Started);
+        await _publisher.PublishSearchStarted(eventId);
 
         // Assert
         var savedEvent = await _context.Events.FirstAsync(e => e.Id == eventId);

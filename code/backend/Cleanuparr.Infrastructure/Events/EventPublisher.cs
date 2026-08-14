@@ -380,9 +380,9 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
-    /// Updates an existing search event with a non terminal status
+    /// Updates an existing search event with the started status
     /// </summary>
-    public async Task PublishSearchProgressed(Guid eventId, SearchCommandStatus status)
+    public async Task PublishSearchStarted(Guid eventId)
     {
         AppEvent? existingEvent = await _context.Events
             .FirstOrDefaultAsync(e => e.Id == eventId);
@@ -393,7 +393,7 @@ public class EventPublisher : IEventPublisher
             return;
         }
 
-        existingEvent.SearchStatus = status;
+        existingEvent.SearchStatus = SearchCommandStatus.Started;
 
         await _context.SaveChangesAsync();
         await NotifyClientsAsync(existingEvent);
