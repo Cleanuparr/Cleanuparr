@@ -235,7 +235,7 @@ describe('TwoFactorCardComponent', () => {
     expect(secret(fixture)).toBeNull();
   });
 
-  it('requires a password and a six digit code before offering to disable or regenerate', () => {
+  it('requires a password and a code before offering to disable or regenerate', () => {
     const { fixture } = setup({ enabled: true });
 
     expect((fixture.nativeElement.querySelector('.status-value') as HTMLElement).textContent!.trim()).toBe('Active');
@@ -243,21 +243,46 @@ describe('TwoFactorCardComponent', () => {
     expect(button(fixture, 'Regenerate 2FA').disabled).toBe(true);
 
     type(fixture, 'Enter your password', 'my-password');
-    type(fixture, 'Enter 6-digit code', '12345');
 
     expect(button(fixture, 'Disable 2FA').disabled).toBe(true);
 
-    type(fixture, 'Enter 6-digit code', '123456');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
 
     expect(button(fixture, 'Disable 2FA').disabled).toBe(false);
     expect(button(fixture, 'Regenerate 2FA').disabled).toBe(false);
+  });
+
+  it('accepts a recovery code in place of an authenticator code', async () => {
+    const { fixture, disableCalls } = setup({ enabled: true });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', 'A1B2-C3D4');
+
+    expect(button(fixture, 'Disable 2FA').disabled).toBe(false);
+
+    await card(fixture).confirmDisable2fa();
+    fixture.detectChanges();
+
+    expect(disableCalls).toEqual([['my-password', 'A1B2-C3D4']]);
+  });
+
+  it('trims surrounding whitespace off a pasted code', async () => {
+    const { fixture, regenerateCalls } = setup({ enabled: true });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '  A1B2-C3D4 ');
+
+    await card(fixture).confirmRegenerate2fa();
+    fixture.detectChanges();
+
+    expect(regenerateCalls).toEqual([{ password: 'my-password', totpCode: 'A1B2-C3D4' }]);
   });
 
   it('does not disable 2FA when the confirmation is declined', async () => {
     const { fixture, confirmations, disableCalls } = setup({ enabled: true, confirmAnswer: false });
 
     type(fixture, 'Enter your password', 'my-password');
-    type(fixture, 'Enter 6-digit code', '123456');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
     await card(fixture).confirmDisable2fa();
     fixture.detectChanges();
 
@@ -277,7 +302,7 @@ describe('TwoFactorCardComponent', () => {
     const { fixture, toasts, disableCalls } = setup({ enabled: true });
 
     type(fixture, 'Enter your password', 'my-password');
-    type(fixture, 'Enter 6-digit code', '123456');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
     await card(fixture).confirmDisable2fa();
     fixture.detectChanges();
 
@@ -292,7 +317,7 @@ describe('TwoFactorCardComponent', () => {
     const { fixture, toasts, regenerateCalls } = setup({ enabled: true });
 
     type(fixture, 'Enter your password', 'my-password');
-    type(fixture, 'Enter 6-digit code', '123456');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
     await card(fixture).confirmRegenerate2fa();
     fixture.detectChanges();
 
@@ -313,7 +338,7 @@ describe('TwoFactorCardComponent', () => {
     const { fixture, toasts } = setup({ enabled: true, regenerateFails: true });
 
     type(fixture, 'Enter your password', 'my-password');
-    type(fixture, 'Enter 6-digit code', '123456');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
     await card(fixture).confirmRegenerate2fa();
     fixture.detectChanges();
 

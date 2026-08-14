@@ -46,7 +46,7 @@
       <!-- 2FA Enabled: Regenerate or Disable -->
       @if (newRecoveryCodes().length === 0) {
         <div class="form-divider"></div>
-        <p class="section-hint">To regenerate your 2FA, enter your current password and a valid authenticator code.</p>
+        <p class="section-hint">Enter your current password and either a valid authenticator code or one of your unused recovery codes.</p>
         <app-input
           label="Current Password"
           type="password"
@@ -55,16 +55,16 @@
           (valueChange)="twoFaPassword.set($event)"
         />
         <app-input
-          label="Authenticator Code"
+          label="Authenticator or Recovery Code"
           type="text"
-          placeholder="Enter 6-digit code"
+          placeholder="Enter 6-digit code or recovery code"
           [value]="twoFaCode()"
           (valueChange)="twoFaCode.set($event)"
         />
         <div class="form-actions">
           <app-button
             variant="destructive"
-            [disabled]="!twoFaPassword() || twoFaCode().length !== 6 || regenerating2fa() || disabling2fa()"
+            [disabled]="!twoFaPassword() || !twoFaCode() || regenerating2fa() || disabling2fa()"
             (clicked)="confirmRegenerate2fa()"
           >
             @if (regenerating2fa()) {
@@ -75,7 +75,7 @@
           </app-button>
           <app-button
             variant="destructive"
-            [disabled]="!twoFaPassword() || twoFaCode().length !== 6 || disabling2fa() || regenerating2fa()"
+            [disabled]="!twoFaPassword() || !twoFaCode() || disabling2fa() || regenerating2fa()"
             (clicked)="confirmDisable2fa()"
           >
             @if (disabling2fa()) {
