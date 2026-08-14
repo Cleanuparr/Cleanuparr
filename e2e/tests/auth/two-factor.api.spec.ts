@@ -1,4 +1,5 @@
 import { test, expect, TEST_CONFIG, CleanuparrApi } from '../fixtures/base';
+import { TokenResponse } from '../helpers/api/auth';
 import { generateTotpCode } from '../helpers/totp';
 
 interface TwoFactorSetup {
@@ -43,7 +44,7 @@ async function loginWithRecoveryCode(anonymousApi: CleanuparrApi, recoveryCode: 
   const verify = await anonymousApi.auth.loginTwoFactor(loginBody.loginToken, recoveryCode, true);
   expect(verify.status).toBe(200);
 
-  const tokens = (await verify.json()).tokens;
+  const tokens: TokenResponse = await verify.json();
   return new CleanuparrApi({ token: tokens.accessToken });
 }
 
