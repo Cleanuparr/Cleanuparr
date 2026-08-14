@@ -649,6 +649,65 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         grabbedItems!.ShouldBe(["Wanted.Movie"]);
     }
 
+    [Fact]
+    public async Task Publishes_completed_status_when_the_queue_cannot_be_inspected()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .ThrowsAsync(new HttpRequestException("queue unavailable"));
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Completed);
+
+        await _eventPublisher.Received(1).PublishSearchCompleted(
+            eventId, SearchCommandStatus.Completed, Arg.Any<InstanceType>(), Arg.Any<string>(), null);
+
+        await WaitForTrackerCountAsync(0);
+    }
+
+    [Fact]
+    public async Task Keeps_polling_when_an_individual_command_check_fails()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid());
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>())
+            .ThrowsAsync(new HttpRequestException("command list unavailable"));
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
+            .ThrowsAsync(new HttpRequestException("command status unavailable"));
+
+        Task secondPoll = CaptureNthPoll(2);
+        CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        await AdvanceUntilAsync(secondPoll);
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        SeekerCommandTracker tracker = _eventsContext.SeekerCommandTrackers.AsNoTracking().Single();
+        tracker.Status.ShouldBe(SearchCommandStatus.Pending);
+    }
+
     private void StubCommandState(ArrCommandState state, long commandId = 1)
     {
         _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>())
