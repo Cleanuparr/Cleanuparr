@@ -11,7 +11,12 @@ TEST_DATA="$HERE/test-data"
 
 ARR_SEED="$HERE/arr-seed"
 
+# Torrents the fake Torznab indexer serves, one file per release.
+# Rebuilt on every run so the tree does not grow.
+rm -rf "$TEST_DATA/torznab-src"
+
 mkdir -p \
+  "$TEST_DATA/torznab-src" \
   "$TEST_DATA/sonarr-tv" \
   "$TEST_DATA/radarr-movies" \
   "$TEST_DATA/downloads/qbittorrent" \
@@ -46,8 +51,8 @@ WebUI\Password_PBKDF2="@ByteArray(ARQ77eY1NUZ366igo9pHIQ==:Bn3qWLqOY3qE6Z+sCx2No
 Downloads\SavePath=/downloads
 EOF
 
-# Restore Sonarr and Radarr from the committed seed. The arrs write to /config on
-# every start, so the run gets a throwaway copy and the seed stays clean.
+# Restore Sonarr and Radarr from the committed seed.
+# The arrs write to /config on every start, so the run gets a throwaway copy.
 for arr in sonarr radarr; do
   if [ -d "$ARR_SEED/$arr" ]; then
     rm -rf "$TEST_DATA/$arr-config"

@@ -35,7 +35,15 @@ npx playwright test --project=core
 make down
 ```
 
-`make up-core` starts the app, Keycloak, nginx and the WireMock servers. `make up-clients` adds opentracker and the five real torrent clients (qBittorrent, Transmission, Deluge, uTorrent, ruTorrent). Both run `scripts/setup-test-data.sh` first, which writes the qBittorrent config the tests authenticate against.
+`make up-core` starts the app, Keycloak, nginx and the WireMock servers. `make up-clients` adds opentracker and the five real torrent clients (qBittorrent, Transmission, Deluge, uTorrent, ruTorrent). `make up-arr` adds real Sonarr and Radarr containers, a fake Torznab indexer and qBittorrent, for the `live-arr` folder. All three run `scripts/setup-test-data.sh` first, which writes the qBittorrent config the tests authenticate against and restores the *arr configs.
+
+## Live *arr Tests
+
+`tests/live-arr/` runs the Seeker against real Sonarr and Radarr. Only the indexer is faked, because no real indexer can be shipped in the test stack. A search is a real `SeasonSearch` or `MoviesSearch` command, and the grab lands in a real qBittorrent and in the *arr's own queue.
+
+The containers start with a library already in place. `e2e/arr-seed/` holds a committed `config.xml` and database per *arr, and `setup-test-data.sh` copies them into `test-data/` on every run. CI therefore needs no metadata lookups.
+
+Regenerate the seed with `make seed-arr`. That is the only step needing internet: Sonarr resolves the series through Skyhook and Radarr resolves the movie through TMDB. Re-run it when the pinned `sonarr` or `radarr` image tag changes, because a seed database is only valid for the version that wrote it.
 
 ## How It Works
 
@@ -46,8 +54,8 @@ make down
 
 ## CI
 
-E2E tests do not run automatically. Trigger them on a pull request by commenting `/e2e`, which dispatches `.github/workflows/e2e.yml` through `.github/workflows/pr-build.yml`. The result is posted back as a PR comment; reports land in the `e2e-test-results-core` and `e2e-test-results-clients` artifacts of that run.
+E2E tests do not run automatically. Trigger them on a pull request by commenting `/e2e`, which dispatches `.github/workflows/e2e.yml` through `.github/workflows/pr-build.yml`. The result is posted back as a PR comment; reports land in the `e2e-test-results-core`, `e2e-test-results-clients` and `e2e-test-results-live-arr` artifacts of that run.
 
 Only the accounts in the allowlist in `.github/workflows/pr-build.yml` can trigger a run. A command from any other account does nothing and gets no reply. Ask a maintainer to run the suite for you.
 
-The suite runs as two matrix legs split by service dependency: `core` covers the 13 folders that need only the app and its mocks, and `clients` covers `download-cleaner` and `malware-blocker`, which drive the real torrent clients.
+The suite runs as three matrix legs split by service dependency: `core` covers the 13 folders that need only the app and its mocks, `clients` covers `download-cleaner` and `malware-blocker`, which drive the real torrent clients, and `live-arr` covers the folder that drives real Sonarr and Radarr containers.

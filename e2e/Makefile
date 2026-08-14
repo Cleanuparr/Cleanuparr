@@ -15,8 +15,8 @@ up-clients: down setup
 up-arr: down setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx wiremock-indexer tracker qbittorrent sonarr radarr
 
-# Rebuilds e2e/arr-seed from scratch. Needs internet: Sonarr reads Skyhook and
-# Radarr reads TMDB to add the library item.
+# Rebuilds e2e/arr-seed from scratch.
+# Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.
 seed-arr:
 	bash ./scripts/seed-arr.sh
 

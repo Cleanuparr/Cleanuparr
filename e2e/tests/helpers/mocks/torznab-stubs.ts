@@ -4,13 +4,10 @@ import { TEST_CONFIG } from '../test-config';
 import type { Mapping } from './wiremock-client';
 
 /**
- * Stubs for the fake Torznab indexer that the real Sonarr and Radarr containers
- * search against.
+ * Stubs for the fake Torznab indexer the real Sonarr and Radarr search against.
  *
- * The caps document and a probe result feed are file-based mappings under
- * `e2e/wiremock-indexer`, so the arrs can always validate the indexer even
- * before a test registers anything. A test adds a search stub for the release
- * it wants grabbed, plus the torrent that release points at.
+ * The caps document and a probe feed are file-based mappings in e2e/wiremock-indexer.
+ * A test adds the release it wants grabbed, plus the torrent that release points at.
  */
 
 /** Torznab search mode. Sonarr sends `tvsearch`, Radarr sends `movie`. */
@@ -23,19 +20,16 @@ export const TORZNAB_MOVIE_CATEGORY = 2040;
 /**
  * The advertised release size.
  *
- * The arrs reject a release that is far smaller than the quality definition
- * allows, and the generated torrent is a few kilobytes, so the feed advertises a
- * plausible size instead. The arrs decide on this number and never compare it
- * with the torrent.
+ * An arr rejects a release far below what the quality definition allows.
+ * It decides on this number and never compares it with the torrent.
  */
 const ADVERTISED_SIZE_BYTES = 2_147_483_648;
 
 /**
  * Where the torrent payload is written.
  *
- * Deliberately not under the qBittorrent save path: with no data on disk the
- * grabbed torrent stalls instead of completing, so the arr keeps it in the queue
- * for the test to assert on.
+ * Deliberately outside the qBittorrent save path.
+ * With no data on disk the grabbed torrent stalls and stays in the arr queue.
  */
 const TORRENT_SOURCE_DIR = resolve(__dirname, '..', '..', '..', 'test-data', 'torznab-src');
 
@@ -112,12 +106,10 @@ export interface GrabbableRelease {
 }
 
 /**
- * Builds a release the arr can actually grab: a torrent, the search response
- * that offers it, and the download link that serves it.
+ * Builds a release the arr can grab: a torrent, a search hit, a download link.
  *
- * The torrent's name is the release title, so the title the arr reports in its
- * queue — and therefore the title Cleanuparr records in `grabbedItems` — is the
- * one the test asked for.
+ * The torrent is named after the release, which is what the arr queue reports.
+ * That name is what Cleanuparr records in `grabbedItems`.
  */
 export function grabbableRelease(
   mode: TorznabSearchMode,

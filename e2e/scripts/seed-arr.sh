@@ -2,16 +2,14 @@
 #
 # Rebuild e2e/arr-seed from scratch.
 #
-# Boots Sonarr and Radarr on an empty config, configures them through their own
-# API, adds one library item each, then snapshots /config into e2e/arr-seed.
-# The e2e run restores that snapshot, so CI needs no network and every run sees
-# the same library.
+# Boots the arrs empty, configures them over their own API, adds one item each.
+# Snapshots /config into e2e/arr-seed, which the e2e run restores.
+# CI therefore needs no network and every run sees the same library.
 #
-# This script needs internet: Sonarr reads Skyhook and Radarr reads TMDB to
-# resolve the library item. It also stops the sonarr and radarr containers.
+# Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.
+# Stops the sonarr and radarr containers.
 #
-# Re-run it when the pinned image tags in docker-compose.e2e.yml change, or when
-# the seeded library has to change.
+# Re-run it when the pinned image tags change, or when the library has to change.
 #
 set -euo pipefail
 
@@ -80,8 +78,8 @@ arr_get() {
   curl -fsS "$url$path" -H "X-Api-Key: $api_key"
 }
 
-# The arrs validate the posted item before they enrich it from their metadata
-# provider, so an add has to carry the whole lookup result, not just the id.
+# An arr validates the posted item before it enriches it from its metadata provider.
+# An add therefore carries the whole lookup result, not just the id.
 merge_add_options() {
   local root_folder="$1" add_options="$2"
 
@@ -118,8 +116,8 @@ wait_for_arr() {
   return 1
 }
 
-# Waits until the arr reports at least one item of the given kind. The add call
-# returns before the metadata refresh finishes.
+# Waits until the arr reports at least one item of the given kind.
+# The add call returns before the metadata refresh finishes.
 wait_for_items() {
   local url="$1" api_key="$2" path="$3" name="$4"
 
@@ -138,8 +136,8 @@ wait_for_items() {
   return 1
 }
 
-# forceSave skips the connection test, so seeding needs neither the mock indexer
-# nor qBittorrent to be running.
+# forceSave skips the field validation, but not the connection test.
+# The mock indexer has to be up and answering caps.
 add_indexer() {
   local url="$1" api_key="$2" categories="$3"
 
@@ -208,8 +206,8 @@ seed_sonarr() {
   add_indexer "$SONARR_URL" "$SONARR_API_KEY" '[5000]'
   add_download_client "$SONARR_URL" "$SONARR_API_KEY" 'tvCategory' 'tv-sonarr'
 
-  # firstSeason leaves the specials unmonitored, so the Seeker has exactly one
-  # season to pick and the release title the spec stubs is deterministic.
+  # firstSeason leaves the specials unmonitored.
+  # The Seeker then has one season to pick and the spec's release title is fixed.
   log "adding the series"
   local series
   series=$(arr_get "$SONARR_URL" "$SONARR_API_KEY" "/api/v3/series/lookup?term=tvdb%3A$SONARR_TVDB_ID" \
@@ -245,8 +243,8 @@ snapshot() {
   mkdir -p "$dest"
   cp "$src/config.xml" "$dest/config.xml"
 
-  # The arr leaves committed rows in the write-ahead log, so the log comes along
-  # and is folded into the database before it is dropped.
+  # The arr leaves committed rows in the write-ahead log.
+  # The log comes along and is folded into the database before it is dropped.
   cp "$src/$arr.db" "$dest/$arr.db"
   for suffix in wal shm; do
     if [ -f "$src/$arr.db-$suffix" ]; then
@@ -264,8 +262,8 @@ main() {
   write_config_xml "$TEST_DATA/sonarr-config" 8989 "$SONARR_API_KEY" 'Sonarr'
   write_config_xml "$TEST_DATA/radarr-config" 7878 "$RADARR_API_KEY" 'Radarr'
 
-  # The arrs test the indexer and the download client before saving them, so both
-  # have to answer during seeding.
+  # An arr tests the indexer and the download client before it saves them.
+  # Both have to answer during seeding.
   log "starting the arrs"
   $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr
 

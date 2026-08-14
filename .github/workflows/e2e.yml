@@ -39,8 +39,7 @@ jobs:
           - name: clients
             make-target: up-clients
             projects: '--project=download-cleaner --project=malware-blocker'
-          # This folder needs real Sonarr and Radarr containers, the fake
-          # Torznab indexer, qBittorrent and the tracker.
+          # This folder needs the real arrs, the fake indexer and qBittorrent.
           - name: live-arr
             make-target: up-arr
             projects: '--project=live-arr'

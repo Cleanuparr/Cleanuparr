@@ -64,10 +64,9 @@ services:
       retries: 30
       start_period: 10s
 
-  # The fake Torznab indexer the real Sonarr and Radarr search against. Its caps
-  # document and an empty result feed are file-based mappings, so they survive
-  # the per-test `resetAll()` and the arrs can always validate the indexer. Tests
-  # add their own higher-priority stubs for the releases they want returned.
+  # The fake Torznab indexer the real Sonarr and Radarr search against.
+  # Its caps and probe feed are file-based mappings, which survive a resetAll.
+  # Tests add higher-priority stubs for the releases they want returned.
   wiremock-indexer:
     image: wiremock/wiremock:3.10.0
     network_mode: host
@@ -209,11 +208,10 @@ services:
       retries: 60
       start_period: 30s
 
-  # Real Sonarr and Radarr. Their /config is restored from the committed seed in
-  # e2e/arr-seed by setup-test-data.sh, so each run starts with the same library,
-  # API key, indexer and download client. Regenerate the seed with `make seed-arr`.
-  # The image tags are pinned because the seed database is only valid for the
-  # version that wrote it.
+  # Real Sonarr and Radarr, restored from e2e/arr-seed by setup-test-data.sh.
+  # Every run starts with the same library, API key, indexer and download client.
+  # Regenerate the seed with `make seed-arr`.
+  # The tags are pinned: a seed database is only valid for the version that wrote it.
   sonarr:
     image: lscr.io/linuxserver/sonarr:4.0.19
     network_mode: host

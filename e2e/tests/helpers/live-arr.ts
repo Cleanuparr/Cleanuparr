@@ -4,9 +4,8 @@ import { WireMockClient } from './mocks/wiremock-client';
 /**
  * Direct access to the real Sonarr and Radarr containers.
  *
- * The live-arr specs drive Cleanuparr through its own API like every other
- * spec. This helper is for the other side of the contract: reading what the arr
- * itself ended up with, and cleaning it up between tests.
+ * The specs drive Cleanuparr through its own API, like every other spec.
+ * This is the other side of the contract: what the arr itself ended up with.
  */
 
 export interface LiveArrQueueRecord {
@@ -54,11 +53,7 @@ export class LiveArr {
     return (await this.request('/api/v3/command')) as LiveArrCommand[];
   }
 
-  /**
-   * The arr only moves a grabbed download into its queue on its own refresh
-   * cycle, which runs once a minute. Tests trigger the same command so they do
-   * not have to wait for it.
-   */
+  /** The arr only queues a grab on its own refresh, which runs once a minute. */
   async refreshMonitoredDownloads(): Promise<void> {
     await this.request('/api/v3/command', {
       method: 'POST',
@@ -97,8 +92,5 @@ export class LiveArr {
 export const liveSonarr = new LiveArr(TEST_CONFIG.liveArr.sonarrUrl, TEST_CONFIG.liveArr.sonarrApiKey);
 export const liveRadarr = new LiveArr(TEST_CONFIG.liveArr.radarrUrl, TEST_CONFIG.liveArr.radarrApiKey);
 
-/**
- * The fake Torznab indexer. It is not part of {@link MockServers} because the
- * other suites run without its container.
- */
+/** The fake Torznab indexer, kept out of MockServers: other suites lack its container. */
 export const indexerMock = new WireMockClient(TEST_CONFIG.mocks.indexerAdminUrl);
