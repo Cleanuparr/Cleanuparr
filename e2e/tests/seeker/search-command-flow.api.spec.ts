@@ -31,6 +31,7 @@ async function listSearchEvents(api: CleanuparrApi, instanceId: string): Promise
   return body.items ?? body.records ?? body;
 }
 
+/** Filters by instance, because all the tests use the same mock arr and item titles are not unique. */
 async function findSearchEvent(
   api: CleanuparrApi,
   instanceId: string,
@@ -88,20 +89,24 @@ async function arrangeSearchableInstance(
   return instance.id;
 }
 
-async function expectSearchStatus(
+/** Waits for the status, then gives the event back so that the test can assert on it. */
+async function waitForSearchStatus(
   api: CleanuparrApi,
   instanceId: string,
   title: string,
   status: string | null,
-): Promise<void> {
+): Promise<SearchEvent | undefined> {
   await expect
     .poll(async () => (await findSearchEvent(api, instanceId, title))?.searchStatus, {
       timeout: TRANSITION_TIMEOUT,
     })
     .toBe(status);
+
+  return findSearchEvent(api, instanceId, title);
 }
 
 test.describe('Seeker: search command status flow', () => {
+  // The app keeps its data between the tests, thus each test must remove what it made.
   test.afterEach(async ({ api }) => {
     for (const id of createdInstanceIds.splice(0)) {
       await api.arr.deleteInstance('radarr', id);
@@ -123,7 +128,8 @@ test.describe('Seeker: search command status flow', () => {
 
     await api.jobs.trigger('Seeker');
 
-    await expectSearchStatus(api, instanceId, title, 'Completed');
+    const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
+    expect(event?.searchStatus).toBe('Completed');
   });
 
   test('reaches failed when the arr aborts the command', async ({ api, mocks }) => {
@@ -136,7 +142,8 @@ test.describe('Seeker: search command status flow', () => {
 
     await api.jobs.trigger('Seeker');
 
-    await expectSearchStatus(api, instanceId, title, 'Failed');
+    const event = await waitForSearchStatus(api, instanceId, title, 'Failed');
+    expect(event?.searchStatus).toBe('Failed');
   });
 
   test('reaches completed when the arr has forgotten the command', async ({ api, mocks }) => {
@@ -150,7 +157,8 @@ test.describe('Seeker: search command status flow', () => {
 
     await api.jobs.trigger('Seeker');
 
-    await expectSearchStatus(api, instanceId, title, 'Completed');
+    const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
+    expect(event?.searchStatus).toBe('Completed');
   });
 
   test('fails the in flight event when the arr instance is deleted', async ({ api, mocks }) => {
@@ -169,7 +177,8 @@ test.describe('Seeker: search command status flow', () => {
 
     await api.arr.deleteInstance('radarr', instanceId);
 
-    await expectSearchStatus(api, instanceId, title, 'Failed');
+    const event = await waitForSearchStatus(api, instanceId, title, 'Failed');
+    expect(event?.searchStatus).toBe('Failed');
   });
 
   test('leaves dry run search events without a status', async ({ api, mocks }) => {
