@@ -330,12 +330,10 @@ public sealed class ArrConfigController : ControllerBase
                 .Where(e => e.ArrInstanceId == arrInstanceId)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            await _eventPublisher.FailStrandedSearchEvents(arrInstanceId);
-
             await _eventsContext.SeekerCommandTrackers
                 .Where(e => e.ArrInstanceId == arrInstanceId)
                 .ExecuteDeleteAsync(cancellationToken);
-            
+
             await transaction.CommitAsync(cancellationToken);
         }
         catch
@@ -343,6 +341,8 @@ public sealed class ArrConfigController : ControllerBase
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+
+        await _eventPublisher.FailStrandedSearchEvents(arrInstanceId);
     }
 
     private async Task<IActionResult> TestArrInstance(InstanceType type, TestArrInstanceRequest request)
