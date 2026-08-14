@@ -15,6 +15,9 @@ const COMMAND_ID = 4242;
 /** The monitor polls once a minute and the Seeker adds up to 30s of jitter. */
 const TRANSITION_TIMEOUT = 180_000;
 
+const createdInstanceIds: string[] = [];
+let savedSearchSettings: Record<string, unknown> | undefined;
+
 interface SearchEvent {
   id: string;
   itemTitle: string;
@@ -61,7 +64,15 @@ async function arrangeSearchableInstance(
     })
   ).json();
 
+  createdInstanceIds.push(instance.id);
+
   const config = await (await api.seeker.getConfig()).json();
+  savedSearchSettings ??= {
+    searchEnabled: config.searchEnabled,
+    proactiveSearchEnabled: config.proactiveSearchEnabled,
+    searchInterval: config.searchInterval,
+  };
+
   const instances = config.instances.map((i: { arrInstanceId: string }) =>
     i.arrInstanceId === instance.id ? { ...i, enabled: true, monitoredOnly: true } : i,
   );
@@ -91,6 +102,17 @@ async function expectSearchStatus(
 }
 
 test.describe('Seeker: search command status flow', () => {
+  test.afterEach(async ({ api }) => {
+    for (const id of createdInstanceIds.splice(0)) {
+      await api.arr.deleteInstance('radarr', id);
+    }
+
+    if (savedSearchSettings) {
+      const config = await (await api.seeker.getConfig()).json();
+      await api.seeker.updateConfig({ ...config, ...savedSearchSettings });
+    }
+  });
+
   test('reaches completed when the arr reports the command completed', async ({ api, mocks }) => {
     test.setTimeout(TRANSITION_TIMEOUT + 60_000);
 
