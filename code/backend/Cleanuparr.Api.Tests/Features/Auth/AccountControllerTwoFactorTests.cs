@@ -156,6 +156,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         disableResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await IsTwoFactorEnabled()).ShouldBeTrue();
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(6)]
@@ -169,6 +171,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await IsTwoFactorEnabled()).ShouldBeTrue();
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(7)]
@@ -197,6 +201,59 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         (await IsTwoFactorEnabled()).ShouldBeFalse();
     }
 
+    [Fact, TestPriority(8)]
+    public async Task Disable2fa_WithRepeatedBadCodes_EventuallyRateLimits()
+    {
+        await EnableTwoFactor();
+
+        try
+        {
+            var first = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+            {
+                password = Password,
+                totpCode = "ZZZZ-ZZZZ"
+            });
+
+            first.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+            var firstBody = await first.Content.ReadFromJsonAsync<JsonElement>();
+            firstBody.GetProperty("retryAfterSeconds").GetInt32().ShouldBeGreaterThan(0);
+
+            var second = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+            {
+                password = Password,
+                totpCode = "ZZZZ-ZZZZ"
+            });
+
+            second.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+            (await IsTwoFactorEnabled()).ShouldBeTrue();
+        }
+        finally
+        {
+            await ClearLockout();
+        }
+    }
+
+    [Fact, TestPriority(9)]
+    public async Task Disable2fa_AfterLockoutCleared_ResetsTheCounterOnSuccess()
+    {
+        var response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+        {
+            password = Password,
+            totpCode = TotpTestHelper.GenerateTotpCode(_secret)
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await IsTwoFactorEnabled()).ShouldBeFalse();
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        var user = await context.Users.FirstAsync();
+
+        user.FailedLoginAttempts.ShouldBe(0);
+        user.LockoutEnd.ShouldBeNull();
+    }
+
     [Fact, TestPriority(20)]
     public async Task Regenerate2fa_WhenIssuedConcurrently_AppliesOnce()
     {
@@ -217,6 +274,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         JsonElement body = await accepted.Content.ReadFromJsonAsync<JsonElement>();
         _secret = body.GetProperty("secret").GetString()!;
         _recoveryCodes = ReadRecoveryCodes(body);
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(21)]
@@ -232,6 +291,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
             _factory.CreateClient().PostAsJsonAsync("/api/auth/login/2fa", new { loginToken = secondToken, code = sharedCode, isRecoveryCode = true }));
 
         responses.Count(response => response.StatusCode is HttpStatusCode.OK).ShouldBe(1);
+
+        await ClearLockout();
     }
 
     private async Task<string> RequestLoginToken()
@@ -255,6 +316,17 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
 
         return await context.RecoveryCodes.CountAsync();
+    }
+
+    private async Task ClearLockout()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        var user = await context.Users.FirstAsync();
+
+        user.FailedLoginAttempts = 0;
+        user.LockoutEnd = null;
+        await context.SaveChangesAsync();
     }
 
     private async Task EnableTwoFactor()

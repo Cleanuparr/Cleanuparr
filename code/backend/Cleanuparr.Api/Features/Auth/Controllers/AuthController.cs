@@ -27,6 +27,7 @@ public sealed class AuthController : ControllerBase
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
     private readonly IOidcAuthService _oidcAuthService;
+    private readonly LoginAttemptTracker _loginAttemptTracker;
     private readonly ILogger<AuthController> _logger;
     private readonly IWebHostEnvironment _environment;
 
@@ -38,6 +39,7 @@ public sealed class AuthController : ControllerBase
         ITotpService totpService,
         IPlexAuthService plexAuthService,
         IOidcAuthService oidcAuthService,
+        LoginAttemptTracker loginAttemptTracker,
         ILogger<AuthController> logger,
         IWebHostEnvironment environment)
     {
@@ -48,6 +50,7 @@ public sealed class AuthController : ControllerBase
         _totpService = totpService;
         _plexAuthService = plexAuthService;
         _oidcAuthService = oidcAuthService;
+        _loginAttemptTracker = loginAttemptTracker;
         _logger = logger;
         _environment = environment;
     }
@@ -251,21 +254,20 @@ public sealed class AuthController : ControllerBase
         }
 
         // Check lockout
-        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
+        if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
         {
-            int remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalSeconds);
             throw new RateLimitException("Account is locked", remaining);
         }
 
         if (!passwordValid || !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
         {
-            int retryAfterSeconds = await IncrementFailedAttempts(user.Id);
+            int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
             return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials",
                 extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
         }
 
         // Reset failed attempts on successful password verification
-        await ResetFailedAttempts(user.Id);
+        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
 
         // If 2FA is not enabled, issue tokens directly
         if (!user.TotpEnabled)
@@ -316,6 +318,11 @@ public sealed class AuthController : ControllerBase
             return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid login token");
         }
 
+        if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+        {
+            throw new RateLimitException("Account is locked", remaining);
+        }
+
         bool codeValid;
 
         if (request.IsRecoveryCode)
@@ -329,8 +336,12 @@ public sealed class AuthController : ControllerBase
 
         if (!codeValid)
         {
-            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid verification code");
+            int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid verification code",
+                extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
         }
+
+        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
 
         return Ok(await GenerateTokenResponse(user));
     }
@@ -695,43 +706,6 @@ public sealed class AuthController : ControllerBase
             }
 
             return false;
-        }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
-    }
-
-    private async Task<int> IncrementFailedAttempts(Guid userId)
-    {
-        await UsersContext.Lock.WaitAsync();
-        try
-        {
-            var user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
-            user.FailedLoginAttempts++;
-            user.LockoutEnd = DateTimeOffset.UtcNow.AddSeconds(user.FailedLoginAttempts * 2);
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogWarning("Failed login attempt {Attempts} for user {Username}, locked for {Seconds}s",
-                user.FailedLoginAttempts, user.Username, user.FailedLoginAttempts * 2);
-
-            return user.FailedLoginAttempts * 2;
-        }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
-    }
-
-    private async Task ResetFailedAttempts(Guid userId)
-    {
-        await UsersContext.Lock.WaitAsync();
-        try
-        {
-            var user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
-            user.FailedLoginAttempts = 0;
-            user.LockoutEnd = null;
-            await _usersContext.SaveChangesAsync();
         }
         finally
         {

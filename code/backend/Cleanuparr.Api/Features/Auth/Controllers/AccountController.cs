@@ -25,6 +25,7 @@ public sealed class AccountController : ControllerBase
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
     private readonly IOidcAuthService _oidcAuthService;
+    private readonly LoginAttemptTracker _loginAttemptTracker;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
@@ -33,6 +34,7 @@ public sealed class AccountController : ControllerBase
         ITotpService totpService,
         IPlexAuthService plexAuthService,
         IOidcAuthService oidcAuthService,
+        LoginAttemptTracker loginAttemptTracker,
         ILogger<AccountController> logger)
     {
         _usersContext = usersContext;
@@ -40,6 +42,7 @@ public sealed class AccountController : ControllerBase
         _totpService = totpService;
         _plexAuthService = plexAuthService;
         _oidcAuthService = oidcAuthService;
+        _loginAttemptTracker = loginAttemptTracker;
         _logger = logger;
     }
 
@@ -106,39 +109,60 @@ public sealed class AccountController : ControllerBase
     [HttpPost("2fa/regenerate")]
     public async Task<IActionResult> Regenerate2fa([FromBody] Regenerate2faRequest request)
     {
+        User user;
+        string? failureMessage = null;
+        TotpSetupResponse? setup = null;
+
         await UsersContext.Lock.WaitAsync();
 
         try
         {
-            var user = await GetCurrentUser(includeRecoveryCodes: true);
-            if (user is null)
+            User? currentUser = await GetCurrentUser(includeRecoveryCodes: true);
+            if (currentUser is null)
             {
                 return Unauthorized();
+            }
+
+            user = currentUser;
+
+            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            {
+                throw new RateLimitException("Account is locked", remaining);
             }
 
             // Verify current credentials
             if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
+                failureMessage = "Incorrect password";
             }
-
-            if (!_totpService.VerifySecondFactor(user, request.TotpCode))
+            else if (!_totpService.VerifySecondFactor(user, request.TotpCode))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid authenticator or recovery code");
+                failureMessage = "Invalid authenticator or recovery code";
             }
+            else
+            {
+                setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
 
-            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
-
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("2FA regenerated for user {Username}", user.Username);
-
-            return Ok(setup);
+                await _usersContext.SaveChangesAsync();
+            }
         }
         finally
         {
             UsersContext.Lock.Release();
         }
+
+        if (failureMessage is not null)
+        {
+            int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+            return this.ProblemResult(StatusCodes.Status400BadRequest, failureMessage,
+                extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
+        }
+
+        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+
+        _logger.LogInformation("2FA regenerated for user {Username}", user.Username);
+
+        return Ok(setup);
     }
 
     [HttpPost("2fa/enable")]
@@ -223,48 +247,68 @@ public sealed class AccountController : ControllerBase
     [HttpPost("2fa/disable")]
     public async Task<IActionResult> Disable2fa([FromBody] Disable2faRequest request)
     {
+        User user;
+        string? failureMessage = null;
+
         await UsersContext.Lock.WaitAsync();
 
         try
         {
-            var user = await GetCurrentUser(includeRecoveryCodes: true);
-            if (user is null)
+            User? currentUser = await GetCurrentUser(includeRecoveryCodes: true);
+            if (currentUser is null)
             {
                 return Unauthorized();
             }
+
+            user = currentUser;
 
             if (!user.TotpEnabled)
             {
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "2FA is not enabled");
             }
 
+            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            {
+                throw new RateLimitException("Account is locked", remaining);
+            }
+
             if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
+                failureMessage = "Incorrect password";
             }
-
-            if (!_totpService.VerifySecondFactor(user, request.TotpCode))
+            else if (!_totpService.VerifySecondFactor(user, request.TotpCode))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid authenticator or recovery code");
+                failureMessage = "Invalid authenticator or recovery code";
             }
+            else
+            {
+                user.TotpEnabled = false;
+                user.TotpSecret = string.Empty;
+                user.UpdatedAt = DateTimeOffset.UtcNow;
 
-            user.TotpEnabled = false;
-            user.TotpSecret = string.Empty;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+                // Remove all recovery codes
+                _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
 
-            // Remove all recovery codes
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("2FA disabled for user {Username}", user.Username);
-
-            return Ok(new { message = "2FA disabled" });
+                await _usersContext.SaveChangesAsync();
+            }
         }
         finally
         {
             UsersContext.Lock.Release();
         }
+
+        if (failureMessage is not null)
+        {
+            int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+            return this.ProblemResult(StatusCodes.Status400BadRequest, failureMessage,
+                extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
+        }
+
+        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+
+        _logger.LogInformation("2FA disabled for user {Username}", user.Username);
+
+        return Ok(new { message = "2FA disabled" });
     }
 
     [HttpGet("api-key")]

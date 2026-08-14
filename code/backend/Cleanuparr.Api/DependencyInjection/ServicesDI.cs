@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Infrastructure.Health;
+﻿using Cleanuparr.Api.Features.Auth;
+using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -35,6 +36,7 @@ public static class ServicesDI
             .AddSingleton<IJwtService, JwtService>()
             .AddSingleton<IPasswordService, PasswordService>()
             .AddSingleton<ITotpService, TotpService>()
+            .AddScoped<LoginAttemptTracker>()
             .AddScoped<IPlexAuthService, PlexAuthService>()
             .AddScoped<IOidcAuthService, OidcAuthService>()
             .AddScoped<IEventPublisher, EventPublisher>()
