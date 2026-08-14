@@ -301,7 +301,9 @@ public sealed class ArrConfigController : ControllerBase
                 await transaction.RollbackAsync();
                 throw;
             }
-            
+
+            await FailStrandedSearchEventsForInstanceAsync(id);
+
             return NoContent();
         }
         finally
@@ -344,8 +346,20 @@ public sealed class ArrConfigController : ControllerBase
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+    }
 
-        await _eventPublisher.FailStrandedSearchEvents(arrInstanceId);
+    private async Task FailStrandedSearchEventsForInstanceAsync(Guid arrInstanceId)
+    {
+        try
+        {
+            await _eventPublisher.FailStrandedSearchEvents(arrInstanceId);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception,
+                "Failed to mark the search events of instance {InstanceId} as failed, the seeker command monitor will retry",
+                arrInstanceId);
+        }
     }
 
     private async Task<IActionResult> TestArrInstance(InstanceType type, TestArrInstanceRequest request)
