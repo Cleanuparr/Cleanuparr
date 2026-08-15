@@ -314,14 +314,16 @@ public class EventPublisher : IEventPublisher
     /// Publishes a search triggered event with context data and notifications.
     /// Returns the event ID so the SeekerCommandMonitor can update it on completion.
     /// </summary>
-    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null)
+    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null)
     {
+        bool dryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
+
         AppEvent eventEntity = new()
         {
             EventType = EventType.SearchTriggered,
             Message = $"Search triggered for {itemTitle}",
             Severity = EventSeverity.Information,
-            SearchStatus = SearchCommandStatus.Pending,
+            SearchStatus = dryRun ? null : SearchCommandStatus.Pending,
             JobRunId = ContextProvider.TryGetJobRunId(),
             ArrInstanceId = ContextProvider.Get(ContextProvider.Keys.ArrInstanceId) as Guid?,
             DownloadClientId = ContextProvider.Get(ContextProvider.Keys.DownloadClientId) as Guid?,
@@ -335,7 +337,7 @@ public class EventPublisher : IEventPublisher
             SearchReason = searchReason,
         };
 
-        eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+        eventEntity.IsDryRun = dryRun;
 
         _context.Events.Add(eventEntity);
         await _context.SaveChangesAsync();
@@ -375,6 +377,74 @@ public class EventPublisher : IEventPublisher
         {
             await _notificationPublisher.NotifySearchItemGrabbed(existingEvent.ItemTitle ?? string.Empty, grabbedItems, instanceType, instanceUrl);
         }
+    }
+
+    /// <summary>
+    /// Updates an existing search event with the started status
+    /// </summary>
+    public async Task PublishSearchStarted(Guid eventId)
+    {
+        AppEvent? existingEvent = await _context.Events
+            .FirstOrDefaultAsync(e => e.Id == eventId);
+
+        if (existingEvent is null)
+        {
+            _logger.LogWarning("Could not find search event {EventId} to update its status", eventId);
+            return;
+        }
+
+        if (existingEvent.SearchStatus is not SearchCommandStatus.Pending)
+        {
+            return;
+        }
+
+        existingEvent.SearchStatus = SearchCommandStatus.Started;
+
+        await _context.SaveChangesAsync();
+        await NotifyClientsAsync(existingEvent);
+    }
+
+    /// <summary>
+    /// Fails every search event of an arr instance that never reached a terminal status
+    /// </summary>
+    public Task<int> FailStrandedSearchEvents(Guid arrInstanceId) =>
+        FailSearchEventsAsync(InProgressSearchEvents().Where(e => e.ArrInstanceId == arrInstanceId));
+
+    /// <summary>
+    /// Fails every search event that never got a command tracker and is older than the given cutoff
+    /// </summary>
+    public Task<int> FailAbandonedSearchEvents(DateTimeOffset cutoff) =>
+        FailSearchEventsAsync(InProgressSearchEvents()
+            .Where(e => e.Timestamp < cutoff && !_context.SeekerCommandTrackers.Any(t => t.EventId == e.Id)));
+
+    private IQueryable<AppEvent> InProgressSearchEvents() =>
+        _context.Events
+            .Where(e => e.EventType == EventType.SearchTriggered
+                && (e.SearchStatus == SearchCommandStatus.Pending || e.SearchStatus == SearchCommandStatus.Started));
+
+    private async Task<int> FailSearchEventsAsync(IQueryable<AppEvent> query)
+    {
+        List<AppEvent> strandedEvents = await query.ToListAsync();
+
+        if (strandedEvents.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (AppEvent strandedEvent in strandedEvents)
+        {
+            strandedEvent.SearchStatus = SearchCommandStatus.Failed;
+            strandedEvent.CompletedAt = DateTimeOffset.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+
+        foreach (AppEvent strandedEvent in strandedEvents)
+        {
+            await NotifyClientsAsync(strandedEvent);
+        }
+
+        return strandedEvents.Count;
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
@@ -22,17 +23,23 @@ public sealed class ArrConfigController : ControllerBase
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
     private readonly IArrClientFactory _arrClientFactory;
+    private readonly IEventPublisher _eventPublisher;
 
+    /// <summary>
+    /// Creates the controller with its injected dependencies.
+    /// </summary>
     public ArrConfigController(
         ILogger<ArrConfigController> logger,
         DataContext dataContext,
         EventsContext eventsContext,
-        IArrClientFactory arrClientFactory)
+        IArrClientFactory arrClientFactory,
+        IEventPublisher eventPublisher)
     {
         _logger = logger;
         _dataContext = dataContext;
         _eventsContext = eventsContext;
         _arrClientFactory = arrClientFactory;
+        _eventPublisher = eventPublisher;
     }
 
     [HttpGet("sonarr")]
@@ -294,7 +301,9 @@ public sealed class ArrConfigController : ControllerBase
                 await transaction.RollbackAsync();
                 throw;
             }
-            
+
+            await FailStrandedSearchEventsForInstanceAsync(id);
+
             return NoContent();
         }
         finally
@@ -329,13 +338,27 @@ public sealed class ArrConfigController : ControllerBase
             await _eventsContext.SeekerCommandTrackers
                 .Where(e => e.ArrInstanceId == arrInstanceId)
                 .ExecuteDeleteAsync(cancellationToken);
-            
+
             await transaction.CommitAsync(cancellationToken);
         }
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
             throw;
+        }
+    }
+
+    private async Task FailStrandedSearchEventsForInstanceAsync(Guid arrInstanceId)
+    {
+        try
+        {
+            await _eventPublisher.FailStrandedSearchEvents(arrInstanceId);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception,
+                "Failed to mark the search events of instance {InstanceId} as failed, the seeker command monitor will retry",
+                arrInstanceId);
         }
     }
 

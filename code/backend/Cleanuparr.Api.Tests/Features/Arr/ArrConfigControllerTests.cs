@@ -2,6 +2,7 @@ using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Api.Features.Arr.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
@@ -21,6 +22,7 @@ public class ArrConfigControllerTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IArrClient _arrClient;
+    private readonly IEventPublisher _eventPublisher;
     private readonly ArrConfigController _controller;
 
     public ArrConfigControllerTests()
@@ -31,7 +33,8 @@ public class ArrConfigControllerTests : IDisposable
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrClient = Substitute.For<IArrClient>();
         _arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
-        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _arrClientFactory);
+        _eventPublisher = Substitute.For<IEventPublisher>();
+        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _arrClientFactory, _eventPublisher);
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
@@ -255,6 +258,29 @@ public class ArrConfigControllerTests : IDisposable
         // Assert
         result.ShouldBeOfType<NoContentResult>();
         (await _dataContext.ArrInstances.CountAsync(i => i.Id == instance.Id)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeleteSonarrInstance_FailsSearchEventsThatAreStillInFlight()
+    {
+        // Arrange
+        var sonarr = await _dataContext.ArrConfigs.FirstAsync(c => c.Type == InstanceType.Sonarr);
+        var instance = new ArrInstance
+        {
+            Name = "doomed",
+            Url = new Uri("http://doomed:8989"),
+            ApiKey = "k",
+            ArrConfigId = sonarr.Id,
+            Enabled = true,
+        };
+        _dataContext.ArrInstances.Add(instance);
+        await _dataContext.SaveChangesAsync();
+
+        // Act
+        await _controller.DeleteSonarrInstance(instance.Id);
+
+        // Assert
+        await _eventPublisher.Received(1).FailStrandedSearchEvents(instance.Id);
     }
 
     [Fact]

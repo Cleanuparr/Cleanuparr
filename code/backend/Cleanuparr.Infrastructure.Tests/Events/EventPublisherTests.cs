@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -692,6 +693,144 @@ public class EventPublisherTests : IDisposable
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         savedEvent.ShouldNotBeNull();
         savedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Pending);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_ForDryRun_LeavesSearchStatusUnset()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered(
+            "Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing, isDryRun: true);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.IsDryRun.ShouldBeTrue();
+        savedEvent.SearchStatus.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task PublishSearchStarted_UpdatesStatusWithoutCompletingTheEvent()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+
+        // Act
+        await _publisher.PublishSearchStarted(eventId);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstAsync(e => e.Id == eventId);
+        savedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Started);
+        savedEvent.CompletedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task PublishSearchStarted_ForEventThatAlreadyFailed_KeepsTheTerminalStatus()
+    {
+        // Arrange
+        Guid arrInstanceId = Guid.NewGuid();
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstanceId);
+
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        await _publisher.FailStrandedSearchEvents(arrInstanceId);
+
+        // Act
+        await _publisher.PublishSearchStarted(eventId);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstAsync(e => e.Id == eventId);
+        savedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Failed);
+    }
+
+    [Fact]
+    public async Task PublishSearchStarted_ForMissingEvent_DoesNotNotifyClients()
+    {
+        // Act
+        await _publisher.PublishSearchStarted(Guid.NewGuid());
+
+        // Assert
+        await _clientProxy.DidNotReceive().SendCoreAsync(
+            Arg.Any<string>(),
+            Arg.Any<object[]>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FailStrandedSearchEvents_WithNothingInProgress_ReturnsZero()
+    {
+        // Arrange
+        Guid arrInstanceId = Guid.NewGuid();
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstanceId);
+
+        Guid completedEventId = await _publisher.PublishSearchTriggered("Completed", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        await _publisher.PublishSearchCompleted(completedEventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://radarr");
+        _clientProxy.ClearReceivedCalls();
+
+        // Act
+        int failed = await _publisher.FailStrandedSearchEvents(arrInstanceId);
+
+        // Assert
+        failed.ShouldBe(0);
+
+        await _clientProxy.DidNotReceive().SendCoreAsync(
+            Arg.Any<string>(),
+            Arg.Any<object[]>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FailStrandedSearchEvents_OnlyFailsEventsThatNeverCompleted()
+    {
+        // Arrange
+        Guid arrInstanceId = Guid.NewGuid();
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstanceId);
+
+        Guid pendingEventId = await _publisher.PublishSearchTriggered("Pending", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        Guid completedEventId = await _publisher.PublishSearchTriggered("Completed", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        await _publisher.PublishSearchCompleted(completedEventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://radarr");
+
+        // Act
+        int failed = await _publisher.FailStrandedSearchEvents(arrInstanceId);
+
+        // Assert
+        failed.ShouldBe(1);
+
+        var pendingEvent = await _context.Events.FirstAsync(e => e.Id == pendingEventId);
+        pendingEvent.SearchStatus.ShouldBe(SearchCommandStatus.Failed);
+        pendingEvent.CompletedAt.ShouldNotBeNull();
+
+        var completedEvent = await _context.Events.FirstAsync(e => e.Id == completedEventId);
+        completedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Completed);
+    }
+
+    [Fact]
+    public async Task FailAbandonedSearchEvents_SkipsEventsThatStillHaveATracker()
+    {
+        // Arrange
+        Guid trackedEventId = await _publisher.PublishSearchTriggered("Tracked", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        Guid abandonedEventId = await _publisher.PublishSearchTriggered("Abandoned", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+
+        _context.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        {
+            ArrInstanceId = Guid.NewGuid(),
+            CommandId = 1,
+            EventId = trackedEventId,
+            ExternalItemId = 1,
+            ItemTitle = "Tracked",
+        });
+        await _context.SaveChangesAsync();
+
+        // Act
+        int failed = await _publisher.FailAbandonedSearchEvents(DateTimeOffset.UtcNow.AddMinutes(1));
+
+        // Assert
+        failed.ShouldBe(1);
+
+        var abandonedEvent = await _context.Events.FirstAsync(e => e.Id == abandonedEventId);
+        abandonedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Failed);
+
+        var trackedEvent = await _context.Events.FirstAsync(e => e.Id == trackedEventId);
+        trackedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Pending);
     }
 
     [Fact]

@@ -708,6 +708,54 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         tracker.Status.ShouldBe(SearchCommandStatus.Pending);
     }
 
+    [Fact]
+    public async Task Propagates_the_started_status_to_the_search_event()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Started);
+
+        TaskCompletionSource progressTcs = new();
+        _eventPublisher.PublishSearchStarted(Arg.Any<Guid>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => progressTcs.TrySetResult());
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await progressTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        await _eventPublisher.Received(1).PublishSearchStarted(eventId);
+
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+    }
+
+    [Fact]
+    public async Task Sweeps_search_events_that_never_got_a_tracker()
+    {
+        // Arrange
+        TaskCompletionSource sweepTcs = new();
+        _eventPublisher.FailAbandonedSearchEvents(Arg.Any<DateTimeOffset>())
+            .Returns(1)
+            .AndDoes(_ => sweepTcs.TrySetResult());
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await sweepTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        await _eventPublisher.Received(1).FailAbandonedSearchEvents(
+            _timeProvider.GetUtcNow() - TimeSpan.FromMinutes(60));
+    }
+
     private void StubCommandState(ArrCommandState state, long commandId = 1)
     {
         _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>())

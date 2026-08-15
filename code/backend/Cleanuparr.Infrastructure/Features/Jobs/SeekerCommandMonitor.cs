@@ -72,6 +72,15 @@ public class SeekerCommandMonitor : BackgroundService
         var queueIterator = scope.ServiceProvider.GetRequiredService<IArrQueueIterator>();
         var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+
+        int abandonedEvents = await eventPublisher.FailAbandonedSearchEvents(now - (CommandTimeout * 2));
+
+        if (abandonedEvents > 0)
+        {
+            _logger.LogWarning("Failed {Count} search events that never got a command tracker", abandonedEvents);
+        }
+
         List<SeekerCommandTracker> trackers = await eventsContext.SeekerCommandTrackers
             .OrderBy(t => t.CreatedAt)
             .ToListAsync(stoppingToken);
@@ -82,7 +91,6 @@ public class SeekerCommandMonitor : BackgroundService
         }
 
         Dictionary<Guid, ArrInstance> instancesById = await LoadInstancesAsync(dataContext, trackers, stoppingToken);
-        DateTimeOffset now = _timeProvider.GetUtcNow();
         bool didWork = false;
 
         List<SeekerCommandTracker> toPoll = [];
@@ -115,7 +123,7 @@ public class SeekerCommandMonitor : BackgroundService
             IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
             didWork = true;
 
-            await PollInstanceCommandsAsync(arrClient, arrInstance, group.ToList());
+            await PollInstanceCommandsAsync(arrClient, arrInstance, group.ToList(), eventPublisher);
         }
 
         await eventsContext.SaveChangesAsync(stoppingToken);
@@ -157,7 +165,8 @@ public class SeekerCommandMonitor : BackgroundService
     private async Task PollInstanceCommandsAsync(
         IArrClient arrClient,
         ArrInstance arrInstance,
-        List<SeekerCommandTracker> trackers)
+        List<SeekerCommandTracker> trackers,
+        IEventPublisher eventPublisher)
     {
         Dictionary<long, ArrCommandStatus>? commands = await TryListCommandsAsync(arrClient, arrInstance);
 
@@ -165,7 +174,7 @@ public class SeekerCommandMonitor : BackgroundService
         {
             foreach (SeekerCommandTracker tracker in trackers)
             {
-                await PollSingleCommandAsync(arrClient, arrInstance, tracker);
+                await PollSingleCommandAsync(arrClient, arrInstance, tracker, eventPublisher);
             }
 
             return;
@@ -175,7 +184,7 @@ public class SeekerCommandMonitor : BackgroundService
         {
             if (commands.TryGetValue(tracker.CommandId, out ArrCommandStatus? status))
             {
-                UpdateTrackerStatus(tracker, status);
+                await ApplyCommandStatusAsync(tracker, status, eventPublisher);
                 continue;
             }
 
@@ -206,12 +215,16 @@ public class SeekerCommandMonitor : BackgroundService
         }
     }
 
-    private async Task PollSingleCommandAsync(IArrClient arrClient, ArrInstance arrInstance, SeekerCommandTracker tracker)
+    private async Task PollSingleCommandAsync(
+        IArrClient arrClient,
+        ArrInstance arrInstance,
+        SeekerCommandTracker tracker,
+        IEventPublisher eventPublisher)
     {
         try
         {
             ArrCommandStatus status = await arrClient.GetCommandStatusAsync(arrInstance, tracker.CommandId);
-            UpdateTrackerStatus(tracker, status);
+            await ApplyCommandStatusAsync(tracker, status, eventPublisher);
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
         {
@@ -225,6 +238,20 @@ public class SeekerCommandMonitor : BackgroundService
         {
             _logger.LogWarning(ex, "Failed to check command {CommandId} status on {Instance}",
                 tracker.CommandId, arrInstance.Name);
+        }
+    }
+
+    private static async Task ApplyCommandStatusAsync(
+        SeekerCommandTracker tracker,
+        ArrCommandStatus status,
+        IEventPublisher eventPublisher)
+    {
+        SearchCommandStatus previousStatus = tracker.Status;
+        UpdateTrackerStatus(tracker, status);
+
+        if (tracker.Status is SearchCommandStatus.Started && previousStatus is not SearchCommandStatus.Started)
+        {
+            await eventPublisher.PublishSearchStarted(tracker.EventId);
         }
     }
 
