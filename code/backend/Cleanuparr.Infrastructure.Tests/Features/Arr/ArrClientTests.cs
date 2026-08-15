@@ -347,14 +347,14 @@ public class ArrClientTests
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
-            new ArrCommandStatus(42, "completed", "ok"))));
+            new ArrCommandStatus(42, ArrCommandState.Completed, "ok"))));
 
         // Act
         var status = await _client.GetCommandStatusAsync(_arrInstance, 42);
 
         // Assert
         status.Id.ShouldBe(42);
-        status.Status.ShouldBe("completed");
+        status.Status.ShouldBe(ArrCommandState.Completed);
         status.Message.ShouldBe("ok");
         var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command/42");
@@ -374,7 +374,7 @@ public class ArrClientTests
 
         // Assert
         status.Id.ShouldBe(99);
-        status.Status.ShouldBe("unknown");
+        status.Status.ShouldBe(ArrCommandState.Unknown);
         status.Message.ShouldBeNull();
     }
 

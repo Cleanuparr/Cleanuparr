@@ -19,7 +19,9 @@ public sealed class DelugeStateConverter : JsonConverter<DelugeState>
 
         string? raw = reader.GetString();
 
-        return raw is not null && Enum.TryParse(raw, ignoreCase: true, out DelugeState parsed)
+        return raw is not null
+               && raw.All(char.IsAsciiLetter)
+               && Enum.TryParse(raw, ignoreCase: true, out DelugeState parsed)
             ? parsed
             : DelugeState.Unknown;
     }

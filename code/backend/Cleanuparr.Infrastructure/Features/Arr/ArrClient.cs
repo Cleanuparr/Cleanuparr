@@ -267,7 +267,7 @@ public abstract class ArrClient : IArrClient
 
         var result = await DeserializeStreamAsync<ArrCommandStatus>(response);
 
-        return result ?? new ArrCommandStatus(commandId, "unknown", null);
+        return result ?? new ArrCommandStatus(commandId, ArrCommandState.Unknown, null);
     }
 
     protected abstract string GetSystemStatusUrlPath();

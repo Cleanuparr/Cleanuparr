@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -89,11 +90,6 @@ public class SeekerCommandMonitor : BackgroundService
 
         foreach (SeekerCommandTracker tracker in timedOut)
         {
-            string instanceName = instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? inst)
-                ? inst.Name
-                : tracker.ArrInstanceId.ToString();
-            _logger.LogWarning("Search command {CommandId} timed out for '{Title}' on {Instance}",
-                tracker.CommandId, tracker.ItemTitle, instanceName);
             tracker.Status = SearchCommandStatus.TimedOut;
         }
 
@@ -113,6 +109,13 @@ public class SeekerCommandMonitor : BackgroundService
             {
                 ArrCommandStatus status = await arrClient.GetCommandStatusAsync(arrInstance, tracker.CommandId);
                 UpdateTrackerStatus(tracker, status);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug(
+                    "Command {CommandId} is no longer known to {Instance}, treating '{Title}' as completed",
+                    tracker.CommandId, arrInstance.Name, tracker.ItemTitle);
+                tracker.Status = SearchCommandStatus.Completed;
             }
             catch (Exception ex)
             {
@@ -137,6 +140,9 @@ public class SeekerCommandMonitor : BackgroundService
             if (!terminalInstances.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
             {
                 // Instance was deleted; drop the orphaned tracker
+                _logger.LogDebug(
+                    "Dropping orphaned search command {CommandId} for '{Title}': arr instance {ArrInstanceId} no longer exists (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, tracker.ArrInstanceId, tracker.EventId);
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
                 continue;
             }
@@ -146,8 +152,10 @@ public class SeekerCommandMonitor : BackgroundService
 
             if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut)
             {
-                await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Failed, instanceType, instanceUrl);
-                _logger.LogWarning("Search command failed for event {EventId}", tracker.EventId);
+                await eventPublisher.PublishSearchCompleted(tracker.EventId, tracker.Status, instanceType, instanceUrl);
+                _logger.LogWarning(
+                    "Search command {CommandId} for '{Title}' on {Instance} finished with status {Status} (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, arrInstance.Name, tracker.Status, tracker.EventId);
             }
             else
             {
@@ -177,12 +185,15 @@ public class SeekerCommandMonitor : BackgroundService
 
     private static void UpdateTrackerStatus(SeekerCommandTracker tracker, ArrCommandStatus commandStatus)
     {
-        tracker.Status = commandStatus.Status.ToLowerInvariant() switch
+        tracker.Status = commandStatus.Status switch
         {
-            "completed" => SearchCommandStatus.Completed,
-            "failed" => SearchCommandStatus.Failed,
-            "started" => SearchCommandStatus.Started,
-            _ => tracker.Status // Keep current status for queued/other states
+            ArrCommandState.Completed => SearchCommandStatus.Completed,
+            ArrCommandState.Failed => SearchCommandStatus.Failed,
+            ArrCommandState.Aborted => SearchCommandStatus.Failed,
+            ArrCommandState.Cancelled => SearchCommandStatus.Failed,
+            ArrCommandState.Orphaned => SearchCommandStatus.Failed,
+            ArrCommandState.Started => SearchCommandStatus.Started,
+            _ => tracker.Status
         };
     }
 

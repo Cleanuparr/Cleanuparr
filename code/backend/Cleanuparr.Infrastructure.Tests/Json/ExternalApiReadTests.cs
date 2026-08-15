@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Json;
 using Shouldly;
 using Xunit;
@@ -125,6 +126,35 @@ public class ExternalApiReadTests
         ArrCommandStatus result = JsonSerializer.Deserialize<ArrCommandStatus>("""{"id": 5}""", CleanuparrJsonOptions.ExternalApiRead)!;
 
         result.Id.ShouldBe(5);
-        result.Status.ShouldBeNull();
+        result.Status.ShouldBe(ArrCommandState.Unknown);
+    }
+
+    [Theory]
+    [InlineData("queued", ArrCommandState.Queued)]
+    [InlineData("started", ArrCommandState.Started)]
+    [InlineData("completed", ArrCommandState.Completed)]
+    [InlineData("failed", ArrCommandState.Failed)]
+    [InlineData("aborted", ArrCommandState.Aborted)]
+    [InlineData("cancelled", ArrCommandState.Cancelled)]
+    [InlineData("orphaned", ArrCommandState.Orphaned)]
+    [InlineData("something-new", ArrCommandState.Unknown)]
+    [InlineData("3", ArrCommandState.Unknown)]
+    [InlineData("999", ArrCommandState.Unknown)]
+    [InlineData("completed,failed", ArrCommandState.Unknown)]
+    public void CommandStatus_DeserializesState(string wireValue, ArrCommandState expected)
+    {
+        ArrCommandStatus result = JsonSerializer.Deserialize<ArrCommandStatus>(
+            $$"""{"id": 5, "status": "{{wireValue}}"}""", CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result.Status.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void CommandStatus_WithNullState_DeserializesToUnknown()
+    {
+        ArrCommandStatus result = JsonSerializer.Deserialize<ArrCommandStatus>(
+            """{"id": 5, "status": null}""", CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result.Status.ShouldBe(ArrCommandState.Unknown);
     }
 }
