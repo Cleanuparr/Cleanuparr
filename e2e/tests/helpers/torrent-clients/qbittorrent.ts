@@ -99,6 +99,31 @@ export class QBittorrentDriver implements TorrentClientDriver {
   }
 
   /**
+   * Add a started torrent whose data is absent, so it stalls with everything left.
+   * An *arr reports it as an active download.
+   *
+   * The hash check is deliberately not skipped.
+   * Skipping it marks the torrent complete, and then nothing is left to download.
+   */
+  async addStalledTorrent({ metainfo, savePath, category }: { metainfo: Buffer; savePath: string; category: string }): Promise<void> {
+    const form = new FormData();
+    form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
+    form.append('savepath', savePath);
+    form.append('paused', 'false');
+    form.append('skip_checking', 'false');
+    form.append('autoTMM', 'false');
+    form.append('category', category);
+    const res = await fetch(`${this.directHost}/api/v2/torrents/add`, {
+      method: 'POST',
+      headers: this.cookie ? { Cookie: this.cookie } : undefined,
+      body: form,
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent add (stalled) failed: ${res.status} ${await res.text()}`);
+    }
+  }
+
+  /**
    * Change a torrent's display name without touching files on disk.
    */
   async renameTorrent(infoHash: string, name: string): Promise<void> {

@@ -1,0 +1,21 @@
+diff --git a/code/backend/Cleanuparr.Infrastructure/Features/Jobs/Seeker.cs b/code/backend/Cleanuparr.Infrastructure/Features/Jobs/Seeker.cs
+index 2491d990..b3daacd0 100644
+--- a/code/backend/Cleanuparr.Infrastructure/Features/Jobs/Seeker.cs
++++ b/code/backend/Cleanuparr.Infrastructure/Features/Jobs/Seeker.cs
+@@ -124,15 +124,7 @@ public sealed class Seeker : IHandler
+             return;
+         }
+ 
+-        int proportionalJitter = (int)(config.SearchInterval * 60 * JitterFactor);
+-        int maxJitterSeconds = Math.Clamp(proportionalJitter, MinJitterSeconds, MaxJitterSeconds);
+-        int jitterSeconds = Random.Shared.Next(0, maxJitterSeconds + 1);
+-
+-        if (jitterSeconds > 0)
+-        {
+-            _logger.LogDebug("Waiting {Jitter}s before searching", jitterSeconds);
+-            await Task.Delay(TimeSpan.FromSeconds(jitterSeconds), _timeProvider, cancellationToken);
+-        }
++        await Task.CompletedTask;
+     }
+ 
+     private async Task ProcessReplacementItemAsync(SearchQueueItem item, bool isDryRun)

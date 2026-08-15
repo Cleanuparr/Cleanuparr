@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The default search response of the fake indexer.
+  An arr refuses to save an indexer that returns nothing in its categories.
+  Neither probe parses to anything in the seeded library, so no arr grabs one.
+  A test that wants a real release registers a higher-priority stub.
+-->
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <atom:link href="http://127.0.0.1:9500/api" rel="self" type="application/rss+xml" />
+    <title>E2E Indexer</title>
+    <description>E2E Indexer</description>
+    <link>http://127.0.0.1:9500/</link>
+    <language>en-US</language>
+    <category>search</category>
+    <item>
+      <title>E2E.Indexer.Probe.S01E01.1080p.WEB-DL.DDP5.1.H.264-E2EPROBE</title>
+      <guid>e2e-indexer-probe-tv</guid>
+      <link>http://127.0.0.1:9500/dl/probe.torrent</link>
+      <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
+      <size>1073741824</size>
+      <enclosure url="http://127.0.0.1:9500/dl/probe.torrent" length="1073741824" type="application/x-bittorrent" />
+      <torznab:attr name="category" value="5000" />
+      <torznab:attr name="category" value="5040" />
+      <torznab:attr name="seeders" value="10" />
+      <torznab:attr name="peers" value="12" />
+    </item>
+    <item>
+      <title>E2E Indexer Probe 2024 1080p WEB-DL DDP5.1 H.264-E2EPROBE</title>
+      <guid>e2e-indexer-probe-movie</guid>
+      <link>http://127.0.0.1:9500/dl/probe.torrent</link>
+      <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
+      <size>1073741824</size>
+      <enclosure url="http://127.0.0.1:9500/dl/probe.torrent" length="1073741824" type="application/x-bittorrent" />
+      <torznab:attr name="category" value="2000" />
+      <torznab:attr name="category" value="2040" />
+      <torznab:attr name="seeders" value="10" />
+      <torznab:attr name="peers" value="12" />
+    </item>
+  </channel>
+</rss>

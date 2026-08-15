@@ -12,6 +12,8 @@ const FOLDERS = [
   'download-cleaner',
   'download-client',
   'general',
+  'live-arr',
+  'live-arr-fast',
   'malware-blocker',
   'notifications',
   'oidc',
