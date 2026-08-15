@@ -57,7 +57,7 @@ EOF
 # Restore Sonarr and Radarr from the committed seed.
 # The arrs write to /config on every start, so the run gets a throwaway copy.
 for arr in sonarr radarr; do
-  if [ -d "$ARR_SEED/$arr" ]; then
+  if [[ -d "$ARR_SEED/$arr" ]]; then
     rm -rf "$TEST_DATA/$arr-config"
     cp -R "$ARR_SEED/$arr" "$TEST_DATA/$arr-config"
     chmod -R a+rwX "$TEST_DATA/$arr-config"

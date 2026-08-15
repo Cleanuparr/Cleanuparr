@@ -128,7 +128,7 @@ wait_for_items() {
   for _ in $(seq 1 90); do
     local count
     count=$(arr_get "$url" "$api_key" "$path" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))' 2>/dev/null || echo 0)
-    if [ "$count" -gt 0 ]; then
+    if [[ "$count" -gt 0 ]]; then
       log "$name ready ($count)"
       return 0
     fi
@@ -256,7 +256,7 @@ snapshot() {
   # The log comes along and is folded into the database before it is dropped.
   cp "$src/$arr.db" "$dest/$arr.db"
   for suffix in wal shm; do
-    if [ -f "$src/$arr.db-$suffix" ]; then
+    if [[ -f "$src/$arr.db-$suffix" ]]; then
       cp "$src/$arr.db-$suffix" "$dest/$arr.db-$suffix"
     fi
   done
