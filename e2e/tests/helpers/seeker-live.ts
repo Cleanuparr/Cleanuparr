@@ -206,6 +206,23 @@ export async function teardownInstances(api: CleanuparrApi): Promise<void> {
 }
 
 /**
+ * Every library item, as the arr returns it.
+ *
+ * Nothing else puts an arr back: the seed is copied in before the containers start.
+ * A spec takes this in its setup and restores it in its teardown.
+ */
+export async function snapshotLibrary(target: SeededArr): Promise<Array<Record<string, unknown>>> {
+  return target.arr.get<Array<Record<string, unknown>>>(`/api/v3/${target.itemPath}`);
+}
+
+/** Writes every item back, because a no-op PUT costs less than a diff. */
+export async function restoreLibrary(target: SeededArr, snapshot: Array<Record<string, unknown>>): Promise<void> {
+  for (const item of snapshot) {
+    await target.arr.put(`/api/v3/${target.itemPath}/${item.id}`, item);
+  }
+}
+
+/**
  * Waits for the grabbed torrent to reach the arr's queue.
  *
  * The arr only tracks a grab on its own one-minute refresh, so this drives it.
