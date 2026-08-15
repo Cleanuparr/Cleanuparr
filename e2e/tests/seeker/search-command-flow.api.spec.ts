@@ -13,11 +13,12 @@ import {
 const COMMAND_ID = 4242;
 
 /**
- * The monitor polls once a minute and the Seeker adds up to 30s of jitter.
- *
  * The Seeker cannot be triggered on demand, so every run here waits for the cron.
+ *
+ * A status is at worst the 2 minute interval, plus 30s of jitter, plus the monitor's
+ * one minute poll away.
  */
-const TRANSITION_TIMEOUT = 180_000;
+const TRANSITION_TIMEOUT = 270_000;
 
 const createdInstanceIds: string[] = [];
 let savedSearchSettings: Record<string, unknown> | undefined;
