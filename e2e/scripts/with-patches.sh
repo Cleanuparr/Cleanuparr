@@ -17,7 +17,7 @@ shopt -s nullglob
 PATCHES=("$HERE"/patches/*.patch)
 shopt -u nullglob
 
-if [ ${#PATCHES[@]} -eq 0 ]; then
+if [[ ${#PATCHES[@]} -eq 0 ]]; then
   echo "[with-patches] no patches found" >&2
   exit 1
 fi
