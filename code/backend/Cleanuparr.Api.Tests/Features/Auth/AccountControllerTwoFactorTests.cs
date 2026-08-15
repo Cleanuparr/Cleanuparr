@@ -186,6 +186,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await IsTwoFactorEnabled()).ShouldBeTrue();
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(8)]
@@ -201,7 +203,7 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         (await IsTwoFactorEnabled()).ShouldBeFalse();
     }
 
-    [Fact, TestPriority(8)]
+    [Fact, TestPriority(9)]
     public async Task Disable2fa_WithRepeatedBadCodes_EventuallyRateLimits()
     {
         await EnableTwoFactor();
@@ -234,7 +236,7 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         }
     }
 
-    [Fact, TestPriority(9)]
+    [Fact, TestPriority(10)]
     public async Task Disable2fa_AfterLockoutCleared_ResetsTheCounterOnSuccess()
     {
         var response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
