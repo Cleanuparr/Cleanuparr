@@ -1,0 +1,208 @@
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
+import type { CleanuparrApi } from '../helpers/api';
+import type { MockServers } from '../helpers/mocks/wiremock-client';
+import {
+  applyArrDefaults,
+  arrCommandListStub,
+  arrCommandNotFoundStub,
+  arrCommandTriggerStub,
+  arrMoviesStub,
+  arrQualityProfilesStub,
+} from '../helpers/mocks/arr-stubs';
+
+const COMMAND_ID = 4242;
+
+/** The monitor polls once a minute and the Seeker adds up to 30s of jitter. */
+const TRANSITION_TIMEOUT = 180_000;
+
+const createdInstanceIds: string[] = [];
+let savedSearchSettings: Record<string, unknown> | undefined;
+
+interface SearchEvent {
+  id: string;
+  itemTitle: string;
+  searchStatus: string | null;
+  isDryRun: boolean;
+}
+
+async function listSearchEvents(api: CleanuparrApi, instanceId: string): Promise<SearchEvent[]> {
+  const res = await api.seeker.getSearchEvents({ page: '1', pageSize: '50', instanceId });
+  const body = await res.json();
+  return body.items ?? body.records ?? body;
+}
+
+/** Filters by instance, because all the tests use the same mock arr and item titles are not unique. */
+async function findSearchEvent(
+  api: CleanuparrApi,
+  instanceId: string,
+  title: string,
+): Promise<SearchEvent | undefined> {
+  const events = await listSearchEvents(api, instanceId);
+  return events.find((event) => event.itemTitle === title);
+}
+
+/** Creates a Radarr instance with one searchable movie, so one Seeker run sends one command. */
+async function arrangeSearchableInstance(
+  api: CleanuparrApi,
+  mocks: MockServers,
+  movieTitle: string,
+  commandStubs: Parameters<MockServers['arr']['stubMany']>[0],
+): Promise<string> {
+  await applyArrDefaults(mocks.arr);
+  await mocks.arr.stubMany([
+    arrMoviesStub([{ id: 1, title: movieTitle }]),
+    arrQualityProfilesStub(),
+    arrCommandTriggerStub(COMMAND_ID),
+    ...commandStubs,
+  ]);
+
+  const instance = await (
+    await api.arr.createInstance('radarr', {
+      name: 'E2E Radarr search flow',
+      url: TEST_CONFIG.mocks.arrUrl,
+      apiKey: 'e2e-test-key-radarr',
+      version: 5,
+    })
+  ).json();
+
+  createdInstanceIds.push(instance.id);
+
+  const config = await (await api.seeker.getConfig()).json();
+  savedSearchSettings ??= {
+    searchEnabled: config.searchEnabled,
+    proactiveSearchEnabled: config.proactiveSearchEnabled,
+    searchInterval: config.searchInterval,
+  };
+
+  const instances = config.instances.map((i: { arrInstanceId: string }) =>
+    i.arrInstanceId === instance.id ? { ...i, enabled: true, monitoredOnly: true } : i,
+  );
+
+  await api.seeker.updateConfig({
+    ...config,
+    instances,
+    searchEnabled: true,
+    proactiveSearchEnabled: true,
+    searchInterval: 2,
+  });
+
+  return instance.id;
+}
+
+/** Waits for the status, then gives the event back so that the test can assert on it. */
+async function waitForSearchStatus(
+  api: CleanuparrApi,
+  instanceId: string,
+  title: string,
+  status: string | null,
+): Promise<SearchEvent | undefined> {
+  await expect
+    .poll(async () => (await findSearchEvent(api, instanceId, title))?.searchStatus, {
+      timeout: TRANSITION_TIMEOUT,
+    })
+    .toBe(status);
+
+  return findSearchEvent(api, instanceId, title);
+}
+
+test.describe('Seeker: search command status flow', () => {
+  // The app keeps its data between the tests, thus each test must remove what it made.
+  test.afterEach(async ({ api }) => {
+    for (const id of createdInstanceIds.splice(0)) {
+      await api.arr.deleteInstance('radarr', id);
+    }
+
+    if (savedSearchSettings) {
+      const config = await (await api.seeker.getConfig()).json();
+      await api.seeker.updateConfig({ ...config, ...savedSearchSettings });
+    }
+  });
+
+  test('reaches completed when the arr reports the command completed', async ({ api, mocks }) => {
+    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
+
+    const title = 'Command Completes';
+    const instanceId = await arrangeSearchableInstance(api, mocks, title, [
+      arrCommandListStub([{ id: COMMAND_ID, status: 'completed' }]),
+    ]);
+
+    await api.jobs.trigger('Seeker');
+
+    const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
+    expect(event?.searchStatus).toBe('Completed');
+  });
+
+  test('reaches failed when the arr aborts the command', async ({ api, mocks }) => {
+    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
+
+    const title = 'Command Aborts';
+    const instanceId = await arrangeSearchableInstance(api, mocks, title, [
+      arrCommandListStub([{ id: COMMAND_ID, status: 'aborted' }]),
+    ]);
+
+    await api.jobs.trigger('Seeker');
+
+    const event = await waitForSearchStatus(api, instanceId, title, 'Failed');
+    expect(event?.searchStatus).toBe('Failed');
+  });
+
+  test('reaches completed when the arr has forgotten the command', async ({ api, mocks }) => {
+    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
+
+    const title = 'Command Forgotten';
+    const instanceId = await arrangeSearchableInstance(api, mocks, title, [
+      arrCommandListStub([]),
+      arrCommandNotFoundStub(COMMAND_ID),
+    ]);
+
+    await api.jobs.trigger('Seeker');
+
+    const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
+    expect(event?.searchStatus).toBe('Completed');
+  });
+
+  test('fails the in flight event when the arr instance is deleted', async ({ api, mocks }) => {
+    test.setTimeout(120_000);
+
+    const title = 'Instance Deleted';
+    const instanceId = await arrangeSearchableInstance(api, mocks, title, [
+      arrCommandListStub([{ id: COMMAND_ID, status: 'started' }]),
+    ]);
+
+    await api.jobs.trigger('Seeker');
+
+    await expect
+      .poll(async () => (await findSearchEvent(api, instanceId, title))?.searchStatus, { timeout: 90_000 })
+      .not.toBe(undefined);
+
+    await api.arr.deleteInstance('radarr', instanceId);
+
+    const event = await waitForSearchStatus(api, instanceId, title, 'Failed');
+    expect(event?.searchStatus).toBe('Failed');
+  });
+
+  test('leaves dry run search events without a status', async ({ api, mocks }) => {
+    test.setTimeout(120_000);
+
+    const title = 'Dry Run Search';
+    const instanceId = await arrangeSearchableInstance(api, mocks, title, [
+      arrCommandListStub([{ id: COMMAND_ID, status: 'completed' }]),
+    ]);
+
+    const general = await (await api.general.getConfig()).json();
+    await api.general.updateConfig({ ...general, dryRun: true });
+
+    try {
+      await api.jobs.trigger('Seeker');
+
+      await expect
+        .poll(async () => (await findSearchEvent(api, instanceId, title))?.isDryRun, { timeout: 90_000 })
+        .toBe(true);
+
+      const event = await findSearchEvent(api, instanceId, title);
+      expect(event?.searchStatus ?? null).toBeNull();
+    } finally {
+      await api.general.updateConfig(general);
+    }
+  });
+});
