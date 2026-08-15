@@ -27,16 +27,6 @@
   "engines": {
     "node": ">=26"
   },
-  "overrides": {
-    "angularx-qrcode": {
-      "@angular/common": "$@angular/common",
-      "@angular/core": "$@angular/core"
-    },
-    "@babel/core": "^7.29.7",
-    "esbuild": "^0.28.1",
-    "brace-expansion": "^5.0.8",
-    "@hono/node-server": "^2.0.11"
-  },
   "dependencies": {
     "@angular/cdk": "^22.0.2",
     "@angular/common": "^22.0.4",
@@ -46,11 +36,11 @@
     "@angular/platform-browser": "^22.0.4",
     "@angular/router": "^22.0.4",
     "@microsoft/signalr": "^10.0.0",
-    "@ng-icons/core": "^33.0.0",
-    "@ng-icons/tabler-icons": "^33.0.0",
+    "@ng-icons/core": "^35.0.1",
+    "@ng-icons/tabler-icons": "^35.0.1",
     "@unovis/angular": "^1.6.7",
     "@unovis/ts": "^1.6.7",
-    "angularx-qrcode": "^21.0.4",
+    "angularx-qrcode": "^22.0.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -58,10 +48,10 @@
     "@angular/build": "^22.0.4",
     "@angular/cli": "^22.0.4",
     "@angular/compiler-cli": "^22.0.4",
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.10",
     "angular-eslint": "^22.0.0",
-    "eslint": "^9.39.2",
+    "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.1",
