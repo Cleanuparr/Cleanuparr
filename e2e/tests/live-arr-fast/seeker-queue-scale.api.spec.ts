@@ -66,8 +66,9 @@ test.describe('Seeker over a paged arr queue', () => {
   test('searches when the paged queue stays under the limit', async ({ api }) => {
     test.setTimeout(TEST_TIMEOUT);
 
+    // Far above the decoy count, because the test before this one pins the boundary.
     const instanceId = await arrangeInstance(api, RADARR, {
-      instance: { activeDownloadLimit: OVER_ONE_PAGE + 1 },
+      instance: { activeDownloadLimit: OVER_ONE_PAGE * 2 },
     });
 
     await addDecoyDownloads(RADARR, OVER_ONE_PAGE);
