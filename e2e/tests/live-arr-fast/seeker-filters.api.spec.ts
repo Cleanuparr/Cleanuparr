@@ -9,6 +9,8 @@ import {
   firstSearchEvent,
   listSearchEvents,
   resetLiveArrState,
+  restoreLibrary,
+  snapshotLibrary,
   teardownInstances,
   triggerSeeker,
 } from '../helpers/seeker-live';
@@ -18,7 +20,7 @@ import { grabbableRelease } from '../helpers/mocks/torznab-stubs';
  * The per-instance filters that decide whether the Seeker searches at all.
  *
  * Each test drives a real arr, so the library state comes from real API calls.
- * Everything a test changes on the arr is restored afterwards.
+ * The teardown puts the library back, whatever a test did to it.
  */
 
 const SKIP_TAG = 'e2e-seeker-skip';
@@ -26,25 +28,23 @@ const SKIP_TAG = 'e2e-seeker-skip';
 /** A search event shows up within a second of the run, so this is generous. */
 const SETTLE_MS = 20_000;
 
-async function withMovie<T>(mutate: (movie: Record<string, unknown>) => Record<string, unknown>, run: () => Promise<T>): Promise<T> {
-  const original = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/movie/${RADARR.itemId}`);
-  await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, mutate({ ...original }));
-
-  try {
-    return await run();
-  } finally {
-    await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, original);
-  }
+async function mutateMovie(mutate: (movie: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
+  const movie = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/movie/${RADARR.itemId}`);
+  await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, mutate({ ...movie }));
 }
 
 test.describe('Seeker candidate filters', () => {
+  let library: Array<Record<string, unknown>> = [];
+
   test.beforeEach(async () => {
     await resetLiveArrState();
+    library = await snapshotLibrary(RADARR);
     await indexerMock.stubMany(grabbableRelease(RADARR.searchMode, RADARR.release, RADARR.category).mappings);
   });
 
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
+    await restoreLibrary(RADARR, library);
     await resetLiveArrState();
   });
 
@@ -61,20 +61,16 @@ test.describe('Seeker candidate filters', () => {
   test('skips an unmonitored movie when monitoredOnly is on', async ({ api }) => {
     const instanceId = await arrangeInstance(api, RADARR, { instance: { monitoredOnly: true } });
 
-    await withMovie(
-      (movie) => ({ ...movie, monitored: false }),
-      () => expectNoSearch(api, instanceId, SETTLE_MS),
-    );
+    await mutateMovie((movie) => ({ ...movie, monitored: false }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
   });
 
   test('skips a movie carrying a skipped tag', async ({ api }) => {
     const tagId = await RADARR.arr.ensureTag(SKIP_TAG);
     const instanceId = await arrangeInstance(api, RADARR, { instance: { skipTags: [SKIP_TAG] } });
 
-    await withMovie(
-      (movie) => ({ ...movie, tags: [tagId] }),
-      () => expectNoSearch(api, instanceId, SETTLE_MS),
-    );
+    await mutateMovie((movie) => ({ ...movie, tags: [tagId] }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
   });
 
   test('skips the run while the active download limit is reached', async ({ api }) => {
