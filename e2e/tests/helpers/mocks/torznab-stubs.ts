@@ -68,8 +68,16 @@ function feed(releases: TorznabRelease[]): string {
 </rss>`;
 }
 
-/** Answers one search mode with the given releases. An empty list means no results. */
-export function torznabSearchStub(mode: TorznabSearchMode, releases: TorznabRelease[]): Mapping {
+/**
+ * Answers one search mode with the given releases. An empty list means no results.
+ *
+ * A delay keeps the arr's search command running, which is how a search is made to hang.
+ */
+export function torznabSearchStub(
+  mode: TorznabSearchMode,
+  releases: TorznabRelease[],
+  delayMs = 0,
+): Mapping {
   return {
     priority: 5,
     request: {
@@ -81,6 +89,7 @@ export function torznabSearchStub(mode: TorznabSearchMode, releases: TorznabRele
       status: 200,
       headers: { 'Content-Type': 'application/xml' },
       body: feed(releases),
+      ...(delayMs > 0 ? { fixedDelayMilliseconds: delayMs } : {}),
     },
   };
 }

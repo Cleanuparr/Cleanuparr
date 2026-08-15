@@ -1,0 +1,19 @@
+diff --git a/code/backend/Cleanuparr.Infrastructure/Features/Jobs/SeekerCommandMonitor.cs b/code/backend/Cleanuparr.Infrastructure/Features/Jobs/SeekerCommandMonitor.cs
+index ac0e06d8..4f4ae886 100644
+--- a/code/backend/Cleanuparr.Infrastructure/Features/Jobs/SeekerCommandMonitor.cs
++++ b/code/backend/Cleanuparr.Infrastructure/Features/Jobs/SeekerCommandMonitor.cs
+@@ -19,13 +19,13 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
+ /// and inspects the download queue for grabbed items after completion.
+ /// </summary>
+ public class SeekerCommandMonitor : BackgroundService
+ {
+     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(60);
+     private static readonly TimeSpan IdleInterval = TimeSpan.FromSeconds(60);
+-    private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(30);
++    private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(20);
+     private static readonly TimeSpan AbandonAfter = TimeSpan.FromMinutes(90);
+ 
+     private readonly ILogger<SeekerCommandMonitor> _logger;
+     private readonly IServiceScopeFactory _scopeFactory;
+     private readonly TimeProvider _timeProvider;
+ 
