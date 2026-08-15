@@ -20,6 +20,19 @@ export interface RestartOptions {
 const COMPOSE_FILE = 'docker-compose.e2e.yml';
 const AUTH_FILE = path.resolve(process.cwd(), 'playwright/.auth/admin.json');
 
+/**
+ * The app container's log from the given RFC3339 timestamp onwards.
+ *
+ * A spec asserts on this when the app swallows a failure the API never reports.
+ */
+export function appLogsSince(since: string): string {
+  return execSync(`docker compose -f ${COMPOSE_FILE} logs --since ${since} --no-log-prefix app`, {
+    encoding: 'utf8',
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
+}
+
 function restartAppContainer(): void {
   execSync(`docker compose -f ${COMPOSE_FILE} restart app`, {
     stdio: 'inherit',
