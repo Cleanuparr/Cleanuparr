@@ -169,6 +169,19 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
     }
 
     [Fact, TestPriority(7)]
+    public async Task Regenerate2fa_WithUnknownCode_IsRejected()
+    {
+        HttpResponseMessage response = await _client.PostAsJsonAsync("/api/account/2fa/regenerate", new
+        {
+            password = Password,
+            totpCode = "ZZZZ-ZZZZ"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await IsTwoFactorEnabled()).ShouldBeTrue();
+    }
+
+    [Fact, TestPriority(8)]
     public async Task Disable2fa_WithTotpCode_StillSucceeds()
     {
         var response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
