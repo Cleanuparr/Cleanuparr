@@ -14,16 +14,21 @@ import { torznabSearchStub } from '../helpers/mocks/torznab-stubs';
  * What happens to a search the arr never finishes.
  *
  * The indexer holds its answer, so Radarr's search command stays running.
- * The patched image cuts the command timeout to 20s, see e2e/patches.
+ * The patched image cuts the command timeout to 20s and the poll to 5s, see e2e/patches.
  * The monitor checks the arr once more before it gives up, and the command is
  * still running, so the event settles on TimedOut.
  */
 
-/** Longer than the patched timeout and the monitor's one minute poll put together. */
-const INDEXER_DELAY_MS = 180_000;
+/**
+ * Long enough to outlive the patched 20s timeout and its 5s poll.
+ *
+ * Short enough that Radarr gets its answer: an indexer that times out on Radarr
+ * lands in its backoff, and the next spec then searches with no active indexer.
+ */
+const INDEXER_DELAY_MS = 45_000;
 
-const TEST_TIMEOUT = 300_000;
-const TIMEOUT_WAIT = 240_000;
+const TEST_TIMEOUT = 180_000;
+const TIMEOUT_WAIT = 90_000;
 
 test.describe('Seeker search command timeout', () => {
   test.beforeEach(async () => {
