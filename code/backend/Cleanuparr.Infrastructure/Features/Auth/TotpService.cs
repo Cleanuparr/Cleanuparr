@@ -24,7 +24,14 @@ public sealed class TotpService : ITotpService
     /// <inheritdoc/>
     public bool ValidateCode(string secret, string code)
     {
-        if (string.IsNullOrWhiteSpace(code) || code.Length != 6)
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
+        string trimmedCode = code.Trim();
+
+        if (trimmedCode.Length != 6)
         {
             return false;
         }
@@ -33,7 +40,7 @@ public sealed class TotpService : ITotpService
         {
             var keyBytes = Base32Encoding.ToBytes(secret);
             var totp = new Totp(keyBytes);
-            return totp.VerifyTotp(code, out _, new VerificationWindow(previous: 1, future: 1));
+            return totp.VerifyTotp(trimmedCode, out _, new VerificationWindow(previous: 1, future: 1));
         }
         catch
         {
@@ -72,7 +79,7 @@ public sealed class TotpService : ITotpService
     {
         try
         {
-            var normalized = code.Replace("-", "").ToUpperInvariant();
+            string normalized = code.Trim().Replace("-", "").ToUpperInvariant();
             return BCrypt.Net.BCrypt.Verify(normalized, hash);
         }
         catch
