@@ -64,7 +64,7 @@ export class LiveArr {
   private async request(path: string, init?: RequestInit): Promise<unknown> {
     const res = await fetch(`${this.url}${path}`, {
       ...init,
-      headers: { 'X-Api-Key': this.apiKey, 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+      headers: { 'X-Api-Key': this.apiKey, 'Content-Type': 'application/json', ...init?.headers },
     });
 
     if (!res.ok) {
