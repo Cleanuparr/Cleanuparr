@@ -3,6 +3,7 @@ import type { CleanuparrApi } from '../helpers/api';
 import type { MockServers } from '../helpers/mocks/wiremock-client';
 import {
   applyArrDefaults,
+  arrCommandCompletedStub,
   arrCommandListStub,
   arrCommandNotFoundStub,
   arrCommandTriggerStub,
@@ -134,6 +135,28 @@ test.describe('Seeker: search command status flow', () => {
 
     const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
     expect(event?.searchStatus).toBe('Completed');
+  });
+
+  /**
+   * The monitor asks for the whole command list once per instance.
+   * Both endpoints answer here, so only the request log tells the two paths apart.
+   */
+  test('reads the command list instead of each command', async ({ api, mocks }) => {
+    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
+
+    const title = 'Command List Only';
+    const instanceId = await arrangeSearchableInstance(api, mocks, title, [
+      arrCommandListStub([{ id: COMMAND_ID, status: 'completed' }]),
+      arrCommandCompletedStub(COMMAND_ID),
+    ]);
+
+    await waitForSearchStatus(api, instanceId, title, 'Completed');
+
+    const listed = await mocks.arr.findRequests({ method: 'GET', urlPath: '/api/v3/command' });
+    const perCommand = await mocks.arr.findRequests({ method: 'GET', urlPath: `/api/v3/command/${COMMAND_ID}` });
+
+    expect(listed.length).toBeGreaterThan(0);
+    expect(perCommand, 'the monitor should not ask for a single command').toHaveLength(0);
   });
 
   test('reaches failed when the arr aborts the command', async ({ api, mocks }) => {
