@@ -215,11 +215,23 @@ export async function snapshotLibrary(target: SeededArr): Promise<Array<Record<s
   return target.arr.get<Array<Record<string, unknown>>>(`/api/v3/${target.itemPath}`);
 }
 
-/** Writes every item back, because a no-op PUT costs less than a diff. */
+/**
+ * Writes every item back, because a no-op PUT costs less than a diff.
+ *
+ * A PUT cannot restore an item a spec added or removed.
+ * Adding one back would send the arr to TMDB or Skyhook, which the seed avoids.
+ * So this fails loudly instead of leaking the change into the next spec.
+ */
 export async function restoreLibrary(target: SeededArr, snapshot: Array<Record<string, unknown>>): Promise<void> {
   for (const item of snapshot) {
     await target.arr.put(`/api/v3/${target.itemPath}/${item.id}`, item);
   }
+
+  const restored = await snapshotLibrary(target);
+  const expected = snapshot.map((item) => item.id).sort();
+  const actual = restored.map((item) => item.id).sort();
+
+  expect(actual, `the ${target.type} library gained or lost items, which a PUT cannot restore`).toEqual(expected);
 }
 
 /**
