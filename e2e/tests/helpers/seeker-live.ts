@@ -228,8 +228,8 @@ export async function restoreLibrary(target: SeededArr, snapshot: Array<Record<s
   }
 
   const restored = await snapshotLibrary(target);
-  const expected = snapshot.map((item) => item.id).sort();
-  const actual = restored.map((item) => item.id).sort();
+  const expected = snapshot.map((item) => Number(item.id)).sort((a, b) => a - b);
+  const actual = restored.map((item) => Number(item.id)).sort((a, b) => a - b);
 
   expect(actual, `the ${target.type} library gained or lost items, which a PUT cannot restore`).toEqual(expected);
 }
