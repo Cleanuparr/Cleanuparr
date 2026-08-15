@@ -57,8 +57,9 @@ The seed holds one Sonarr series with its first season monitored, and two Radarr
 |-------|-----------------|
 | `0001-allow-triggering-the-seeker` | the guard that rejects `POST /api/jobs/Seeker/trigger` |
 | `0002-drop-the-seeker-jitter` | the random delay a run waits before searching |
+| `0003-shorten-the-search-command-timeout` | 30 minutes of waiting before a running command times out, cut to 20 seconds |
 
-Together they turn a two-to-four minute wait per test into seconds, which is what makes a behaviour matrix affordable. `scripts/with-patches.sh` applies the patches, builds, and reverts from a `trap`, so an aborted build cannot leave the tree dirty.
+Together they turn a two-to-four minute wait per test into seconds, which is what makes a behaviour matrix affordable. The third patch is what makes `seeker-timeout.api.spec.ts` possible: it holds the indexer's answer so the arr's command keeps running, then asserts the event settles on `TimedOut`. `scripts/with-patches.sh` applies the patches, builds, and reverts from a `trap`, so an aborted build cannot leave the tree dirty.
 
 The split matters: the patched image is not the shipped one, so anything that depends on scheduling or timing has to stay in `tests/live-arr`. Put behaviour in `live-arr-fast` and timing in `live-arr`.
 
