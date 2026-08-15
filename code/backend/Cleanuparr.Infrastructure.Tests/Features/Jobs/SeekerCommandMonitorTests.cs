@@ -269,8 +269,60 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventPublisher.Received(1).PublishSearchCompleted(
             eventId, SearchCommandStatus.TimedOut, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
 
+        await _arrClient.Received(1).GetCommandsAsync(Arg.Any<ArrInstance>());
         await _arrClient.DidNotReceive().GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>());
         await _arrClient.DidNotReceive().GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task Completes_a_command_that_finished_just_after_the_timeout()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid eventId = Guid.NewGuid();
+        AddTracker(radarrInstance.Id, eventId, commandId: 7, age: TimeSpan.FromMinutes(31));
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed, commandId: 7);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        publishedStatus.ShouldBe(SearchCommandStatus.Completed);
+    }
+
+    [Fact]
+    public async Task Does_not_time_out_a_command_that_is_still_within_the_timeout()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid(), age: TimeSpan.FromMinutes(10));
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Started);
+
+        Task secondPoll = CaptureNthPoll(2);
+        CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        await AdvanceUntilAsync(secondPoll);
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        SeekerCommandTracker tracker = _eventsContext.SeekerCommandTrackers.AsNoTracking().Single();
+        tracker.Status.ShouldBe(SearchCommandStatus.Started);
     }
 
     [Fact]
