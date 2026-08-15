@@ -252,6 +252,16 @@ describe('TwoFactorCardComponent', () => {
     expect(button(fixture, 'Regenerate 2FA').disabled).toBe(false);
   });
 
+  it('keeps the actions disabled for a whitespace-only code', () => {
+    const { fixture } = setup({ enabled: true });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '   ');
+
+    expect(button(fixture, 'Disable 2FA').disabled).toBe(true);
+    expect(button(fixture, 'Regenerate 2FA').disabled).toBe(true);
+  });
+
   it('accepts a recovery code in place of an authenticator code', async () => {
     const { fixture, disableCalls } = setup({ enabled: true });
 

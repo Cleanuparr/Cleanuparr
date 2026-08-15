@@ -64,7 +64,7 @@
         <div class="form-actions">
           <app-button
             variant="destructive"
-            [disabled]="!twoFaPassword() || !twoFaCode() || regenerating2fa() || disabling2fa()"
+            [disabled]="!twoFaPassword() || !twoFaCode().trim() || regenerating2fa() || disabling2fa()"
             (clicked)="confirmRegenerate2fa()"
           >
             @if (regenerating2fa()) {
@@ -75,7 +75,7 @@
           </app-button>
           <app-button
             variant="destructive"
-            [disabled]="!twoFaPassword() || !twoFaCode() || disabling2fa() || regenerating2fa()"
+            [disabled]="!twoFaPassword() || !twoFaCode().trim() || disabling2fa() || regenerating2fa()"
             (clicked)="confirmDisable2fa()"
           >
             @if (disabling2fa()) {
