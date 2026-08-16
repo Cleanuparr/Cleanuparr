@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Cleanuparr.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Auth;
@@ -192,6 +195,65 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await IsTwoFactorEnabled()).ShouldBeFalse();
+    }
+
+    [Fact, TestPriority(20)]
+    public async Task Regenerate2fa_WhenIssuedConcurrently_AppliesOnce()
+    {
+        await EnableTwoFactor();
+
+        string sharedCode = _recoveryCodes[0];
+
+        HttpResponseMessage[] responses = await Task.WhenAll(
+            _client.PostAsJsonAsync("/api/account/2fa/regenerate", new { password = Password, totpCode = sharedCode }),
+            _client.PostAsJsonAsync("/api/account/2fa/regenerate", new { password = Password, totpCode = sharedCode }));
+
+        responses.Count(response => response.StatusCode is HttpStatusCode.OK).ShouldBe(1);
+        responses.Count(response => response.StatusCode is HttpStatusCode.BadRequest).ShouldBe(1);
+        (await CountRecoveryCodes()).ShouldBe(10);
+
+        HttpResponseMessage accepted = responses.First(response => response.StatusCode is HttpStatusCode.OK);
+        JsonElement body = await accepted.Content.ReadFromJsonAsync<JsonElement>();
+        _secret = body.GetProperty("secret").GetString()!;
+        _recoveryCodes = ReadRecoveryCodes(body);
+    }
+
+    [Fact, TestPriority(21)]
+    public async Task Login2fa_WithSameRecoveryCodeConcurrently_SucceedsOnce()
+    {
+        string sharedCode = _recoveryCodes[0];
+
+        string firstToken = await RequestLoginToken();
+        string secondToken = await RequestLoginToken();
+
+        HttpResponseMessage[] responses = await Task.WhenAll(
+            _factory.CreateClient().PostAsJsonAsync("/api/auth/login/2fa", new { loginToken = firstToken, code = sharedCode, isRecoveryCode = true }),
+            _factory.CreateClient().PostAsJsonAsync("/api/auth/login/2fa", new { loginToken = secondToken, code = sharedCode, isRecoveryCode = true }));
+
+        responses.Count(response => response.StatusCode is HttpStatusCode.OK).ShouldBe(1);
+    }
+
+    private async Task<string> RequestLoginToken()
+    {
+        HttpResponseMessage response = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new
+        {
+            username = Username,
+            password = Password
+        });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("requiresTwoFactor").GetBoolean().ShouldBeTrue();
+
+        return body.GetProperty("loginToken").GetString()!;
+    }
+
+    private async Task<int> CountRecoveryCodes()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+        return await context.RecoveryCodes.CountAsync();
     }
 
     private async Task EnableTwoFactor()
