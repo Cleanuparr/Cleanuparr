@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, OnDestroy, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, inject, input, output, signal } from '@angular/core';
+import { createRetryCountdown } from '@shared/utils/retry-countdown';
 import { CardComponent, InputComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { AccountApi } from '@core/api/account.api';
@@ -14,7 +15,7 @@ import { ConfirmService } from '@core/services/confirm.service';
   styleUrl: './two-factor-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TwoFactorCardComponent implements OnDestroy {
+export class TwoFactorCardComponent {
   private readonly api = inject(AccountApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
@@ -42,12 +43,8 @@ export class TwoFactorCardComponent implements OnDestroy {
   readonly disabling2fa = signal(false);
 
   // Retry countdown, shared by the regenerate and disable forms
-  readonly retryCountdown = signal(0);
-  private countdownTimer: ReturnType<typeof setInterval> | null = null;
-
-  ngOnDestroy(): void {
-    this.clearCountdown();
-  }
+  private readonly countdown = createRetryCountdown(inject(DestroyRef));
+  readonly retryCountdown = this.countdown.seconds;
 
   async confirmRegenerate2fa(): Promise<void> {
     const confirmed = await this.confirmService.confirm({
@@ -145,29 +142,8 @@ export class TwoFactorCardComponent implements OnDestroy {
       return null;
     }
 
-    this.startCountdown(retryAfter);
+    this.countdown.start(retryAfter);
     return `Too many failed attempts. Try again in ${retryAfter}s.`;
-  }
-
-  private startCountdown(seconds: number): void {
-    this.clearCountdown();
-    this.retryCountdown.set(seconds);
-    this.countdownTimer = setInterval(() => {
-      const current = this.retryCountdown();
-      if (current <= 1) {
-        this.clearCountdown();
-      } else {
-        this.retryCountdown.set(current - 1);
-      }
-    }, 1000);
-  }
-
-  private clearCountdown(): void {
-    this.retryCountdown.set(0);
-    if (this.countdownTimer) {
-      clearInterval(this.countdownTimer);
-      this.countdownTimer = null;
-    }
   }
 
   async confirmDisable2fa(): Promise<void> {

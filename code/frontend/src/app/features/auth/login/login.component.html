@@ -5,7 +5,7 @@
 }
 
 @if (retryCountdown() > 0) {
-  <div class="retry-countdown">Try again in {{ retryCountdown() }}s</div>
+  <div class="retry-countdown" role="status">Try again in {{ retryCountdown() }}s</div>
 }
 
 <!-- Credentials view -->
