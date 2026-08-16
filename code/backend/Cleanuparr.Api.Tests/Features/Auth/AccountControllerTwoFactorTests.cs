@@ -240,6 +240,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
     [Fact, TestPriority(10)]
     public async Task Disable2fa_AfterLockoutCleared_ResetsTheCounterOnSuccess()
     {
+        await SeedFailedAttempts(3);
+
         var response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
         {
             password = Password,
