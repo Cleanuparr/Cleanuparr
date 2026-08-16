@@ -111,6 +111,7 @@ public sealed class AccountController : ControllerBase
     {
         User user;
         string? failureMessage = null;
+        int retryAfterSeconds = 0;
         TotpSetupResponse? setup = null;
 
         await UsersContext.Lock.WaitAsync();
@@ -145,6 +146,15 @@ public sealed class AccountController : ControllerBase
 
                 await _usersContext.SaveChangesAsync();
             }
+
+            if (failureMessage is not null)
+            {
+                retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+            }
+            else
+            {
+                await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+            }
         }
         finally
         {
@@ -153,12 +163,9 @@ public sealed class AccountController : ControllerBase
 
         if (failureMessage is not null)
         {
-            int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
             return this.ProblemResult(StatusCodes.Status400BadRequest, failureMessage,
                 extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
         }
-
-        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
 
         _logger.LogInformation("2FA regenerated for user {Username}", user.Username);
 
@@ -249,6 +256,7 @@ public sealed class AccountController : ControllerBase
     {
         User user;
         string? failureMessage = null;
+        int retryAfterSeconds = 0;
 
         await UsersContext.Lock.WaitAsync();
 
@@ -291,6 +299,15 @@ public sealed class AccountController : ControllerBase
 
                 await _usersContext.SaveChangesAsync();
             }
+
+            if (failureMessage is not null)
+            {
+                retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+            }
+            else
+            {
+                await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+            }
         }
         finally
         {
@@ -299,12 +316,9 @@ public sealed class AccountController : ControllerBase
 
         if (failureMessage is not null)
         {
-            int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
             return this.ProblemResult(StatusCodes.Status400BadRequest, failureMessage,
                 extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
         }
-
-        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
 
         _logger.LogInformation("2FA disabled for user {Username}", user.Username);
 
