@@ -61,10 +61,13 @@
           [value]="twoFaCode()"
           (valueChange)="twoFaCode.set($event)"
         />
+        @if (retryCountdown() > 0) {
+          <div class="retry-countdown">Try again in {{ retryCountdown() }}s</div>
+        }
         <div class="form-actions">
           <app-button
             variant="destructive"
-            [disabled]="!twoFaPassword() || !twoFaCode().trim() || regenerating2fa() || disabling2fa()"
+            [disabled]="!twoFaPassword() || !twoFaCode().trim() || regenerating2fa() || disabling2fa() || retryCountdown() > 0"
             (clicked)="confirmRegenerate2fa()"
           >
             @if (regenerating2fa()) {
@@ -75,7 +78,7 @@
           </app-button>
           <app-button
             variant="destructive"
-            [disabled]="!twoFaPassword() || !twoFaCode().trim() || disabling2fa() || regenerating2fa()"
+            [disabled]="!twoFaPassword() || !twoFaCode().trim() || disabling2fa() || regenerating2fa() || retryCountdown() > 0"
             (clicked)="confirmDisable2fa()"
           >
             @if (disabling2fa()) {
