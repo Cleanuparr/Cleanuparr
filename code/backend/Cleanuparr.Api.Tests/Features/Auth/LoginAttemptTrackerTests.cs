@@ -103,7 +103,7 @@ public sealed class LoginAttemptTrackerTests : IDisposable
     [Fact]
     public void GetLockoutSecondsRemaining_WithActiveLockout_RoundsUpToWholeSeconds()
     {
-        User user = CreateUser(DateTimeOffset.UtcNow.AddSeconds(9.2));
+        User user = CreateUser(DateTimeOffset.UtcNow.AddSeconds(9.9));
 
         LoginAttemptTracker.GetLockoutSecondsRemaining(user).ShouldBe(10);
     }

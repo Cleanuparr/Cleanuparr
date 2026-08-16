@@ -241,45 +241,49 @@ public sealed class AuthController : ControllerBase
             return this.ProblemResult(StatusCodes.Status403Forbidden, "Login with credentials is disabled. Use OIDC to sign in.");
         }
 
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+
+        // Always verify the submitted password to prevent timing-based username enumeration
+        var userHasPassword = user?.PasswordHash is not null;
+        var verifiedHash = user?.PasswordHash ?? _passwordService.DummyHash;
+        var passwordValid = _passwordService.VerifyPassword(request.Password, verifiedHash) && userHasPassword;
+
+        if (user is null || !user.SetupCompleted)
+        {
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials");
+        }
+
         await UsersContext.Lock.WaitAsync();
 
         try
         {
-            var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
-
-            // Always verify the submitted password to prevent timing-based username enumeration
-            var userHasPassword = user?.PasswordHash is not null;
-            var passwordHash = user?.PasswordHash ?? _passwordService.DummyHash;
-            var passwordValid = _passwordService.VerifyPassword(request.Password, passwordHash) && userHasPassword;
-
-            if (user is null || !user.SetupCompleted)
-            {
-                return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials");
-            }
+            User current = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
 
             // Check lockout
-            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            if (LoginAttemptTracker.GetLockoutSecondsRemaining(current) is { } remaining)
             {
                 throw new RateLimitException("Account is locked", remaining);
             }
 
-            if (!passwordValid || !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
+            bool credentialsValid = passwordValid
+                && string.Equals(current.Username, request.Username, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(current.PasswordHash, verifiedHash, StringComparison.Ordinal);
+
+            if (!credentialsValid)
             {
-                int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+                int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(current.Id);
                 return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials",
                     extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
             }
 
             // If 2FA is not enabled, issue tokens directly
-            if (!user.TotpEnabled)
+            if (!current.TotpEnabled)
             {
-                await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+                await _loginAttemptTracker.ResetFailedAttempts(current.Id);
 
-                // Re-fetch with tracking since the query above used AsNoTracking
-                var trackedUser = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
-                var tokenResponse = await GenerateTokenResponse(trackedUser);
+                var tokenResponse = await GenerateTokenResponse(current);
 
-                _logger.LogInformation("User {Username} logged in (2FA disabled)", user.Username);
+                _logger.LogInformation("User {Username} logged in (2FA disabled)", current.Username);
 
                 return Ok(new LoginResponse
                 {
@@ -289,7 +293,7 @@ public sealed class AuthController : ControllerBase
             }
 
             // Password valid - require 2FA
-            var loginToken = _jwtService.GenerateLoginToken(user.Id);
+            var loginToken = _jwtService.GenerateLoginToken(current.Id);
 
             return Ok(new LoginResponse
             {

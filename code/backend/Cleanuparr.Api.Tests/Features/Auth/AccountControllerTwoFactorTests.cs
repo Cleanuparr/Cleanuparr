@@ -279,6 +279,26 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         }
     }
 
+    [Fact, TestPriority(12)]
+    public async Task Login_WithConcurrentWrongPasswords_LocksOutTheSecondRequest()
+    {
+        await ClearLockout();
+
+        try
+        {
+            HttpResponseMessage[] responses = await Task.WhenAll(
+                _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username = Username, password = "WrongPassword123!" }),
+                _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username = Username, password = "WrongPassword123!" }));
+
+            responses.Count(response => response.StatusCode is HttpStatusCode.Unauthorized).ShouldBe(1);
+            responses.Count(response => response.StatusCode is HttpStatusCode.TooManyRequests).ShouldBe(1);
+        }
+        finally
+        {
+            await ClearLockout();
+        }
+    }
+
     [Fact, TestPriority(20)]
     public async Task Regenerate2fa_WhenIssuedConcurrently_AppliesOnce()
     {
