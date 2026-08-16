@@ -48,7 +48,9 @@ async function forceDisable(api: CleanuparrApi, setup: TwoFactorSetup): Promise<
   }
 
   await waitOutLockout(first);
-  await api.account.disable2fa(TEST_CONFIG.adminPassword, generateTotpCode(setup.secret));
+
+  const second = await api.account.disable2fa(TEST_CONFIG.adminPassword, generateTotpCode(setup.secret));
+  expect(second.ok).toBe(true);
 }
 
 /** Signs in with a recovery code and returns a client for that session. The code is used up. */
