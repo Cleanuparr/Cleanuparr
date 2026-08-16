@@ -62,7 +62,7 @@
           (valueChange)="twoFaCode.set($event)"
         />
         @if (retryCountdown() > 0) {
-          <div class="retry-countdown" role="status">Try again in {{ retryCountdown() }}s</div>
+          <output class="retry-countdown">Try again in {{ retryCountdown() }}s</output>
         }
         <div class="form-actions">
           <app-button

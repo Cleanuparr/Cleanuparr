@@ -1,4 +1,5 @@
 @mixin retry-countdown {
+  display: block;
   background: var(--color-warning-bg);
   color: var(--color-warning);
   padding: var(--space-2) var(--space-3);
