@@ -27,13 +27,17 @@ export function createRetryCountdown(destroyRef: DestroyRef): RetryCountdown {
 
   const start = (initial: number): void => {
     stop();
+
+    // Tracked as an expiry so a throttled or suspended timer cannot outlive the lockout
+    const expiresAt = Date.now() + initial * 1000;
     seconds.set(initial);
+
     timer = setInterval(() => {
-      const current = seconds();
-      if (current <= 1) {
+      const remaining = Math.ceil((expiresAt - Date.now()) / 1000);
+      if (remaining <= 0) {
         stop();
       } else {
-        seconds.set(current - 1);
+        seconds.set(remaining);
       }
     }, 1000);
   };

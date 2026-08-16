@@ -58,6 +58,27 @@ describe('createRetryCountdown', () => {
     expect(countdown.seconds()).toBe(9);
   });
 
+  it('expires after a clock jump that skipped the ticks', () => {
+    const { countdown } = setup();
+
+    countdown.start(30);
+    vi.setSystemTime(Date.now() + 60_000);
+    vi.advanceTimersByTime(1000);
+
+    expect(countdown.seconds()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('follows the wall clock when ticks run late', () => {
+    const { countdown } = setup();
+
+    countdown.start(10);
+    vi.setSystemTime(Date.now() + 4000);
+    vi.advanceTimersByTime(1000);
+
+    expect(countdown.seconds()).toBe(5);
+  });
+
   it('clears the timer when the host is destroyed', () => {
     const { countdown, destroy } = setup();
 
