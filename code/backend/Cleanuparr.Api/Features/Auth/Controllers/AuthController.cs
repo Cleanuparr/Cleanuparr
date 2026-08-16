@@ -704,7 +704,11 @@ public sealed class AuthController : ControllerBase
         await UsersContext.Lock.WaitAsync();
         try
         {
-            foreach (var recoveryCode in user.RecoveryCodes.Where(r => !r.IsUsed))
+            List<RecoveryCode> unusedCodes = await _usersContext.RecoveryCodes
+                .Where(r => r.UserId == user.Id && !r.IsUsed)
+                .ToListAsync();
+
+            foreach (var recoveryCode in unusedCodes)
             {
                 if (_totpService.VerifyRecoveryCode(code, recoveryCode.CodeHash))
                 {
