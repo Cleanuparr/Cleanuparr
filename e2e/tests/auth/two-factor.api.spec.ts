@@ -174,6 +174,29 @@ test.describe('Account — 2FA with recovery codes', () => {
     }
   });
 
+  test('codes pasted with surrounding whitespace are accepted', async ({ api, anonymousApi }) => {
+    const enable = await api.account.enable2fa(TEST_CONFIG.adminPassword);
+    expect(enable.ok).toBe(true);
+
+    const setup: TwoFactorSetup = await enable.json();
+    const verify = await api.account.enable2faVerify(` ${generateTotpCode(setup.secret)} `);
+    expect(verify.status).toBe(200);
+
+    try {
+      const recoveryApi = await loginWithRecoveryCode(anonymousApi, ` ${setup.recoveryCodes[0]}\n`);
+
+      const disable = await recoveryApi.account.disable2fa(
+        TEST_CONFIG.adminPassword,
+        ` ${generateTotpCode(setup.secret)} `,
+      );
+
+      expect(disable.status).toBe(200);
+      expect(await isTwoFactorEnabled(api)).toBe(false);
+    } finally {
+      await forceDisable(api, setup);
+    }
+  });
+
   test('repeated bad codes at the 2FA login step are rate limited', async ({ api, anonymousApi }) => {
     const setup = await enableTwoFactor(api);
 
