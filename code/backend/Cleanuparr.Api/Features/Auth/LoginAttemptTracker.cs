@@ -6,6 +6,8 @@ namespace Cleanuparr.Api.Features.Auth;
 
 public sealed class LoginAttemptTracker
 {
+    private const int MaxLockoutSeconds = 300;
+
     private readonly UsersContext _usersContext;
     private readonly ILogger<LoginAttemptTracker> _logger;
 
@@ -32,13 +34,15 @@ public sealed class LoginAttemptTracker
         {
             User user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
             user.FailedLoginAttempts++;
-            user.LockoutEnd = DateTimeOffset.UtcNow.AddSeconds(user.FailedLoginAttempts * 2);
+
+            int lockoutSeconds = Math.Min(user.FailedLoginAttempts * 2, MaxLockoutSeconds);
+            user.LockoutEnd = DateTimeOffset.UtcNow.AddSeconds(lockoutSeconds);
             await _usersContext.SaveChangesAsync();
 
             _logger.LogWarning("Failed login attempt {Attempts} for user {Username}, locked for {Seconds}s",
-                user.FailedLoginAttempts, user.Username, user.FailedLoginAttempts * 2);
+                user.FailedLoginAttempts, user.Username, lockoutSeconds);
 
-            return user.FailedLoginAttempts * 2;
+            return lockoutSeconds;
         }
         finally
         {

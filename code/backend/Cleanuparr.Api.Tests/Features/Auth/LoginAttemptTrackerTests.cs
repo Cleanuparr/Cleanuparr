@@ -55,6 +55,22 @@ public sealed class LoginAttemptTrackerTests : IDisposable
     }
 
     [Fact]
+    public async Task IncrementFailedAttempts_StopsGrowingAtTheMaximumWindow()
+    {
+        User seeded = await _usersContext.Users.FirstAsync(u => u.Id == _userId);
+        seeded.FailedLoginAttempts = 148;
+        await _usersContext.SaveChangesAsync();
+
+        (await _sut.IncrementFailedAttempts(_userId)).ShouldBe(298);
+        (await _sut.IncrementFailedAttempts(_userId)).ShouldBe(300);
+        (await _sut.IncrementFailedAttempts(_userId)).ShouldBe(300);
+
+        User user = await _usersContext.Users.FirstAsync(u => u.Id == _userId);
+        user.FailedLoginAttempts.ShouldBe(151);
+        LoginAttemptTracker.GetLockoutSecondsRemaining(user)!.Value.ShouldBeLessThanOrEqualTo(300);
+    }
+
+    [Fact]
     public async Task ResetFailedAttempts_ClearsTheCounterAndLockout()
     {
         await _sut.IncrementFailedAttempts(_userId);
