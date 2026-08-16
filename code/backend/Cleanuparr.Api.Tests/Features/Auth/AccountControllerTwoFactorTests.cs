@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -256,6 +257,26 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         user.LockoutEnd.ShouldBeNull();
     }
 
+    [Fact, TestPriority(11)]
+    public async Task Login_WithTwoFactorEnabled_KeepsTheFailedAttemptCounter()
+    {
+        await EnableTwoFactor();
+
+        try
+        {
+            await SeedFailedAttempts(3);
+
+            await RequestLoginToken();
+
+            (await ReadFailedAttempts()).ShouldBe(3);
+        }
+        finally
+        {
+            await ClearLockout();
+            await DisableTwoFactor();
+        }
+    }
+
     [Fact, TestPriority(20)]
     public async Task Regenerate2fa_WhenIssuedConcurrently_AppliesOnce()
     {
@@ -320,6 +341,25 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         return await context.RecoveryCodes.CountAsync();
     }
 
+    private async Task SeedFailedAttempts(int attempts)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        User user = await context.Users.FirstAsync();
+
+        user.FailedLoginAttempts = attempts;
+        user.LockoutEnd = null;
+        await context.SaveChangesAsync();
+    }
+
+    private async Task<int> ReadFailedAttempts()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+        return (await context.Users.AsNoTracking().FirstAsync()).FailedLoginAttempts;
+    }
+
     private async Task ClearLockout()
     {
         using var scope = _factory.Services.CreateScope();
@@ -349,6 +389,16 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
             code = TotpTestHelper.GenerateTotpCode(_secret)
         });
         verifyResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    private async Task DisableTwoFactor()
+    {
+        HttpResponseMessage response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+        {
+            password = Password,
+            totpCode = TotpTestHelper.GenerateTotpCode(_secret)
+        });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     private async Task<bool> IsTwoFactorEnabled()

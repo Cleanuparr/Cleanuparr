@@ -266,12 +266,11 @@ public sealed class AuthController : ControllerBase
                 extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
         }
 
-        // Reset failed attempts on successful password verification
-        await _loginAttemptTracker.ResetFailedAttempts(user.Id);
-
         // If 2FA is not enabled, issue tokens directly
         if (!user.TotpEnabled)
         {
+            await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+
             // Re-fetch with tracking since the query above used AsNoTracking
             var trackedUser = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
             var tokenResponse = await GenerateTokenResponse(trackedUser);
