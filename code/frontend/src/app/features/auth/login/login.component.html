@@ -102,7 +102,7 @@
       <app-button
         variant="primary"
         class="login-submit"
-        [disabled]="totpCode().length !== 6 || loading()"
+        [disabled]="totpCode().trim().length !== 6 || loading()"
         type="submit"
       >
         @if (loading()) {
@@ -135,7 +135,7 @@
       <app-button
         variant="primary"
         class="login-submit"
-        [disabled]="!recoveryCode() || loading()"
+        [disabled]="!recoveryCode().trim() || loading()"
         type="submit"
       >
         @if (loading()) {

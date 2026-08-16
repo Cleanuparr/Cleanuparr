@@ -185,6 +185,24 @@ describe('LoginComponent', () => {
     expect(navigations).toEqual([['/dashboard']]);
   });
 
+  it('accepts a pasted code that carries surrounding whitespace', () => {
+    const { fixture, verify2faCalls } = setup({
+      login: of({ requiresTwoFactor: true, loginToken: 'login-token' }),
+    });
+    const component = fixture.componentInstance;
+
+    component.submitLogin();
+    component.totpCode.set(' 123456 ');
+    fixture.detectChanges();
+
+    expect(submitButton(fixture).disabled).toBe(false);
+
+    submitButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(verify2faCalls).toEqual([['login-token', '123456', undefined]]);
+  });
+
   it('verifies a recovery code and reports a rejected one on the recovery view', () => {
     const { fixture, verify2faCalls, navigations } = setup({
       login: of({ requiresTwoFactor: true, loginToken: 'login-token' }),
