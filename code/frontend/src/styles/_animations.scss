@@ -89,19 +89,18 @@
   100% { background-position: calc(200px + 100%) 0; }
 }
 
+@keyframes orb-hue {
+  0%   { filter: hue-rotate(0deg); }
+  50%  { filter: hue-rotate(-35deg); }
+  100% { filter: hue-rotate(0deg); }
+}
+
 // Ambient orb float for glassmorphism background
 @keyframes float {
   0%   { transform: translate(0, 0) scale(1); }
   33%  { transform: translate(30px, -30px) scale(1.05); }
   66%  { transform: translate(-20px, 20px) scale(0.95); }
   100% { transform: translate(10px, -10px) scale(1.02); }
-}
-
-// Slow hue rotation for ambient orbs — barely noticeable color drift
-@keyframes hue-drift {
-  0%   { filter: blur(var(--orb-blur, 120px)) hue-rotate(0deg); }
-  50%  { filter: blur(var(--orb-blur, 120px)) hue-rotate(-35deg); }
-  100% { filter: blur(var(--orb-blur, 120px)) hue-rotate(0deg); }
 }
 
 // Toast entrance glow
@@ -150,8 +149,7 @@
 }
 
 :root[data-performance-mode='true'] .shell__main::before,
-:root[data-performance-mode='true'] .shell__main::after,
-:root[data-performance-mode='true'] .shell::after {
+:root[data-performance-mode='true'] .auth-layout::before {
   display: none !important;
 }
 
@@ -184,8 +182,7 @@
   }
 
   .shell__main::before,
-  .shell__main::after,
-  .shell::after {
+  .auth-layout::before {
     display: none !important;
   }
 }
