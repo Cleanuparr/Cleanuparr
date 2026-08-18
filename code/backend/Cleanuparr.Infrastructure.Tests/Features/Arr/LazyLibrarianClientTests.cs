@@ -194,7 +194,7 @@ public class LazyLibrarianClientTests
 
         ids.ShouldBeEmpty();
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
-        request.RequestUri!.Query.ShouldContain("id=OL7353617M");
+        request.RequestUri!.Query.ShouldBe("?apikey=api-key&cmd=searchBook&id=OL7353617M");
     }
 
     [Fact]

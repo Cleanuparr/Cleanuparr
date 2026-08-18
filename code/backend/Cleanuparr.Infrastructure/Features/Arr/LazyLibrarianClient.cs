@@ -152,7 +152,7 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
                 continue;
             }
 
-            Uri uri = BuildApiUri(arrInstance, "forceBookSearch", ("id", book.ContentId));
+            Uri uri = BuildApiUri(arrInstance, "searchBook", ("id", book.ContentId));
 
             using HttpRequestMessage request = new(HttpMethod.Get, uri);
 
