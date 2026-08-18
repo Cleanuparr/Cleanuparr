@@ -85,7 +85,7 @@ public class LazyLibrarianClientTests
     }
 
     [Fact]
-    public async Task GetQueueItemsAsync_SkipsTheMagazineRow()
+    public async Task GetQueueItemsAsync_SkipsTheLegacyRowWithNoBook()
     {
         StubHistory("""
             [{"BookID":"unknown","NZBtitle":"Some Magazine","DownloadID":"HASH","Status":"Snatched","NZBmode":"torrent"}]
@@ -104,14 +104,34 @@ public class LazyLibrarianClientTests
             [
               {"BookID":"OL1M","NZBtitle":"nzb row","DownloadID":"HASH1","Status":"Snatched","NZBmode":"nzb"},
               {"BookID":"OL2M","NZBtitle":"direct row","DownloadID":"HASH2","Status":"Snatched","NZBmode":"direct"},
-              {"BookID":"OL3M","NZBtitle":"processed row","DownloadID":"HASH3","Status":"Processed","NZBmode":"torrent"},
-              {"BookID":"OL4M","NZBtitle":"no download id","DownloadID":"","Status":"Snatched","NZBmode":"torrent"}
+              {"BookID":"OL3M","NZBtitle":"irc row","DownloadID":"HASH3","Status":"Snatched","NZBmode":"irc"},
+              {"BookID":"OL4M","NZBtitle":"no mode","DownloadID":"HASH4","Status":"Snatched","NZBmode":""},
+              {"BookID":"OL5M","NZBtitle":"processed row","DownloadID":"HASH5","Status":"Processed","NZBmode":"torrent"},
+              {"BookID":"OL6M","NZBtitle":"no download id","DownloadID":"","Status":"Snatched","NZBmode":"torrent"}
             ]
             """);
 
         QueueListResponse response = await _client.GetQueueItemsAsync(_arrInstance, 1);
 
         response.Records.ShouldBeEmpty();
+    }
+
+    // LazyLibrarian records the provider type.
+    // All three reach a torrent client.
+    [Theory]
+    [InlineData("torrent")]
+    [InlineData("torznab")]
+    [InlineData("magnet")]
+    public async Task GetQueueItemsAsync_AcceptsEveryTorrentMode(string mode)
+    {
+        StubHistory($$"""
+            [{"BookID":"OL450063W","NZBtitle":"Author - Title","DownloadID":"HASH","Status":"Snatched","NZBmode":"{{mode}}"}]
+            """);
+
+        QueueListResponse response = await _client.GetQueueItemsAsync(_arrInstance, 1);
+
+        QueueRecord record = response.Records.ShouldHaveSingleItem();
+        record.ContentId.ShouldBe("OL450063W");
     }
 
     [Fact]

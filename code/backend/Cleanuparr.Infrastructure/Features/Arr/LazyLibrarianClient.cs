@@ -12,6 +12,8 @@ namespace Cleanuparr.Infrastructure.Features.Arr;
 
 public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
 {
+    private static readonly string[] TorrentModes = ["torrent", "torznab", "magnet"];
+
     public LazyLibrarianClient(
         ILogger<LazyLibrarianClient> logger,
         IHttpClientFactory httpClientFactory,
@@ -250,9 +252,10 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
             return false;
         }
 
-        // Require an explicit torrent NzbMode. A null/empty value would otherwise let NZB rows
-        // through on older LazyLibrarian builds, and the DownloadID would be a job id rather
-        // than a torrent hash — useless to Cleanuparr and dangerous if logged or matched.
-        return string.Equals(record.NzbMode, "torrent", StringComparison.OrdinalIgnoreCase);
+        // LazyLibrarian records the provider type, not the protocol.
+        // It sends torznab, torrent and magnet to a torrent client.
+        // An empty value stays rejected.
+        // An nzb or direct row carries a job id, not a torrent hash.
+        return TorrentModes.Contains(record.NzbMode, StringComparer.OrdinalIgnoreCase);
     }
 }
