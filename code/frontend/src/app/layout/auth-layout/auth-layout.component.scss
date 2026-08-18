@@ -12,34 +12,16 @@
   overflow: hidden;
 
   // Ambient orbs for glassmorphism atmosphere
-  &::before,
-  &::after {
+  &::before {
     content: '';
     position: absolute;
-    border-radius: 50%;
-    filter: blur(var(--orb-blur));
+    inset: -120px;
     opacity: var(--orb-opacity);
     pointer-events: none;
     z-index: 0;
+    background-image: var(--orb-layers-auth);
     animation: float 20s ease-in-out infinite alternate,
-               hue-drift 60s ease-in-out infinite;
-  }
-
-  &::before {
-    width: 400px;
-    height: 400px;
-    background: var(--orb-primary);
-    top: -80px;
-    right: 10%;
-  }
-
-  &::after {
-    width: 350px;
-    height: 350px;
-    background: var(--orb-secondary);
-    bottom: -80px;
-    left: 10%;
-    animation-delay: -10s;
+               orb-hue 60s ease-in-out infinite;
   }
 
   &__card {

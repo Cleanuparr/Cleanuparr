@@ -95,10 +95,64 @@
 
   // Ambient orbs
   --orb-opacity: 0.15;
-  --orb-blur: 120px;
-  --orb-primary: radial-gradient(circle, var(--brand-500), var(--brand-800));
-  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--brand-600));
-  --orb-tertiary: radial-gradient(circle, var(--brand-400), var(--brand-700));
+  --orb-1: #6b34cb;
+  --orb-1: color-mix(in srgb, var(--brand-800) 67%, var(--brand-500));
+  --orb-2: #8a55f1;
+  --orb-2: color-mix(in srgb, var(--brand-600) 67%, var(--brand-400));
+  --orb-3: #8049e4;
+  --orb-3: color-mix(in srgb, var(--brand-700) 67%, var(--brand-400));
+  --orb-layers:
+    radial-gradient(circle 610px at calc(100% - 270px) 270px,
+      color-mix(in srgb, var(--orb-1) 92%, transparent),
+      color-mix(in srgb, var(--orb-1) 88.7%, transparent),
+      color-mix(in srgb, var(--orb-1) 78.4%, transparent),
+      color-mix(in srgb, var(--orb-1) 62.2%, transparent),
+      color-mix(in srgb, var(--orb-1) 43.2%, transparent),
+      color-mix(in srgb, var(--orb-1) 25.3%, transparent),
+      color-mix(in srgb, var(--orb-1) 11.8%, transparent),
+      color-mix(in srgb, var(--orb-1) 4.2%, transparent),
+      color-mix(in srgb, var(--orb-1) 0.9%, transparent), transparent, transparent),
+    radial-gradient(circle 560px at 270px calc(100% - 220px),
+      color-mix(in srgb, var(--orb-2) 78.3%, transparent),
+      color-mix(in srgb, var(--orb-2) 74.6%, transparent),
+      color-mix(in srgb, var(--orb-2) 63.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 48.1%, transparent),
+      color-mix(in srgb, var(--orb-2) 31.9%, transparent),
+      color-mix(in srgb, var(--orb-2) 17.8%, transparent),
+      color-mix(in srgb, var(--orb-2) 8.1%, transparent),
+      color-mix(in srgb, var(--orb-2) 2.8%, transparent),
+      color-mix(in srgb, var(--orb-2) 0.6%, transparent), transparent, transparent),
+    radial-gradient(circle 510px at calc(30% + 198px) calc(50% + 150px),
+      color-mix(in srgb, var(--orb-3) 56.5%, transparent),
+      color-mix(in srgb, var(--orb-3) 53.3%, transparent),
+      color-mix(in srgb, var(--orb-3) 44.6%, transparent),
+      color-mix(in srgb, var(--orb-3) 32.9%, transparent),
+      color-mix(in srgb, var(--orb-3) 21%, transparent),
+      color-mix(in srgb, var(--orb-3) 11.4%, transparent),
+      color-mix(in srgb, var(--orb-3) 5.1%, transparent),
+      color-mix(in srgb, var(--orb-3) 1.7%, transparent),
+      color-mix(in srgb, var(--orb-3) 0.3%, transparent), transparent, transparent);
+  --orb-layers-auth:
+    radial-gradient(circle 560px at calc(90% - 296px) 240px,
+      color-mix(in srgb, var(--orb-1) 78.3%, transparent),
+      color-mix(in srgb, var(--orb-1) 74.6%, transparent),
+      color-mix(in srgb, var(--orb-1) 63.7%, transparent),
+      color-mix(in srgb, var(--orb-1) 48.1%, transparent),
+      color-mix(in srgb, var(--orb-1) 31.9%, transparent),
+      color-mix(in srgb, var(--orb-1) 17.8%, transparent),
+      color-mix(in srgb, var(--orb-1) 8.1%, transparent),
+      color-mix(in srgb, var(--orb-1) 2.8%, transparent),
+      color-mix(in srgb, var(--orb-1) 0.6%, transparent), transparent, transparent),
+    radial-gradient(circle 535px at calc(10% + 271px) calc(100% - 215px),
+      color-mix(in srgb, var(--orb-2) 68.4%, transparent),
+      color-mix(in srgb, var(--orb-2) 64.9%, transparent),
+      color-mix(in srgb, var(--orb-2) 54.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 40.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 26.4%, transparent),
+      color-mix(in srgb, var(--orb-2) 14.5%, transparent),
+      color-mix(in srgb, var(--orb-2) 6.6%, transparent),
+      color-mix(in srgb, var(--orb-2) 2.3%, transparent),
+      color-mix(in srgb, var(--orb-2) 0.5%, transparent), transparent, transparent);
 }
 
 // Light theme
@@ -187,8 +241,62 @@
 
   // Ambient orbs (stronger for light backgrounds; retint with accent)
   --orb-opacity: 0.35;
-  --orb-blur: 150px;
-  --orb-primary: radial-gradient(circle, var(--brand-500), var(--brand-700));
-  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--brand-600));
-  --orb-tertiary: radial-gradient(circle, var(--brand-500), var(--brand-800));
+  --orb-1: #7739e3;
+  --orb-1: color-mix(in srgb, var(--brand-700) 67%, var(--brand-500));
+  --orb-2: #8a55f1;
+  --orb-2: color-mix(in srgb, var(--brand-600) 67%, var(--brand-400));
+  --orb-3: #6b34cb;
+  --orb-3: color-mix(in srgb, var(--brand-800) 67%, var(--brand-500));
+  --orb-layers:
+    radial-gradient(circle 700px at calc(100% - 270px) 270px,
+      color-mix(in srgb, var(--orb-1) 78.3%, transparent),
+      color-mix(in srgb, var(--orb-1) 74.6%, transparent),
+      color-mix(in srgb, var(--orb-1) 63.5%, transparent),
+      color-mix(in srgb, var(--orb-1) 48%, transparent),
+      color-mix(in srgb, var(--orb-1) 31.7%, transparent),
+      color-mix(in srgb, var(--orb-1) 17.7%, transparent),
+      color-mix(in srgb, var(--orb-1) 8%, transparent),
+      color-mix(in srgb, var(--orb-1) 2.8%, transparent),
+      color-mix(in srgb, var(--orb-1) 0.6%, transparent), transparent, transparent),
+    radial-gradient(circle 650px at 270px calc(100% - 220px),
+      color-mix(in srgb, var(--orb-2) 61.6%, transparent),
+      color-mix(in srgb, var(--orb-2) 58.2%, transparent),
+      color-mix(in srgb, var(--orb-2) 48.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 36%, transparent),
+      color-mix(in srgb, var(--orb-2) 23.1%, transparent),
+      color-mix(in srgb, var(--orb-2) 12.5%, transparent),
+      color-mix(in srgb, var(--orb-2) 5.6%, transparent),
+      color-mix(in srgb, var(--orb-2) 1.9%, transparent),
+      color-mix(in srgb, var(--orb-2) 0.4%, transparent), transparent, transparent),
+    radial-gradient(circle 600px at calc(30% + 198px) calc(50% + 150px),
+      color-mix(in srgb, var(--orb-3) 40.9%, transparent),
+      color-mix(in srgb, var(--orb-3) 38.6%, transparent),
+      color-mix(in srgb, var(--orb-3) 32.2%, transparent),
+      color-mix(in srgb, var(--orb-3) 23.7%, transparent),
+      color-mix(in srgb, var(--orb-3) 15.1%, transparent),
+      color-mix(in srgb, var(--orb-3) 8.1%, transparent),
+      color-mix(in srgb, var(--orb-3) 3.6%, transparent),
+      color-mix(in srgb, var(--orb-3) 1.2%, transparent),
+      color-mix(in srgb, var(--orb-3) 0.2%, transparent), transparent, transparent);
+  --orb-layers-auth:
+    radial-gradient(circle 650px at calc(90% - 296px) 240px,
+      color-mix(in srgb, var(--orb-1) 61.6%, transparent),
+      color-mix(in srgb, var(--orb-1) 58.2%, transparent),
+      color-mix(in srgb, var(--orb-1) 48.7%, transparent),
+      color-mix(in srgb, var(--orb-1) 36%, transparent),
+      color-mix(in srgb, var(--orb-1) 23.1%, transparent),
+      color-mix(in srgb, var(--orb-1) 12.5%, transparent),
+      color-mix(in srgb, var(--orb-1) 5.6%, transparent),
+      color-mix(in srgb, var(--orb-1) 1.9%, transparent),
+      color-mix(in srgb, var(--orb-1) 0.4%, transparent), transparent, transparent),
+    radial-gradient(circle 625px at calc(10% + 271px) calc(100% - 215px),
+      color-mix(in srgb, var(--orb-2) 51.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 48.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 40.7%, transparent),
+      color-mix(in srgb, var(--orb-2) 29.9%, transparent),
+      color-mix(in srgb, var(--orb-2) 19%, transparent),
+      color-mix(in srgb, var(--orb-2) 10.2%, transparent),
+      color-mix(in srgb, var(--orb-2) 4.6%, transparent),
+      color-mix(in srgb, var(--orb-2) 1.6%, transparent),
+      color-mix(in srgb, var(--orb-2) 0.3%, transparent), transparent, transparent);
 }
