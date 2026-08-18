@@ -109,6 +109,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
             {
                 ArrInstanceId = request.Instance.Id,
                 ItemId = request.SearchItem.Id,
+                ContentId = (request.SearchItem as BookSearchItem)?.ContentId,
                 SeriesId = (request.SearchItem as SeriesSearchItem)?.SeriesId,
                 SearchType = (request.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
                 Title = request.Record.Title,

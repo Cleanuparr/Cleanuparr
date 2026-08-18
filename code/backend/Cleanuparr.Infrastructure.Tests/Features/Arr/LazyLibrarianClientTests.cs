@@ -209,6 +209,18 @@ public class LazyLibrarianClientTests
     }
 
     [Fact]
+    public async Task SearchItemAsync_ReturnsZeroBecauseThereIsNoCommandToTrack()
+    {
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
+
+        long commandId = await _client.SearchItemAsync(_arrInstance, new BookSearchItem { ContentId = "OL7353617M" });
+
+        commandId.ShouldBe(0);
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.Query.ShouldContain("id=OL7353617M");
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_WithNoItems_SendsNothing()
     {
         _httpMessageHandler.SetupResponse(HttpStatusCode.OK);

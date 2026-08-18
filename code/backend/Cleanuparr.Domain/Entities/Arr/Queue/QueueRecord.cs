@@ -70,6 +70,10 @@ public sealed record QueueRecord
     /// </summary>
     public QueueBook? Book { get; init; }
 
+    /// <summary>
+    /// The id of the content, for an arr that does not use a number.
+    /// LazyLibrarian stores the book id as text.
+    /// </summary>
     public string? ContentId { get; init; }
 
     // common

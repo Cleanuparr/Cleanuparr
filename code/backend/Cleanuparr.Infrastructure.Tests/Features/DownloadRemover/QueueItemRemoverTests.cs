@@ -142,6 +142,44 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_PersistsTheTextBookId()
+    {
+        // Arrange
+        var instance = TestDataContextFactory.AddLazyLibrarianInstance(_dataContext);
+        var request = new QueueItemRemoveRequest<BookSearchItem>
+        {
+            Instance = instance,
+            SearchItem = new BookSearchItem { ContentId = "OL7353617M" },
+            Record = CreateQueueRecord(),
+            RemoveFromClient = true,
+            DeleteReason = DeleteReason.Stalled,
+            JobRunId = _jobRunId
+        };
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        var queueItem = (await _eventsContext.SearchQueue.ToListAsync()).ShouldHaveSingleItem();
+        queueItem.ContentId.ShouldBe("OL7353617M");
+        queueItem.ItemId.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_ForOtherArrs_LeavesTheTextBookIdEmpty()
+    {
+        // Arrange
+        var request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        var queueItem = (await _eventsContext.SearchQueue.ToListAsync()).ShouldHaveSingleItem();
+        queueItem.ContentId.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task RemoveQueueItemAsync_Success_ClearsDownloadMarkedForRemovalCache()
     {
         // Arrange

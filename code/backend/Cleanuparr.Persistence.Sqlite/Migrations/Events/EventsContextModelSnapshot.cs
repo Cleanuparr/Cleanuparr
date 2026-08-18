@@ -505,6 +505,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("arr_instance_id");
 
+                    b.Property<string>("ContentId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_id");
+
                     b.Property<string>("CreatedAt")
                         .IsRequired()
                         .HasColumnType("TEXT")

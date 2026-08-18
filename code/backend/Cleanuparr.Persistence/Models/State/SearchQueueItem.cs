@@ -26,6 +26,11 @@ public sealed record SearchQueueItem
     public long ItemId { get; set; }
 
     /// <summary>
+    /// For LazyLibrarian: the book id, which the metadata provider gives as text
+    /// </summary>
+    public string? ContentId { get; set; }
+
+    /// <summary>
     /// For Sonarr/Whisparr: the series ID when searching at episode/season level
     /// </summary>
     public long? SeriesId { get; set; }

@@ -173,6 +173,14 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
         return [];
     }
 
+    public override async Task<long> SearchItemAsync(ArrInstance arrInstance, SearchItem item)
+    {
+        await SearchItemsAsync(arrInstance, [item]);
+
+        // LazyLibrarian returns no command id to track
+        return 0;
+    }
+
     public override bool HasContentId(QueueRecord record) => !string.IsNullOrWhiteSpace(record.ContentId);
 
     public override Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
