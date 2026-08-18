@@ -192,7 +192,7 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
     public override Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId)
     {
         // LazyLibrarian has no async command model
-        return Task.FromResult(new ArrCommandStatus(commandId, "completed", null));
+        return Task.FromResult(new ArrCommandStatus(commandId, ArrCommandState.Completed, null));
     }
 
     protected override string GetSystemStatusUrlPath() => string.Empty;
