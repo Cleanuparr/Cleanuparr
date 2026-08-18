@@ -1,4 +1,3 @@
-using System.Globalization;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
@@ -76,16 +75,9 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
                 continue;
             }
 
-            if (!long.TryParse(row.BookId, NumberStyles.Integer, CultureInfo.InvariantCulture, out long bookId))
-            {
-                _logger.LogDebug("skip | unparseable book id | {bookId} | {title}", row.BookId, row.Title);
-                continue;
-            }
-
             records.Add(new QueueRecord
             {
-                Id = bookId,
-                BookId = bookId,
+                ContentId = row.BookId,
                 Title = row.Title ?? string.Empty,
                 DownloadId = row.DownloadId,
                 Protocol = "torrent",
@@ -116,7 +108,13 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
         DeleteReason deleteReason
     )
     {
-        Uri uri = BuildApiUri(arrInstance, "queueBook", ("id", record.BookId.ToString(CultureInfo.InvariantCulture)));
+        if (string.IsNullOrWhiteSpace(record.ContentId))
+        {
+            _logger.LogWarning("queue item reset skipped | no book id | {url} | {title}", arrInstance.Url, record.Title);
+            return;
+        }
+
+        Uri uri = BuildApiUri(arrInstance, "queueBook", ("id", record.ContentId));
 
         try
         {
@@ -148,7 +146,13 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
 
         foreach (SearchItem item in items)
         {
-            Uri uri = BuildApiUri(arrInstance, "forceBookSearch", ("id", item.Id.ToString(CultureInfo.InvariantCulture)));
+            if (item is not BookSearchItem book || string.IsNullOrWhiteSpace(book.ContentId))
+            {
+                _logger.LogWarning("book search skipped | no book id | {url}", arrInstance.Url);
+                continue;
+            }
+
+            Uri uri = BuildApiUri(arrInstance, "forceBookSearch", ("id", book.ContentId));
 
             using HttpRequestMessage request = new(HttpMethod.Get, uri);
 
@@ -157,11 +161,11 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
                 HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
                 response?.Dispose();
 
-                _logger.LogInformation("book search triggered | {url} | book id: {id}", arrInstance.Url, item.Id);
+                _logger.LogInformation("book search triggered | {url} | book id: {id}", arrInstance.Url, book.ContentId);
             }
             catch
             {
-                _logger.LogError("book search failed | {url} | book id: {id}", arrInstance.Url, item.Id);
+                _logger.LogError("book search failed | {url} | book id: {id}", arrInstance.Url, book.ContentId);
                 throw;
             }
         }
@@ -169,7 +173,7 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
         return [];
     }
 
-    public override bool HasContentId(QueueRecord record) => record.BookId is not 0;
+    public override bool HasContentId(QueueRecord record) => !string.IsNullOrWhiteSpace(record.ContentId);
 
     public override Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
     {

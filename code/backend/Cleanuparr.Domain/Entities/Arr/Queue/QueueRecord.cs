@@ -70,6 +70,8 @@ public sealed record QueueRecord
     /// </summary>
     public QueueBook? Book { get; init; }
 
+    public string? ContentId { get; init; }
+
     // common
     /// <summary>
     /// The name of the release.

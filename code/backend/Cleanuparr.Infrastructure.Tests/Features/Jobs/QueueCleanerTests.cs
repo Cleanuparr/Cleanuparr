@@ -1595,7 +1595,7 @@ public class QueueCleanerTests : IDisposable
             DownloadId = "torrent-hash",
             Title = "Book",
             Protocol = "torrent",
-            BookId = 1,
+            ContentId = "OL7353617M",
         };
 
         _fixture.ArrQueueIterator
@@ -1640,7 +1640,7 @@ public class QueueCleanerTests : IDisposable
         // Assert: the inline DeleteDownload actually ran and the removal request is published.
         await mockDownloadService.Received(1).DeleteDownload(torrent, true);
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r => r.RemoveFromClient && r.DeleteReason == DeleteReason.Stalled),
+            Arg.Is<QueueItemRemoveRequest<BookSearchItem>>(r => r.RemoveFromClient && r.DeleteReason == DeleteReason.Stalled && r.SearchItem.ContentId == "OL7353617M"),
             Arg.Any<CancellationToken>()
         );
     }
@@ -1666,7 +1666,7 @@ public class QueueCleanerTests : IDisposable
             DownloadId = "torrent-hash",
             Title = "Book",
             Protocol = "torrent",
-            BookId = 1,
+            ContentId = "OL7353617M",
         };
 
         _fixture.ArrQueueIterator

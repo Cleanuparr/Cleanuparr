@@ -28,6 +28,7 @@ public static class MainDI
                 
                 config.AddConsumer<DownloadRemoverConsumer<SearchItem>>();
                 config.AddConsumer<DownloadRemoverConsumer<SeriesSearchItem>>();
+                config.AddConsumer<DownloadRemoverConsumer<BookSearchItem>>();
                 config.AddConsumer<NotificationConsumer<FailedImportStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<StalledStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<SlowSpeedStrikeNotification>>();
@@ -49,6 +50,7 @@ public static class MainDI
                     {
                         e.ConfigureConsumer<DownloadRemoverConsumer<SearchItem>>(context);
                         e.ConfigureConsumer<DownloadRemoverConsumer<SeriesSearchItem>>(context);
+                        e.ConfigureConsumer<DownloadRemoverConsumer<BookSearchItem>>(context);
                         e.ConcurrentMessageLimit = 1;
                         e.PrefetchCount = 1;
                     });

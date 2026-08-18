@@ -171,6 +171,23 @@ public abstract class GenericHandler : IHandler
 
             await _messageBus.Publish(removeRequest);
         }
+        else if (instanceType is InstanceType.LazyLibrarian)
+        {
+            QueueItemRemoveRequest<BookSearchItem> removeRequest = new()
+            {
+                Instance = instance,
+                Record = record,
+                SearchItem = (BookSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
+                RemoveFromClient = removeFromClient,
+                ChangeCategory = changeCategory,
+                DeleteReason = deleteReason,
+                JobRunId = ContextProvider.GetJobRunId(),
+                SkipSearch = skipSearch,
+                DownloadClient = downloadClient,
+            };
+
+            await _messageBus.Publish(removeRequest);
+        }
         else
         {
             QueueItemRemoveRequest<SearchItem> removeRequest = new()
@@ -260,9 +277,9 @@ public abstract class GenericHandler : IHandler
             {
                 Id = record.MovieId
             },
-            InstanceType.LazyLibrarian => new SearchItem
+            InstanceType.LazyLibrarian => new BookSearchItem
             {
-                Id = record.BookId
+                ContentId = record.ContentId ?? string.Empty
             },
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };
