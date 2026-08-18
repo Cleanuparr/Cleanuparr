@@ -48,6 +48,10 @@ jobs:
           - name: live-arr-fast
             make-target: up-arr-fast
             projects: '--project=live-arr-fast'
+          # This folder needs the real LazyLibrarian, the fake indexer and qBittorrent.
+          - name: live-lazylibrarian
+            make-target: up-lazylibrarian
+            projects: '--project=live-lazylibrarian'
 
     name: e2e (${{ matrix.suite.name }})
 

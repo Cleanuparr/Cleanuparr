@@ -36,4 +36,11 @@ export const TEST_CONFIG = {
     seededSeriesTitle: 'Agatha All Along',
     seededMovieTitle: 'F1',
   },
+
+  // The real LazyLibrarian container. Its API key and its library come from the
+  // committed seed in e2e/lazylibrarian-seed, written by e2e/scripts/seed-lazylibrarian.sh.
+  liveLazyLibrarian: {
+    url: 'http://localhost:5299',
+    apiKey: '0000000000000000000000000000e2e3',
+  },
 } as const;

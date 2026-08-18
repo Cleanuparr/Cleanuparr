@@ -14,6 +14,7 @@ const FOLDERS = [
   'general',
   'live-arr',
   'live-arr-fast',
+  'live-lazylibrarian',
   'malware-blocker',
   'notifications',
   'oidc',
