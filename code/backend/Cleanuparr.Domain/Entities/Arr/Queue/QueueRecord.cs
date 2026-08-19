@@ -76,6 +76,19 @@ public sealed record QueueRecord
     /// </summary>
     public string? ContentId { get; init; }
 
+    /// <summary>
+    /// The library the item belongs to, for an arr that keeps more than one.
+    /// LazyLibrarian uses eBook and AudioBook.
+    /// Each carries its own status.
+    /// </summary>
+    public string? Library { get; init; }
+
+    /// <summary>
+    /// Whether the arr created the download task itself.
+    /// LazyLibrarian writes "adopted" when the client already had the torrent.
+    /// </summary>
+    public string? DownloadOrigin { get; init; }
+
     // common
     /// <summary>
     /// The name of the release.
