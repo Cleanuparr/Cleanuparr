@@ -1,8 +1,10 @@
+using System.Text.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Json;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -13,6 +15,12 @@ namespace Cleanuparr.Infrastructure.Features.Arr;
 public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
 {
     private static readonly string[] TorrentModes = ["torrent", "torznab", "magnet"];
+
+    private const string EbookLibrary = "eBook";
+
+    private const string AudioBookLibrary = "AudioBook";
+
+    private static readonly string[] BookLibraries = [EbookLibrary, AudioBookLibrary];
 
     public LazyLibrarianClient(
         ILogger<LazyLibrarianClient> logger,
@@ -50,7 +58,17 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
             throw;
         }
 
-        List<LazyLibrarianWantedRecord>? rows = await DeserializeStreamAsync<List<LazyLibrarianWantedRecord>>(response);
+        string body = await response.Content.ReadAsStringAsync();
+
+        EnsureNoApiError(body, arrInstance, "queue list");
+
+        if (!body.TrimStart().StartsWith('['))
+        {
+            throw new Exception($"unrecognized queue list response | {arrInstance.Url}");
+        }
+
+        List<LazyLibrarianWantedRecord>? rows =
+            JsonSerializer.Deserialize<List<LazyLibrarianWantedRecord>>(body, CleanuparrJsonOptions.ExternalApiRead);
 
         if (rows is null)
         {
@@ -71,15 +89,25 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
                 continue;
             }
 
+            // A magazine row carries the magazine title.
+            // A comic row carries an issue key.
+            // Only a book row has an id the book commands accept.
+            if (!BookLibraries.Contains(row.AuxInfo, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // A legacy row that was never matched to a book.
             if (string.Equals(row.BookId, "unknown", StringComparison.OrdinalIgnoreCase))
             {
-                // Magazines are stored without a book id.
                 continue;
             }
 
             records.Add(new QueueRecord
             {
                 ContentId = row.BookId,
+                Library = row.AuxInfo,
+                DownloadOrigin = row.Origin,
                 Title = row.Title ?? string.Empty,
                 DownloadId = row.DownloadId,
                 Protocol = "torrent",
@@ -116,14 +144,23 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
             return;
         }
 
-        Uri uri = BuildApiUri(arrInstance, "queueBook", ("id", record.ContentId));
+        // Each library keeps its own status.
+        // A reset without the type resets the ebook.
+        Uri uri = IsAudioBook(record.Library)
+            ? BuildApiUri(arrInstance, "queueBook", ("id", record.ContentId), ("type", AudioBookLibrary))
+            : BuildApiUri(arrInstance, "queueBook", ("id", record.ContentId));
 
         try
         {
             using HttpRequestMessage request = new(HttpMethod.Get, uri);
 
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-            response?.Dispose();
+
+            if (response is not null)
+            {
+                await EnsureCommandAcceptedAsync(response, arrInstance, "queue item reset");
+                response.Dispose();
+            }
 
             _logger.LogInformation(
                 "queue item reset in LazyLibrarian with reason {reason} | {url} | {title}",
@@ -161,7 +198,12 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
             try
             {
                 HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-                response?.Dispose();
+
+                if (response is not null)
+                {
+                    await EnsureCommandAcceptedAsync(response, arrInstance, "book search");
+                    response.Dispose();
+                }
 
                 _logger.LogInformation("book search triggered | {url} | book id: {id}", arrInstance.Url, book.ContentId);
             }
@@ -199,6 +241,18 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
         using HttpResponseMessage response = await _httpClient.SendAsync(request);
 
         response.EnsureSuccessStatusCode();
+
+        string body = await response.Content.ReadAsStringAsync();
+
+        EnsureNoApiError(body, arrInstance, "connection test");
+
+        LazyLibrarianApiResponse? version =
+            JsonSerializer.Deserialize<LazyLibrarianApiResponse>(body, CleanuparrJsonOptions.ExternalApiRead);
+
+        if (version?.Success is not true)
+        {
+            throw new Exception($"unrecognized version response | {arrInstance.Url}");
+        }
 
         _logger.LogDebug("Connection test successful for {url}", arrInstance.Url);
     }
@@ -244,6 +298,59 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
 
         return uriBuilder.Uri;
     }
+
+    private static bool IsAudioBook(string? library) =>
+        string.Equals(library, AudioBookLibrary, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Throws when the body carries an error.
+    /// LazyLibrarian answers HTTP 200 for a rejected command.
+    /// The body is the only signal.
+    /// </summary>
+    private static void EnsureNoApiError(string body, ArrInstance arrInstance, string context)
+    {
+        string trimmed = body.TrimStart();
+
+        // A command answers with a bare string.
+        // The queue answers with an array.
+        // Only an object can carry the error envelope.
+        if (!trimmed.StartsWith('{'))
+        {
+            return;
+        }
+
+        LazyLibrarianApiResponse? error =
+            JsonSerializer.Deserialize<LazyLibrarianApiResponse>(trimmed, CleanuparrJsonOptions.ExternalApiRead);
+
+        if (error?.Success is false)
+        {
+            throw new Exception($"{context} failed | {arrInstance.Url} | {error.Error?.Message ?? "unknown error"}");
+        }
+    }
+
+    /// <summary>
+    /// Throws unless LazyLibrarian answered a command with OK.
+    /// An unknown book id answers "Invalid id".
+    /// A read-only key is refused.
+    /// Both arrive with HTTP 200.
+    /// </summary>
+    private static async Task EnsureCommandAcceptedAsync(
+        HttpResponseMessage response,
+        ArrInstance arrInstance,
+        string context
+    )
+    {
+        string body = (await response.Content.ReadAsStringAsync()).Trim();
+
+        EnsureNoApiError(body, arrInstance, context);
+
+        if (!string.Equals(body, "OK", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new Exception($"{context} failed | {arrInstance.Url} | {Truncate(body)}");
+        }
+    }
+
+    private static string Truncate(string value) => value.Length <= 200 ? value : value[..200];
 
     private static bool IsSnatchedTorrent(LazyLibrarianWantedRecord record)
     {
