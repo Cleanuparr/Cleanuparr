@@ -5,8 +5,10 @@ import {
   type LazyLibrarianBook,
   type SnatchedBook,
   liveLazyLibrarian,
+  prepareRelease,
   qbittorrent,
   snatchBook,
+  snatchPreparedRelease,
   torrentPresent,
   waitForTorrentInClient,
 } from '../helpers/live-lazylibrarian';
@@ -38,6 +40,15 @@ const STRIKE_SETTLE_MS = 10_000;
 
 /** The config rejects anything lower, so a removal needs three runs. */
 const MIN_MAX_STRIKES = 3;
+
+/**
+ * Where the adopted torrent is filed before LazyLibrarian ever sees it.
+ *
+ * The data is not there, so the torrent stalls like every other one here.
+ * The category stays empty, which is not LazyLibrarian's own label.
+ */
+const ADOPTED_SAVE_PATH = '/downloads/adopted';
+const ADOPTED_CATEGORY = '';
 
 /** Far enough out that the cron never fires inside a spec. */
 function farFutureCron(): string {
@@ -255,6 +266,38 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
 
     expect(await torrentPresent(snatched.downloadId), 'LazyLibrarian handles failed imports itself').toBe(true);
     expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).not.toBe('Wanted');
+  });
+
+  // LazyLibrarian only records an adoption when the client rejects a duplicate with a 409.
+  // qBittorrent answers 200 with "Fails." until 5.2.0, so this cannot run on the pinned 4.6.7.
+  // The guard itself is covered by a unit test.
+  test.fixme('an adopted torrent stays in the client while the book still resets', async ({ api }) => {
+    test.setTimeout(240_000);
+
+    const prepared = await prepareRelease(claimBook(12));
+
+    // qBittorrent holds the torrent before LazyLibrarian grabs the release.
+    // LazyLibrarian then adopts it instead of adding it.
+    await qbittorrent.addStalledTorrent({
+      metainfo: prepared.torrent.metainfo,
+      savePath: ADOPTED_SAVE_PATH,
+      category: ADOPTED_CATEGORY,
+    });
+    await waitForTorrentInClient(prepared.torrent.infoHash);
+
+    const snatched = await snatchPreparedRelease(prepared);
+    expect(snatched.origin, 'the client already held the torrent, so LazyLibrarian must adopt it').toBe('adopted');
+
+    await createRule(api, 'stall');
+
+    await runUntilStruckOut(api, snatched.downloadId);
+
+    await expect
+      .poll(() => liveLazyLibrarian.bookStatus(snatched.bookId), { timeout: REMOVAL_TIMEOUT })
+      .toBe('Wanted');
+
+    // Deleting it would stop a seed LazyLibrarian never started.
+    expect(await torrentPresent(snatched.downloadId), 'an adopted torrent must stay in the client').toBe(true);
   });
 
   test('two snatched books are both handled in one run', async ({ api }) => {

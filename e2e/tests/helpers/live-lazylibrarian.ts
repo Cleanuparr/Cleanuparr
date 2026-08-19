@@ -24,6 +24,8 @@ export interface LazyLibrarianHistoryRow {
   Source: string;
   DownloadID: string;
   AuxInfo: string;
+  /** `new` when LazyLibrarian added the torrent, `adopted` when the client already held it. */
+  Origin: string | null;
 }
 
 export interface LazyLibrarianBook {
@@ -238,6 +240,14 @@ export interface SnatchedBook {
   /** Lowercase infohash, which is what LazyLibrarian records as the download id. */
   downloadId: string;
   torrentName: string;
+  /** The Origin LazyLibrarian recorded for the wanted row. */
+  origin: string | null;
+}
+
+export interface PreparedRelease {
+  bookId: string;
+  releaseTitle: string;
+  torrent: GeneratedTorrent;
 }
 
 /**
@@ -260,6 +270,19 @@ export async function snatchBook(
   book: LazyLibrarianBook,
   options: SnatchOptions = {},
 ): Promise<SnatchedBook> {
+  return snatchPreparedRelease(await prepareRelease(book, options));
+}
+
+/**
+ * Registers the Torznab stubs for a book and returns the torrent, unsnatched.
+ *
+ * A spec that needs the client to hold the torrent first adds it here.
+ * It then calls `snatchPreparedRelease`.
+ */
+export async function prepareRelease(
+  book: LazyLibrarianBook,
+  options: SnatchOptions = {},
+): Promise<PreparedRelease> {
   const releaseTitle = `${book.AuthorName} - ${book.BookName}`.replace(/[^\w\s.-]/g, ' ').trim();
   const file = `${book.BookID}.torrent`;
 
@@ -269,16 +292,22 @@ export async function snatchBook(
 
   await indexerMock.stubMany([bookSearchStub(releaseTitle, file), torrentStub(file, torrent.metainfo)]);
 
-  await liveLazyLibrarian.markWanted(book.BookID);
-  await liveLazyLibrarian.searchBook(book.BookID);
+  return { bookId: book.BookID, releaseTitle, torrent };
+}
 
-  const row = await waitForSnatchedRow(book.BookID);
+/** Runs the search and grab for a release whose stubs are already registered. */
+export async function snatchPreparedRelease(prepared: PreparedRelease): Promise<SnatchedBook> {
+  await liveLazyLibrarian.markWanted(prepared.bookId);
+  await liveLazyLibrarian.searchBook(prepared.bookId);
+
+  const row = await waitForSnatchedRow(prepared.bookId);
 
   return {
-    bookId: book.BookID,
-    releaseTitle,
+    bookId: prepared.bookId,
+    releaseTitle: prepared.releaseTitle,
     downloadId: row.DownloadID.toLowerCase(),
-    torrentName: torrent.name,
+    torrentName: prepared.torrent.name,
+    origin: row.Origin,
   };
 }
 
