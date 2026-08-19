@@ -313,6 +313,19 @@ public abstract class GenericHandler : IHandler
             return true;
         }
 
+        // LazyLibrarian records "adopted" when the client already held the torrent.
+        // It refuses to remove such a task itself.
+        // Removing it would stop another seed and take files it never downloaded.
+        // A row without an origin counts as adopted, as it does for LazyLibrarian.
+        if (!string.Equals(record.DownloadOrigin, "new", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "skip lazylibrarian delete | LazyLibrarian did not add this torrent | {title} | {hash}",
+                record.Title, record.DownloadId
+            );
+            return true;
+        }
+
         if (downloadService is null || torrent is null)
         {
             _logger.LogWarning(
