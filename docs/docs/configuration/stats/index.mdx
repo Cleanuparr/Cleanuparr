@@ -381,7 +381,7 @@ Scheduled job run outcomes in the timeframe. Job runs are recorded regardless of
 Current health of all configured download clients and arr instances.
 
 - **downloadClients**: Health of each enabled download client.
-- **arrInstances**: Health of each enabled arr instance: Sonarr, Radarr, Lidarr, Readarr, Whisparr.
+- **arrInstances**: Health of each enabled instance, for every supported application: Sonarr, Radarr, Lidarr, Readarr, Whisparr, Sportarr and LazyLibrarian.
 
 <Important>
 `health` is a **gauge**, not a timeframe-scoped metric. It reflects the last background check (roughly every 5 minutes) and ignores the `hours` parameter, keeping the endpoint fast for frequent polling.
