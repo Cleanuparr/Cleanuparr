@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Controllers;
+using Cleanuparr.Api.Features.Status.Contracts.Responses;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
@@ -54,8 +55,9 @@ public class StatusControllerTests : IDisposable
         return instance;
     }
 
-    private static Dictionary<string, object> AsDictionary(IActionResult result) =>
-        result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<Dictionary<string, object>>();
+    private static Dictionary<string, List<InstanceConnectionResponse>> AsDictionary(IActionResult result) =>
+        result.ShouldBeOfType<OkObjectResult>().Value
+            .ShouldBeOfType<Dictionary<string, List<InstanceConnectionResponse>>>();
 
     [Fact]
     public async Task GetMediaManagersStatus_CoversEveryInstanceType()
@@ -64,7 +66,7 @@ public class StatusControllerTests : IDisposable
         IActionResult result = await _controller.GetMediaManagersStatus();
 
         // Assert: the list drives the response, so a forgotten member would vanish from the UI.
-        Dictionary<string, object> status = AsDictionary(result);
+        Dictionary<string, List<InstanceConnectionResponse>> status = AsDictionary(result);
         foreach (InstanceType type in Enum.GetValues<InstanceType>())
         {
             status.ShouldContainKey(type.ToString());
@@ -117,8 +119,9 @@ public class StatusControllerTests : IDisposable
         IActionResult result = await _controller.GetMediaManagersStatus();
 
         // Assert
-        object sonarr = AsDictionary(result)[nameof(InstanceType.Sonarr)];
-        sonarr.ShouldBeOfType<List<object>>().ShouldHaveSingleItem().ToString()!.ShouldContain("connection refused");
+        InstanceConnectionResponse sonarr = AsDictionary(result)[nameof(InstanceType.Sonarr)].ShouldHaveSingleItem();
+        sonarr.IsConnected.ShouldBeFalse();
+        sonarr.Message.ShouldContain("connection refused");
     }
 
     [Fact]
@@ -132,7 +135,22 @@ public class StatusControllerTests : IDisposable
         IActionResult result = await _controller.GetSystemStatus();
 
         // Assert
-        result.ShouldBeOfType<OkObjectResult>().Value.ShouldNotBeNull();
+        SystemStatusResponse status = result.ShouldBeOfType<OkObjectResult>().Value
+            .ShouldBeOfType<SystemStatusResponse>();
+        status.MediaManagers[nameof(InstanceType.Radarr)].InstanceCount.ShouldBe(2);
+        status.MediaManagers[nameof(InstanceType.LazyLibrarian)].InstanceCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task GetDownloadClientStatus_ReturnsTheClientsKey()
+    {
+        // Act
+        IActionResult result = await _controller.GetDownloadClientStatus();
+
+        // Assert
+        result.ShouldBeOfType<OkObjectResult>().Value
+            .ShouldBeOfType<Dictionary<string, List<DownloadClientStatusResponse>>>()
+            .ShouldContainKey("Clients");
     }
 
     public void Dispose()

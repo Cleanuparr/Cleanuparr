@@ -91,7 +91,7 @@ public sealed class QueueCleaner : GenericHandler
         var readarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr));
         var whisparrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr));
         var sportarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sportarr));
-        var lazyLibrarianConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian));
+        ArrConfig lazyLibrarianConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian));
 
         await ProcessArrConfigAsync(sonarrConfig);
         await ProcessArrConfigAsync(radarrConfig);

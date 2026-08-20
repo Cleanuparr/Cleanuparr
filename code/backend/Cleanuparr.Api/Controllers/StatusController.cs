@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
+using Cleanuparr.Api.Features.Status.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,29 +38,28 @@ public class StatusController : ControllerBase
     {
         using var process = Process.GetCurrentProcess();
 
-        var configsByType = await _dataContext.ArrConfigs
+        Dictionary<InstanceType, ArrConfig> configsByType = await _dataContext.ArrConfigs
             .Include(x => x.Instances)
             .Where(x => ArrTypes.Contains(x.Type))
             .AsNoTracking()
             .ToDictionaryAsync(x => x.Type);
 
-        var mediaManagers = ArrTypes.ToDictionary(
+        Dictionary<string, MediaManagerStatusResponse> mediaManagers = ArrTypes.ToDictionary(
             type => type.ToString(),
-            type => (object)new { InstanceCount = configsByType.TryGetValue(type, out var c) ? c.Instances.Count : 0 });
+            type => new MediaManagerStatusResponse
+            {
+                InstanceCount = configsByType.TryGetValue(type, out ArrConfig? config) ? config.Instances.Count : 0,
+            });
 
-        var status = new
+        SystemStatusResponse status = new()
         {
-            Application = new
+            Application = new ApplicationStatusResponse
             {
                 Version = GetType().Assembly.GetName().Version?.ToString() ?? "Unknown",
-                process.StartTime,
+                StartTime = process.StartTime,
                 UpTime = DateTimeOffset.UtcNow - process.StartTime.ToUniversalTime(),
                 MemoryUsageMB = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
-                ProcessorTime = process.TotalProcessorTime
-            },
-            DownloadClient = new
-            {
-                // TODO
+                ProcessorTime = process.TotalProcessorTime,
             },
             MediaManagers = mediaManagers,
         };
@@ -69,37 +70,29 @@ public class StatusController : ControllerBase
     [HttpGet("download-client")]
     public async Task<IActionResult> GetDownloadClientStatus()
     {
-        var downloadClients = await _dataContext.DownloadClients
+        List<DownloadClientConfig> downloadClients = await _dataContext.DownloadClients
             .AsNoTracking()
             .ToListAsync();
-        var result = new Dictionary<string, object>();
 
-        if (downloadClients.Count > 0)
-        {
-            var clientsStatus = new List<object>();
-            foreach (var client in downloadClients)
+        List<DownloadClientStatusResponse> clients = downloadClients
+            .Select(client => new DownloadClientStatusResponse
             {
-                clientsStatus.Add(new
-                {
-                    client.Id,
-                    client.Name,
-                    Type = client.TypeName,
-                    client.Host,
-                    client.Enabled,
-                    IsConnected = client.Enabled, // We can't check connection status without implementing test methods
-                });
-            }
+                Id = client.Id,
+                Name = client.Name,
+                Type = client.TypeName,
+                Host = client.Host,
+                Enabled = client.Enabled,
+                IsConnected = client.Enabled,
+            })
+            .ToList();
 
-            result["Clients"] = clientsStatus;
-        }
-
-        return Ok(result);
+        return Ok(new Dictionary<string, List<DownloadClientStatusResponse>> { ["Clients"] = clients });
     }
 
     [HttpGet("arrs")]
     public async Task<IActionResult> GetMediaManagersStatus()
     {
-        var status = new Dictionary<string, object>();
+        Dictionary<string, List<InstanceConnectionResponse>> status = new();
 
         foreach (InstanceType type in ArrTypes)
         {
@@ -117,9 +110,9 @@ public class StatusController : ControllerBase
         return Ok(status);
     }
 
-    private async Task<List<object>> CheckInstancesAsync(InstanceType type, IReadOnlyList<ArrInstance> instances)
+    private async Task<List<InstanceConnectionResponse>> CheckInstancesAsync(InstanceType type, IReadOnlyList<ArrInstance> instances)
     {
-        var results = new List<object>(instances.Count);
+        List<InstanceConnectionResponse> results = new(instances.Count);
 
         foreach (ArrInstance instance in instances)
         {
@@ -127,23 +120,23 @@ public class StatusController : ControllerBase
             {
                 await _healthChecker.CheckAsync(type, instance);
 
-                results.Add(new
+                results.Add(new InstanceConnectionResponse
                 {
-                    instance.Name,
-                    instance.Url,
+                    Name = instance.Name,
+                    Url = instance.Url,
                     IsConnected = true,
-                    Message = "Successfully connected"
+                    Message = "Successfully connected",
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "health check failed for {type} instance | {url}", type, instance.Url);
-                results.Add(new
+                results.Add(new InstanceConnectionResponse
                 {
-                    instance.Name,
-                    instance.Url,
+                    Name = instance.Name,
+                    Url = instance.Url,
                     IsConnected = false,
-                    Message = $"Connection failed: {ex.Message}"
+                    Message = $"Connection failed: {ex.Message}",
                 });
             }
         }

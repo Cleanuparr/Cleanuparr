@@ -5,7 +5,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
 /// <summary>
-/// A download client's verdict on one LazyLibrarian item, normalised across the two jobs.
+/// A download client's verdict, normalised across the two jobs.
 /// </summary>
 public sealed record LazyLibrarianCheck
 {

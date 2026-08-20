@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Interceptors;
@@ -208,8 +208,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
     }
 
     /// <summary>
-    /// A row is adopted for every sibling sharing its DownloadId.
-    /// LazyLibrarian judges the group, not the row.
+    /// LazyLibrarian judges the group sharing a DownloadId, not the row.
     /// </summary>
     private static HashSet<string> FindAdoptedHashes(List<LazyLibrarianWantedRecord> rows)
     {

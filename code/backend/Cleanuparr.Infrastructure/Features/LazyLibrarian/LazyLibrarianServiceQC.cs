@@ -1,11 +1,8 @@
-using Cleanuparr.Infrastructure.Features.DownloadClient;
+﻿using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
-/// <summary>
-/// The Queue Cleaner's view of a LazyLibrarian instance.
-/// </summary>
 public sealed class LazyLibrarianServiceQC : LazyLibrarianJobEvaluator, ILazyLibrarianServiceQC
 {
     public LazyLibrarianServiceQC(ILogger<LazyLibrarianServiceQC> logger, ILazyLibrarianService lazyLibrarianService)

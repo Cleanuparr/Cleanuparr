@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.LazyLibrarian;
+﻿using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
@@ -20,11 +20,13 @@ public interface ILazyLibrarianService
     /// <summary>
     /// Asks LazyLibrarian to poll the client for a download it snatched.
     /// It marks the row aborted when the client no longer holds it.
+    /// Nothing else clears a snatch through the API.
     /// </summary>
     Task<LazyLibrarianDownloadProgress?> GetDownloadProgressAsync(ArrInstance instance, LazyLibrarianQueueItem item);
 
     /// <summary>
-    /// Sets the book back to wanted. The audio status is separate from the ebook status.
+    /// Sets the book back to wanted.
+    /// The audio status is separate from the ebook status.
     /// </summary>
     Task ResetItemAsync(ArrInstance instance, LazyLibrarianQueueItem item);
 

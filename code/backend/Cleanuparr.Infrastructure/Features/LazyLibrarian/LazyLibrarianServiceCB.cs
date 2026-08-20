@@ -1,13 +1,10 @@
-using Cleanuparr.Infrastructure.Features.Context;
+﻿using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
-/// <summary>
-/// The Malware Blocker's view of a LazyLibrarian instance.
-/// </summary>
 public sealed class LazyLibrarianServiceCB : LazyLibrarianJobEvaluator, ILazyLibrarianServiceCB
 {
     public LazyLibrarianServiceCB(ILogger<LazyLibrarianServiceCB> logger, ILazyLibrarianService lazyLibrarianService)

@@ -1,10 +1,7 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.LazyLibrarian;
 
-/// <summary>
-/// The payload of a getDownloadProgress response for a single download.
-/// </summary>
 public sealed record LazyLibrarianDownloadProgress
 {
     /// <summary>

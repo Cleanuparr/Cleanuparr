@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
 /// <summary>
-/// Walks a LazyLibrarian queue and asks the torrent clients what to do with each item.
+/// Asks the torrent clients what to do with each queued item.
 /// The subclass supplies the question its job asks.
 /// </summary>
 public abstract class LazyLibrarianJobEvaluator
@@ -123,7 +123,7 @@ public abstract class LazyLibrarianJobEvaluator
 
     /// <summary>
     /// One torrent can back an ebook row and an audiobook row.
-    /// The first row settles the torrent, so the sibling would double-strike it.
+    /// Acting on both would strike the same torrent twice.
     /// </summary>
     private static IEnumerable<LazyLibrarianQueueItem> Deduplicate(IReadOnlyList<LazyLibrarianQueueItem> items) =>
         items

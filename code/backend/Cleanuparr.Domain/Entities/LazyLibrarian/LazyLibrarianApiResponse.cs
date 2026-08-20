@@ -1,11 +1,10 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Entities.LazyLibrarian;
 
 /// <summary>
 /// The envelope LazyLibrarian returns when a command fails.
-/// It answers HTTP 200 in that case.
-/// The body is the only signal.
+/// It answers HTTP 200, so the body is the only signal.
 /// </summary>
 public sealed record LazyLibrarianApiResponse
 {

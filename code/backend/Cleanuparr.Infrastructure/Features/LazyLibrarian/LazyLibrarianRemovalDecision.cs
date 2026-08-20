@@ -6,9 +6,6 @@ using Cleanuparr.Persistence.Models.Configuration;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
-/// <summary>
-/// One item a job decided to remove, with everything the handler needs to act.
-/// </summary>
 public sealed record LazyLibrarianRemovalDecision
 {
     public required LazyLibrarianQueueItem Item { get; init; }
@@ -16,7 +13,8 @@ public sealed record LazyLibrarianRemovalDecision
     public required DeleteReason DeleteReason { get; init; }
 
     /// <summary>
-    /// The intent. LazyLibrarian refuses to remove a task it adopted, so the handler can still decline.
+    /// The intent only.
+    /// LazyLibrarian refuses to remove a task it adopted, so the handler can still decline.
     /// </summary>
     public required bool RemoveFromClient { get; init; }
 
