@@ -19,9 +19,19 @@ public class LazyLibrarianServiceTests
     private readonly LazyLibrarianService _service;
     private readonly ArrInstance _instance;
 
+    private readonly List<string> _loggedMessages = [];
+
     public LazyLibrarianServiceTests()
     {
         ILogger<LazyLibrarianService> logger = Substitute.For<ILogger<LazyLibrarianService>>();
+        logger
+            .When(x => x.Log(
+                Arg.Any<LogLevel>(),
+                Arg.Any<EventId>(),
+                Arg.Any<object>(),
+                Arg.Any<Exception?>(),
+                Arg.Any<Func<object, Exception?, string>>()))
+            .Do(ci => _loggedMessages.Add(ci.ArgAt<object>(2).ToString() ?? string.Empty));
         IDryRunInterceptor dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         _httpMessageHandler = new FakeHttpMessageHandler();
 
@@ -310,6 +320,66 @@ public class LazyLibrarianServiceTests
         // Assert
         hashes.ShouldBe(["HASH1"]);
     }
+
+    #endregion
+
+    #region api key
+
+    private const string ApiKey = "api-key";
+
+    [Fact]
+    public async Task TheApiKeyNeverReachesALogOrAnException_OnAQueueFailure()
+    {
+        // Arrange: the key rides in the query string, so any logged Uri would leak it.
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act
+        Exception exception = await Should.ThrowAsync<Exception>(() => _service.GetQueueAsync(_instance));
+
+        // Assert
+        exception.ToString().ShouldNotContain(ApiKey);
+        _loggedMessages.ShouldAllBe(message => !message.Contains(ApiKey));
+    }
+
+    [Fact]
+    public async Task TheApiKeyNeverReachesALogOrAnException_OnARejectedCommand()
+    {
+        // Arrange
+        RespondWith("""{"Success":false,"Error":{"Code":403,"Message":"Incorrect API key"}}""");
+
+        // Act
+        Exception exception = await Should.ThrowAsync<Exception>(
+            () => _service.ResetItemAsync(_instance, CreateItem()));
+
+        // Assert
+        exception.ToString().ShouldNotContain(ApiKey);
+        _loggedMessages.ShouldAllBe(message => !message.Contains(ApiKey));
+    }
+
+    [Fact]
+    public async Task TheUpstreamBodyNeverReachesAnException()
+    {
+        // Arrange: a reverse proxy error page can echo the request URI, and the URI carries the key.
+        RespondWith($"<html>error at /api?apikey={ApiKey}&cmd=queueBook</html>");
+
+        // Act
+        Exception exception = await Should.ThrowAsync<Exception>(
+            () => _service.ResetItemAsync(_instance, CreateItem()));
+
+        // Assert
+        exception.Message.ShouldNotContain(ApiKey);
+        exception.Message.ShouldNotContain("html");
+    }
+
+    private static LazyLibrarianQueueItem CreateItem() => new()
+    {
+        DownloadId = "HASH1",
+        Title = "A Book",
+        BookId = "OL7353617M",
+        Library = BookLibrary.EBook,
+        Source = LazyLibrarianSource.QBittorrent,
+        Origin = LazyLibrarianOrigin.New,
+    };
 
     #endregion
 }

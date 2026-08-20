@@ -18,15 +18,8 @@ public class StatusController : ControllerBase
     private readonly DataContext _dataContext;
     private readonly IInstanceHealthChecker _healthChecker;
 
-    private static readonly IReadOnlyList<InstanceType> ArrTypes =
-    [
-        InstanceType.Sonarr,
-        InstanceType.Radarr,
-        InstanceType.Lidarr,
-        InstanceType.Readarr,
-        InstanceType.Whisparr,
-        InstanceType.LazyLibrarian,
-    ];
+    // Every member is seeded in arr_configs, so a new one must not be forgotten here.
+    private static readonly IReadOnlyList<InstanceType> ArrTypes = Enum.GetValues<InstanceType>();
 
     public StatusController(
         ILogger<StatusController> logger,
@@ -150,7 +143,7 @@ public class StatusController : ControllerBase
                     instance.Name,
                     instance.Url,
                     IsConnected = false,
-                    Message = "Connection failed"
+                    Message = $"Connection failed: {ex.Message}"
                 });
             }
         }
