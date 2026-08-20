@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.Jobs;
+using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -366,6 +367,62 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         // Assert
         await _fixture.MessageBus.Received(1)
             .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_MarksDownloadBeforePublishing()
+    {
+        // Arrange
+        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
+        ArrInstance instance = new()
+        {
+            Name = "s",
+            Url = new Uri("http://s"),
+            ApiKey = "k",
+            ArrConfig = arrConfig,
+            Version = 4f,
+        };
+        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
+        string key = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
+        bool markedWhenPublished = false;
+
+        _fixture.MessageBus
+            .When(bus => bus.Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>()))
+            .Do(_ => markedWhenPublished = _fixture.Cache.TryGetValue(key, out bool _));
+
+        // Act
+        await _handler.PublicPublishQueueItemRemoveRequest(
+            key, instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+
+        // Assert
+        markedWhenPublished.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_PublishThrows_RemovesMark()
+    {
+        // Arrange
+        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
+        ArrInstance instance = new()
+        {
+            Name = "s",
+            Url = new Uri("http://s"),
+            ApiKey = "k",
+            ArrConfig = arrConfig,
+            Version = 4f,
+        };
+        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
+        string key = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
+
+        _fixture.MessageBus
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("bus is down")));
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(() => _handler.PublicPublishQueueItemRemoveRequest(
+            key, instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
+
+        _fixture.Cache.TryGetValue(key, out bool _).ShouldBeFalse();
     }
 
     #endregion
