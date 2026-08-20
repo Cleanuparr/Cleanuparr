@@ -44,78 +44,19 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _dataContext = dataContext;
     }
 
-    public async Task RemoveQueueItemAsync<T>(QueueItemRemoveRequest<T> request)
-        where T : SearchItem
+    public async Task RemoveQueueItemAsync(QueueItemRemoveRequest request)
     {
         try
         {
-            var instanceType = request.Instance.ArrConfig.Type;
-            var arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
-            await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.ChangeCategory, request.DeleteReason);
-
-            // Mark the download item as removed in the database
-            string downloadId = request.Record.DownloadId.ToLower();
-            await _eventsContext.DownloadItems
-                .Where(x => x.DownloadId.ToLower() == downloadId)
-                .ExecuteUpdateAsync(setter =>
-                {
-                    setter.SetProperty(x => x.IsRemoved, true);
-                    setter.SetProperty(x => x.IsMarkedForRemoval, false);
-                });
-
-            // Set context for EventPublisher
-            ContextProvider.SetJobRunId(request.JobRunId);
-            ContextProvider.Set(ContextProvider.Keys.ItemName, request.Record.Title);
-            ContextProvider.Set(ContextProvider.Keys.Hash, request.Record.DownloadId);
-            ContextProvider.Set(nameof(QueueRecord), request.Record);
-            ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
-            ContextProvider.Set(nameof(InstanceType), instanceType);
-            ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
-            ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
-
-            if (request.DownloadClient is not null)
+            switch (request.Target)
             {
-                ContextProvider.SetDownloadClient(request.DownloadClient);
+                case ArrRemovalTarget target:
+                    await RemoveViaArrAsync(request, target);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"removal target {request.Target.GetType().Name} is not supported");
             }
-
-            await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
-
-            string hash = request.Record.DownloadId.ToLowerInvariant();
-            var isRecurring = Striker.RecurringHashes.ContainsKey(hash);
-
-            if (isRecurring || request.SkipSearch)
-            {
-                await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
-
-                if (isRecurring)
-                {
-                    Striker.RecurringHashes.Remove(hash, out _);
-                }
-
-                return;
-            }
-
-            SeekerConfig seekerConfig = await _dataContext.SeekerConfigs
-                .AsNoTracking()
-                .FirstAsync();
-
-            if (!seekerConfig.SearchEnabled)
-            {
-                _logger.LogDebug("Search not triggered | {name}", request.Record.Title);
-                return;
-            }
-
-            _eventsContext.SearchQueue.Add(new SearchQueueItem
-            {
-                ArrInstanceId = request.Instance.Id,
-                ItemId = request.SearchItem.Id,
-                ContentId = (request.SearchItem as BookSearchItem)?.ContentId,
-                SeriesId = (request.SearchItem as SeriesSearchItem)?.SeriesId,
-                SearchType = (request.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
-                Title = request.Record.Title,
-            });
-
-            await _eventsContext.SaveChangesAsync();
         }
         catch (HttpRequestException exception)
         {
@@ -128,7 +69,92 @@ public sealed class QueueItemRemover : IQueueItemRemover
         }
         finally
         {
-            _cache.Remove(CacheKeys.DownloadMarkedForRemoval(request.Record.DownloadId, request.Instance.Url));
+            _cache.Remove(CacheKeys.DownloadMarkedForRemoval(request.Target.DownloadId, request.Instance.Url));
         }
+    }
+
+    private async Task RemoveViaArrAsync(QueueItemRemoveRequest request, ArrRemovalTarget target)
+    {
+        InstanceType instanceType = request.Instance.ArrConfig.Type;
+        IArrClient arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
+        await arrClient.DeleteQueueItemAsync(request.Instance, target.Record, target.RemoveFromClient, target.ChangeCategory, request.DeleteReason);
+
+        await MarkDownloadRemovedAsync(target.DownloadId);
+
+        ContextProvider.SetJobRunId(request.JobRunId);
+        ContextProvider.Set(ContextProvider.Keys.ItemName, target.Title);
+        ContextProvider.Set(ContextProvider.Keys.Hash, target.DownloadId);
+        ContextProvider.Set(nameof(QueueRecord), target.Record);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
+        ContextProvider.Set(nameof(InstanceType), instanceType);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
+        ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
+
+        if (request.DownloadClient is not null)
+        {
+            ContextProvider.SetDownloadClient(request.DownloadClient);
+        }
+
+        await _eventPublisher.PublishQueueItemDeleted(target.RemoveFromClient, request.DeleteReason);
+
+        if (!await ShouldQueueSearchAsync(request, target))
+        {
+            return;
+        }
+
+        _eventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = request.Instance.Id,
+            ItemId = target.SearchItem.Id,
+            ContentId = (target.SearchItem as BookSearchItem)?.ContentId,
+            SeriesId = (target.SearchItem as SeriesSearchItem)?.SeriesId,
+            SearchType = (target.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
+            Title = target.Title,
+        });
+
+        await _eventsContext.SaveChangesAsync();
+    }
+
+    private async Task MarkDownloadRemovedAsync(string downloadId)
+    {
+        string normalized = downloadId.ToLower();
+
+        await _eventsContext.DownloadItems
+            .Where(x => x.DownloadId.ToLower() == normalized)
+            .ExecuteUpdateAsync(setter =>
+            {
+                setter.SetProperty(x => x.IsRemoved, true);
+                setter.SetProperty(x => x.IsMarkedForRemoval, false);
+            });
+    }
+
+    private async Task<bool> ShouldQueueSearchAsync(QueueItemRemoveRequest request, RemovalTarget target)
+    {
+        string hash = target.DownloadId.ToLowerInvariant();
+        bool isRecurring = Striker.RecurringHashes.ContainsKey(hash);
+
+        if (isRecurring || request.SkipSearch)
+        {
+            await _eventPublisher.PublishSearchNotTriggered(target.DownloadId, target.Title);
+
+            if (isRecurring)
+            {
+                Striker.RecurringHashes.Remove(hash, out _);
+            }
+
+            return false;
+        }
+
+        SeekerConfig seekerConfig = await _dataContext.SeekerConfigs
+            .AsNoTracking()
+            .FirstAsync();
+
+        if (!seekerConfig.SearchEnabled)
+        {
+            _logger.LogDebug("Search not triggered | {name}", target.Title);
+            return false;
+        }
+
+        return true;
     }
 }

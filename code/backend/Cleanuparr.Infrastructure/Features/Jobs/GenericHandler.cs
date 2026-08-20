@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities;
+﻿using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -152,59 +152,25 @@ public abstract class GenericHandler : IHandler
             return;
         }
 
-        var instanceType = instance.ArrConfig.Type;
+        InstanceType instanceType = instance.ArrConfig.Type;
 
-        if (instanceType is InstanceType.Sonarr or InstanceType.Sportarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
+        QueueItemRemoveRequest removeRequest = new()
         {
-            QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
+            Instance = instance,
+            Target = new ArrRemovalTarget
             {
-                Instance = instance,
-                Record = record,
-                SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
-                RemoveFromClient = removeFromClient,
-                ChangeCategory = changeCategory,
-                DeleteReason = deleteReason,
-                JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch,
-                DownloadClient = downloadClient,
-            };
-
-            await _messageBus.Publish(removeRequest);
-        }
-        else if (instanceType is InstanceType.LazyLibrarian)
-        {
-            QueueItemRemoveRequest<BookSearchItem> removeRequest = new()
-            {
-                Instance = instance,
-                Record = record,
-                SearchItem = (BookSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
-                RemoveFromClient = removeFromClient,
-                ChangeCategory = changeCategory,
-                DeleteReason = deleteReason,
-                JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch,
-                DownloadClient = downloadClient,
-            };
-
-            await _messageBus.Publish(removeRequest);
-        }
-        else
-        {
-            QueueItemRemoveRequest<SearchItem> removeRequest = new()
-            {
-                Instance = instance,
                 Record = record,
                 SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 ChangeCategory = changeCategory,
-                DeleteReason = deleteReason,
-                JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch,
-                DownloadClient = downloadClient,
-            };
+            },
+            DeleteReason = deleteReason,
+            JobRunId = ContextProvider.GetJobRunId(),
+            SkipSearch = skipSearch,
+            DownloadClient = downloadClient,
+        };
 
-            await _messageBus.Publish(removeRequest);
-        }
+        await _messageBus.Publish(removeRequest);
 
         // Set context for event
         if (downloadClient is not null)

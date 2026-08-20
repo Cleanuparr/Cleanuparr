@@ -1,4 +1,4 @@
-using Cleanuparr.Api.Json;
+﻿using Cleanuparr.Api.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
@@ -26,9 +26,7 @@ public static class MainDI
             {
                 config.DisableUsageTelemetry();
                 
-                config.AddConsumer<DownloadRemoverConsumer<SearchItem>>();
-                config.AddConsumer<DownloadRemoverConsumer<SeriesSearchItem>>();
-                config.AddConsumer<DownloadRemoverConsumer<BookSearchItem>>();
+                config.AddConsumer<DownloadRemoverConsumer>();
                 config.AddConsumer<NotificationConsumer<FailedImportStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<StalledStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<SlowSpeedStrikeNotification>>();
@@ -48,9 +46,7 @@ public static class MainDI
                     
                     cfg.ReceiveEndpoint("download-remover-queue", e =>
                     {
-                        e.ConfigureConsumer<DownloadRemoverConsumer<SearchItem>>(context);
-                        e.ConfigureConsumer<DownloadRemoverConsumer<SeriesSearchItem>>(context);
-                        e.ConfigureConsumer<DownloadRemoverConsumer<BookSearchItem>>(context);
+                        e.ConfigureConsumer<DownloadRemoverConsumer>(context);
                         e.ConcurrentMessageLimit = 1;
                         e.PrefetchCount = 1;
                     });

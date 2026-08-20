@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
@@ -17,15 +17,15 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadRemover.Consumers;
 
 public class DownloadRemoverConsumerTests
 {
-    private readonly ILogger<DownloadRemoverConsumer<SearchItem>> _logger;
+    private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
-    private readonly DownloadRemoverConsumer<SearchItem> _consumer;
+    private readonly DownloadRemoverConsumer _consumer;
 
     public DownloadRemoverConsumerTests()
     {
-        _logger = Substitute.For<ILogger<DownloadRemoverConsumer<SearchItem>>>();
+        _logger = Substitute.For<ILogger<DownloadRemoverConsumer>>();
         _queueItemRemover = Substitute.For<IQueueItemRemover>();
-        _consumer = new DownloadRemoverConsumer<SearchItem>(_logger, _queueItemRemover);
+        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover);
     }
 
     #region Consume Tests
@@ -38,7 +38,7 @@ public class DownloadRemoverConsumerTests
         var context = CreateConsumeContext(request);
 
         _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -56,7 +56,7 @@ public class DownloadRemoverConsumerTests
         var context = CreateConsumeContext(request);
 
         _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
             .ThrowsAsync(new Exception("Remove failed"));
 
         // Act - Should not throw
@@ -72,12 +72,12 @@ public class DownloadRemoverConsumerTests
         // Arrange
         var request = CreateRemoveRequest();
         var context = CreateConsumeContext(request);
-        QueueItemRemoveRequest<SearchItem>? capturedRequest = null;
+        QueueItemRemoveRequest? capturedRequest = null;
 
         _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => capturedRequest = ci.Arg<QueueItemRemoveRequest<SearchItem>>());
+            .AndDoes(ci => capturedRequest = ci.Arg<QueueItemRemoveRequest>());
 
         // Act
         await _consumer.Consume(context);
@@ -85,8 +85,8 @@ public class DownloadRemoverConsumerTests
         // Assert
         capturedRequest.ShouldNotBeNull();
         capturedRequest.Instance.ArrConfig.Type.ShouldBe(request.Instance.ArrConfig.Type);
-        capturedRequest.SearchItem.Id.ShouldBe(request.SearchItem.Id);
-        capturedRequest.RemoveFromClient.ShouldBe(request.RemoveFromClient);
+        capturedRequest.ArrTarget().SearchItem.Id.ShouldBe(request.ArrTarget().SearchItem.Id);
+        capturedRequest.ArrTarget().RemoveFromClient.ShouldBe(request.ArrTarget().RemoveFromClient);
         capturedRequest.DeleteReason.ShouldBe(request.DeleteReason);
     }
 
@@ -94,19 +94,22 @@ public class DownloadRemoverConsumerTests
     public async Task Consume_WithRemoveFromClientTrue_PassesCorrectly()
     {
         // Arrange
-        var request = new QueueItemRemoveRequest<SearchItem>
+        var request = new QueueItemRemoveRequest
         {
             Instance = CreateArrInstance(InstanceType.Sonarr),
-            SearchItem = new SearchItem { Id = 456 },
-            Record = CreateQueueRecord(),
-            RemoveFromClient = true,
+            Target = new ArrRemovalTarget
+            {
+                Record = CreateQueueRecord(),
+                SearchItem = new SearchItem { Id = 456 },
+                RemoveFromClient = true,
+            },
             DeleteReason = DeleteReason.Stalled,
             JobRunId = Guid.NewGuid()
         };
         var context = CreateConsumeContext(request);
 
         _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -114,8 +117,8 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         await _queueItemRemover.Received(1).RemoveQueueItemAsync(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(req =>
-                req.RemoveFromClient == true &&
+            Arg.Is<QueueItemRemoveRequest>(req =>
+                req.ArrTarget().RemoveFromClient == true &&
                 req.DeleteReason == DeleteReason.Stalled));
     }
 
@@ -123,19 +126,22 @@ public class DownloadRemoverConsumerTests
     public async Task Consume_WithDifferentDeleteReasons_HandlesCorrectly()
     {
         // Arrange
-        var request = new QueueItemRemoveRequest<SearchItem>
+        var request = new QueueItemRemoveRequest
         {
             Instance = CreateArrInstance(InstanceType.Radarr),
-            SearchItem = new SearchItem { Id = 789 },
-            Record = CreateQueueRecord(),
-            RemoveFromClient = false,
+            Target = new ArrRemovalTarget
+            {
+                Record = CreateQueueRecord(),
+                SearchItem = new SearchItem { Id = 789 },
+                RemoveFromClient = false,
+            },
             DeleteReason = DeleteReason.FailedImport,
             JobRunId = Guid.NewGuid()
         };
         var context = CreateConsumeContext(request);
 
         _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -143,7 +149,7 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         await _queueItemRemover.Received(1).RemoveQueueItemAsync(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(req =>
+            Arg.Is<QueueItemRemoveRequest>(req =>
                 req.DeleteReason == DeleteReason.FailedImport));
     }
 
@@ -151,19 +157,22 @@ public class DownloadRemoverConsumerTests
     public async Task Consume_WithDifferentInstanceTypes_HandlesCorrectly()
     {
         // Arrange
-        var request = new QueueItemRemoveRequest<SearchItem>
+        var request = new QueueItemRemoveRequest
         {
             Instance = CreateArrInstance(InstanceType.Readarr),
-            SearchItem = new SearchItem { Id = 111 },
-            Record = CreateQueueRecord(),
-            RemoveFromClient = true,
+            Target = new ArrRemovalTarget
+            {
+                Record = CreateQueueRecord(),
+                SearchItem = new SearchItem { Id = 111 },
+                RemoveFromClient = true,
+            },
             DeleteReason = DeleteReason.SlowSpeed,
             JobRunId = Guid.NewGuid()
         };
         var context = CreateConsumeContext(request);
 
         _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
             .Returns(Task.CompletedTask);
 
         // Act
@@ -171,21 +180,24 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         await _queueItemRemover.Received(1).RemoveQueueItemAsync(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(req => req.Instance.ArrConfig.Type == InstanceType.Readarr));
+            Arg.Is<QueueItemRemoveRequest>(req => req.Instance.ArrConfig.Type == InstanceType.Readarr));
     }
 
     #endregion
 
     #region Helper Methods
 
-    private static QueueItemRemoveRequest<SearchItem> CreateRemoveRequest()
+    private static QueueItemRemoveRequest CreateRemoveRequest()
     {
-        return new QueueItemRemoveRequest<SearchItem>
+        return new QueueItemRemoveRequest
         {
             Instance = CreateArrInstance(InstanceType.Radarr),
-            SearchItem = new SearchItem { Id = 123 },
-            Record = CreateQueueRecord(),
-            RemoveFromClient = true,
+            Target = new ArrRemovalTarget
+            {
+                Record = CreateQueueRecord(),
+                SearchItem = new SearchItem { Id = 123 },
+                RemoveFromClient = true,
+            },
             DeleteReason = DeleteReason.Stalled,
             JobRunId = Guid.NewGuid()
         };
@@ -213,9 +225,9 @@ public class DownloadRemoverConsumerTests
         };
     }
 
-    private static ConsumeContext<QueueItemRemoveRequest<SearchItem>> CreateConsumeContext(QueueItemRemoveRequest<SearchItem> message)
+    private static ConsumeContext<QueueItemRemoveRequest> CreateConsumeContext(QueueItemRemoveRequest message)
     {
-        var context = Substitute.For<ConsumeContext<QueueItemRemoveRequest<SearchItem>>>();
+        var context = Substitute.For<ConsumeContext<QueueItemRemoveRequest>>();
         context.Message.Returns(message);
         return context;
     }

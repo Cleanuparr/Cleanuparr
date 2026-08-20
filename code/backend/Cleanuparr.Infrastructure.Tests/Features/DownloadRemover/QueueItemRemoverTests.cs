@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Shouldly;
@@ -118,9 +119,9 @@ public class QueueItemRemoverTests : IDisposable
         // Assert
         await _arrClient.Received(1).DeleteQueueItemAsync(
             request.Instance,
-            request.Record,
-            request.RemoveFromClient,
-            request.ChangeCategory,
+            request.ArrTarget().Record,
+            request.ArrTarget().RemoveFromClient,
+            request.ArrTarget().ChangeCategory,
             request.DeleteReason);
     }
 
@@ -137,8 +138,8 @@ public class QueueItemRemoverTests : IDisposable
         var queueItems = await _eventsContext.SearchQueue.ToListAsync();
         queueItems.Count.ShouldBe(1);
         queueItems[0].ArrInstanceId.ShouldBe(request.Instance.Id);
-        queueItems[0].ItemId.ShouldBe(request.SearchItem.Id);
-        queueItems[0].Title.ShouldBe(request.Record.Title);
+        queueItems[0].ItemId.ShouldBe(request.ArrTarget().SearchItem.Id);
+        queueItems[0].Title.ShouldBe(request.ArrTarget().Record.Title);
     }
 
     [Fact]
@@ -146,12 +147,15 @@ public class QueueItemRemoverTests : IDisposable
     {
         // Arrange
         var instance = TestDataContextFactory.AddLazyLibrarianInstance(_dataContext);
-        var request = new QueueItemRemoveRequest<BookSearchItem>
+        var request = new QueueItemRemoveRequest
         {
             Instance = instance,
-            SearchItem = new BookSearchItem { ContentId = "OL7353617M" },
-            Record = CreateQueueRecord(),
-            RemoveFromClient = true,
+            Target = new ArrRemovalTarget
+            {
+                Record = CreateQueueRecord(),
+                SearchItem = new BookSearchItem { ContentId = "OL7353617M" },
+                RemoveFromClient = true,
+            },
             DeleteReason = DeleteReason.Stalled,
             JobRunId = _jobRunId
         };
@@ -184,7 +188,7 @@ public class QueueItemRemoverTests : IDisposable
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var cacheKey = $"remove_{request.Record.DownloadId.ToLowerInvariant()}_{request.Instance.Url}";
+        var cacheKey = $"remove_{request.ArrTarget().Record.DownloadId.ToLowerInvariant()}_{request.Instance.Url}";
         _memoryCache.Set(cacheKey, true);
 
         // Act
@@ -222,7 +226,7 @@ public class QueueItemRemoverTests : IDisposable
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var hash = request.Record.DownloadId.ToLowerInvariant();
+        var hash = request.ArrTarget().Record.DownloadId.ToLowerInvariant();
         Striker.RecurringHashes.TryAdd(hash, null);
 
         // Act
@@ -238,7 +242,7 @@ public class QueueItemRemoverTests : IDisposable
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var hash = request.Record.DownloadId.ToLowerInvariant();
+        var hash = request.ArrTarget().Record.DownloadId.ToLowerInvariant();
         Striker.RecurringHashes.TryAdd(hash, null);
 
         // Act
@@ -285,7 +289,7 @@ public class QueueItemRemoverTests : IDisposable
     {
         // Arrange
         var request = CreateRemoveRequest(skipSearch: true);
-        var hash = request.Record.DownloadId.ToLowerInvariant();
+        var hash = request.ArrTarget().Record.DownloadId.ToLowerInvariant();
 
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
@@ -348,7 +352,7 @@ public class QueueItemRemoverTests : IDisposable
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var cacheKey = $"remove_{request.Record.DownloadId.ToLowerInvariant()}_{request.Instance.Url}";
+        var cacheKey = $"remove_{request.ArrTarget().Record.DownloadId.ToLowerInvariant()}_{request.Instance.Url}";
         _memoryCache.Set(cacheKey, true);
 
         _arrClient
@@ -485,7 +489,7 @@ public class QueueItemRemoverTests : IDisposable
 
     #region Helper Methods
 
-    private QueueItemRemoveRequest<SearchItem> CreateRemoveRequest(
+    private QueueItemRemoveRequest CreateRemoveRequest(
         InstanceType instanceType = InstanceType.Sonarr,
         bool removeFromClient = true,
         DeleteReason deleteReason = DeleteReason.Stalled,
@@ -495,13 +499,16 @@ public class QueueItemRemoverTests : IDisposable
         // Use an ArrInstance that exists in the DB to satisfy FK constraint on SearchQueueItem
         var instance = GetOrCreateArrInstance(instanceType);
 
-        return new QueueItemRemoveRequest<SearchItem>
+        return new QueueItemRemoveRequest
         {
             Instance = instance,
-            SearchItem = new SearchItem { Id = 123 },
-            Record = CreateQueueRecord(),
-            RemoveFromClient = removeFromClient,
-            ChangeCategory = changeCategory,
+            Target = new ArrRemovalTarget
+            {
+                Record = CreateQueueRecord(),
+                SearchItem = new SearchItem { Id = 123 },
+                RemoveFromClient = removeFromClient,
+                ChangeCategory = changeCategory,
+            },
             DeleteReason = deleteReason,
             SkipSearch = skipSearch,
             JobRunId = _jobRunId

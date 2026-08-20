@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -314,7 +314,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert
         await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(), Arg.Any<CancellationToken>());
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
         await _fixture.EventPublisher.Received(1).PublishAsync(
             EventType.DownloadMarkedForDeletion, Arg.Any<string>(), Arg.Any<EventSeverity>(),
             Arg.Any<Action<AppEvent>?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<bool?>());
@@ -341,7 +341,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert
         await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest<SearchItem>>(), Arg.Any<CancellationToken>());
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -365,7 +365,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert
         await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(), Arg.Any<CancellationToken>());
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
     }
 
     #endregion

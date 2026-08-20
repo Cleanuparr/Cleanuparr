@@ -1,27 +1,14 @@
-using Cleanuparr.Domain.Entities.Arr;
-using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 
-public sealed record QueueItemRemoveRequest<T>
-    where T : SearchItem
+public sealed record QueueItemRemoveRequest
 {
     public required ArrInstance Instance { get; init; }
 
-    public required T SearchItem { get; init; }
-
-    public required QueueRecord Record { get; init; }
-
-    public required bool RemoveFromClient { get; init; }
-
-    /// <summary>
-    /// When true, the *arr is asked to change the download's category to its post-import category
-    /// instead of removing it from the download client. Mutually exclusive with <see cref="RemoveFromClient"/>.
-    /// </summary>
-    public bool ChangeCategory { get; init; }
+    public required RemovalTarget Target { get; init; }
 
     public required DeleteReason DeleteReason { get; init; }
 

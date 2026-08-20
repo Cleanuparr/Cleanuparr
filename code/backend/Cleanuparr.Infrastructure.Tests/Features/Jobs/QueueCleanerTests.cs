@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -478,7 +478,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
@@ -678,7 +678,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.DeleteReason == DeleteReason.FailedImport
             ),
             Arg.Any<CancellationToken>()
@@ -729,7 +729,7 @@ public class QueueCleanerTests : IDisposable
         _logger.ReceivedLogContaining(LogLevel.Information, "skip | item is missing the content id");
 
         await _fixture.MessageBus.DidNotReceive().Publish(
-            Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
@@ -805,7 +805,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert - SkipSearch must be true because the item has no content ID
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.SkipSearch == true &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
@@ -961,7 +961,7 @@ public class QueueCleanerTests : IDisposable
 
         // Verify no publish was made
         await _fixture.MessageBus.DidNotReceive().Publish(
-            Arg.Any<QueueItemRemoveRequest<SearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
@@ -1026,11 +1026,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> (not SeriesSearchItem)
+        // Assert - should publish QueueItemRemoveRequest (not SeriesSearchItem)
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Radarr &&
-                r.SearchItem.Id == 42 &&
+                r.ArrTarget().SearchItem.Id == 42 &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1097,11 +1097,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> with AlbumId
+        // Assert - should publish QueueItemRemoveRequest with AlbumId
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Lidarr &&
-                r.SearchItem.Id == 123 &&
+                r.ArrTarget().SearchItem.Id == 123 &&
                 r.DeleteReason == DeleteReason.SlowSpeed
             ),
             Arg.Any<CancellationToken>()
@@ -1168,11 +1168,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> with BookId
+        // Assert - should publish QueueItemRemoveRequest with BookId
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Readarr &&
-                r.SearchItem.Id == 456 &&
+                r.ArrTarget().SearchItem.Id == 456 &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1240,13 +1240,13 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem>
+        // Assert - should publish QueueItemRemoveRequest
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.SearchItem.Id == 100 && // EpisodeId
-                r.SearchItem.SeriesId == 10 &&
-                r.SearchItem.SearchType == SeriesSearchType.Episode &&
+                r.ArrTarget().SearchItem.Id == 100 && // EpisodeId
+                r.SeriesItem().SeriesId == 10 &&
+                r.SeriesItem().SearchType == SeriesSearchType.Episode &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1313,11 +1313,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> with MovieId
+        // Assert - should publish QueueItemRemoveRequest with MovieId
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.SearchItem.Id == 42 && // MovieId
+                r.ArrTarget().SearchItem.Id == 42 && // MovieId
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1397,14 +1397,14 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem> with Season search type
+        // Assert - should publish QueueItemRemoveRequest with Season search type
         // because multiple records with the same download ID indicate a pack
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.SearchItem.Id == 3 && // SeasonNumber
-                r.SearchItem.SeriesId == 10 &&
-                r.SearchItem.SearchType == SeriesSearchType.Season &&
+                r.ArrTarget().SearchItem.Id == 3 && // SeasonNumber
+                r.SeriesItem().SeriesId == 10 &&
+                r.SeriesItem().SearchType == SeriesSearchType.Season &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1488,10 +1488,10 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.DeleteReason == DeleteReason.FailedImport &&
-                r.ChangeCategory == true &&
-                r.RemoveFromClient == false
+                r.ArrTarget().ChangeCategory == true &&
+                r.ArrTarget().RemoveFromClient == false
             ),
             Arg.Any<CancellationToken>()
         );
@@ -1561,10 +1561,10 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.DeleteReason == DeleteReason.Stalled &&
-                r.ChangeCategory == true &&
-                r.RemoveFromClient == false
+                r.ArrTarget().ChangeCategory == true &&
+                r.ArrTarget().RemoveFromClient == false
             ),
             Arg.Any<CancellationToken>()
         );
@@ -1641,7 +1641,7 @@ public class QueueCleanerTests : IDisposable
         // Assert: the inline DeleteDownload actually ran and the removal request is published.
         await mockDownloadService.Received(1).DeleteDownload(torrent, true);
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<BookSearchItem>>(r => r.RemoveFromClient && r.DeleteReason == DeleteReason.Stalled && r.SearchItem.ContentId == "OL7353617M"),
+            Arg.Is<QueueItemRemoveRequest>(r => r.ArrTarget().RemoveFromClient && r.DeleteReason == DeleteReason.Stalled && r.BookItem().ContentId == "OL7353617M"),
             Arg.Any<CancellationToken>()
         );
     }
@@ -1714,7 +1714,7 @@ public class QueueCleanerTests : IDisposable
         // Assert
         await mockDownloadService.DidNotReceive().DeleteDownload(Arg.Any<Cleanuparr.Domain.Entities.ITorrentItemWrapper>(), Arg.Any<bool>());
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<BookSearchItem>>(r => r.DeleteReason == DeleteReason.Stalled),
+            Arg.Is<QueueItemRemoveRequest>(r => r.DeleteReason == DeleteReason.Stalled),
             Arg.Any<CancellationToken>()
         );
     }
@@ -1788,7 +1788,7 @@ public class QueueCleanerTests : IDisposable
         // Assert: when the underlying DeleteDownload throws, no removal request is published.
         await mockDownloadService.Received(1).DeleteDownload(torrent, true);
         await _fixture.MessageBus.DidNotReceive().Publish(
-            Arg.Any<QueueItemRemoveRequest<SearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
