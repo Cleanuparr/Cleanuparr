@@ -1,6 +1,6 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +16,7 @@ public class StatusController : ControllerBase
 {
     private readonly ILogger<StatusController> _logger;
     private readonly DataContext _dataContext;
-    private readonly IArrClientFactory _arrClientFactory;
+    private readonly IInstanceHealthChecker _healthChecker;
 
     private static readonly IReadOnlyList<InstanceType> ArrTypes =
     [
@@ -31,11 +31,11 @@ public class StatusController : ControllerBase
     public StatusController(
         ILogger<StatusController> logger,
         DataContext dataContext,
-        IArrClientFactory arrClientFactory)
+        IInstanceHealthChecker healthChecker)
     {
         _logger = logger;
         _dataContext = dataContext;
-        _arrClientFactory = arrClientFactory;
+        _healthChecker = healthChecker;
     }
 
     [HttpGet]
@@ -132,8 +132,7 @@ public class StatusController : ControllerBase
         {
             try
             {
-                var client = _arrClientFactory.GetClient(type, instance.Version);
-                await client.HealthCheckAsync(instance);
+                await _healthChecker.CheckAsync(type, instance);
 
                 results.Add(new
                 {

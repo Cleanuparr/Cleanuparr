@@ -1,9 +1,9 @@
-using Cleanuparr.Api.Extensions;
+﻿using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
-using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Shared.Helpers;
@@ -22,7 +22,7 @@ public sealed class ArrConfigController : ControllerBase
     private readonly ILogger<ArrConfigController> _logger;
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
-    private readonly IArrClientFactory _arrClientFactory;
+    private readonly IInstanceHealthChecker _healthChecker;
     private readonly IEventPublisher _eventPublisher;
 
     /// <summary>
@@ -32,13 +32,13 @@ public sealed class ArrConfigController : ControllerBase
         ILogger<ArrConfigController> logger,
         DataContext dataContext,
         EventsContext eventsContext,
-        IArrClientFactory arrClientFactory,
+        IInstanceHealthChecker healthChecker,
         IEventPublisher eventPublisher)
     {
         _logger = logger;
         _dataContext = dataContext;
         _eventsContext = eventsContext;
-        _arrClientFactory = arrClientFactory;
+        _healthChecker = healthChecker;
         _eventPublisher = eventPublisher;
     }
 
@@ -402,8 +402,7 @@ public sealed class ArrConfigController : ControllerBase
             }
 
             var testInstance = request.ToTestInstance(resolvedApiKey);
-            var client = _arrClientFactory.GetClient(type, request.Version);
-            await client.HealthCheckAsync(testInstance);
+            await _healthChecker.CheckAsync(type, testInstance);
 
             return Ok(new { Message = $"Connection to {type} instance successful" });
         }

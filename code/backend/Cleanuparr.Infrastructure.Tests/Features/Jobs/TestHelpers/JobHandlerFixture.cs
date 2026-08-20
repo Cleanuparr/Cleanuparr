@@ -1,10 +1,11 @@
-using Cleanuparr.Infrastructure.Events.Interfaces;
+﻿using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.Jobs;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
@@ -33,6 +34,9 @@ public class JobHandlerFixture : IDisposable
     public IBlocklistProvider BlocklistProvider { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
+    public ILazyLibrarianService LazyLibrarianService { get; private set; }
+    public ILazyLibrarianServiceQC LazyLibrarianServiceQC { get; private set; }
+    public ILazyLibrarianServiceCB LazyLibrarianServiceCB { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; }
     public IUnlinkedDownloadsService UnlinkedService { get; private set; }
@@ -56,6 +60,9 @@ public class JobHandlerFixture : IDisposable
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
+        LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianServiceQC>();
+        LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianServiceCB>();
         TimeProvider = new FakeTimeProvider();
         RecreateCleanupServices();
 

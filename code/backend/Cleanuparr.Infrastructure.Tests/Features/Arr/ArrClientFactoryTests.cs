@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using NSubstitute;
@@ -16,7 +16,6 @@ public class ArrClientFactoryTests
     private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
-    private readonly ILazyLibrarianClient _lazyLibrarianClient;
     private readonly ArrClientFactory _factory;
 
     public ArrClientFactoryTests()
@@ -28,7 +27,6 @@ public class ArrClientFactoryTests
         _sportarrClient = Substitute.For<ISportarrClient>();
         _whisparrClient = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
-        _lazyLibrarianClient = Substitute.For<ILazyLibrarianClient>();
 
         _factory = new ArrClientFactory(
             _sonarrClient,
@@ -37,8 +35,7 @@ public class ArrClientFactoryTests
             _readarrClient,
             _sportarrClient,
             _whisparrClient,
-            _whisparrV3Client,
-            _lazyLibrarianClient
+            _whisparrV3Client
         );
     }
 
@@ -115,13 +112,10 @@ public class ArrClientFactoryTests
     }
 
     [Fact]
-    public void GetClient_LazyLibrarian_ReturnsLazyLibrarianClient()
+    public void GetClient_LazyLibrarian_Throws()
     {
-        // Act
-        var result = _factory.GetClient(InstanceType.LazyLibrarian, 0);
-
-        // Assert
-        result.ShouldBeSameAs(_lazyLibrarianClient);
+        // Act + Assert
+        Should.Throw<NotImplementedException>(() => _factory.GetClient(InstanceType.LazyLibrarian, 0));
     }
 
     [Fact]
@@ -167,8 +161,7 @@ public class ArrClientFactoryTests
         [InstanceType.Lidarr, null],
         [InstanceType.Readarr, null],
         [InstanceType.Whisparr, 2f],
-        [InstanceType.Whisparr, 3f],
-        [InstanceType.LazyLibrarian, null]
+        [InstanceType.Whisparr, 3f]
     ];
 
     #endregion

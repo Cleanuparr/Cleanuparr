@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
@@ -39,6 +41,7 @@ public class QueueItemRemoverTests : IDisposable
     private readonly EventPublisher _eventPublisher;
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
+    private readonly ILazyLibrarianService _lazyLibrarianService = Substitute.For<ILazyLibrarianService>();
     private readonly QueueItemRemover _queueItemRemover;
     private readonly Guid _jobRunId;
 
@@ -90,12 +93,159 @@ public class QueueItemRemoverTests : IDisposable
             _arrClientFactory,
             _eventPublisher,
             _eventsContext,
-            _dataContext
+            _dataContext,
+            _lazyLibrarianService
         );
 
         // Clear static RecurringHashes before each test
         Striker.RecurringHashes.Clear();
     }
+
+    #region LazyLibrarian
+
+    private LazyLibrarianQueueItem CreateBookItem(BookLibrary library = BookLibrary.EBook) => new()
+    {
+        DownloadId = "HASH1",
+        Title = "A Book",
+        BookId = "OL7353617M",
+        Library = library,
+        Source = LazyLibrarianSource.QBittorrent,
+        Origin = LazyLibrarianOrigin.New,
+    };
+
+    private QueueItemRemoveRequest CreateLazyLibrarianRequest(bool removedFromClient, LazyLibrarianQueueItem? item = null) => new()
+    {
+        Instance = TestDataContextFactory.AddLazyLibrarianInstance(_dataContext),
+        Target = new LazyLibrarianRemovalTarget
+        {
+            Item = item ?? CreateBookItem(),
+            RemovedFromClient = removedFromClient,
+        },
+        DeleteReason = DeleteReason.Stalled,
+        JobRunId = _jobRunId,
+    };
+
+    private void StubProgress(int progress)
+    {
+        _lazyLibrarianService
+            .GetDownloadProgressAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(new LazyLibrarianDownloadProgress { Progress = progress });
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_ResetsTheBook()
+    {
+        // Arrange
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _lazyLibrarianService.Received(1).ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_ClearsTheSnatchBeforeSearching()
+    {
+        // Arrange: progress -1 means LazyLibrarian just marked the row aborted.
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        Received.InOrder(() =>
+        {
+            _lazyLibrarianService.GetDownloadProgressAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+            _lazyLibrarianService.ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+            _lazyLibrarianService.TriggerSearchAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+        });
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(50)]
+    [InlineData(100)]
+    [InlineData(-2)]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_DoesNotSearchWhileTheSnatchStands(int progress)
+    {
+        // Arrange: anything but -1 leaves the wanted row snatched, and every search command skips such a book.
+        StubProgress(progress);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _lazyLibrarianService.DidNotReceive().TriggerSearchAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_DoesNotSearchWhenTheTorrentStaysInTheClient()
+    {
+        // Arrange
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: false);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _lazyLibrarianService.DidNotReceive().GetDownloadProgressAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+        await _lazyLibrarianService.DidNotReceive().TriggerSearchAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_DoesNotSearchWhenNoProgressIsReported()
+    {
+        // Arrange
+        _lazyLibrarianService
+            .GetDownloadProgressAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns((LazyLibrarianDownloadProgress?)null);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _lazyLibrarianService.DidNotReceive().TriggerSearchAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_DoesNotSearchWhenSearchIsDisabled()
+    {
+        // Arrange
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        var seekerConfig = await _dataContext.SeekerConfigs.FirstAsync();
+        seekerConfig.SearchEnabled = false;
+        await _dataContext.SaveChangesAsync();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _lazyLibrarianService.DidNotReceive().TriggerSearchAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_DoesNotQueueASeekerSearch()
+    {
+        // Arrange: the search happens here, so the Seeker must stay out of it.
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        (await _eventsContext.SearchQueue.ToListAsync()).ShouldBeEmpty();
+    }
+
+    #endregion
 
     public void Dispose()
     {
@@ -143,47 +293,6 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveQueueItemAsync_LazyLibrarian_PersistsTheTextBookId()
-    {
-        // Arrange
-        var instance = TestDataContextFactory.AddLazyLibrarianInstance(_dataContext);
-        var request = new QueueItemRemoveRequest
-        {
-            Instance = instance,
-            Target = new ArrRemovalTarget
-            {
-                Record = CreateQueueRecord(),
-                SearchItem = new BookSearchItem { ContentId = "OL7353617M" },
-                RemoveFromClient = true,
-            },
-            DeleteReason = DeleteReason.Stalled,
-            JobRunId = _jobRunId
-        };
-
-        // Act
-        await _queueItemRemover.RemoveQueueItemAsync(request);
-
-        // Assert
-        var queueItem = (await _eventsContext.SearchQueue.ToListAsync()).ShouldHaveSingleItem();
-        queueItem.ContentId.ShouldBe("OL7353617M");
-        queueItem.ItemId.ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task RemoveQueueItemAsync_ForOtherArrs_LeavesTheTextBookIdEmpty()
-    {
-        // Arrange
-        var request = CreateRemoveRequest();
-
-        // Act
-        await _queueItemRemover.RemoveQueueItemAsync(request);
-
-        // Assert
-        var queueItem = (await _eventsContext.SearchQueue.ToListAsync()).ShouldHaveSingleItem();
-        queueItem.ContentId.ShouldBeNull();
-    }
-
-    [Fact]
     public async Task RemoveQueueItemAsync_Success_ClearsDownloadMarkedForRemovalCache()
     {
         // Arrange
@@ -204,7 +313,6 @@ public class QueueItemRemoverTests : IDisposable
     [InlineData(InstanceType.Lidarr)]
     [InlineData(InstanceType.Readarr)]
     [InlineData(InstanceType.Whisparr)]
-    [InlineData(InstanceType.LazyLibrarian)]
     public async Task RemoveQueueItemAsync_UsesCorrectClientForInstanceType(InstanceType instanceType)
     {
         // Arrange

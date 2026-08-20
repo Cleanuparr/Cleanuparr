@@ -8,9 +8,9 @@ internal static class RemovalTargetExtensions
     internal static ArrRemovalTarget ArrTarget(this QueueItemRemoveRequest request) =>
         (ArrRemovalTarget)request.Target;
 
+    internal static LazyLibrarianRemovalTarget LazyTarget(this QueueItemRemoveRequest request) =>
+        (LazyLibrarianRemovalTarget)request.Target;
+
     internal static SeriesSearchItem SeriesItem(this QueueItemRemoveRequest request) =>
         (SeriesSearchItem)request.ArrTarget().SearchItem;
-
-    internal static BookSearchItem BookItem(this QueueItemRemoveRequest request) =>
-        (BookSearchItem)request.ArrTarget().SearchItem;
 }

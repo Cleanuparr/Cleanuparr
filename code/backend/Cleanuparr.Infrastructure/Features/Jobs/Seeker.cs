@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -190,14 +190,6 @@ public sealed class Seeker : IHandler
 
     private static SearchItem BuildSearchItem(SearchQueueItem item)
     {
-        if (!string.IsNullOrWhiteSpace(item.ContentId))
-        {
-            return new BookSearchItem
-            {
-                ContentId = item.ContentId
-            };
-        }
-
         if (item.SeriesId.HasValue && Enum.TryParse<SeriesSearchType>(item.SearchType, out var searchType))
         {
             return new SeriesSearchItem

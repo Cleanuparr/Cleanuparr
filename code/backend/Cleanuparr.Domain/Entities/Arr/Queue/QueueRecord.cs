@@ -1,4 +1,4 @@
-namespace Cleanuparr.Domain.Entities.Arr.Queue;
+﻿namespace Cleanuparr.Domain.Entities.Arr.Queue;
 
 /// <summary>
 /// One item in the queue of an *arr application.
@@ -69,25 +69,6 @@ public sealed record QueueRecord
     /// The data about the book.
     /// </summary>
     public QueueBook? Book { get; init; }
-
-    /// <summary>
-    /// The id of the content, for an arr that does not use a number.
-    /// LazyLibrarian stores the book id as text.
-    /// </summary>
-    public string? ContentId { get; init; }
-
-    /// <summary>
-    /// The library the item belongs to, for an arr that keeps more than one.
-    /// LazyLibrarian uses eBook and AudioBook.
-    /// Each carries its own status.
-    /// </summary>
-    public string? Library { get; init; }
-
-    /// <summary>
-    /// Whether the arr created the download task itself.
-    /// LazyLibrarian writes "adopted" when the client already had the torrent.
-    /// </summary>
-    public string? DownloadOrigin { get; init; }
 
     // common
     /// <summary>

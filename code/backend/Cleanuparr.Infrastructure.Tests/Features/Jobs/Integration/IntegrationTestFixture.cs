@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
@@ -57,6 +58,9 @@ public class IntegrationTestFixture : IDisposable
     public IHardLinkFileService HardLinkFileService { get; private set; }
     public INotificationPublisher NotificationPublisher { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
+    public ILazyLibrarianService LazyLibrarianService { get; private set; }
+    public ILazyLibrarianServiceQC LazyLibrarianServiceQC { get; private set; }
+    public ILazyLibrarianServiceCB LazyLibrarianServiceCB { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
     public IHubContext<AppHub> HubContext { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; } = null!;
@@ -85,6 +89,9 @@ public class IntegrationTestFixture : IDisposable
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         NotificationPublisher = Substitute.For<INotificationPublisher>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
+        LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianServiceQC>();
+        LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianServiceCB>();
         HubContext = CreateMockHubContext();
 
         SetupDefaults();
@@ -136,7 +143,8 @@ public class IntegrationTestFixture : IDisposable
             ArrClientFactory,
             EventPublisher,
             EventsContext,
-            DataContext);
+            DataContext,
+            LazyLibrarianService);
 
         SeedingRulesService = new SeedingRulesCleanupService(
             Substitute.For<ILogger<SeedingRulesCleanupService>>(),

@@ -1,9 +1,10 @@
-using Cleanuparr.Domain.Entities.Arr.Queue;
+﻿using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
@@ -23,6 +24,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 public sealed class QueueCleaner : GenericHandler
 {
     private readonly IConnectivityChecker _connectivityChecker;
+    private readonly ILazyLibrarianServiceQC _lazyLibrarianService;
 
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
@@ -34,13 +36,15 @@ public sealed class QueueCleaner : GenericHandler
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
-        IConnectivityChecker connectivityChecker
+        IConnectivityChecker connectivityChecker,
+        ILazyLibrarianServiceQC lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
     )
     {
         _connectivityChecker = connectivityChecker;
+        _lazyLibrarianService = lazyLibrarianService;
     }
 
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
@@ -107,8 +111,6 @@ public sealed class QueueCleaner : GenericHandler
         using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
         using var _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
 
-        IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
-
         // push to context
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, instance.ExternalOrInternalUrl);
         ContextProvider.Set(nameof(InstanceType), instance.ArrConfig.Type);
@@ -116,6 +118,17 @@ public sealed class QueueCleaner : GenericHandler
         ContextProvider.Set(ContextProvider.Keys.Version, instance.Version);
 
         IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
+
+        if (instance.ArrConfig.Type is InstanceType.LazyLibrarian)
+        {
+            IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
+                await _lazyLibrarianService.EvaluateAsync(instance, downloadServices, ignoredDownloads);
+
+            await ProcessLazyLibrarianDecisionsAsync(instance, decisions);
+            return;
+        }
+
+        IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
         bool hasEnabledTorrentClients = ContextProvider
             .Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig))
             .Where(x => x.Type == DownloadClientType.Torrent)
@@ -171,7 +184,6 @@ public sealed class QueueCleaner : GenericHandler
                 DownloadCheckResult downloadCheckResult = new();
                 bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
                 DownloadClientConfig? foundInClient = null;
-                IDownloadService? foundInService = null;
 
                 if (isTorrent)
                 {
@@ -193,7 +205,6 @@ public sealed class QueueCleaner : GenericHandler
                                 if (downloadCheckResult.Found)
                                 {
                                     foundInClient = downloadService.ClientConfig;
-                                    foundInService = downloadService;
                                     break;
                                 }
                             }
@@ -215,11 +226,6 @@ public sealed class QueueCleaner : GenericHandler
                 {
                     bool changeCategory = downloadCheckResult.ChangeCategory;
                     bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient);
-
-                    if (!await TryDeleteForLazyLibrarianAsync(instance.ArrConfig.Type, removeFromClient, foundInService, downloadCheckResult.Torrent, record))
-                    {
-                        continue;
-                    }
 
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,

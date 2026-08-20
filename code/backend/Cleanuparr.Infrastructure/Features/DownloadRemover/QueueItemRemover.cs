@@ -1,6 +1,7 @@
-using System.Net;
+﻿using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -8,6 +9,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
@@ -26,6 +28,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly IEventPublisher _eventPublisher;
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
+    private readonly ILazyLibrarianService _lazyLibrarianService;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
@@ -33,7 +36,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
         IArrClientFactory arrClientFactory,
         IEventPublisher eventPublisher,
         EventsContext eventsContext,
-        DataContext dataContext
+        DataContext dataContext,
+        ILazyLibrarianService lazyLibrarianService
     )
     {
         _logger = logger;
@@ -42,6 +46,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _eventPublisher = eventPublisher;
         _eventsContext = eventsContext;
         _dataContext = dataContext;
+        _lazyLibrarianService = lazyLibrarianService;
     }
 
     public async Task RemoveQueueItemAsync(QueueItemRemoveRequest request)
@@ -52,6 +57,10 @@ public sealed class QueueItemRemover : IQueueItemRemover
             {
                 case ArrRemovalTarget target:
                     await RemoveViaArrAsync(request, target);
+                    break;
+
+                case LazyLibrarianRemovalTarget target:
+                    await RemoveViaLazyLibrarianAsync(request, target);
                     break;
 
                 default:
@@ -106,13 +115,101 @@ public sealed class QueueItemRemover : IQueueItemRemover
         {
             ArrInstanceId = request.Instance.Id,
             ItemId = target.SearchItem.Id,
-            ContentId = (target.SearchItem as BookSearchItem)?.ContentId,
             SeriesId = (target.SearchItem as SeriesSearchItem)?.SeriesId,
             SearchType = (target.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
             Title = target.Title,
         });
 
         await _eventsContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Clears the snatch in LazyLibrarian, then asks it to search again.
+    /// queueBook alone leaves the wanted row snatched, and every search command skips such a book.
+    /// getDownloadProgress is what flips that row, and only once the client no longer holds the torrent.
+    /// </summary>
+    private async Task RemoveViaLazyLibrarianAsync(QueueItemRemoveRequest request, LazyLibrarianRemovalTarget target)
+    {
+        LazyLibrarianQueueItem item = target.Item;
+
+        await MarkDownloadRemovedAsync(target.DownloadId);
+
+        ContextProvider.SetJobRunId(request.JobRunId);
+        ContextProvider.Set(ContextProvider.Keys.ItemName, target.Title);
+        ContextProvider.Set(ContextProvider.Keys.Hash, target.DownloadId);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
+        ContextProvider.Set(nameof(InstanceType), InstanceType.LazyLibrarian);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
+        ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
+
+        if (request.DownloadClient is not null)
+        {
+            ContextProvider.SetDownloadClient(request.DownloadClient);
+        }
+
+        bool snatchCleared = await TryClearSnatchAsync(request, target);
+
+        await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
+
+        _logger.LogInformation(
+            "queue item reset in LazyLibrarian with reason {reason} | {url} | {title}",
+            request.DeleteReason.ToString(), request.Instance.Url, target.Title
+        );
+
+        await _eventPublisher.PublishQueueItemDeleted(target.RemovedFromClient, request.DeleteReason);
+
+        if (!snatchCleared)
+        {
+            await _eventPublisher.PublishSearchNotTriggered(target.DownloadId, target.Title);
+            return;
+        }
+
+        if (!await ShouldQueueSearchAsync(request, target))
+        {
+            return;
+        }
+
+        await _lazyLibrarianService.TriggerSearchAsync(request.Instance, item);
+
+        _logger.LogInformation("book search triggered | {url} | book id: {id}", request.Instance.Url, item.BookId);
+    }
+
+    /// <summary>
+    /// LazyLibrarian marks the wanted row aborted when it polls the client and finds nothing.
+    /// Progress -1 means it did. Anything else leaves the row snatched, which blocks the search.
+    /// </summary>
+    private async Task<bool> TryClearSnatchAsync(QueueItemRemoveRequest request, LazyLibrarianRemovalTarget target)
+    {
+        if (!target.RemovedFromClient)
+        {
+            _logger.LogInformation(
+                "search not triggered | the torrent is still in the download client | {title}",
+                target.Title
+            );
+
+            return false;
+        }
+
+        LazyLibrarianDownloadProgress? progress =
+            await _lazyLibrarianService.GetDownloadProgressAsync(request.Instance, target.Item);
+
+        if (progress is null)
+        {
+            _logger.LogWarning("search not triggered | no download progress reported | {title}", target.Title);
+            return false;
+        }
+
+        if (progress.Progress is -1)
+        {
+            return true;
+        }
+
+        _logger.LogWarning(
+            "search not triggered | LazyLibrarian still reports the snatch | {title} | progress: {progress}",
+            target.Title, progress.Progress
+        );
+
+        return false;
     }
 
     private async Task MarkDownloadRemovedAsync(string downloadId)

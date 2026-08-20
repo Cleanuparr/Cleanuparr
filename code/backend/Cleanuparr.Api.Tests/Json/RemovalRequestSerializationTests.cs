@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
@@ -95,15 +95,6 @@ public class RemovalRequestSerializationTests
         item.Id.ShouldBe(100);
         item.SeriesId.ShouldBe(10);
         item.SearchType.ShouldBe(SeriesSearchType.Episode);
-    }
-
-    [Fact]
-    public void BookSearchItem_KeepsItsDerivedType()
-    {
-        QueueItemRemoveRequest result = RoundTrip(CreateRequest(new BookSearchItem { ContentId = "OL7353617M" }));
-
-        BookSearchItem item = ArrTargetOf(result).SearchItem.ShouldBeOfType<BookSearchItem>();
-        item.ContentId.ShouldBe("OL7353617M");
     }
 
     [Fact]

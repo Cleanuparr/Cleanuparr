@@ -1,3 +1,4 @@
+﻿using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Api.Features.Arr.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
@@ -20,8 +21,7 @@ public class ArrConfigControllerTests : IDisposable
 {
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
-    private readonly IArrClientFactory _arrClientFactory;
-    private readonly IArrClient _arrClient;
+    private readonly IInstanceHealthChecker _healthChecker;
     private readonly IEventPublisher _eventPublisher;
     private readonly ArrConfigController _controller;
 
@@ -30,11 +30,9 @@ public class ArrConfigControllerTests : IDisposable
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         var logger = Substitute.For<ILogger<ArrConfigController>>();
-        _arrClientFactory = Substitute.For<IArrClientFactory>();
-        _arrClient = Substitute.For<IArrClient>();
-        _arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
+        _healthChecker = Substitute.For<IInstanceHealthChecker>();
         _eventPublisher = Substitute.For<IEventPublisher>();
-        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _arrClientFactory, _eventPublisher);
+        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _healthChecker, _eventPublisher);
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
@@ -329,14 +327,14 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
-        await _arrClient.Received(1).HealthCheckAsync(Arg.Any<ArrInstance>());
+        await _healthChecker.Received(1).CheckAsync(InstanceType.Sonarr, Arg.Any<ArrInstance>());
     }
 
     [Fact]
     public async Task TestSonarrInstance_HealthCheckThrows_ReturnsBadRequest()
     {
         // Arrange
-        _arrClient.HealthCheckAsync(Arg.Any<ArrInstance>())
+        _healthChecker.CheckAsync(Arg.Any<InstanceType>(), Arg.Any<ArrInstance>())
             .Returns(Task.FromException(new HttpRequestException("unreachable")));
 
         var request = new TestArrInstanceRequest
@@ -400,7 +398,7 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
-        await _arrClient.Received(1).HealthCheckAsync(Arg.Is<ArrInstance>(i => i.ApiKey == "stored-key"));
+        await _healthChecker.Received(1).CheckAsync(InstanceType.Sonarr, Arg.Is<ArrInstance>(i => i.ApiKey == "stored-key"));
     }
 
     #endregion

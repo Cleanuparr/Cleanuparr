@@ -1,4 +1,4 @@
-using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+﻿using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -189,9 +189,8 @@ public class HealthCheckService : IHealthCheckService
             }
 
             // Get the arr client and execute health check
-            var arrClientFactory = scope.ServiceProvider.GetRequiredService<IArrClientFactory>();
-            var client = arrClientFactory.GetClient(arrInstance.Config.Type, arrInstance.Instance.Version);
-            await client.HealthCheckAsync(arrInstance.Instance);
+            var healthChecker = scope.ServiceProvider.GetRequiredService<IInstanceHealthChecker>();
+            await healthChecker.CheckAsync(arrInstance.Config.Type, arrInstance.Instance);
 
             var status = new ArrHealthStatus
             {
@@ -245,14 +244,13 @@ public class HealthCheckService : IHealthCheckService
                 .ToList();
 
             var results = new Dictionary<Guid, ArrHealthStatus>();
-            var arrClientFactory = scope.ServiceProvider.GetRequiredService<IArrClientFactory>();
+            var healthChecker = scope.ServiceProvider.GetRequiredService<IInstanceHealthChecker>();
 
             foreach (var entry in enabledInstances)
             {
                 try
                 {
-                    var client = arrClientFactory.GetClient(entry.Config.Type, entry.Instance.Version);
-                    await client.HealthCheckAsync(entry.Instance);
+                    await healthChecker.CheckAsync(entry.Config.Type, entry.Instance);
 
                     var status = new ArrHealthStatus
                     {

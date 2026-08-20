@@ -1,3 +1,4 @@
+﻿using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -50,7 +51,8 @@ public class DownloadCleanerIntegrationTests : IDisposable
             _fixture.UnlinkedService,
             _fixture.DeadTorrentService,
             _fixture.OrphanedFilesService,
-            _fixture.DryRunInterceptor);
+            _fixture.DryRunInterceptor,
+            _fixture.LazyLibrarianService);
     }
 
     /// <summary>

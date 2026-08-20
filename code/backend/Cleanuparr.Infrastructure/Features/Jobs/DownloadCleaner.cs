@@ -1,10 +1,11 @@
-using Cleanuparr.Domain.Entities;
+﻿using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
@@ -27,6 +28,7 @@ public sealed class DownloadCleaner : GenericHandler
     private readonly IUnlinkedDownloadsService _unlinkedService;
     private readonly IDeadTorrentService _deadTorrentService;
     private readonly IOrphanedFilesCleanupService _orphanedFilesService;
+    private readonly ILazyLibrarianService _lazyLibrarianService;
 
     public DownloadCleaner(
         ILogger<DownloadCleaner> logger,
@@ -42,7 +44,8 @@ public sealed class DownloadCleaner : GenericHandler
         IUnlinkedDownloadsService unlinkedService,
         IDeadTorrentService deadTorrentService,
         IOrphanedFilesCleanupService orphanedFilesService,
-        IDryRunInterceptor dryRunInterceptor
+        IDryRunInterceptor dryRunInterceptor,
+        ILazyLibrarianService lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
@@ -53,6 +56,7 @@ public sealed class DownloadCleaner : GenericHandler
         _unlinkedService = unlinkedService;
         _deadTorrentService = deadTorrentService;
         _orphanedFilesService = orphanedFilesService;
+        _lazyLibrarianService = lazyLibrarianService;
     }
 
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
@@ -195,6 +199,19 @@ public sealed class DownloadCleaner : GenericHandler
     {
         using IDisposable _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
         using IDisposable _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
+
+        if (instance.ArrConfig.Type is InstanceType.LazyLibrarian)
+        {
+            // Magazines and comics are claimed here even though no job can act on them.
+            IReadOnlyList<string> hashes = await _lazyLibrarianService.GetClaimedHashesAsync(instance);
+
+            foreach (string hash in hashes)
+            {
+                _downloadsProcessedByArrs.Add(hash);
+            }
+
+            return;
+        }
 
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
 

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -24,11 +24,6 @@ public sealed record SearchQueueItem
     /// The item ID to search for (movieId, episodeId, albumId, etc.)
     /// </summary>
     public long ItemId { get; set; }
-
-    /// <summary>
-    /// For LazyLibrarian: the book id, which the metadata provider gives as text
-    /// </summary>
-    public string? ContentId { get; set; }
 
     /// <summary>
     /// For Sonarr/Whisparr: the series ID when searching at episode/season level

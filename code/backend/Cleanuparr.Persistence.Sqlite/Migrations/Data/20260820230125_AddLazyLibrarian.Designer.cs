@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260818130651_AddLazyLibrarian")]
+    [Migration("20260820230125_AddLazyLibrarian")]
     partial class AddLazyLibrarian
     {
         /// <inheritdoc />

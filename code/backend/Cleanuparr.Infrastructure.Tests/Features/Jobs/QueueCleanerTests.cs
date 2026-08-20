@@ -1,4 +1,7 @@
 ﻿using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using Cleanuparr.Domain.Entities.LazyLibrarian;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -55,7 +58,8 @@ public class QueueCleanerTests : IDisposable
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
-            _connectivityChecker
+            _connectivityChecker,
+            _fixture.LazyLibrarianServiceQC
         );
     }
 
@@ -1572,139 +1576,111 @@ public class QueueCleanerTests : IDisposable
 
     #endregion
 
+
     #region LazyLibrarian
 
-    [Fact]
-    public async Task ProcessInstanceAsync_LazyLibrarian_DeletesTorrentInlineThroughDryRunInterceptor()
+    private static LazyLibrarianQueueItem CreateBookItem(LazyLibrarianOrigin origin = LazyLibrarianOrigin.New) => new()
     {
-        // Arrange
+        DownloadId = "torrent-hash",
+        Title = "Book",
+        BookId = "OL7353617M",
+        Library = BookLibrary.EBook,
+        Source = LazyLibrarianSource.QBittorrent,
+        Origin = origin,
+    };
+
+    private (IDownloadService Service, ITorrentItemWrapper Torrent) StubLazyLibrarianDecision(
+        LazyLibrarianOrigin origin = LazyLibrarianOrigin.New,
+        bool removeFromClient = true
+    )
+    {
         TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = Substitute.For<IArrClient>();
-        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
-        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
-
-        _fixture.ArrClientFactory
-            .GetClient(InstanceType.LazyLibrarian, Arg.Any<float>())
-            .Returns(mockArrClient);
-
-        var queueRecord = new QueueRecord
-        {
-            Id = 1,
-            DownloadId = "torrent-hash",
-            Title = "Book",
-            Protocol = "torrent",
-            ContentId = "OL7353617M",
-            DownloadOrigin = "new",
-        };
-
-        _fixture.ArrQueueIterator
-            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
-
-        var torrent = Substitute.For<Cleanuparr.Domain.Entities.ITorrentItemWrapper>();
+        ITorrentItemWrapper torrent = Substitute.For<ITorrentItemWrapper>();
         torrent.Hash.Returns("torrent-hash");
 
-        var mockDownloadService = _fixture.CreateMockDownloadService();
-        mockDownloadService
-            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
-            .Returns(new DownloadCheckResult
-            {
-                Found = true,
-                ShouldRemove = true,
-                IsPrivate = false,
-                DeleteFromClient = true,
-                DeleteReason = DeleteReason.Stalled,
-                Torrent = torrent,
-            });
+        IDownloadService downloadService = _fixture.CreateMockDownloadService();
+        DownloadClientConfig clientConfig = downloadService.ClientConfig;
+
+        LazyLibrarianRemovalDecision decision = new()
+        {
+            Item = CreateBookItem(origin),
+            DeleteReason = DeleteReason.Stalled,
+            RemoveFromClient = removeFromClient,
+            DownloadClient = clientConfig,
+            DownloadService = downloadService,
+            Torrent = torrent,
+        };
+
+        IReadOnlyList<LazyLibrarianRemovalDecision> decisions = [decision];
+
+        _fixture.LazyLibrarianServiceQC
+            .EvaluateAsync(Arg.Any<ArrInstance>(), Arg.Any<IReadOnlyList<IDownloadService>>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(decisions);
 
         _fixture.DownloadServiceFactory
             .GetDownloadService(Arg.Any<DownloadClientConfig>())
-            .Returns(mockDownloadService);
+            .Returns(downloadService);
 
-        // Have the dry-run interceptor actually invoke the captured delegate so the
-        // underlying DeleteDownload runs (matching real "not dry run" behavior).
         _fixture.DryRunInterceptor
             .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .Returns(ci => ((Func<Task>)ci[0])());
 
+        return (downloadService, torrent);
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DeletesTheTorrentThroughTheDryRunInterceptor()
+    {
+        // Arrange
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
         var sut = CreateSut();
 
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: the inline DeleteDownload actually ran and the removal request is published.
-        await mockDownloadService.Received(1).DeleteDownload(torrent, true);
+        // Assert
+        await downloadService.Received(1).DeleteDownload(torrent, true);
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest>(r => r.ArrTarget().RemoveFromClient && r.DeleteReason == DeleteReason.Stalled && r.BookItem().ContentId == "OL7353617M"),
+            Arg.Is<QueueItemRemoveRequest>(r =>
+                r.LazyTarget().RemovedFromClient
+                && r.LazyTarget().Item.BookId == "OL7353617M"
+                && r.DeleteReason == DeleteReason.Stalled
+            ),
             Arg.Any<CancellationToken>()
         );
     }
 
-    // LazyLibrarian marks a torrent the client already held as adopted.
-    // It refuses to remove one itself.
-    // Deleting it would stop another seed and take those files.
     [Fact]
-    public async Task ProcessInstanceAsync_LazyLibrarian_AdoptedTorrent_IsNotDeletedButStillPublished()
+    public async Task ProcessInstanceAsync_LazyLibrarian_KeepsATorrentLazyLibrarianAdopted()
+    {
+        // Arrange: LazyLibrarian refuses to remove an adopted task, and the files back another seed.
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) =
+            StubLazyLibrarianDecision(origin: LazyLibrarianOrigin.Adopted);
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await downloadService.DidNotReceive().DeleteDownload(Arg.Any<ITorrentItemWrapper>(), Arg.Any<bool>());
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r =>
+                !r.LazyTarget().RemovedFromClient
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotPublishWhenTheDeleteFails()
     {
         // Arrange
-        TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
-        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-
-        var mockArrClient = Substitute.For<IArrClient>();
-        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
-        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
-
-        _fixture.ArrClientFactory
-            .GetClient(InstanceType.LazyLibrarian, Arg.Any<float>())
-            .Returns(mockArrClient);
-
-        var queueRecord = new QueueRecord
-        {
-            Id = 1,
-            DownloadId = "torrent-hash",
-            Title = "Book",
-            Protocol = "torrent",
-            ContentId = "OL7353617M",
-            DownloadOrigin = "adopted",
-        };
-
-        _fixture.ArrQueueIterator
-            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
-
-        var torrent = Substitute.For<Cleanuparr.Domain.Entities.ITorrentItemWrapper>();
-        torrent.Hash.Returns("torrent-hash");
-
-        var mockDownloadService = _fixture.CreateMockDownloadService();
-        mockDownloadService
-            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
-            .Returns(new DownloadCheckResult
-            {
-                Found = true,
-                ShouldRemove = true,
-                IsPrivate = false,
-                DeleteFromClient = true,
-                DeleteReason = DeleteReason.Stalled,
-                Torrent = torrent,
-            });
-
-        _fixture.DownloadServiceFactory
-            .GetDownloadService(Arg.Any<DownloadClientConfig>())
-            .Returns(mockDownloadService);
-
-        _fixture.DryRunInterceptor
-            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
-            .Returns(ci => ((Func<Task>)ci[0])());
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
+        downloadService
+            .DeleteDownload(Arg.Any<ITorrentItemWrapper>(), Arg.Any<bool>())
+            .ThrowsAsync(new Exception("client unreachable"));
 
         var sut = CreateSut();
 
@@ -1712,84 +1688,27 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        await mockDownloadService.DidNotReceive().DeleteDownload(Arg.Any<Cleanuparr.Domain.Entities.ITorrentItemWrapper>(), Arg.Any<bool>());
-        await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest>(r => r.DeleteReason == DeleteReason.Stalled),
+        await _fixture.MessageBus.DidNotReceive().Publish(
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
 
     [Fact]
-    public async Task ProcessInstanceAsync_LazyLibrarian_WhenInlineDeleteThrows_DoesNotPublishRemovalRequest()
+    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueIterator()
     {
         // Arrange
-        TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
-        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-
-        var mockArrClient = Substitute.For<IArrClient>();
-        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
-        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
-
-        _fixture.ArrClientFactory
-            .GetClient(InstanceType.LazyLibrarian, Arg.Any<float>())
-            .Returns(mockArrClient);
-
-        var queueRecord = new QueueRecord
-        {
-            Id = 1,
-            DownloadId = "torrent-hash",
-            Title = "Book",
-            Protocol = "torrent",
-            ContentId = "OL7353617M",
-            DownloadOrigin = "new",
-        };
-
-        _fixture.ArrQueueIterator
-            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
-
-        var torrent = Substitute.For<Cleanuparr.Domain.Entities.ITorrentItemWrapper>();
-        torrent.Hash.Returns("torrent-hash");
-
-        var mockDownloadService = _fixture.CreateMockDownloadService();
-        mockDownloadService
-            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
-            .Returns(new DownloadCheckResult
-            {
-                Found = true,
-                ShouldRemove = true,
-                IsPrivate = false,
-                DeleteFromClient = true,
-                DeleteReason = DeleteReason.Stalled,
-                Torrent = torrent,
-            });
-
-        _fixture.DownloadServiceFactory
-            .GetDownloadService(Arg.Any<DownloadClientConfig>())
-            .Returns(mockDownloadService);
-
-        // Have DeleteDownload throw, with the interceptor passing the failure through.
-        mockDownloadService
-            .DeleteDownload(Arg.Any<Cleanuparr.Domain.Entities.ITorrentItemWrapper>(), Arg.Any<bool>())
-            .Returns(_ => Task.FromException(new InvalidOperationException("delete failed")));
-        _fixture.DryRunInterceptor
-            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
-            .Returns(ci => ((Func<Task>)ci[0])());
-
+        StubLazyLibrarianDecision();
         var sut = CreateSut();
 
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: when the underlying DeleteDownload throws, no removal request is published.
-        await mockDownloadService.Received(1).DeleteDownload(torrent, true);
-        await _fixture.MessageBus.DidNotReceive().Publish(
-            Arg.Any<QueueItemRemoveRequest>(),
-            Arg.Any<CancellationToken>()
+        // Assert
+        await _fixture.ArrQueueIterator.DidNotReceive().Iterate(
+            Arg.Any<IArrClient>(),
+            Arg.Any<ArrInstance>(),
+            Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
         );
     }
 

@@ -5,7 +5,6 @@ namespace Cleanuparr.Domain.Entities.Arr;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$item")]
 [JsonDerivedType(typeof(SearchItem), "base")]
 [JsonDerivedType(typeof(SeriesSearchItem), "series")]
-[JsonDerivedType(typeof(BookSearchItem), "book")]
 public class SearchItem
 {
     public long Id { get; set; }

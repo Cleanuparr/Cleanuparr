@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -3777,47 +3777,6 @@ public class SeekerTests : IDisposable
         capturedSearchItem.Id.ShouldBe(5);
         capturedSearchItem.SeriesId.ShouldBe(42);
         capturedSearchItem.SearchType.ShouldBe(SeriesSearchType.Season);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_LazyLibrarianReplacement_WithContentId_BuildsBookSearchItem()
-    {
-        // Arrange — replacement queue item with a text book id should create a BookSearchItem
-        var lazyLibrarianInstance = TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
-
-        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
-        {
-            ArrInstanceId = lazyLibrarianInstance.Id,
-            ItemId = 0,
-            ContentId = "OL7353617M",
-            Title = "Author - Title",
-            CreatedAt = DateTime.UtcNow
-        });
-        await _fixture.DataContext.SaveChangesAsync();
-        await _fixture.EventsContext.SaveChangesAsync();
-
-        var mockArrClient = Substitute.For<IArrClient>();
-        BookSearchItem? capturedSearchItem = null;
-        mockArrClient
-            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
-            .Returns(ci =>
-            {
-                capturedSearchItem = ci.ArgAt<SearchItem>(1) as BookSearchItem;
-                return 0L;
-            });
-
-        _fixture.ArrClientFactory
-            .GetClient(InstanceType.LazyLibrarian, Arg.Any<float>())
-            .Returns(mockArrClient);
-
-        var sut = CreateSut();
-
-        // Act
-        await sut.ExecuteAsync();
-
-        // Assert
-        capturedSearchItem.ShouldNotBeNull();
-        capturedSearchItem.ContentId.ShouldBe("OL7353617M");
     }
 
     [Fact]

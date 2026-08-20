@@ -1,4 +1,6 @@
-﻿using Cleanuparr.Domain.Entities;
+﻿using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -154,16 +156,29 @@ public abstract class GenericHandler : IHandler
 
         InstanceType instanceType = instance.ArrConfig.Type;
 
+        ArrRemovalTarget target = new()
+        {
+            Record = record,
+            SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
+            RemoveFromClient = removeFromClient,
+            ChangeCategory = changeCategory,
+        };
+
+        await PublishRemovalRequest(instance, target, deleteReason, skipSearch, downloadClient);
+    }
+
+    protected async Task PublishRemovalRequest(
+        ArrInstance instance,
+        RemovalTarget target,
+        DeleteReason deleteReason,
+        bool skipSearch = false,
+        DownloadClientConfig? downloadClient = null
+    )
+    {
         QueueItemRemoveRequest removeRequest = new()
         {
             Instance = instance,
-            Target = new ArrRemovalTarget
-            {
-                Record = record,
-                SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
-                RemoveFromClient = removeFromClient,
-                ChangeCategory = changeCategory,
-            },
+            Target = target,
             DeleteReason = deleteReason,
             JobRunId = ContextProvider.GetJobRunId(),
             SkipSearch = skipSearch,
@@ -178,12 +193,12 @@ public abstract class GenericHandler : IHandler
             ContextProvider.SetDownloadClient(downloadClient);
         }
 
-        _logger.LogInformation("item marked for removal | {title} | {url}", record.Title, instance.Url);
+        _logger.LogInformation("item marked for removal | {title} | {url}", target.Title, instance.Url);
         await _eventPublisher.PublishAsync(EventType.DownloadMarkedForDeletion, "Download marked for deletion", EventSeverity.Important,
             configure: e =>
             {
-                e.ItemTitle = record.Title;
-                e.ItemHash = record.DownloadId;
+                e.ItemTitle = target.Title;
+                e.ItemHash = target.DownloadId;
             });
     }
     
@@ -243,71 +258,84 @@ public abstract class GenericHandler : IHandler
             {
                 Id = record.MovieId
             },
-            InstanceType.LazyLibrarian => new BookSearchItem
-            {
-                ContentId = record.ContentId ?? string.Empty
-            },
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };
     }
 
     /// <summary>
-    /// LazyLibrarian has no arr-driven <c>removeFromClient</c> equivalent. When we're about
-    /// to publish a removal request for a LazyLibrarian item that should also be deleted
-    /// from the download client, do that deletion inline using the already-authenticated
-    /// download service and the torrent reference we just collected during rule evaluation.
+    /// Removes the torrent from the client, then hands the item to the removal consumer.
+    /// LazyLibrarian clears a snatch only once the client no longer holds the download,
+    /// so the client delete has to happen first.
     /// </summary>
-    /// <returns>
-    /// True if the removal request should proceed; false if the inline deletion failed and
-    /// the caller must skip publishing.
-    /// </returns>
-    protected async Task<bool> TryDeleteForLazyLibrarianAsync(
-        InstanceType instanceType,
-        bool removeFromClient,
-        IDownloadService? downloadService,
-        ITorrentItemWrapper? torrent,
-        QueueRecord record
+    protected async Task ProcessLazyLibrarianDecisionsAsync(
+        ArrInstance instance,
+        IReadOnlyList<LazyLibrarianRemovalDecision> decisions
     )
     {
-        if (instanceType is not InstanceType.LazyLibrarian)
+        foreach (LazyLibrarianRemovalDecision decision in decisions)
         {
-            return true;
+            string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(decision.Item.DownloadId, instance.Url);
+
+            if (_cache.TryGetValue(downloadRemovalKey, out bool _))
+            {
+                _logger.LogDebug("skip | already marked for removal | {title}", decision.Item.Title);
+                continue;
+            }
+
+            bool wanted = decision.RemoveFromClient && !decision.Item.WasAdoptedByLazyLibrarian;
+            bool removedFromClient = await TryRemoveFromClientAsync(decision);
+
+            if (wanted && !removedFromClient)
+            {
+                continue;
+            }
+
+            LazyLibrarianRemovalTarget target = new()
+            {
+                Item = decision.Item,
+                RemovedFromClient = removedFromClient,
+            };
+
+            await PublishRemovalRequest(instance, target, decision.DeleteReason, downloadClient: decision.DownloadClient);
+        }
+    }
+
+    private async Task<bool> TryRemoveFromClientAsync(LazyLibrarianRemovalDecision decision)
+    {
+        if (!decision.RemoveFromClient)
+        {
+            return false;
         }
 
-        if (!removeFromClient)
-        {
-            return true;
-        }
-
-        // LazyLibrarian records "adopted" when the client already held the torrent.
-        // It refuses to remove such a task itself.
-        // Removing it would stop another seed and take files it never downloaded.
-        // A row without an origin counts as adopted, as it does for LazyLibrarian.
-        if (!string.Equals(record.DownloadOrigin, "new", StringComparison.OrdinalIgnoreCase))
+        // LazyLibrarian refuses to remove a task it adopted, and the files back another seed.
+        if (decision.Item.WasAdoptedByLazyLibrarian)
         {
             _logger.LogInformation(
-                "skip lazylibrarian delete | LazyLibrarian did not add this torrent | {title} | {hash}",
-                record.Title, record.DownloadId
+                "keeping torrent | LazyLibrarian adopted it | {title} | {hash}",
+                decision.Item.Title, decision.Item.DownloadId
             );
-            return true;
+
+            return false;
         }
 
-        if (downloadService is null || torrent is null)
+        if (decision.DownloadService is null || decision.Torrent is null)
         {
             _logger.LogWarning(
                 "skip lazylibrarian delete | torrent reference unavailable | {title} | {hash}",
-                record.Title, record.DownloadId
+                decision.Item.Title, decision.Item.DownloadId
             );
+
             return false;
         }
 
         try
         {
-            await _dryRunInterceptor.InterceptAsync(() => downloadService.DeleteDownload(torrent, true));
+            await _dryRunInterceptor.InterceptAsync(() => decision.DownloadService.DeleteDownload(decision.Torrent, true));
             _logger.LogInformation(
                 "torrent removed from download client {client} | {title}",
-                downloadService.ClientConfig.Name, record.Title
+                decision.DownloadService.ClientConfig.Name, decision.Item.Title
             );
+
             return true;
         }
         catch (Exception exception)
@@ -315,11 +343,13 @@ public abstract class GenericHandler : IHandler
             _logger.LogError(
                 exception,
                 "failed to remove torrent from download client {client} | {hash} | {title}",
-                downloadService.ClientConfig.Name, record.DownloadId, record.Title
+                decision.DownloadService.ClientConfig.Name, decision.Item.DownloadId, decision.Item.Title
             );
+
             return false;
         }
     }
+
 
     protected async Task<IReadOnlyList<IDownloadService>> GetInitializedDownloadServicesAsync()
     {

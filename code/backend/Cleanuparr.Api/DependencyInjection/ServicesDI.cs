@@ -1,3 +1,5 @@
+﻿using Cleanuparr.Infrastructure.Health;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -46,7 +48,10 @@ public static class ServicesDI
             .AddScoped<IReadarrClient, ReadarrClient>()
             .AddScoped<IWhisparrV2Client, WhisparrV2Client>()
             .AddScoped<IWhisparrV3Client, WhisparrV3Client>()
-            .AddScoped<ILazyLibrarianClient, LazyLibrarianClient>()
+            .AddScoped<ILazyLibrarianService, LazyLibrarianService>()
+            .AddScoped<IInstanceHealthChecker, InstanceHealthChecker>()
+            .AddScoped<ILazyLibrarianServiceQC, LazyLibrarianServiceQC>()
+            .AddScoped<ILazyLibrarianServiceCB, LazyLibrarianServiceCB>()
             .AddScoped<IArrClientFactory, ArrClientFactory>()
             .AddScoped<QueueCleaner>()
             .AddScoped<BlacklistSynchronizer>()

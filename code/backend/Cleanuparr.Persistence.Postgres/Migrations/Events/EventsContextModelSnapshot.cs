@@ -507,10 +507,6 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("uuid")
                         .HasColumnName("arr_instance_id");
 
-                    b.Property<string>("ContentId")
-                        .HasColumnType("text")
-                        .HasColumnName("content_id");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");

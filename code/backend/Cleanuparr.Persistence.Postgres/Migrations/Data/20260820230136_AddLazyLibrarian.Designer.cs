@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cleanuparr.Persistence.Postgres.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260818130704_AddLazyLibrarian")]
+    [Migration("20260820230136_AddLazyLibrarian")]
     partial class AddLazyLibrarian
     {
         /// <inheritdoc />
