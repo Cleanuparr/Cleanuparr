@@ -128,7 +128,7 @@ services:
     restart: unless-stopped
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:4.6.7
+    image: lscr.io/linuxserver/qbittorrent:5.2.3
     network_mode: host
     environment:
       PUID: "1000"

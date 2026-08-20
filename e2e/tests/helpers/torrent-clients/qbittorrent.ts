@@ -46,10 +46,10 @@ export class QBittorrentDriver implements TorrentClientDriver {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     });
-    // qBittorrent returns HTTP 200 with body "Ok." on success and "Fails." on
-    // bad credentials, so we cannot rely on res.ok alone.
+    // qBittorrent 4.x answers 200 with "Ok." or "Fails.", so res.ok proves nothing.
+    // qBittorrent 5.2 answers 204 with an empty body.
     const responseBody = (await res.text()).trim();
-    if (!res.ok || responseBody !== 'Ok.') {
+    if (!res.ok || (responseBody !== '' && responseBody !== 'Ok.')) {
       throw new Error(`qBittorrent login failed: ${res.status} ${responseBody}`);
     }
     const cookie = res.headers.get('set-cookie');

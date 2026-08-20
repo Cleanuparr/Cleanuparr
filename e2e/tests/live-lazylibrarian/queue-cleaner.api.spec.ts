@@ -268,10 +268,9 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
     expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).not.toBe('Wanted');
   });
 
-  // LazyLibrarian only records an adoption when the client rejects a duplicate with a 409.
-  // qBittorrent answers 200 with "Fails." until 5.2.0, so this cannot run on the pinned 4.6.7.
-  // The guard itself is covered by a unit test.
-  test.fixme('an adopted torrent stays in the client while the book still resets', async ({ api }) => {
+  // LazyLibrarian records an adoption only when the client rejects a duplicate with a 409.
+  // qBittorrent answers that from 5.2.0 on.
+  test('an adopted torrent stays in the client while the book still resets', async ({ api }) => {
     test.setTimeout(240_000);
 
     const prepared = await prepareRelease(claimBook(12));
