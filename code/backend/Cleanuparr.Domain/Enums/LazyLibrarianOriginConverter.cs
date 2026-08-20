@@ -3,10 +3,6 @@ using System.Text.Json.Serialization;
 
 namespace Cleanuparr.Domain.Enums;
 
-/// <summary>
-/// Maps a LazyLibrarian wire value to <see cref="LazyLibrarianOrigin"/>.
-/// Any value the enum does not name becomes <see cref="LazyLibrarianOrigin.Unknown"/>.
-/// </summary>
 public sealed class LazyLibrarianOriginConverter : JsonConverter<LazyLibrarianOrigin>
 {
     public override bool HandleNull => true;

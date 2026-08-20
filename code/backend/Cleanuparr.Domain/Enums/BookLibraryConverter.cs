@@ -4,8 +4,6 @@ using System.Text.Json.Serialization;
 namespace Cleanuparr.Domain.Enums;
 
 /// <summary>
-/// Maps a LazyLibrarian wire value to <see cref="BookLibrary"/>.
-/// Any value the enum does not name becomes <see cref="BookLibrary.Unknown"/>.
 /// A magazine issue date contains digits, so it lands on Unknown.
 /// </summary>
 public sealed class BookLibraryConverter : JsonConverter<BookLibrary>

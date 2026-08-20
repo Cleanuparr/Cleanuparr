@@ -263,9 +263,8 @@ public abstract class GenericHandler : IHandler
     }
 
     /// <summary>
-    /// Removes the torrent from the client, then hands the item to the removal consumer.
-    /// LazyLibrarian clears a snatch only once the client no longer holds the download,
-    /// so the client delete has to happen first.
+    /// The client delete comes first.
+    /// LazyLibrarian clears a snatch only once the client no longer holds the download.
     /// </summary>
     protected async Task ProcessLazyLibrarianDecisionsAsync(
         ArrInstance instance,

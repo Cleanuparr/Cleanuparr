@@ -124,9 +124,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
     }
 
     /// <summary>
-    /// Clears the snatch in LazyLibrarian, then asks it to search again.
-    /// queueBook alone leaves the wanted row snatched, and every search command skips such a book.
-    /// getDownloadProgress is what flips that row, and only once the client no longer holds the torrent.
+    /// queueBook leaves the wanted row snatched, and a snatched row blocks every search.
+    /// getDownloadProgress is what clears it.
     /// </summary>
     private async Task RemoveViaLazyLibrarianAsync(QueueItemRemoveRequest request, LazyLibrarianRemovalTarget target)
     {

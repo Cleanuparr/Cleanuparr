@@ -18,8 +18,7 @@ public interface ILazyLibrarianService
     Task<IReadOnlyList<string>> GetClaimedHashesAsync(ArrInstance instance);
 
     /// <summary>
-    /// Asks LazyLibrarian to poll the client for a download it snatched.
-    /// It marks the row aborted when the client no longer holds it.
+    /// LazyLibrarian marks the row aborted when the client no longer holds the download.
     /// Nothing else clears a snatch through the API.
     /// </summary>
     Task<LazyLibrarianDownloadProgress?> GetDownloadProgressAsync(ArrInstance instance, LazyLibrarianQueueItem item);
