@@ -2,6 +2,8 @@ import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { buildDownloadClientPayload } from '../helpers/api/download-client';
 import {
+  claimBookById,
+  farFutureCron,
   type LazyLibrarianBook,
   type SnatchedBook,
   liveLazyLibrarian,
@@ -50,31 +52,33 @@ const MIN_MAX_STRIKES = 3;
 const ADOPTED_SAVE_PATH = '/downloads/adopted';
 const ADOPTED_CATEGORY = '';
 
-/** Far enough out that the cron never fires inside a spec. */
-function farFutureCron(): string {
-  const minutes = (new Date().getUTCMinutes() + 30) % 60;
-  return `0 ${minutes} * * * ?`;
-}
-
 let books: LazyLibrarianBook[] = [];
-const createdRules: Array<{ kind: 'stall' | 'slow'; id: string }> = [];
+const createdRules: Array<{ kind: 'stall'; id: string }> = [];
 let instanceId: string | undefined;
 let clientId: string | undefined;
+let savedCleanerConfig: Record<string, unknown> | undefined;
 
-/** Hands out the seeded book a spec owns. */
-function claimBook(index: number): LazyLibrarianBook {
-  const book = books[index];
+/**
+ * Each spec owns one OpenLibrary work id from seed-lazylibrarian.sh.
+ * Claiming by id keeps the tests off getAllBooks order, which has no ORDER BY.
+ */
+const BOOK_IDS = {
+  stall: 'OL450063W',
+  belowLimit: 'OL450124W',
+  private: 'OL85892W',
+  failedImport: 'OL52267W',
+  firstOfTwo: 'OL52114W',
+  secondOfTwo: 'OL52266W',
+  adopted: 'OL66513W',
+} as const;
 
-  if (!book) {
-    throw new Error('the LazyLibrarian seed ran out of books, add more work ids to seed-lazylibrarian.sh');
-  }
-
-  return book;
+function claimBook(bookId: string): LazyLibrarianBook {
+  return claimBookById(books, bookId);
 }
 
 async function createRule(
   api: CleanuparrApi,
-  kind: 'stall' | 'slow',
+  kind: 'stall',
   overrides: Record<string, unknown> = {},
 ): Promise<string> {
   const base = {
@@ -89,10 +93,7 @@ async function createRule(
     resetStrikesOnProgress: true,
   };
 
-  const payload =
-    kind === 'stall'
-      ? { ...base, minimumProgress: null, ...overrides }
-      : { ...base, minSpeed: '100KB', maxTimeHours: 0, ignoreAboveSize: null, ...overrides };
+  const payload = { ...base, minimumProgress: null, ...overrides };
 
   const created = await (await api.queueCleaner.createRule(kind, payload)).json();
   expect(created.id, `createRule ${kind}`).toBeTruthy();
@@ -101,8 +102,8 @@ async function createRule(
   return created.id;
 }
 
-async function arrangeSnatch(bookIndex: number, options: Parameters<typeof snatchBook>[1] = {}): Promise<SnatchedBook> {
-  const snatched = await snatchBook(claimBook(bookIndex), options);
+async function arrangeSnatch(bookId: string, options: Parameters<typeof snatchBook>[1] = {}): Promise<SnatchedBook> {
+  const snatched = await snatchBook(claimBook(bookId), options);
   await waitForTorrentInClient(snatched.downloadId);
   return snatched;
 }
@@ -123,6 +124,21 @@ async function runUntilStruckOut(api: CleanuparrApi, downloadId: string): Promis
       return;
     }
   }
+}
+
+/**
+ * Proves the run actually reached this item.
+ * Without it a "nothing was removed" assertion also passes when LazyLibrarian was never queried.
+ */
+async function strikeCount(api: CleanuparrApi, downloadId: string): Promise<number> {
+  const response = await api.strikes.list({ pageSize: 200 });
+  expect(response.status).toBeLessThan(300);
+
+  const body = await response.json();
+  const rows: Array<Record<string, unknown>> = body.items ?? body.data ?? body ?? [];
+
+  return rows.filter((row) => String(row.downloadId ?? row.hash ?? '').toLowerCase() === downloadId.toLowerCase())
+    .length;
 }
 
 async function expectRemoved(snatched: SnatchedBook): Promise<void> {
@@ -202,6 +218,11 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
       clientId = undefined;
     }
 
+    if (savedCleanerConfig) {
+      await api.queueCleaner.updateConfig(savedCleanerConfig);
+      savedCleanerConfig = undefined;
+    }
+
     await liveLazyLibrarian.clearHistory();
     await qbittorrent.clearAllTorrents();
   });
@@ -209,7 +230,7 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
   test('a stall rule strikes the snatched book and removes it', async ({ api }) => {
     test.setTimeout(240_000);
 
-    const snatched = await arrangeSnatch(0);
+    const snatched = await arrangeSnatch(BOOK_IDS.stall);
     await createRule(api, 'stall');
 
     await runUntilStruckOut(api, snatched.downloadId);
@@ -220,21 +241,23 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
   test('below the strike limit nothing is removed', async ({ api }) => {
     test.setTimeout(240_000);
 
-    const snatched = await arrangeSnatch(1);
+    const snatched = await arrangeSnatch(BOOK_IDS.belowLimit);
     await createRule(api, 'stall');
 
     expect((await api.jobs.trigger('QueueCleaner')).status).toBeLessThan(300);
 
-    await new Promise((r) => setTimeout(r, STRIKE_SETTLE_MS));
+    await expect
+      .poll(() => strikeCount(api, snatched.downloadId), { timeout: REMOVAL_TIMEOUT })
+      .toBeGreaterThan(0);
 
     expect(await torrentPresent(snatched.downloadId), 'one strike must not remove the torrent').toBe(true);
-    expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).not.toBe('Wanted');
+    expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).toBe('Snatched');
   });
 
   test('a private torrent stays in the client while the book still resets', async ({ api }) => {
     test.setTimeout(240_000);
 
-    const snatched = await arrangeSnatch(2);
+    const snatched = await arrangeSnatch(BOOK_IDS.private);
     await createRule(api, 'stall', { privacyType: 'Private', deletePrivateTorrentsFromClient: false });
 
     await runUntilStruckOut(api, snatched.downloadId);
@@ -244,14 +267,16 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
       .toBe('Wanted');
 
     expect(await torrentPresent(snatched.downloadId), 'a private torrent must stay in the client').toBe(true);
+    expect(await strikeCount(api, snatched.downloadId), 'the run must have reached this item').toBeGreaterThan(0);
   });
 
   test('the failed import path never strikes a LazyLibrarian item', async ({ api }) => {
     test.setTimeout(240_000);
 
-    const snatched = await arrangeSnatch(3);
+    const snatched = await arrangeSnatch(BOOK_IDS.failedImport);
 
     const config = await (await api.queueCleaner.getConfig()).json();
+    savedCleanerConfig = config;
     await api.queueCleaner.updateConfig({
       ...config,
       enabled: true,
@@ -262,10 +287,13 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
 
     expect((await api.jobs.trigger('QueueCleaner')).status).toBeLessThan(300);
 
-    await new Promise((r) => setTimeout(r, 10_000));
+    // The stall rule is absent, so a strike here could only come from the failed-import path.
+    await expect
+      .poll(() => strikeCount(api, snatched.downloadId), { timeout: STRIKE_SETTLE_MS })
+      .toBe(0);
 
     expect(await torrentPresent(snatched.downloadId), 'LazyLibrarian handles failed imports itself').toBe(true);
-    expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).not.toBe('Wanted');
+    expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).toBe('Snatched');
   });
 
   // LazyLibrarian records an adoption only when the client rejects a duplicate with a 409.
@@ -273,7 +301,7 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
   test('an adopted torrent stays in the client while the book still resets', async ({ api }) => {
     test.setTimeout(240_000);
 
-    const prepared = await prepareRelease(claimBook(12));
+    const prepared = await prepareRelease(claimBook(BOOK_IDS.adopted));
 
     // qBittorrent holds the torrent before LazyLibrarian grabs the release.
     // LazyLibrarian then adopts it instead of adding it.
@@ -302,11 +330,8 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
   test('two snatched books are both handled in one run', async ({ api }) => {
     test.setTimeout(300_000);
 
-    const first = await arrangeSnatch(4);
-    const second = await arrangeSnatch(5);
-
-    const rows = await liveLazyLibrarian.snatchedTorrents();
-    expect(rows.length, 'LazyLibrarian should report both snatched torrents').toBe(2);
+    const first = await arrangeSnatch(BOOK_IDS.firstOfTwo);
+    const second = await arrangeSnatch(BOOK_IDS.secondOfTwo);
 
     await createRule(api, 'stall');
 

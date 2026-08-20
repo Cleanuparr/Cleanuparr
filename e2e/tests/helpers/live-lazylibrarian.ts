@@ -90,24 +90,6 @@ export class LiveLazyLibrarian {
     return this.command<LazyLibrarianHistoryRow[]>('getHistory');
   }
 
-  /**
-   * The rows Cleanuparr treats as queued: snatched torrents with a download id.
-   *
-   * LazyLibrarian records the provider type in NZBmode, so a torznab provider
-   * writes `torznab`. All three of these go down its torrent download path.
-   */
-  async snatchedTorrents(): Promise<LazyLibrarianHistoryRow[]> {
-    const torrentModes = ['torrent', 'torznab', 'magnet'];
-    const rows = await this.history();
-
-    return rows.filter(
-      (row) =>
-        row.Status?.toLowerCase() === 'snatched' &&
-        torrentModes.includes(row.NZBmode?.toLowerCase()) &&
-        !!row.DownloadID,
-    );
-  }
-
   async books(): Promise<LazyLibrarianBook[]> {
     return this.command<LazyLibrarianBook[]>('getAllBooks');
   }
@@ -354,4 +336,24 @@ export async function torrentPresent(downloadId: string): Promise<boolean> {
   const target = downloadId.toLowerCase();
   const torrents = await qbittorrent.listTorrents();
   return torrents.some((t) => t.hash.toLowerCase() === target);
+}
+
+/** Far enough out that the cron never fires inside a spec. */
+export function farFutureCron(): string {
+  const minutes = (new Date().getUTCMinutes() + 30) % 60;
+  return `0 ${minutes} * * * ?`;
+}
+
+/**
+ * Hands out a seeded book by its work id.
+ * Indexing into getAllBooks order would break: that query has no ORDER BY.
+ */
+export function claimBookById(books: LazyLibrarianBook[], bookId: string): LazyLibrarianBook {
+  const book = books.find((candidate) => candidate.BookID === bookId);
+
+  if (!book) {
+    throw new Error(`the LazyLibrarian seed has no book ${bookId}, add its work id to seed-lazylibrarian.sh`);
+  }
+
+  return book;
 }

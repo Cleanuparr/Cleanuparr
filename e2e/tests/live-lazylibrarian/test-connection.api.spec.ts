@@ -39,5 +39,9 @@ test.describe('LazyLibrarian test connection', () => {
     });
 
     expect(res.status, 'a 200 carrying an error body is still a failed connection').toBe(400);
+
+    // Without this a payload rejection or an unreachable host would pass as "bad key detected".
+    const body = await res.text();
+    expect(body.toLowerCase(), body).toContain('api key');
   });
 });

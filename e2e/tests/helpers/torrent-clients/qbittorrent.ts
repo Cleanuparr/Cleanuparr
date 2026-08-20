@@ -63,6 +63,7 @@ export class QBittorrentDriver implements TorrentClientDriver {
     const form = new FormData();
     form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
     form.append('savepath', savePath);
+    form.append('stopped', 'true');
     form.append('paused', 'true');
     form.append('skip_checking', 'true');
     form.append('autoTMM', 'false');
@@ -84,6 +85,7 @@ export class QBittorrentDriver implements TorrentClientDriver {
     const form = new FormData();
     form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
     form.append('savepath', savePath);
+    form.append('stopped', 'false');
     form.append('paused', 'false');
     form.append('skip_checking', 'true');
     form.append('autoTMM', 'false');
@@ -109,6 +111,7 @@ export class QBittorrentDriver implements TorrentClientDriver {
     const form = new FormData();
     form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
     form.append('savepath', savePath);
+    form.append('stopped', 'false');
     form.append('paused', 'false');
     form.append('skip_checking', 'false');
     form.append('autoTMM', 'false');
