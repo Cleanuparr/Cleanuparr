@@ -120,13 +120,12 @@ public sealed class QueueItemRemover : IQueueItemRemover
     {
         LazyLibrarianQueueItem item = target.Item;
 
-        await MarkDownloadRemovedAsync(target.DownloadId);
-
         SetRemovalContext(request, target, InstanceType.LazyLibrarian);
 
         bool snatchCleared = await TryClearSnatchAsync(request, target);
 
         await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
+        await MarkDownloadRemovedAsync(target.DownloadId);
 
         _logger.LogInformation(
             "queue item reset in LazyLibrarian with reason {Reason} | {Url} | {Title}",

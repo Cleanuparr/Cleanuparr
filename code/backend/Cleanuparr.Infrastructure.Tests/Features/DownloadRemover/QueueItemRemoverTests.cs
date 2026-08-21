@@ -13,6 +13,7 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -143,6 +144,33 @@ public class QueueItemRemoverTests : IDisposable
 
         // Assert
         await _lazyLibrarianService.Received(1).ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_KeepsTheDownloadWhenTheResetFails()
+    {
+        // Arrange: a failed reset leaves the snatch, so the download is not removed yet.
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "hash1",
+            Title = "A Book",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        StubProgress(-1);
+        _lazyLibrarianService
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(Task.FromException(new Exception("lazylibrarian is down")));
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await Should.ThrowAsync<Exception>(() => _queueItemRemover.RemoveQueueItemAsync(request));
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "hash1");
+        item.IsRemoved.ShouldBeFalse();
     }
 
     [Fact]
