@@ -2,7 +2,7 @@ import { test as base, Page } from '@playwright/test';
 import { ApiClient, CleanuparrApi } from '../helpers/api';
 import { adminTokens } from '../helpers/test-lifecycle';
 import { MockServers } from '../helpers/mocks/wiremock-client';
-import { TEST_CONFIG } from '../helpers/test-config';
+import { TEST_CONFIG, farFutureCron } from '../helpers/test-config';
 
 interface TestFixtures {
   autoReset: void;
@@ -71,4 +71,4 @@ export const test = base.extend<TestFixtures>({
 });
 
 export const expect = test.expect;
-export { TEST_CONFIG, ApiClient, CleanuparrApi };
+export { TEST_CONFIG, farFutureCron, ApiClient, CleanuparrApi };

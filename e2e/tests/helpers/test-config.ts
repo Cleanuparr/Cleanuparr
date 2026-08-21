@@ -45,3 +45,9 @@ export const TEST_CONFIG = {
     readOnlyApiKey: '0000000000000000000000000000e2e4',
   },
 } as const;
+
+/** A cron far enough out that the schedule never fires inside a spec. */
+export function farFutureCron(): string {
+  const minutes = (new Date().getUTCMinutes() + 30) % 60;
+  return `0 ${minutes} * * * ?`;
+}
