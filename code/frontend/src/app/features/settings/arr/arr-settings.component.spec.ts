@@ -99,6 +99,21 @@ describe('ArrSettingsComponent', () => {
     expect(component.hasPendingChanges()).toBe(false);
   });
 
+  it('tags the LazyLibrarian page as experimental', () => {
+    const { fixture } = setup('lazylibrarian');
+
+    const heading = fixture.nativeElement.querySelector('.page-header__heading') as HTMLElement;
+
+    expect(heading.textContent).toContain('LazyLibrarian Settings');
+    expect(heading.querySelector('.badge')!.textContent!.trim()).toBe('Experimental');
+  });
+
+  it('leaves the other arr pages untagged', () => {
+    const { fixture } = setup('sonarr');
+
+    expect(fixture.nativeElement.querySelector('.page-header__heading .badge')).toBeNull();
+  });
+
   it('shows an empty state when the arr type has no instances', () => {
     const { fixture, component } = setup('radarr', createApi({ failedImportMaxStrikes: 0, instances: [] }));
 

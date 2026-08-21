@@ -25,6 +25,8 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   lazylibrarian: [{ label: 'latest', value: 1 }],
 };
 
+const EXPERIMENTAL_TYPES = new Set(['lazylibrarian']);
+
 const ARR_DEFAULT_PORT: Record<string, number> = {
   sonarr: 8989,
   radarr: 7878,
@@ -69,6 +71,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
     }
     return t.charAt(0).toUpperCase() + t.slice(1);
   });
+  readonly badge = computed(() => (EXPERIMENTAL_TYPES.has(this.type()) ? 'Experimental' : ''));
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.type()] ?? []);
   readonly urlPlaceholder = computed(() => `http://localhost:${ARR_DEFAULT_PORT[this.type()] ?? 8989}`);
   readonly externalUrlPlaceholder = computed(() => `https://${this.type()}.example.com`);
