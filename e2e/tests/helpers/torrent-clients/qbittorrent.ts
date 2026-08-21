@@ -1,13 +1,10 @@
 import { TorrentClientDriver, pollUntilOk } from './types';
 
 /**
- * qBittorrent driver (WebUI v2).
+ * Driver for the qBittorrent WebUI v2 API.
  *
- * Auth note: relies on the linuxserver/qbittorrent default of bypassing auth
- * for localhost. Combined with `network_mode: host`, requests from the test
- * runner originate from 127.0.0.1, so login is skipped. If running against
- * a qBittorrent without localhost-bypass, set `username` and `password` and
- * the driver will POST /api/v2/auth/login.
+ * Requests come from 127.0.0.1 under `network_mode: host`, so login is skipped.
+ * Setting `username` and `password` makes the driver log in anyway.
  */
 export class QBittorrentDriver implements TorrentClientDriver {
   readonly typeName = 'qBittorrent' as const;
@@ -46,8 +43,8 @@ export class QBittorrentDriver implements TorrentClientDriver {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     });
-    // qBittorrent 4.x answers 200 with "Ok." or "Fails.", so res.ok proves nothing.
-    // qBittorrent 5.2 answers 204 with an empty body.
+    // Version 4.x answers 200 with "Ok." or "Fails.", so res.ok proves nothing.
+    // Version 5.2 answers 204 with an empty body.
     const responseBody = (await res.text()).trim();
     if (!res.ok || (responseBody !== '' && responseBody !== 'Ok.')) {
       throw new Error(`qBittorrent login failed: ${res.status} ${responseBody}`);
@@ -77,10 +74,7 @@ export class QBittorrentDriver implements TorrentClientDriver {
     }
   }
 
-  /**
-   * Add a torrent that is immediately seeding (started, hash-check skipped, data present)
-   * and assigned to a category. Used by the dead-torrent spec.
-   */
+  /** Adds a categorised torrent that seeds at once, with the hash check skipped. */
   async addSeedingTorrent({ metainfo, savePath, category }: { metainfo: Buffer; savePath: string; category: string; infoHash: string }): Promise<void> {
     const form = new FormData();
     form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');

@@ -1,4 +1,8 @@
+import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { expect } from '@playwright/test';
+import type { CleanuparrApi } from './api';
+import { buildDownloadClientPayload } from './api/download-client';
 import { TEST_CONFIG } from './test-config';
 import { buildMultiFileTorrent, buildSingleFileTorrent, type GeneratedTorrent } from './torrent-fixtures';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
@@ -7,11 +11,8 @@ import { WireMockClient, type Mapping } from './mocks/wiremock-client';
 /**
  * Direct access to the real LazyLibrarian container.
  *
- * The specs drive Cleanuparr through its own API, like every other spec.
- * This is the other side of the contract: what LazyLibrarian itself ended up with.
- *
- * Nothing here writes to lazylibrarian.db. A spec snatches through LazyLibrarian's
- * own search and download path, so the wanted row has the shape LazyLibrarian writes.
+ * Nothing here writes to lazylibrarian.db.
+ * A spec snatches through LazyLibrarian's own search and download path.
  */
 
 /** One row of the `wanted` table, as `getHistory` returns it. */
@@ -33,22 +34,21 @@ export interface LazyLibrarianBook {
   BookName: string;
   AuthorName: string;
   Status: string;
+  /** Null until the audiobook has been asked for. */
+  AudioStatus: string | null;
 }
+
+/** Which library a command applies to. */
+export type BookLibrary = 'eBook' | 'AudioBook';
 
 /**
  * Torznab ebook category.
  *
- * LazyLibrarian drops BOOKCAT from config.ini when it saves, so it asks for its
- * own default of 8000,8010. It does not filter the results by category itself.
+ * LazyLibrarian asks for its own default of 8000,8010 and never filters on it.
  */
 export const TORZNAB_BOOK_CATEGORY = 8010;
 
-/**
- * Where the torrent payload is written.
- *
- * Deliberately outside the qBittorrent save path.
- * With no data on disk the grabbed torrent stalls and stays snatched.
- */
+/** Outside the qBittorrent save path, so the grabbed torrent stalls. */
 const TORRENT_SOURCE_DIR = resolve(__dirname, '..', '..', 'test-data', 'torznab-src');
 
 const ADVERTISED_SIZE_BYTES = 2_147_483_648;
@@ -59,12 +59,7 @@ export class LiveLazyLibrarian {
     private readonly apiKey: string,
   ) {}
 
-  /**
-   * Runs an API command and returns the body.
-   *
-   * Some commands answer with JSON and others with a bare string such as `OK`,
-   * so the text comes back unparsed when it is not JSON.
-   */
+  /** Returns the parsed body, or the raw text when the command answers `OK`. */
   async command<T>(cmd: string, params: Record<string, string> = {}): Promise<T> {
     const query = new URLSearchParams({ apikey: this.apiKey, cmd, ...params });
     const res = await fetch(`${this.url}/api?${query}`);
@@ -102,25 +97,26 @@ export class LiveLazyLibrarian {
     return (await this.book(bookId))?.Status;
   }
 
+  /** The audiobook status, which lives in its own column. */
+  async audioStatus(bookId: string): Promise<string | null | undefined> {
+    return (await this.book(bookId))?.AudioStatus;
+  }
+
   /** Marks the book Wanted, which is what a search needs. */
-  async markWanted(bookId: string): Promise<void> {
-    await this.command('queueBook', { id: bookId });
+  async markWanted(bookId: string, library: BookLibrary = 'eBook'): Promise<void> {
+    await this.command('queueBook', { id: bookId, ...(library === 'AudioBook' ? { type: library } : {}) });
   }
 
   /** Marks the book Skipped, which keeps LazyLibrarian's own searches off it. */
-  async markSkipped(bookId: string): Promise<void> {
-    await this.command('unqueueBook', { id: bookId });
+  async markSkipped(bookId: string, library: BookLibrary = 'eBook'): Promise<void> {
+    await this.command('unqueueBook', { id: bookId, ...(library === 'AudioBook' ? { type: library } : {}) });
   }
 
   searchBook(bookId: string): Promise<unknown> {
     return this.command('searchBook', { id: bookId, wait: '1' });
   }
 
-  /**
-   * Drops every wanted row, resets the snatched books to Wanted, and cancels the
-   * download tasks in the client. This is LazyLibrarian's own history page action,
-   * so no test has to touch its database.
-   */
+  /** LazyLibrarian's own history page action, so no test touches its database. */
   async clearHistory(): Promise<void> {
     const res = await fetch(`${this.url}/clearhistory?status=all`, { redirect: 'manual' });
 
@@ -138,7 +134,7 @@ export class LiveLazyLibrarian {
           return;
         }
       } catch {
-        // not up yet
+        // Not up yet.
       }
       await new Promise((r) => setTimeout(r, 1_000));
     }
@@ -180,9 +176,7 @@ function bookFeed(title: string, file: string): string {
 /**
  * Answers every search LazyLibrarian sends.
  *
- * LazyLibrarian tries several modes for one book, `t=search` among them, and it
- * discards the BOOKSEARCH setting when it saves its config. Matching the mode
- * would make this stub depend on which mode it picks, so it matches none.
+ * LazyLibrarian tries several modes for one book, so this stub matches none.
  * The capabilities mapping keeps priority 1 and still answers `t=caps`.
  */
 function bookSearchStub(title: string, file: string): Mapping {
@@ -214,6 +208,8 @@ function torrentStub(file: string, metainfo: Buffer): Mapping {
 export interface SnatchOptions {
   /** Files inside the torrent, for the Malware Blocker specs. */
   files?: Array<{ filename: string; sizeBytes: number }>;
+  /** Which library to ask for. */
+  library?: BookLibrary;
 }
 
 export interface SnatchedBook {
@@ -230,23 +226,15 @@ export interface PreparedRelease {
   bookId: string;
   releaseTitle: string;
   torrent: GeneratedTorrent;
+  library: BookLibrary;
 }
 
 /**
- * Drives a real snatch: LazyLibrarian searches, grabs and hands the torrent to
- * qBittorrent, then writes the wanted row itself.
+ * Drives a real snatch through LazyLibrarian's own search and grab path.
  *
- * The release title carries the author and the book name so LazyLibrarian's
- * matcher accepts it.
- *
- * Both fixture builders set `private: 1`, so every torrent here is private.
- * A rule that has to act on one needs privacyType `Both` or `Private`, and a
- * removal from the client needs `deletePrivateTorrentsFromClient`.
- *
- * The torrent must contain a file whose extension is in LazyLibrarian's
- * EBOOK_TYPE, which defaults to epub, mobi and pdf. LazyLibrarian reads the
- * file list from the client and rejects a grab that has none, see
- * `download_client.py`: "has no eBook files".
+ * Every fixture torrent is private, so a rule needs privacyType Both or Private.
+ * Removing one from the client needs `deletePrivateTorrentsFromClient`.
+ * LazyLibrarian rejects a grab whose file list holds no epub, mobi or pdf.
  */
 export async function snatchBook(
   book: LazyLibrarianBook,
@@ -267,22 +255,24 @@ export async function prepareRelease(
 ): Promise<PreparedRelease> {
   const releaseTitle = `${book.AuthorName} - ${book.BookName}`.replace(/[^\w\s.-]/g, ' ').trim();
   const file = `${book.BookID}.torrent`;
+  const library = options.library ?? 'eBook';
+  const extension = library === 'AudioBook' ? 'mp3' : 'epub';
 
   const torrent: GeneratedTorrent = options.files?.length
     ? buildMultiFileTorrent(TORRENT_SOURCE_DIR, releaseTitle, options.files)
-    : buildSingleFileTorrent(TORRENT_SOURCE_DIR, `${releaseTitle}.epub`, 32_768, 'http://127.0.0.1:6969/announce');
+    : buildSingleFileTorrent(TORRENT_SOURCE_DIR, `${releaseTitle}.${extension}`, 32_768, 'http://127.0.0.1:6969/announce');
 
   await indexerMock.stubMany([bookSearchStub(releaseTitle, file), torrentStub(file, torrent.metainfo)]);
 
-  return { bookId: book.BookID, releaseTitle, torrent };
+  return { bookId: book.BookID, releaseTitle, torrent, library };
 }
 
 /** Runs the search and grab for a release whose stubs are already registered. */
 export async function snatchPreparedRelease(prepared: PreparedRelease): Promise<SnatchedBook> {
-  await liveLazyLibrarian.markWanted(prepared.bookId);
+  await liveLazyLibrarian.markWanted(prepared.bookId, prepared.library);
   await liveLazyLibrarian.searchBook(prepared.bookId);
 
-  const row = await waitForSnatchedRow(prepared.bookId);
+  const row = await waitForSnatchedRow(prepared.bookId, prepared.library);
 
   return {
     bookId: prepared.bookId,
@@ -296,6 +286,7 @@ export async function snatchPreparedRelease(prepared: PreparedRelease): Promise<
 /** LazyLibrarian writes the download id once the client has accepted the torrent. */
 export async function waitForSnatchedRow(
   bookId: string,
+  library: BookLibrary = 'eBook',
   timeoutMs = 90_000,
 ): Promise<LazyLibrarianHistoryRow> {
   const start = Date.now();
@@ -303,7 +294,9 @@ export async function waitForSnatchedRow(
 
   while (Date.now() - start < timeoutMs) {
     seen = await liveLazyLibrarian.history();
-    const row = seen.find((r) => r.BookID === bookId && r.Status?.toLowerCase() === 'snatched' && !!r.DownloadID);
+    const row = seen.find(
+      (r) => r.BookID === bookId && r.AuxInfo === library && r.Status?.toLowerCase() === 'snatched' && !!r.DownloadID,
+    );
 
     if (row) {
       return row;
@@ -338,16 +331,170 @@ export async function torrentPresent(downloadId: string): Promise<boolean> {
   return torrents.some((t) => t.hash.toLowerCase() === target);
 }
 
+/** The status of the `wanted` row for a snatch, undefined once the row is gone. */
+export async function wantedStatus(
+  bookId: string,
+  library: BookLibrary = 'eBook',
+): Promise<string | undefined> {
+  const rows = await liveLazyLibrarian.history();
+  return rows.find((row) => row.BookID === bookId && row.AuxInfo === library)?.Status;
+}
+
+/** A refused re-search shows up only in LazyLibrarian's own log. */
+export function lazyLibrarianLogsSince(since: string): string {
+  return execSync(
+    `docker compose -f docker-compose.e2e.yml logs --since ${since} --no-log-prefix lazylibrarian`,
+    { encoding: 'utf8', env: process.env, stdio: ['ignore', 'pipe', 'ignore'] },
+  );
+}
+
+/**
+ * Sets the master search toggle.
+ *
+ * The stub indexer answers a re-search with the same release.
+ * LazyLibrarian then re-grabs the identical torrent within a second.
+ */
+export async function setSearchEnabled(api: CleanuparrApi, searchEnabled: boolean): Promise<void> {
+  const config = await (await api.seeker.getConfig()).json();
+  const res = await api.seeker.updateConfig({ ...config, searchEnabled });
+
+  if (!res.ok) {
+    throw new Error(`Seeker config update failed: ${await res.text()}`);
+  }
+}
+
+/**
+ * Sets the log level.
+ *
+ * A job names the item it is working on at Debug, and nowhere else.
+ */
+export async function setLogLevel(api: CleanuparrApi, level: string): Promise<void> {
+  const config = await api.general.getJsonConfig();
+  const res = await api.general.updateConfig({ ...config, log: { ...(config.log as object), level } });
+
+  if (!res.ok) {
+    throw new Error(`General config update failed: ${await res.text()}`);
+  }
+}
+
+/**
+ * Drops the history and puts every book back to Skipped.
+ *
+ * `clearhistory` resets a snatched book to Wanted.
+ * LazyLibrarian runs its own backlog search a minute after the container starts.
+ */
+export async function resetLibrary(books: LazyLibrarianBook[]): Promise<void> {
+  await liveLazyLibrarian.clearHistory();
+
+  for (const book of books) {
+    await liveLazyLibrarian.markSkipped(book.BookID);
+    await liveLazyLibrarian.markSkipped(book.BookID, 'AudioBook');
+  }
+}
+
+/** The config rejects anything lower, so a removal needs three runs. */
+export const MIN_MAX_STRIKES = 3;
+
+const RUN_SETTLE_MS = 8_000;
+const MAX_RUNS = 8;
+
+/** Cleanuparr needs a client to evaluate the torrent and to delete it. */
+export async function createDownloadClient(api: CleanuparrApi): Promise<string> {
+  const created = await (
+    await api.downloadClient.create(
+      buildDownloadClientPayload('qbittorrent', {
+        name: 'live-lazylibrarian qbittorrent',
+        host: qbittorrent.cleanuparrHost,
+        username: qbittorrent.username,
+        password: qbittorrent.password,
+      }),
+    )
+  ).json();
+
+  expect(created.id, 'createDownloadClient').toBeTruthy();
+  return created.id;
+}
+
+export async function createStallRule(
+  api: CleanuparrApi,
+  overrides: Record<string, unknown> = {},
+): Promise<string> {
+  const payload = {
+    name: `live-ll-stall-${Math.random().toString(36).slice(2, 8)}`,
+    enabled: true,
+    maxStrikes: MIN_MAX_STRIKES,
+    privacyType: 'Both',
+    minCompletionPercentage: 0,
+    maxCompletionPercentage: 100,
+    deletePrivateTorrentsFromClient: true,
+    changeCategory: false,
+    resetStrikesOnProgress: true,
+    minimumProgress: null,
+    ...overrides,
+  };
+
+  const created = await (await api.queueCleaner.createRule('stall', payload)).json();
+  expect(created.id, 'createRule stall').toBeTruthy();
+
+  return created.id;
+}
+
+/**
+ * The number of strikes recorded against a hash.
+ * The endpoint groups them per download.
+ */
+export async function strikeCount(api: CleanuparrApi, downloadId: string): Promise<number> {
+  const response = await api.strikes.list({ pageSize: 200 });
+  expect(response.status).toBeLessThan(300);
+
+  const body = await response.json();
+  const rows: Array<Record<string, unknown>> = body.items ?? body.data ?? body ?? [];
+
+  return rows
+    .filter((row) => String(row.downloadId ?? '').toLowerCase() === downloadId.toLowerCase())
+    .reduce((total, row) => total + Number(row.totalStrikes ?? 0), 0);
+}
+
+/**
+ * Triggers the Queue Cleaner until the torrent leaves the client.
+ *
+ * A run has to finish before its strike counts.
+ * The removal also goes through a message bus, so the run count is not fixed.
+ */
+export async function runUntilStruckOut(api: CleanuparrApi, downloadId: string): Promise<void> {
+  for (let run = 0; run < MAX_RUNS; run++) {
+    expect((await api.jobs.trigger('QueueCleaner')).status).toBeLessThan(300);
+    await new Promise((r) => setTimeout(r, RUN_SETTLE_MS));
+
+    if (run + 1 >= MIN_MAX_STRIKES && !(await torrentPresent(downloadId))) {
+      return;
+    }
+  }
+}
+
+/**
+ * Triggers the Queue Cleaner until the strike count is reached.
+ *
+ * Use it for a rule that keeps the torrent, where absence proves nothing.
+ */
+export async function runUntilStrikes(api: CleanuparrApi, downloadId: string, strikes: number): Promise<void> {
+  for (let run = 0; run < MAX_RUNS; run++) {
+    expect((await api.jobs.trigger('QueueCleaner')).status).toBeLessThan(300);
+    await new Promise((r) => setTimeout(r, RUN_SETTLE_MS));
+
+    if (await strikeCount(api, downloadId) >= strikes) {
+      return;
+    }
+  }
+}
+
 /** Far enough out that the cron never fires inside a spec. */
 export function farFutureCron(): string {
   const minutes = (new Date().getUTCMinutes() + 30) % 60;
   return `0 ${minutes} * * * ?`;
 }
 
-/**
- * Hands out a seeded book by its work id.
- * Indexing into getAllBooks order would break: that query has no ORDER BY.
- */
+/** getAllBooks has no ORDER BY, so a spec must claim by work id. */
 export function claimBookById(books: LazyLibrarianBook[], bookId: string): LazyLibrarianBook {
   const book = books.find((candidate) => candidate.BookID === bookId);
 

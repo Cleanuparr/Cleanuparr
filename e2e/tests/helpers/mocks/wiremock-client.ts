@@ -40,12 +40,13 @@ export interface RequestLogEntry {
     headers: Record<string, string | string[]>;
     body?: string;
     bodyAsBase64?: string;
+    /** Epoch milliseconds. */
+    loggedDate: number;
   };
   response: {
     status: number;
     body?: string;
   };
-  loggedDate: number;
 }
 
 /**
@@ -132,7 +133,7 @@ export class WireMockClient {
           return;
         }
       } catch {
-        // not ready yet
+        // Not ready yet.
       }
       await new Promise((r) => setTimeout(r, 1_000));
     }

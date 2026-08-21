@@ -1,8 +1,7 @@
 import { defineConfig, Project } from '@playwright/test';
 
-// Each spec folder is its own Playwright project, paired with a "setup" project
-// that restarts the app container and re-bootstraps the admin before the
-// folder's tests run. Folder = isolation boundary.
+// Each spec folder is its own project, paired with a setup project.
+// The setup restarts the app container and re-bootstraps the admin.
 const FOLDERS = [
   'account',
   'arr',

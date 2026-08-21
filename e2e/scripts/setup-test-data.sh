@@ -37,7 +37,7 @@ mkdir -p \
 
 chmod -R a+rwX "$TEST_DATA" 2>/dev/null || true
 
-# qBittorrent credentials: admin / adminadmin
+# Credentials: admin / adminadmin
 cat > "$TEST_DATA/qbittorrent-config/qBittorrent/qBittorrent.conf" <<'EOF'
 [LegalNotice]
 Accepted=true
