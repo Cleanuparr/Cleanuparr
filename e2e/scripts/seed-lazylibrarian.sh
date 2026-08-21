@@ -20,6 +20,7 @@ COMPOSE="docker compose -f $HERE/docker-compose.e2e.yml"
 
 URL="http://localhost:5299"
 API_KEY="0000000000000000000000000000e2e3"
+RO_API_KEY="0000000000000000000000000000e2e4"
 
 # The mock Torznab indexer, and qBittorrent, both on the host network.
 INDEXER_URL="http://127.0.0.1:9500"
@@ -70,6 +71,7 @@ match_ratio = 20
 [API]
 api_enabled = 1
 api_key = $API_KEY
+api_ro_key = $RO_API_KEY
 book_api = OpenLibrary
 
 [LOGGING]
