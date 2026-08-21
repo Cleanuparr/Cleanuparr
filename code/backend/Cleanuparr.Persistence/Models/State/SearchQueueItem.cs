@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Arr;

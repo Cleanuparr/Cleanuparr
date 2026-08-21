@@ -31,7 +31,7 @@ public sealed class ArrClientFactory : IArrClientFactory
         _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
     }
-    
+
     public IArrClient GetClient(InstanceType type, float instanceVersion) =>
         type switch
         {

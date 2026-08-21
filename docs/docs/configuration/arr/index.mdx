@@ -11,7 +11,7 @@ import {
 
 # Arr Applications
 
-Configure connections to your *arr applications (Sonarr, Radarr, Lidarr, Readarr, Whisparr, Sportarr). Each application type has its own configuration page where you can manage multiple instances.
+Configure connections to your *arr applications (Sonarr, Radarr, Lidarr, Readarr, Whisparr, Sportarr) and to LazyLibrarian. Each application type has its own configuration page where you can manage multiple instances.
 
 <ElementNavigator />
 
@@ -99,6 +99,7 @@ The API version for this *arr application. Select the version that matches your 
 - **Lidarr**: v3
 - **Readarr**: v0.4
 - **Whisparr**: v2 or v3
+- **LazyLibrarian**: any current release
 - **Sportarr**: v4
 
 </ConfigSection>
@@ -106,3 +107,46 @@ The API version for this *arr application. Select the version that matches your 
 </div>
 
 </div>
+
+## LazyLibrarian
+
+LazyLibrarian is not an *arr application. It has its own API, so Cleanuparr treats it as a separate integration. Most settings work the same, with the differences below.
+
+### The API key must not be read only
+
+LazyLibrarian exposes two keys. The connection test uses `getVersion`, which a read-only key can call, so the test passes with either key. Cleanuparr also needs `queueBook` and `searchBook`, which LazyLibrarian refuses for a read-only key.
+
+Use the full API key from **Config > Interface > API key**. With a read-only key the connection test succeeds and every reset fails at runtime.
+
+### How a replacement search works
+
+LazyLibrarian records a snatch in its history table. It refuses to search for a book again while that record still says `Snatched`, and its API has no command that clears the record directly.
+
+So Cleanuparr does this in order:
+
+1. Remove the torrent from the download client.
+2. Ask LazyLibrarian for the download progress. It polls the client, finds nothing, and marks the record aborted.
+3. Set the book back to wanted.
+4. Trigger the search.
+
+Step 2 only works once the torrent has left the client. Two cases leave it in place:
+
+- The torrent is private and you chose to keep private torrents.
+- LazyLibrarian adopted the torrent, meaning your client already held it when LazyLibrarian picked it up. LazyLibrarian refuses to remove such a task, and the files may back another seed.
+
+In both cases Cleanuparr still resets the book, then logs that it did not search because the snatch still stands. LazyLibrarian searches again on its own once its post-processor gives up on the download.
+
+### Magazines and comics
+
+Cleanuparr does not strike or reset magazine and comic downloads. LazyLibrarian identifies those by title or issue rather than by book id, and its book commands reject both.
+
+It does protect them. The Download Cleaner leaves every torrent LazyLibrarian snatched alone, magazines and comics included, so its seeding rules cannot delete an issue before LazyLibrarian imports it.
+
+### Only real torrent clients
+
+Cleanuparr acts only on downloads LazyLibrarian sent to qBittorrent, Transmission, Deluge, uTorrent or rTorrent. A torrent blackhole or a Synology task records a path or a task id instead of a torrent hash, so Cleanuparr cannot match it against your client and skips it.
+
+### Reading the queue
+
+LazyLibrarian has no paged queue endpoint. Cleanuparr reads the whole history on each run and filters it, so a very long history costs more on every Queue Cleaner, Malware Blocker and Download Cleaner cycle.
+

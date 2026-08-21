@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr.Queue;
+﻿using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
@@ -663,6 +663,63 @@ public class NotificationPublisherTests
             },
             Configuration = new { ApiKey = "test", ChannelId = "123" }
         };
+    }
+
+    #endregion
+
+    #region LazyLibrarian
+
+    // LazyLibrarian carries no QueueRecord, so the publisher reads the item from context.
+    private void SetupLazyLibrarianContext()
+    {
+        ContextProvider.Set(nameof(InstanceType), InstanceType.LazyLibrarian);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, new Uri("http://lazylibrarian.local"));
+        ContextProvider.Set(ContextProvider.Keys.Version, 1f);
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Frankenstein");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "BOOKHASH1");
+    }
+
+    [Fact]
+    public async Task NotifyQueueItemDeleted_WithoutAQueueRecord_StillNotifies()
+    {
+        // Arrange
+        SetupLazyLibrarianContext();
+
+        var providerDto = CreateProviderDto();
+        var provider = Substitute.For<INotificationProvider>();
+
+        _configService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto).Returns(provider);
+
+        // Act
+        await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
+
+        // Assert
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.Description == "Frankenstein" && c.Data["Hash"] == "bookhash1"));
+    }
+
+    [Fact]
+    public async Task NotifyStrike_WithoutAQueueRecord_StillNotifies()
+    {
+        // Arrange
+        SetupLazyLibrarianContext();
+        ContextProvider.Set<QueueRule>(new StallRule { Name = "Test Rule" });
+
+        var providerDto = CreateProviderDto();
+        var provider = Substitute.For<INotificationProvider>();
+
+        _configService.GetProvidersForEventAsync(NotificationEventType.StalledStrike)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto).Returns(provider);
+
+        // Act
+        await _publisher.NotifyStrike(StrikeType.Stalled, 1);
+
+        // Assert
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.Description == "Frankenstein" && c.Data["Hash"] == "bookhash1"));
     }
 
     #endregion

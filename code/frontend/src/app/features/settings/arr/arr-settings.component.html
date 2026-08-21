@@ -1,6 +1,7 @@
 <app-page-header
   [title]="displayName() + ' Settings'"
   [subtitle]="'Manage your ' + displayName() + ' instances'"
+  [badge]="badge()"
 />
 
 @if (loadError()) {

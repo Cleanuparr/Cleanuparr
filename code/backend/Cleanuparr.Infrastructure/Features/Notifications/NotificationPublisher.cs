@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -150,24 +150,26 @@ public class NotificationPublisher : INotificationPublisher
 
     private NotificationContext BuildStrikeNotificationContext(StrikeType strikeType, int strikeCount, NotificationEventType eventType)
     {
-        var record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
+        QueueRecord? record = ContextProvider.Get(nameof(QueueRecord)) as QueueRecord;
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
         var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
+        string itemTitle = ResolveItemTitle(record);
+        string itemHash = ResolveItemHash(record);
 
         NotificationContext context = new()
         {
             EventType = eventType,
             Title = $"Strike received with reason: {strikeType}",
-            Description = record.Title,
+            Description = itemTitle,
             Severity = EventSeverity.Warning,
             Image = imageUrl,
             Data = new Dictionary<string, string>
             {
                 ["Strike type"] = strikeType.ToString(),
                 ["Strike count"] = strikeCount.ToString(),
-                ["Hash"] = record.DownloadId.ToLowerInvariant(),
+                ["Hash"] = itemHash,
                 ["Instance type"] = instanceType.ToString(),
                 ["Url"] = instanceUrl.ToString(),
             }
@@ -184,24 +186,26 @@ public class NotificationPublisher : INotificationPublisher
 
     private NotificationContext BuildQueueItemDeletedContext(bool removeFromClient, DeleteReason reason)
     {
-        var record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
+        QueueRecord? record = ContextProvider.Get(nameof(QueueRecord)) as QueueRecord;
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
         var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
+        string itemTitle = ResolveItemTitle(record);
+        string itemHash = ResolveItemHash(record);
 
         return new NotificationContext
         {
             EventType = NotificationEventType.QueueItemDeleted,
             Title = $"Deleting item from queue with reason: {reason}",
-            Description = record.Title,
+            Description = itemTitle,
             Severity = EventSeverity.Important,
             Image = imageUrl,
             Data = new Dictionary<string, string>
             {
                 ["Reason"] = reason.ToString(),
                 ["Removed from client?"] = removeFromClient.ToString(),
-                ["Hash"] = record.DownloadId.ToLowerInvariant(),
+                ["Hash"] = itemHash,
                 ["Instance type"] = instanceType.ToString(),
                 ["Url"] = instanceUrl.ToString(),
             }
@@ -315,8 +319,21 @@ public class NotificationPublisher : INotificationPublisher
         };
     }
 
-    private Uri? GetImageFromContext(QueueRecord record, InstanceType instanceType, float version)
+    // LazyLibrarian has no QueueRecord, so the record is absent on that path.
+    private static string ResolveItemTitle(QueueRecord? record) =>
+        record?.Title ?? ContextProvider.Get(ContextProvider.Keys.ItemName) as string ?? string.Empty;
+
+    private static string ResolveItemHash(QueueRecord? record) =>
+        (record?.DownloadId ?? ContextProvider.Get(ContextProvider.Keys.Hash) as string ?? string.Empty)
+        .ToLowerInvariant();
+
+    private Uri? GetImageFromContext(QueueRecord? record, InstanceType instanceType, float version)
     {
+        if (record is null)
+        {
+            return null;
+        }
+
         Uri? image = instanceType switch
         {
             InstanceType.Sonarr => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
@@ -326,6 +343,7 @@ public class NotificationPublisher : INotificationPublisher
             InstanceType.Whisparr when version is 2 => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Whisparr when version is 3 => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl ?? record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "screenshot")?.RemoteUrl,
             InstanceType.Sportarr => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
+            InstanceType.LazyLibrarian => null,
             _ => throw new ArgumentOutOfRangeException(nameof(instanceType))
         };
 

@@ -1,6 +1,6 @@
 import { ApiClient } from './client';
 
-export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr';
+export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
 
 export interface ArrInstancePayload {
   name: string;

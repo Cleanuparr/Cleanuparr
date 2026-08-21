@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -17,6 +17,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using MassTransit;
+using Cleanuparr.Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -43,7 +44,8 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             _fixture.ArrClientFactory,
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
-            _fixture.EventPublisher);
+            _fixture.EventPublisher,
+            _fixture.DryRunInterceptor);
     }
 
     #region GetRecordSearchItem
@@ -312,7 +314,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert
         await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(), Arg.Any<CancellationToken>());
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
         await _fixture.EventPublisher.Received(1).PublishAsync(
             EventType.DownloadMarkedForDeletion, Arg.Any<string>(), Arg.Any<EventSeverity>(),
             Arg.Any<Action<AppEvent>?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<bool?>());
@@ -339,7 +341,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert
         await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest<SearchItem>>(), Arg.Any<CancellationToken>());
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -363,7 +365,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert
         await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(), Arg.Any<CancellationToken>());
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -552,8 +554,9 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             IArrClientFactory arrClientFactory,
             IArrQueueIterator arrQueueIterator,
             IDownloadServiceFactory downloadServiceFactory,
-            IEventPublisher eventPublisher)
-            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher)
+            IEventPublisher eventPublisher,
+            IDryRunInterceptor dryRunInterceptor)
+            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor)
         {
         }
 

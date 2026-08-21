@@ -1,4 +1,7 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using Cleanuparr.Domain.Entities.LazyLibrarian;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -54,7 +57,9 @@ public class QueueCleanerTests : IDisposable
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
-            _connectivityChecker
+            _fixture.DryRunInterceptor,
+            _connectivityChecker,
+            _fixture.LazyLibrarianServiceQC
         );
     }
 
@@ -477,7 +482,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
@@ -677,7 +682,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.DeleteReason == DeleteReason.FailedImport
             ),
             Arg.Any<CancellationToken>()
@@ -728,7 +733,7 @@ public class QueueCleanerTests : IDisposable
         _logger.ReceivedLogContaining(LogLevel.Information, "skip | item is missing the content id");
 
         await _fixture.MessageBus.DidNotReceive().Publish(
-            Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
@@ -804,7 +809,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert - SkipSearch must be true because the item has no content ID
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.SkipSearch == true &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
@@ -960,7 +965,7 @@ public class QueueCleanerTests : IDisposable
 
         // Verify no publish was made
         await _fixture.MessageBus.DidNotReceive().Publish(
-            Arg.Any<QueueItemRemoveRequest<SearchItem>>(),
+            Arg.Any<QueueItemRemoveRequest>(),
             Arg.Any<CancellationToken>()
         );
     }
@@ -1025,11 +1030,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> (not SeriesSearchItem)
+        // Assert - should publish QueueItemRemoveRequest (not SeriesSearchItem)
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Radarr &&
-                r.SearchItem.Id == 42 &&
+                r.ArrTarget().SearchItem.Id == 42 &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1096,11 +1101,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> with AlbumId
+        // Assert - should publish QueueItemRemoveRequest with AlbumId
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Lidarr &&
-                r.SearchItem.Id == 123 &&
+                r.ArrTarget().SearchItem.Id == 123 &&
                 r.DeleteReason == DeleteReason.SlowSpeed
             ),
             Arg.Any<CancellationToken>()
@@ -1167,11 +1172,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> with BookId
+        // Assert - should publish QueueItemRemoveRequest with BookId
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Readarr &&
-                r.SearchItem.Id == 456 &&
+                r.ArrTarget().SearchItem.Id == 456 &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1239,13 +1244,13 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem>
+        // Assert - should publish QueueItemRemoveRequest
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.SearchItem.Id == 100 && // EpisodeId
-                r.SearchItem.SeriesId == 10 &&
-                r.SearchItem.SearchType == SeriesSearchType.Episode &&
+                r.ArrTarget().SearchItem.Id == 100 && // EpisodeId
+                r.SeriesItem().SeriesId == 10 &&
+                r.SeriesItem().SearchType == SeriesSearchType.Episode &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1312,11 +1317,11 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SearchItem> with MovieId
+        // Assert - should publish QueueItemRemoveRequest with MovieId
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.SearchItem.Id == 42 && // MovieId
+                r.ArrTarget().SearchItem.Id == 42 && // MovieId
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1396,14 +1401,14 @@ public class QueueCleanerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem> with Season search type
+        // Assert - should publish QueueItemRemoveRequest with Season search type
         // because multiple records with the same download ID indicate a pack
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.SearchItem.Id == 3 && // SeasonNumber
-                r.SearchItem.SeriesId == 10 &&
-                r.SearchItem.SearchType == SeriesSearchType.Season &&
+                r.ArrTarget().SearchItem.Id == 3 && // SeasonNumber
+                r.SeriesItem().SeriesId == 10 &&
+                r.SeriesItem().SearchType == SeriesSearchType.Season &&
                 r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()
@@ -1487,10 +1492,10 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.DeleteReason == DeleteReason.FailedImport &&
-                r.ChangeCategory == true &&
-                r.RemoveFromClient == false
+                r.ArrTarget().ChangeCategory == true &&
+                r.ArrTarget().RemoveFromClient == false
             ),
             Arg.Any<CancellationToken>()
         );
@@ -1560,12 +1565,202 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+            Arg.Is<QueueItemRemoveRequest>(r =>
                 r.DeleteReason == DeleteReason.Stalled &&
-                r.ChangeCategory == true &&
-                r.RemoveFromClient == false
+                r.ArrTarget().ChangeCategory == true &&
+                r.ArrTarget().RemoveFromClient == false
             ),
             Arg.Any<CancellationToken>()
+        );
+    }
+
+    #endregion
+
+
+    #region LazyLibrarian
+
+    private static LazyLibrarianQueueItem CreateBookItem(LazyLibrarianOrigin origin = LazyLibrarianOrigin.New) => new()
+    {
+        DownloadId = "torrent-hash",
+        Title = "Book",
+        Books = [new LazyLibrarianBookRef { BookId = "OL7353617M", Library = BookLibrary.EBook }],
+        Source = LazyLibrarianSource.QBittorrent,
+        Origin = origin,
+    };
+
+    private (IDownloadService Service, ITorrentItemWrapper Torrent) StubLazyLibrarianDecision(
+        LazyLibrarianOrigin origin = LazyLibrarianOrigin.New,
+        bool removeFromClient = true
+    )
+    {
+        TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        ITorrentItemWrapper torrent = Substitute.For<ITorrentItemWrapper>();
+        torrent.Hash.Returns("torrent-hash");
+
+        IDownloadService downloadService = _fixture.CreateMockDownloadService();
+        DownloadClientConfig clientConfig = downloadService.ClientConfig;
+
+        LazyLibrarianRemovalDecision decision = new()
+        {
+            Item = CreateBookItem(origin),
+            DeleteReason = DeleteReason.Stalled,
+            RemoveFromClient = removeFromClient,
+            DownloadClient = clientConfig,
+            DownloadService = downloadService,
+            Torrent = torrent,
+        };
+
+        IReadOnlyList<LazyLibrarianRemovalDecision> decisions = [decision];
+
+        _fixture.LazyLibrarianServiceQC
+            .EvaluateAsync(Arg.Any<ArrInstance>(), Arg.Any<IReadOnlyList<IDownloadService>>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(decisions);
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(downloadService);
+
+        _fixture.DryRunInterceptor
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .Returns(ci => ((Func<Task>)ci[0])());
+
+        return (downloadService, torrent);
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DeletesTheTorrentThroughTheDryRunInterceptor()
+    {
+        // Arrange
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await downloadService.Received(1).DeleteDownload(torrent, true);
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r =>
+                r.LazyTarget().RemovedFromClient
+                && r.LazyTarget().Item.Books.Single().BookId == "OL7353617M"
+                && r.DeleteReason == DeleteReason.Stalled
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_KeepsATorrentLazyLibrarianAdopted()
+    {
+        // Arrange: LazyLibrarian refuses to remove an adopted task, and the files back another seed.
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) =
+            StubLazyLibrarianDecision(origin: LazyLibrarianOrigin.Adopted);
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await downloadService.DidNotReceive().DeleteDownload(Arg.Any<ITorrentItemWrapper>(), Arg.Any<bool>());
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r =>
+                !r.LazyTarget().RemovedFromClient
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotPublishWhenTheDeleteFails()
+    {
+        // Arrange
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
+        downloadService
+            .DeleteDownload(Arg.Any<ITorrentItemWrapper>(), Arg.Any<bool>())
+            .ThrowsAsync(new Exception("client unreachable"));
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.DidNotReceive().Publish(
+            Arg.Any<QueueItemRemoveRequest>(),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_KeepsGoingWhenOneRemovalCannotBePublished()
+    {
+        // Arrange: the first torrent is already deleted, so a failed publish must not skip the second book.
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
+        LazyLibrarianQueueItem second = CreateBookItem() with { DownloadId = "torrent-hash-2" };
+
+        ITorrentItemWrapper secondTorrent = Substitute.For<ITorrentItemWrapper>();
+        secondTorrent.Hash.Returns("torrent-hash-2");
+
+        DownloadClientConfig clientConfig = downloadService.ClientConfig;
+        IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
+        [
+            new LazyLibrarianRemovalDecision
+            {
+                Item = CreateBookItem(),
+                DeleteReason = DeleteReason.Stalled,
+                RemoveFromClient = true,
+                DownloadClient = clientConfig,
+                DownloadService = downloadService,
+                Torrent = torrent,
+            },
+            new LazyLibrarianRemovalDecision
+            {
+                Item = second,
+                DeleteReason = DeleteReason.Stalled,
+                RemoveFromClient = true,
+                DownloadClient = clientConfig,
+                DownloadService = downloadService,
+                Torrent = secondTorrent,
+            },
+        ];
+
+        _fixture.LazyLibrarianServiceQC
+            .EvaluateAsync(Arg.Any<ArrInstance>(), Arg.Any<IReadOnlyList<IDownloadService>>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(decisions);
+
+        _fixture.MessageBus
+            .Publish(Arg.Is<QueueItemRemoveRequest>(r => r.Target.DownloadId == "torrent-hash"), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new Exception("bus is down")));
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r => r.Target.DownloadId == "torrent-hash-2"),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueIterator()
+    {
+        // Arrange
+        StubLazyLibrarianDecision();
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.ArrQueueIterator.DidNotReceive().Iterate(
+            Arg.Any<IArrClient>(),
+            Arg.Any<ArrInstance>(),
+            Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
         );
     }
 

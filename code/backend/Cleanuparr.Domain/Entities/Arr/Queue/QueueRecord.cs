@@ -1,4 +1,4 @@
-namespace Cleanuparr.Domain.Entities.Arr.Queue;
+﻿namespace Cleanuparr.Domain.Entities.Arr.Queue;
 
 /// <summary>
 /// One item in the queue of an *arr application.

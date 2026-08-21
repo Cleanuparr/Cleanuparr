@@ -843,6 +843,24 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("use_advanced_scheduling");
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "LazyLibrarian", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.LazyLibrarian#BlocklistSettings", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("BlocklistPath")
+                                .HasColumnType("text")
+                                .HasColumnName("lazy_librarian_blocklist_path");
+
+                            b1.Property<string>("BlocklistType")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("lazy_librarian_blocklist_type");
+
+                            b1.Property<bool>("Enabled")
+                                .HasColumnType("boolean")
+                                .HasColumnName("lazy_librarian_enabled");
+                        });
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Lidarr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Lidarr#BlocklistSettings", b1 =>
                         {
                             b1.IsRequired();

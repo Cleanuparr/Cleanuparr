@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using NSubstitute;
@@ -109,6 +109,13 @@ public class ArrClientFactoryTests
 
         // Assert
         result.ShouldBeSameAs(_whisparrV3Client);
+    }
+
+    [Fact]
+    public void GetClient_LazyLibrarian_Throws()
+    {
+        // Act + Assert
+        Should.Throw<NotImplementedException>(() => _factory.GetClient(InstanceType.LazyLibrarian, 0));
     }
 
     [Fact]

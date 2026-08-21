@@ -47,10 +47,12 @@ public class JobsController : ControllerBase
             return this.ProblemResult(StatusCodes.Status400BadRequest, "The Seeker job cannot be manually controlled");
         }
 
-        // Get the schedule from the request body if provided
-        JobSchedule jobSchedule = scheduleRequest.Schedule;
+        if (scheduleRequest?.Schedule is null)
+        {
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Schedule is required");
+        }
 
-        var result = await _jobManagementService.StartJob(jobType, jobSchedule);
+        var result = await _jobManagementService.StartJob(jobType, scheduleRequest.Schedule);
 
         if (!result)
         {

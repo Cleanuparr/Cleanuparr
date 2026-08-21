@@ -1,7 +1,10 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using Cleanuparr.Api.Features.Status.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,15 +16,21 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class StatusController : ControllerBase
 {
+    private readonly ILogger<StatusController> _logger;
     private readonly DataContext _dataContext;
-    private readonly IArrClientFactory _arrClientFactory;
+    private readonly IInstanceHealthChecker _healthChecker;
+
+    // Every member is seeded in arr_configs, so a new one must not be forgotten here.
+    private static readonly IReadOnlyList<InstanceType> ArrTypes = Enum.GetValues<InstanceType>();
 
     public StatusController(
+        ILogger<StatusController> logger,
         DataContext dataContext,
-        IArrClientFactory arrClientFactory)
+        IInstanceHealthChecker healthChecker)
     {
+        _logger = logger;
         _dataContext = dataContext;
-        _arrClientFactory = arrClientFactory;
+        _healthChecker = healthChecker;
     }
 
     [HttpGet]
@@ -29,57 +38,30 @@ public class StatusController : ControllerBase
     {
         using var process = Process.GetCurrentProcess();
 
-        // Get configuration
-        var sonarrConfig = await _dataContext.ArrConfigs
+        Dictionary<InstanceType, ArrConfig> configsByType = await _dataContext.ArrConfigs
             .Include(x => x.Instances)
+            .Where(x => ArrTypes.Contains(x.Type))
             .AsNoTracking()
-            .FirstAsync(x => x.Type == InstanceType.Sonarr);
-        var radarrConfig = await _dataContext.ArrConfigs
-            .Include(x => x.Instances)
-            .AsNoTracking()
-            .FirstAsync(x => x.Type == InstanceType.Radarr);
-        var lidarrConfig = await _dataContext.ArrConfigs
-            .Include(x => x.Instances)
-            .AsNoTracking()
-            .FirstAsync(x => x.Type == InstanceType.Lidarr);
-        var readarrConfig = await _dataContext.ArrConfigs
-            .Include(x => x.Instances)
-            .AsNoTracking()
-            .FirstAsync(x => x.Type == InstanceType.Readarr);
+            .ToDictionaryAsync(x => x.Type);
 
-        var status = new
+        Dictionary<string, MediaManagerStatusResponse> mediaManagers = ArrTypes.ToDictionary(
+            type => type.ToString(),
+            type => new MediaManagerStatusResponse
+            {
+                InstanceCount = configsByType.TryGetValue(type, out ArrConfig? config) ? config.Instances.Count : 0,
+            });
+
+        SystemStatusResponse status = new()
         {
-            Application = new
+            Application = new ApplicationStatusResponse
             {
                 Version = GetType().Assembly.GetName().Version?.ToString() ?? "Unknown",
-                process.StartTime,
+                StartTime = process.StartTime,
                 UpTime = DateTimeOffset.UtcNow - process.StartTime.ToUniversalTime(),
                 MemoryUsageMB = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
-                ProcessorTime = process.TotalProcessorTime
+                ProcessorTime = process.TotalProcessorTime,
             },
-            DownloadClient = new
-            {
-                // TODO
-            },
-            MediaManagers = new
-            {
-                Sonarr = new
-                {
-                    InstanceCount = sonarrConfig.Instances.Count
-                },
-                Radarr = new
-                {
-                    InstanceCount = radarrConfig.Instances.Count
-                },
-                Lidarr = new
-                {
-                    InstanceCount = lidarrConfig.Instances.Count
-                },
-                Readarr = new
-                {
-                    InstanceCount = readarrConfig.Instances.Count
-                }
-            }
+            MediaManagers = mediaManagers,
         };
 
         return Ok(status);
@@ -88,158 +70,77 @@ public class StatusController : ControllerBase
     [HttpGet("download-client")]
     public async Task<IActionResult> GetDownloadClientStatus()
     {
-        var downloadClients = await _dataContext.DownloadClients
+        List<DownloadClientConfig> downloadClients = await _dataContext.DownloadClients
             .AsNoTracking()
             .ToListAsync();
-        var result = new Dictionary<string, object>();
 
-        // Check for configured clients
-        if (downloadClients.Count > 0)
-        {
-            var clientsStatus = new List<object>();
-            foreach (var client in downloadClients)
+        List<DownloadClientStatusResponse> clients = downloadClients
+            .Select(client => new DownloadClientStatusResponse
             {
-                clientsStatus.Add(new
-                {
-                    client.Id,
-                    client.Name,
-                    Type = client.TypeName,
-                    client.Host,
-                    client.Enabled,
-                    IsConnected = client.Enabled, // We can't check connection status without implementing test methods
-                });
-            }
+                Id = client.Id,
+                Name = client.Name,
+                Type = client.TypeName,
+                Host = client.Host,
+                Enabled = client.Enabled,
+                IsConnected = client.Enabled,
+            })
+            .ToList();
 
-            result["Clients"] = clientsStatus;
-        }
-
-        return Ok(result);
+        return Ok(new Dictionary<string, List<DownloadClientStatusResponse>> { ["Clients"] = clients });
     }
 
     [HttpGet("arrs")]
     public async Task<IActionResult> GetMediaManagersStatus()
     {
-        var status = new Dictionary<string, object>();
+        Dictionary<string, List<InstanceConnectionResponse>> status = new();
 
-        // Get configurations
-        var enabledSonarrInstances = await _dataContext.ArrConfigs
-            .Include(x => x.Instances)
-            .Where(x => x.Type == InstanceType.Sonarr)
-            .SelectMany(x => x.Instances)
-            .Where(x => x.Enabled)
-            .AsNoTracking()
-            .ToListAsync();
-        var enabledRadarrInstances = await _dataContext.ArrConfigs
-            .Include(x => x.Instances)
-            .Where(x => x.Type == InstanceType.Radarr)
-            .SelectMany(x => x.Instances)
-            .Where(x => x.Enabled)
-            .AsNoTracking()
-            .ToListAsync();
-        var enabledLidarrInstances = await _dataContext.ArrConfigs
-            .Include(x => x.Instances)
-            .Where(x => x.Type == InstanceType.Lidarr)
-            .SelectMany(x => x.Instances)
-            .Where(x => x.Enabled)
-            .AsNoTracking()
-            .ToListAsync();
-
-        // Check Sonarr instances
-        var sonarrStatus = new List<object>();
-
-        foreach (var instance in enabledSonarrInstances)
+        foreach (InstanceType type in ArrTypes)
         {
-            try
-            {
-                var sonarrClient = _arrClientFactory.GetClient(InstanceType.Sonarr, instance.Version);
-                await sonarrClient.HealthCheckAsync(instance);
+            List<ArrInstance> enabledInstances = await _dataContext.ArrConfigs
+                .Include(x => x.Instances)
+                .Where(x => x.Type == type)
+                .SelectMany(x => x.Instances)
+                .Where(x => x.Enabled)
+                .AsNoTracking()
+                .ToListAsync();
 
-                sonarrStatus.Add(new
-                {
-                    instance.Name,
-                    instance.Url,
-                    IsConnected = true,
-                    Message = "Successfully connected"
-                });
-            }
-            catch (Exception ex)
-            {
-                sonarrStatus.Add(new
-                {
-                    instance.Name,
-                    instance.Url,
-                    IsConnected = false,
-                    Message = $"Connection failed: {ex.Message}"
-                });
-            }
+            status[type.ToString()] = await CheckInstancesAsync(type, enabledInstances);
         }
-
-        status["Sonarr"] = sonarrStatus;
-
-        // Check Radarr instances
-        var radarrStatus = new List<object>();
-
-        foreach (var instance in enabledRadarrInstances)
-        {
-            try
-            {
-                var radarrClient = _arrClientFactory.GetClient(InstanceType.Radarr, instance.Version);
-                await radarrClient.HealthCheckAsync(instance);
-
-                radarrStatus.Add(new
-                {
-                    instance.Name,
-                    instance.Url,
-                    IsConnected = true,
-                    Message = "Successfully connected"
-                });
-            }
-            catch (Exception ex)
-            {
-                radarrStatus.Add(new
-                {
-                    instance.Name,
-                    instance.Url,
-                    IsConnected = false,
-                    Message = $"Connection failed: {ex.Message}"
-                });
-            }
-        }
-
-        status["Radarr"] = radarrStatus;
-
-        // Check Lidarr instances
-        var lidarrStatus = new List<object>();
-
-        foreach (var instance in enabledLidarrInstances)
-        {
-            try
-            {
-                var lidarrClient = _arrClientFactory.GetClient(InstanceType.Lidarr, instance.Version);
-                await lidarrClient.HealthCheckAsync(instance);
-
-                lidarrStatus.Add(new
-                {
-                    instance.Name,
-                    instance.Url,
-                    IsConnected = true,
-                    Message = "Successfully connected"
-                });
-            }
-            catch (Exception ex)
-            {
-                lidarrStatus.Add(new
-                {
-                    instance.Name,
-                    instance.Url,
-                    IsConnected = false,
-                    Message = $"Connection failed: {ex.Message}"
-                });
-            }
-        }
-
-        status["Lidarr"] = lidarrStatus;
 
         return Ok(status);
+    }
+
+    private async Task<List<InstanceConnectionResponse>> CheckInstancesAsync(InstanceType type, IReadOnlyList<ArrInstance> instances)
+    {
+        List<InstanceConnectionResponse> results = new(instances.Count);
+
+        foreach (ArrInstance instance in instances)
+        {
+            try
+            {
+                await _healthChecker.CheckAsync(type, instance);
+
+                results.Add(new InstanceConnectionResponse
+                {
+                    Name = instance.Name,
+                    Url = instance.Url,
+                    IsConnected = true,
+                    Message = "Successfully connected",
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "health check failed for {Type} instance | {Url}", type, instance.Url);
+                results.Add(new InstanceConnectionResponse
+                {
+                    Name = instance.Name,
+                    Url = instance.Url,
+                    IsConnected = false,
+                    Message = $"Connection failed: {ex.Message}",
+                });
+            }
+        }
+
+        return results;
     }
 }

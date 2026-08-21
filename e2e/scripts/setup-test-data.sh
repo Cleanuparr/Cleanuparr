@@ -16,12 +16,13 @@ ARR_SEED="$HERE/arr-seed"
 rm -rf "$TEST_DATA/torznab-src"
 
 # Media an arr imports during a run, wiped so its library always starts empty.
-rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies"
+rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies" "$TEST_DATA/lazylibrarian-books"
 
 mkdir -p \
   "$TEST_DATA/torznab-src" \
   "$TEST_DATA/sonarr-tv" \
   "$TEST_DATA/radarr-movies" \
+  "$TEST_DATA/lazylibrarian-books" \
   "$TEST_DATA/downloads/qbittorrent" \
   "$TEST_DATA/downloads/transmission" \
   "$TEST_DATA/downloads/deluge" \
@@ -36,7 +37,7 @@ mkdir -p \
 
 chmod -R a+rwX "$TEST_DATA" 2>/dev/null || true
 
-# qBittorrent credentials: admin / adminadmin
+# Credentials: admin / adminadmin
 cat > "$TEST_DATA/qbittorrent-config/qBittorrent/qBittorrent.conf" <<'EOF'
 [LegalNotice]
 Accepted=true
@@ -65,5 +66,16 @@ for arr in sonarr radarr; do
     mkdir -p "$TEST_DATA/$arr-config"
   fi
 done
+
+# Restore LazyLibrarian from its committed seed.
+# LazyLibrarian rewrites config.ini when it shuts down, so the run gets a copy.
+LAZYLIBRARIAN_SEED="$HERE/lazylibrarian-seed"
+rm -rf "$TEST_DATA/lazylibrarian-config"
+if [[ -d "$LAZYLIBRARIAN_SEED" ]]; then
+  cp -R "$LAZYLIBRARIAN_SEED" "$TEST_DATA/lazylibrarian-config"
+  chmod -R a+rwX "$TEST_DATA/lazylibrarian-config"
+else
+  mkdir -p "$TEST_DATA/lazylibrarian-config"
+fi
 
 echo "test-data ready under $TEST_DATA"

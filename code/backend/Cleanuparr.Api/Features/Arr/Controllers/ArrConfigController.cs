@@ -1,9 +1,9 @@
-using Cleanuparr.Api.Extensions;
+﻿using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
-using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Shared.Helpers;
@@ -22,7 +22,7 @@ public sealed class ArrConfigController : ControllerBase
     private readonly ILogger<ArrConfigController> _logger;
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
-    private readonly IArrClientFactory _arrClientFactory;
+    private readonly IInstanceHealthChecker _healthChecker;
     private readonly IEventPublisher _eventPublisher;
 
     /// <summary>
@@ -32,13 +32,13 @@ public sealed class ArrConfigController : ControllerBase
         ILogger<ArrConfigController> logger,
         DataContext dataContext,
         EventsContext eventsContext,
-        IArrClientFactory arrClientFactory,
+        IInstanceHealthChecker healthChecker,
         IEventPublisher eventPublisher)
     {
         _logger = logger;
         _dataContext = dataContext;
         _eventsContext = eventsContext;
-        _arrClientFactory = arrClientFactory;
+        _healthChecker = healthChecker;
         _eventPublisher = eventPublisher;
     }
 
@@ -59,6 +59,8 @@ public sealed class ArrConfigController : ControllerBase
 
     [HttpGet("sportarr")]
     public Task<IActionResult> GetSportarrConfig() => GetArrConfig(InstanceType.Sportarr);
+    [HttpGet("lazylibrarian")]
+    public Task<IActionResult> GetLazyLibrarianConfig() => GetArrConfig(InstanceType.LazyLibrarian);
 
     [HttpPut("sonarr")]
     public Task<IActionResult> UpdateSonarrConfig([FromBody] UpdateArrConfigRequest request)
@@ -83,6 +85,9 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPut("sportarr")]
     public Task<IActionResult> UpdateSportarrConfig([FromBody] UpdateArrConfigRequest request)
         => UpdateArrConfig(InstanceType.Sportarr, request);
+    [HttpPut("lazylibrarian")]
+    public Task<IActionResult> UpdateLazyLibrarianConfig([FromBody] UpdateArrConfigRequest request)
+        => UpdateArrConfig(InstanceType.LazyLibrarian, request);
 
     [HttpPost("sonarr/instances")]
     public Task<IActionResult> CreateSonarrInstance([FromBody] ArrInstanceRequest request)
@@ -155,6 +160,17 @@ public sealed class ArrConfigController : ControllerBase
     [HttpDelete("sportarr/instances/{id}")]
     public Task<IActionResult> DeleteSportarrInstance(Guid id)
         => DeleteArrInstance(InstanceType.Sportarr, id);
+    [HttpPost("lazylibrarian/instances")]
+    public Task<IActionResult> CreateLazyLibrarianInstance([FromBody] ArrInstanceRequest request)
+        => CreateArrInstance(InstanceType.LazyLibrarian, request);
+
+    [HttpPut("lazylibrarian/instances/{id}")]
+    public Task<IActionResult> UpdateLazyLibrarianInstance(Guid id, [FromBody] ArrInstanceRequest request)
+        => UpdateArrInstance(InstanceType.LazyLibrarian, id, request);
+
+    [HttpDelete("lazylibrarian/instances/{id}")]
+    public Task<IActionResult> DeleteLazyLibrarianInstance(Guid id)
+        => DeleteArrInstance(InstanceType.LazyLibrarian, id);
 
     [HttpPost("sonarr/instances/test")]
     public Task<IActionResult> TestSonarrInstance([FromBody] TestArrInstanceRequest request)
@@ -179,6 +195,9 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPost("sportarr/instances/test")]
     public Task<IActionResult> TestSportarrInstance([FromBody] TestArrInstanceRequest request)
         => TestArrInstance(InstanceType.Sportarr, request);
+    [HttpPost("lazylibrarian/instances/test")]
+    public Task<IActionResult> TestLazyLibrarianInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.LazyLibrarian, request);
 
     private async Task<IActionResult> GetArrConfig(InstanceType type)
     {
@@ -383,8 +402,7 @@ public sealed class ArrConfigController : ControllerBase
             }
 
             var testInstance = request.ToTestInstance(resolvedApiKey);
-            var client = _arrClientFactory.GetClient(type, request.Version);
-            await client.HealthCheckAsync(testInstance);
+            await _healthChecker.CheckAsync(type, testInstance);
 
             return Ok(new { Message = $"Connection to {type} instance successful" });
         }
@@ -422,6 +440,7 @@ public sealed class ArrConfigController : ControllerBase
         InstanceType.Readarr => nameof(GetReadarrConfig),
         InstanceType.Whisparr => nameof(GetWhisparrConfig),
         InstanceType.Sportarr => nameof(GetSportarrConfig),
+        InstanceType.LazyLibrarian => nameof(GetLazyLibrarianConfig),
         _ => nameof(GetSonarrConfig),
     };
 }

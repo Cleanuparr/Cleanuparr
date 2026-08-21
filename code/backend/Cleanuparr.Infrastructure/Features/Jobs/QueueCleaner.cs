@@ -1,10 +1,12 @@
-using Cleanuparr.Domain.Entities.Arr.Queue;
+﻿using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -14,6 +16,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using LogContext = Serilog.Context.LogContext;
 
@@ -22,6 +25,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 public sealed class QueueCleaner : GenericHandler
 {
     private readonly IConnectivityChecker _connectivityChecker;
+    private readonly ILazyLibrarianEvaluator _lazyLibrarianService;
 
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
@@ -32,13 +36,16 @@ public sealed class QueueCleaner : GenericHandler
         IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
-        IConnectivityChecker connectivityChecker
+        IDryRunInterceptor dryRunInterceptor,
+        IConnectivityChecker connectivityChecker,
+        [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
+        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
     )
     {
         _connectivityChecker = connectivityChecker;
+        _lazyLibrarianService = lazyLibrarianService;
     }
 
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
@@ -85,6 +92,7 @@ public sealed class QueueCleaner : GenericHandler
         var readarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr));
         var whisparrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr));
         var sportarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sportarr));
+        ArrConfig lazyLibrarianConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian));
 
         await ProcessArrConfigAsync(sonarrConfig);
         await ProcessArrConfigAsync(radarrConfig);
@@ -92,6 +100,7 @@ public sealed class QueueCleaner : GenericHandler
         await ProcessArrConfigAsync(readarrConfig);
         await ProcessArrConfigAsync(whisparrConfig);
         await ProcessArrConfigAsync(sportarrConfig);
+        await ProcessArrConfigAsync(lazyLibrarianConfig);
     }
 
     protected override async Task ProcessInstanceAsync(ArrInstance instance)
@@ -103,8 +112,6 @@ public sealed class QueueCleaner : GenericHandler
         using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
         using var _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
 
-        IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
-
         // push to context
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, instance.ExternalOrInternalUrl);
         ContextProvider.Set(nameof(InstanceType), instance.ArrConfig.Type);
@@ -112,6 +119,17 @@ public sealed class QueueCleaner : GenericHandler
         ContextProvider.Set(ContextProvider.Keys.Version, instance.Version);
 
         IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
+
+        if (instance.ArrConfig.Type is InstanceType.LazyLibrarian)
+        {
+            IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
+                await _lazyLibrarianService.EvaluateAsync(instance, downloadServices, ignoredDownloads);
+
+            await ProcessLazyLibrarianDecisionsAsync(instance, decisions);
+            return;
+        }
+
+        IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
         bool hasEnabledTorrentClients = ContextProvider
             .Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig))
             .Where(x => x.Type == DownloadClientType.Torrent)

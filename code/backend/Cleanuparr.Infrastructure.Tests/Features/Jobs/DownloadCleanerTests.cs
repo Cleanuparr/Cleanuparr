@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities;
+﻿using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -54,7 +54,9 @@ public class DownloadCleanerTests : IDisposable
             _fixture.SeedingRulesService,
             _fixture.UnlinkedService,
             _fixture.DeadTorrentService,
-            _fixture.OrphanedFilesService
+            _fixture.OrphanedFilesService,
+            _fixture.DryRunInterceptor,
+            _fixture.LazyLibrarianService
         );
     }
 

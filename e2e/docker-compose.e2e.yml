@@ -128,7 +128,7 @@ services:
     restart: unless-stopped
 
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:4.6.7
+    image: lscr.io/linuxserver/qbittorrent:5.2.3
     network_mode: host
     environment:
       PUID: "1000"
@@ -241,6 +241,28 @@ services:
       - ./test-data/radarr-movies:/movies
     healthcheck:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:7878/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  # Real LazyLibrarian, restored from e2e/lazylibrarian-seed by setup-test-data.sh.
+  # LazyLibrarian publishes no versions, so the tag names the upstream commit.
+  # The seed database is only valid for the commit that wrote it.
+  # Regenerate the seed with `make seed-lazylibrarian`.
+  lazylibrarian:
+    image: lscr.io/linuxserver/lazylibrarian:276d79c1-ls333
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/lazylibrarian-config:/config
+      - ./test-data/downloads/qbittorrent:/downloads
+      - ./test-data/lazylibrarian-books:/books
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:5299/ || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 60

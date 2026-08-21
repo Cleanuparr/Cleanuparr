@@ -1,3 +1,4 @@
+﻿using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -55,7 +56,9 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         _fixture.SeedingRulesService,
         _fixture.UnlinkedService,
         _fixture.DeadTorrentService,
-        _fixture.OrphanedFilesService);
+        _fixture.OrphanedFilesService,
+        _fixture.DryRunInterceptor,
+        _fixture.LazyLibrarianService);
 
     private async Task ExecuteWithTimeAdvance(DownloadCleaner sut)
     {

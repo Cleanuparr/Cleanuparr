@@ -26,8 +26,8 @@ export const TEST_CONFIG = {
     indexerAdminUrl: 'http://localhost:9500/__admin',
   },
 
-  // The real Sonarr and Radarr containers. Their API keys come from the
-  // committed seed in e2e/arr-seed, written by e2e/scripts/seed-arr.sh.
+  // The real Sonarr and Radarr containers.
+  // Their api keys come from the committed seed in e2e/arr-seed.
   liveArr: {
     sonarrUrl: 'http://localhost:8989',
     sonarrApiKey: '0000000000000000000000000000e2e1',
@@ -36,4 +36,18 @@ export const TEST_CONFIG = {
     seededSeriesTitle: 'Agatha All Along',
     seededMovieTitle: 'F1',
   },
+
+  // The real LazyLibrarian container.
+  // Its api keys and library come from the committed seed in e2e/lazylibrarian-seed.
+  liveLazyLibrarian: {
+    url: 'http://localhost:5299',
+    apiKey: '0000000000000000000000000000e2e3',
+    readOnlyApiKey: '0000000000000000000000000000e2e4',
+  },
 } as const;
+
+/** A cron far enough out that the schedule never fires inside a spec. */
+export function farFutureCron(): string {
+  const minutes = (new Date().getUTCMinutes() + 30) % 60;
+  return `0 ${minutes} * * * ?`;
+}

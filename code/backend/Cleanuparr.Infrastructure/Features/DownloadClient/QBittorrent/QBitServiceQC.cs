@@ -42,6 +42,7 @@ public partial class QBitService
 
         // Create ITorrentItem wrapper for consistent interface usage
         QBitItemWrapper torrent = new(download, trackers, result.IsPrivate);
+        result.Torrent = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {

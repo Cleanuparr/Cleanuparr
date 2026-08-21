@@ -1,3 +1,4 @@
+﻿using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Api.Features.Arr.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
@@ -20,8 +21,7 @@ public class ArrConfigControllerTests : IDisposable
 {
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
-    private readonly IArrClientFactory _arrClientFactory;
-    private readonly IArrClient _arrClient;
+    private readonly IInstanceHealthChecker _healthChecker;
     private readonly IEventPublisher _eventPublisher;
     private readonly ArrConfigController _controller;
 
@@ -30,11 +30,9 @@ public class ArrConfigControllerTests : IDisposable
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         var logger = Substitute.For<ILogger<ArrConfigController>>();
-        _arrClientFactory = Substitute.For<IArrClientFactory>();
-        _arrClient = Substitute.For<IArrClient>();
-        _arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
+        _healthChecker = Substitute.For<IInstanceHealthChecker>();
         _eventPublisher = Substitute.For<IEventPublisher>();
-        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _arrClientFactory, _eventPublisher);
+        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _healthChecker, _eventPublisher);
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
@@ -54,6 +52,7 @@ public class ArrConfigControllerTests : IDisposable
     [InlineData(InstanceType.Readarr)]
     [InlineData(InstanceType.Whisparr)]
     [InlineData(InstanceType.Sportarr)]
+    [InlineData(InstanceType.LazyLibrarian)]
     public async Task GetArrConfig_AllTypes_ReturnOk(InstanceType type)
     {
         // Act
@@ -329,14 +328,14 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
-        await _arrClient.Received(1).HealthCheckAsync(Arg.Any<ArrInstance>());
+        await _healthChecker.Received(1).CheckAsync(InstanceType.Sonarr, Arg.Any<ArrInstance>());
     }
 
     [Fact]
     public async Task TestSonarrInstance_HealthCheckThrows_ReturnsBadRequest()
     {
         // Arrange
-        _arrClient.HealthCheckAsync(Arg.Any<ArrInstance>())
+        _healthChecker.CheckAsync(Arg.Any<InstanceType>(), Arg.Any<ArrInstance>())
             .Returns(Task.FromException(new HttpRequestException("unreachable")));
 
         var request = new TestArrInstanceRequest
@@ -400,10 +399,110 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
-        await _arrClient.Received(1).HealthCheckAsync(Arg.Is<ArrInstance>(i => i.ApiKey == "stored-key"));
+        await _healthChecker.Received(1).CheckAsync(InstanceType.Sonarr, Arg.Is<ArrInstance>(i => i.ApiKey == "stored-key"));
     }
 
     #endregion
+
+    #region Route wiring
+
+    [Theory]
+    [InlineData(InstanceType.Sonarr)]
+    [InlineData(InstanceType.Radarr)]
+    [InlineData(InstanceType.Lidarr)]
+    [InlineData(InstanceType.Readarr)]
+    [InlineData(InstanceType.Whisparr)]
+    [InlineData(InstanceType.Sportarr)]
+    [InlineData(InstanceType.LazyLibrarian)]
+    public async Task InstanceRoutes_AllTypes_CreateUpdateDeleteAndTest(InstanceType type)
+    {
+        // Arrange: every route delegates to the same helper, so this covers the wiring per type.
+        ArrInstanceRequest request = new()
+        {
+            Name = "wired",
+            Url = "http://instance.test:1234",
+            ApiKey = "abc",
+            Version = 1f,
+        };
+
+        // Act + Assert: create
+        IActionResult created = await DispatchCreate(type, request);
+        ArrInstanceDto dto = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<ArrInstanceDto>();
+
+        // Act + Assert: update
+        Guid id = dto.Id.ShouldNotBeNull();
+        IActionResult updated = await DispatchUpdate(type, id, request with { Name = "rewired" });
+        updated.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<ArrInstanceDto>().Name.ShouldBe("rewired");
+
+        // Act + Assert: connection test
+        IActionResult tested = await DispatchTest(type, new TestArrInstanceRequest
+        {
+            Url = request.Url,
+            ApiKey = request.ApiKey,
+            Version = request.Version,
+        });
+        tested.ShouldBeOfType<OkObjectResult>();
+        await _healthChecker.Received(1).CheckAsync(type, Arg.Any<ArrInstance>());
+
+        // Act + Assert: delete
+        IActionResult deleted = await DispatchDelete(type, id);
+        deleted.ShouldBeOfType<NoContentResult>();
+
+        ArrConfig config = await _dataContext.ArrConfigs
+            .Include(c => c.Instances)
+            .FirstAsync(c => c.Type == type);
+        config.Instances.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    private Task<IActionResult> DispatchCreate(InstanceType type, ArrInstanceRequest request) => type switch
+    {
+        InstanceType.Sonarr => _controller.CreateSonarrInstance(request),
+        InstanceType.Radarr => _controller.CreateRadarrInstance(request),
+        InstanceType.Lidarr => _controller.CreateLidarrInstance(request),
+        InstanceType.Readarr => _controller.CreateReadarrInstance(request),
+        InstanceType.Whisparr => _controller.CreateWhisparrInstance(request),
+        InstanceType.Sportarr => _controller.CreateSportarrInstance(request),
+        InstanceType.LazyLibrarian => _controller.CreateLazyLibrarianInstance(request),
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
+
+    private Task<IActionResult> DispatchUpdate(InstanceType type, Guid id, ArrInstanceRequest request) => type switch
+    {
+        InstanceType.Sonarr => _controller.UpdateSonarrInstance(id, request),
+        InstanceType.Radarr => _controller.UpdateRadarrInstance(id, request),
+        InstanceType.Lidarr => _controller.UpdateLidarrInstance(id, request),
+        InstanceType.Readarr => _controller.UpdateReadarrInstance(id, request),
+        InstanceType.Whisparr => _controller.UpdateWhisparrInstance(id, request),
+        InstanceType.Sportarr => _controller.UpdateSportarrInstance(id, request),
+        InstanceType.LazyLibrarian => _controller.UpdateLazyLibrarianInstance(id, request),
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
+
+    private Task<IActionResult> DispatchDelete(InstanceType type, Guid id) => type switch
+    {
+        InstanceType.Sonarr => _controller.DeleteSonarrInstance(id),
+        InstanceType.Radarr => _controller.DeleteRadarrInstance(id),
+        InstanceType.Lidarr => _controller.DeleteLidarrInstance(id),
+        InstanceType.Readarr => _controller.DeleteReadarrInstance(id),
+        InstanceType.Whisparr => _controller.DeleteWhisparrInstance(id),
+        InstanceType.Sportarr => _controller.DeleteSportarrInstance(id),
+        InstanceType.LazyLibrarian => _controller.DeleteLazyLibrarianInstance(id),
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
+
+    private Task<IActionResult> DispatchTest(InstanceType type, TestArrInstanceRequest request) => type switch
+    {
+        InstanceType.Sonarr => _controller.TestSonarrInstance(request),
+        InstanceType.Radarr => _controller.TestRadarrInstance(request),
+        InstanceType.Lidarr => _controller.TestLidarrInstance(request),
+        InstanceType.Readarr => _controller.TestReadarrInstance(request),
+        InstanceType.Whisparr => _controller.TestWhisparrInstance(request),
+        InstanceType.Sportarr => _controller.TestSportarrInstance(request),
+        InstanceType.LazyLibrarian => _controller.TestLazyLibrarianInstance(request),
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
 
     private Task<IActionResult> DispatchGet(InstanceType type) => type switch
     {
@@ -413,6 +512,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Readarr => _controller.GetReadarrConfig(),
         InstanceType.Whisparr => _controller.GetWhisparrConfig(),
         InstanceType.Sportarr => _controller.GetSportarrConfig(),
+        InstanceType.LazyLibrarian => _controller.GetLazyLibrarianConfig(),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 }

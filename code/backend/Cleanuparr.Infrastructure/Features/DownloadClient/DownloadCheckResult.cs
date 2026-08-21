@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 
@@ -27,4 +28,9 @@ public sealed record DownloadCheckResult
     /// True if the matching queue rule asked to change the category in the *arr instead of deleting; otherwise false.
     /// </summary>
     public bool ChangeCategory { get; set; }
+
+    /// <summary>
+    /// The matched torrent, set when <see cref="Found"/> is true.
+    /// </summary>
+    public ITorrentItemWrapper? Torrent { get; set; }
 }

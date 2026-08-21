@@ -43,4 +43,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'connectivity-check' },
   { id: 'ignore-alt-speed' },
   { id: 'sportarr-blocklist' },
+  { id: 'lazylibrarian-blocklist' },
 ];

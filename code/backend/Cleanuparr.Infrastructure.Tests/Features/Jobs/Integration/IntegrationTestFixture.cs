@@ -1,3 +1,4 @@
+﻿using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -57,6 +58,9 @@ public class IntegrationTestFixture : IDisposable
     public IHardLinkFileService HardLinkFileService { get; private set; }
     public INotificationPublisher NotificationPublisher { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
+    public ILazyLibrarianService LazyLibrarianService { get; private set; }
+    public ILazyLibrarianEvaluator LazyLibrarianServiceQC { get; private set; }
+    public ILazyLibrarianEvaluator LazyLibrarianServiceCB { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
     public IHubContext<AppHub> HubContext { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; } = null!;
@@ -85,6 +89,9 @@ public class IntegrationTestFixture : IDisposable
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         NotificationPublisher = Substitute.For<INotificationPublisher>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
+        LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianEvaluator>();
+        LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianEvaluator>();
         HubContext = CreateMockHubContext();
 
         SetupDefaults();
@@ -100,11 +107,7 @@ public class IntegrationTestFixture : IDisposable
         DryRunInterceptor.IsDryRunEnabled().Returns(false);
         DryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>()).ReturnsForAnyArgs(Task.CompletedTask);
 
-        // Capture messages published to IBus (generic Publish<T> overloads)
-        MessageBus.Publish(default(QueueItemRemoveRequest<SearchItem>)!, default)
-            .ReturnsForAnyArgs(Task.CompletedTask)
-            .AndDoes(ci => CapturedMessages.Add(ci[0]));
-        MessageBus.Publish(default(QueueItemRemoveRequest<SeriesSearchItem>)!, default)
+        MessageBus.Publish(default(QueueItemRemoveRequest)!, default)
             .ReturnsForAnyArgs(Task.CompletedTask)
             .AndDoes(ci => CapturedMessages.Add(ci[0]));
 
@@ -140,7 +143,8 @@ public class IntegrationTestFixture : IDisposable
             ArrClientFactory,
             EventPublisher,
             EventsContext,
-            DataContext);
+            DataContext,
+            LazyLibrarianService);
 
         SeedingRulesService = new SeedingRulesCleanupService(
             Substitute.For<ILogger<SeedingRulesCleanupService>>(),
@@ -160,41 +164,22 @@ public class IntegrationTestFixture : IDisposable
             DryRunInterceptor);
     }
 
-    /// <summary>
-    /// Gets distinct remove requests from captured messages (NSubstitute may capture duplicates
-    /// when both generic type setups match).
-    /// </summary>
-    public List<object> GetCapturedRemoveRequests()
+    public List<QueueItemRemoveRequest> GetCapturedRemoveRequests()
     {
         return CapturedMessages
-            .Where(m => m is QueueItemRemoveRequest<SearchItem> or QueueItemRemoveRequest<SeriesSearchItem>)
-            .DistinctBy(m => m switch
-            {
-                QueueItemRemoveRequest<SearchItem> r => r.Record.DownloadId,
-                QueueItemRemoveRequest<SeriesSearchItem> r => r.Record.DownloadId,
-                _ => ""
-            })
+            .OfType<QueueItemRemoveRequest>()
+            .DistinctBy(r => r.Target.DownloadId)
             .ToList();
     }
 
     /// <summary>
-    /// Processes all captured IBus messages through the real QueueItemRemover pipeline.
-    /// This simulates what MassTransit consumers would do. Deduplicates to handle
-    /// NSubstitute's generic type matching behavior.
+    /// Runs the captured messages through the real QueueItemRemover, as the consumer would.
     /// </summary>
     public async Task ProcessCapturedRemoveRequestsAsync()
     {
-        foreach (var message in GetCapturedRemoveRequests())
+        foreach (QueueItemRemoveRequest request in GetCapturedRemoveRequests())
         {
-            switch (message)
-            {
-                case QueueItemRemoveRequest<SearchItem> request:
-                    await QueueItemRemover.RemoveQueueItemAsync(request);
-                    break;
-                case QueueItemRemoveRequest<SeriesSearchItem> request:
-                    await QueueItemRemover.RemoveQueueItemAsync(request);
-                    break;
-            }
+            await QueueItemRemover.RemoveQueueItemAsync(request);
         }
     }
 

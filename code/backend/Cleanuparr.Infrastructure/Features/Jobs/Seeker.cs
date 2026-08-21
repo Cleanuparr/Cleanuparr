@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -206,8 +206,7 @@ public sealed class Seeker : IHandler
     private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun, CancellationToken cancellationToken)
     {
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
-            .Include(s => s.ArrInstance)
-                .ThenInclude(a => a.ArrConfig)
+            .Include(s => s.ArrInstance.ArrConfig)
             .Where(s => s.Enabled && s.ArrInstance.Enabled)
             .ToListAsync();
 

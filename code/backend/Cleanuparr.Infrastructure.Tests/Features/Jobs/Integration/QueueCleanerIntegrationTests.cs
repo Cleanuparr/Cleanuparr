@@ -1,3 +1,4 @@
+﻿using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -46,7 +47,9 @@ public class QueueCleanerIntegrationTests : IDisposable
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
-            connectivityChecker);
+            _fixture.DryRunInterceptor,
+            connectivityChecker,
+            _fixture.LazyLibrarianServiceQC);
     }
 
     [Fact]

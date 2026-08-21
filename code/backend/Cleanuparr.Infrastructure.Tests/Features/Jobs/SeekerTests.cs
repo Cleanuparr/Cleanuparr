@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Entities.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;

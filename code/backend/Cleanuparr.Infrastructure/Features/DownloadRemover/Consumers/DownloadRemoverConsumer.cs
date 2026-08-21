@@ -1,4 +1,3 @@
-﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using MassTransit;
@@ -6,14 +5,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 
-public class DownloadRemoverConsumer<T> : IConsumer<QueueItemRemoveRequest<T>>
-    where T : SearchItem
+public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
 {
-    private readonly ILogger<DownloadRemoverConsumer<T>> _logger;
+    private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
 
     public DownloadRemoverConsumer(
-        ILogger<DownloadRemoverConsumer<T>> logger,
+        ILogger<DownloadRemoverConsumer> logger,
         IQueueItemRemover queueItemRemover
     )
     {
@@ -21,7 +19,7 @@ public class DownloadRemoverConsumer<T> : IConsumer<QueueItemRemoveRequest<T>>
         _queueItemRemover = queueItemRemover;
     }
 
-    public async Task Consume(ConsumeContext<QueueItemRemoveRequest<T>> context)
+    public async Task Consume(ConsumeContext<QueueItemRemoveRequest> context)
     {
         try
         {
@@ -31,7 +29,7 @@ public class DownloadRemoverConsumer<T> : IConsumer<QueueItemRemoveRequest<T>>
         {
             _logger.LogError(exception,
                 "failed to remove queue item | {title} | {url}",
-                context.Message.Record.Title,
+                context.Message.Target.Title,
                 context.Message.Instance.Url
             );
         }

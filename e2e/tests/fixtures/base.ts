@@ -72,3 +72,4 @@ export const test = base.extend<TestFixtures>({
 
 export const expect = test.expect;
 export { TEST_CONFIG, ApiClient, CleanuparrApi };
+export { farFutureCron } from '../helpers/test-config';

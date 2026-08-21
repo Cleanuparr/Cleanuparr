@@ -5,7 +5,7 @@ namespace Cleanuparr.Domain.Enums;
 /// <summary>
 /// Command state values reported by the arr command endpoint
 /// </summary>
-[JsonConverter(typeof(ArrCommandStateConverter))]
+[JsonConverter(typeof(TolerantEnumConverter<ArrCommandState>))]
 public enum ArrCommandState
 {
     Unknown = 0,

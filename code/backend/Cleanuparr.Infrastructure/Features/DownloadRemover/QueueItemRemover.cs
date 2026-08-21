@@ -1,6 +1,7 @@
-using System.Net;
+﻿using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -8,6 +9,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
@@ -26,6 +28,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly IEventPublisher _eventPublisher;
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
+    private readonly ILazyLibrarianService _lazyLibrarianService;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
@@ -33,7 +36,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
         IArrClientFactory arrClientFactory,
         IEventPublisher eventPublisher,
         EventsContext eventsContext,
-        DataContext dataContext
+        DataContext dataContext,
+        ILazyLibrarianService lazyLibrarianService
     )
     {
         _logger = logger;
@@ -42,79 +46,26 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _eventPublisher = eventPublisher;
         _eventsContext = eventsContext;
         _dataContext = dataContext;
+        _lazyLibrarianService = lazyLibrarianService;
     }
 
-    public async Task RemoveQueueItemAsync<T>(QueueItemRemoveRequest<T> request)
-        where T : SearchItem
+    public async Task RemoveQueueItemAsync(QueueItemRemoveRequest request)
     {
         try
         {
-            var instanceType = request.Instance.ArrConfig.Type;
-            var arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
-            await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.ChangeCategory, request.DeleteReason);
-
-            // Mark the download item as removed in the database
-            string downloadId = request.Record.DownloadId.ToLower();
-            await _eventsContext.DownloadItems
-                .Where(x => x.DownloadId.ToLower() == downloadId)
-                .ExecuteUpdateAsync(setter =>
-                {
-                    setter.SetProperty(x => x.IsRemoved, true);
-                    setter.SetProperty(x => x.IsMarkedForRemoval, false);
-                });
-
-            // Set context for EventPublisher
-            ContextProvider.SetJobRunId(request.JobRunId);
-            ContextProvider.Set(ContextProvider.Keys.ItemName, request.Record.Title);
-            ContextProvider.Set(ContextProvider.Keys.Hash, request.Record.DownloadId);
-            ContextProvider.Set(nameof(QueueRecord), request.Record);
-            ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
-            ContextProvider.Set(nameof(InstanceType), instanceType);
-            ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
-            ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
-
-            if (request.DownloadClient is not null)
+            switch (request.Target)
             {
-                ContextProvider.SetDownloadClient(request.DownloadClient);
+                case ArrRemovalTarget target:
+                    await RemoveViaArrAsync(request, target);
+                    break;
+
+                case LazyLibrarianRemovalTarget target:
+                    await RemoveViaLazyLibrarianAsync(request, target);
+                    break;
+
+                default:
+                    throw new NotSupportedException($"removal target {request.Target.GetType().Name} is not supported");
             }
-
-            await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
-
-            string hash = request.Record.DownloadId.ToLowerInvariant();
-            var isRecurring = Striker.RecurringHashes.ContainsKey(hash);
-            
-            if (isRecurring || request.SkipSearch)
-            {
-                await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
-                
-                if (isRecurring)
-                {
-                    Striker.RecurringHashes.Remove(hash, out _);
-                }
-
-                return;
-            }
-
-            SeekerConfig seekerConfig = await _dataContext.SeekerConfigs
-                .AsNoTracking()
-                .FirstAsync();
-
-            if (!seekerConfig.SearchEnabled)
-            {
-                _logger.LogDebug("Search not triggered | {name}", request.Record.Title);
-                return;
-            }
-
-            _eventsContext.SearchQueue.Add(new SearchQueueItem
-            {
-                ArrInstanceId = request.Instance.Id,
-                ItemId = request.SearchItem.Id,
-                SeriesId = (request.SearchItem as SeriesSearchItem)?.SeriesId,
-                SearchType = (request.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
-                Title = request.Record.Title,
-            });
-
-            await _eventsContext.SaveChangesAsync();
         }
         catch (HttpRequestException exception)
         {
@@ -127,7 +78,175 @@ public sealed class QueueItemRemover : IQueueItemRemover
         }
         finally
         {
-            _cache.Remove(CacheKeys.DownloadMarkedForRemoval(request.Record.DownloadId, request.Instance.Url));
+            _cache.Remove(CacheKeys.DownloadMarkedForRemoval(request.Target.DownloadId, request.Instance.Url));
         }
+    }
+
+    private async Task RemoveViaArrAsync(QueueItemRemoveRequest request, ArrRemovalTarget target)
+    {
+        InstanceType instanceType = request.Instance.ArrConfig.Type;
+        IArrClient arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
+        await arrClient.DeleteQueueItemAsync(request.Instance, target.Record, target.RemoveFromClient, target.ChangeCategory, request.DeleteReason);
+
+        await MarkDownloadRemovedAsync(target.DownloadId);
+
+        SetRemovalContext(request, target, instanceType);
+        ContextProvider.Set(nameof(QueueRecord), target.Record);
+
+        await _eventPublisher.PublishQueueItemDeleted(target.RemoveFromClient, request.DeleteReason);
+
+        if (!await ShouldQueueSearchAsync(request, target))
+        {
+            return;
+        }
+
+        _eventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = request.Instance.Id,
+            ItemId = target.SearchItem.Id,
+            SeriesId = (target.SearchItem as SeriesSearchItem)?.SeriesId,
+            SearchType = (target.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
+            Title = target.Title,
+        });
+
+        await _eventsContext.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// queueBook leaves the wanted row snatched, and a snatched row blocks every search.
+    /// getDownloadProgress is what clears it.
+    /// </summary>
+    private async Task RemoveViaLazyLibrarianAsync(QueueItemRemoveRequest request, LazyLibrarianRemovalTarget target)
+    {
+        LazyLibrarianQueueItem item = target.Item;
+
+        SetRemovalContext(request, target, InstanceType.LazyLibrarian);
+
+        bool snatchCleared = await TryClearSnatchAsync(request, target);
+
+        await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
+        await MarkDownloadRemovedAsync(target.DownloadId);
+
+        _logger.LogInformation(
+            "queue item reset in LazyLibrarian with reason {Reason} | {Url} | {Title}",
+            request.DeleteReason.ToString(), request.Instance.Url, target.Title
+        );
+
+        await _eventPublisher.PublishQueueItemDeleted(target.RemovedFromClient, request.DeleteReason);
+
+        if (!snatchCleared)
+        {
+            await _eventPublisher.PublishSearchNotTriggered(target.DownloadId, target.Title);
+            return;
+        }
+
+        if (!await ShouldQueueSearchAsync(request, target))
+        {
+            return;
+        }
+
+        await _lazyLibrarianService.TriggerSearchAsync(request.Instance, item);
+
+        _logger.LogInformation(
+            "book search triggered | {Url} | book id: {Id}",
+            request.Instance.Url, string.Join(',', item.Books.Select(book => book.BookId))
+        );
+    }
+
+    /// <summary>
+    /// LazyLibrarian marks the wanted row aborted when it polls the client and finds nothing.
+    /// Progress -1 means it did. Anything else leaves the row snatched, which blocks the search.
+    /// </summary>
+    private async Task<bool> TryClearSnatchAsync(QueueItemRemoveRequest request, LazyLibrarianRemovalTarget target)
+    {
+        if (!target.RemovedFromClient)
+        {
+            _logger.LogInformation(
+                "search not triggered | the torrent is still in the download client | {Title}",
+                target.Title
+            );
+
+            return false;
+        }
+
+        LazyLibrarianDownloadProgress? progress =
+            await _lazyLibrarianService.GetDownloadProgressAsync(request.Instance, target.Item);
+
+        if (progress is null)
+        {
+            _logger.LogWarning("search not triggered | no download progress reported | {Title}", target.Title);
+            return false;
+        }
+
+        if (progress.Progress is -1)
+        {
+            return true;
+        }
+
+        _logger.LogWarning(
+            "search not triggered | LazyLibrarian still reports the snatch | {Title} | progress: {Progress}",
+            target.Title, progress.Progress
+        );
+
+        return false;
+    }
+
+    private static void SetRemovalContext(QueueItemRemoveRequest request, RemovalTarget target, InstanceType instanceType)
+    {
+        ContextProvider.SetJobRunId(request.JobRunId);
+        ContextProvider.Set(ContextProvider.Keys.ItemName, target.Title);
+        ContextProvider.Set(ContextProvider.Keys.Hash, target.DownloadId);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
+        ContextProvider.Set(nameof(InstanceType), instanceType);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
+        ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
+
+        if (request.DownloadClient is not null)
+        {
+            ContextProvider.SetDownloadClient(request.DownloadClient);
+        }
+    }
+
+    private async Task MarkDownloadRemovedAsync(string downloadId)
+    {
+        string normalized = downloadId.ToLower();
+
+        await _eventsContext.DownloadItems
+            .Where(x => x.DownloadId.ToLower() == normalized)
+            .ExecuteUpdateAsync(setter =>
+            {
+                setter.SetProperty(x => x.IsRemoved, true);
+                setter.SetProperty(x => x.IsMarkedForRemoval, false);
+            });
+    }
+
+    private async Task<bool> ShouldQueueSearchAsync(QueueItemRemoveRequest request, RemovalTarget target)
+    {
+        string hash = target.DownloadId.ToLowerInvariant();
+        bool isRecurring = Striker.RecurringHashes.ContainsKey(hash);
+
+        if (isRecurring || request.SkipSearch)
+        {
+            await _eventPublisher.PublishSearchNotTriggered(target.DownloadId, target.Title);
+
+            if (isRecurring)
+            {
+                Striker.RecurringHashes.Remove(hash, out _);
+            }
+
+            return false;
+        }
+
+        SeekerConfig seekerConfig = await _dataContext.SeekerConfigs
+            .AsNoTracking()
+            .FirstAsync();
+
+        if (!seekerConfig.SearchEnabled)
+        {
+            _logger.LogDebug("Search not triggered | {Name}", target.Title);
+            return false;
+        }
+
+        return true;
     }
 }

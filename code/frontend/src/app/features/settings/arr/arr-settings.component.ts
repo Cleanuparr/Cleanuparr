@@ -22,7 +22,10 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   readarr: [{ label: 'v0.4', value: 0.4 }],
   whisparr: [{ label: 'v2', value: 2 }, { label: 'v3', value: 3 }],
   sportarr: [{ label: 'v3', value: 3 }],
+  lazylibrarian: [{ label: 'latest', value: 1 }],
 };
+
+const EXPERIMENTAL_TYPES = new Set(['lazylibrarian']);
 
 const ARR_DEFAULT_PORT: Record<string, number> = {
   sonarr: 8989,
@@ -31,6 +34,7 @@ const ARR_DEFAULT_PORT: Record<string, number> = {
   readarr: 8787,
   whisparr: 6969,
   sportarr: 1867,
+  lazylibrarian: 5299,
 };
 
 interface ArrInstanceFormModel {
@@ -62,8 +66,12 @@ export class ArrSettingsComponent implements HasPendingChanges {
   readonly type = input.required<string>();
   readonly displayName = computed(() => {
     const t = this.type();
+    if (t === 'lazylibrarian') {
+      return 'LazyLibrarian';
+    }
     return t.charAt(0).toUpperCase() + t.slice(1);
   });
+  readonly badge = computed(() => (EXPERIMENTAL_TYPES.has(this.type()) ? 'Experimental' : ''));
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.type()] ?? []);
   readonly urlPlaceholder = computed(() => `http://localhost:${ARR_DEFAULT_PORT[this.type()] ?? 8989}`);
   readonly externalUrlPlaceholder = computed(() => `https://${this.type()}.example.com`);
