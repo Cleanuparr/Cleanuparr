@@ -1694,6 +1694,59 @@ public class QueueCleanerTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_KeepsGoingWhenOneRemovalCannotBePublished()
+    {
+        // Arrange: the first torrent is already deleted, so a failed publish must not skip the second book.
+        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
+        LazyLibrarianQueueItem second = CreateBookItem() with { DownloadId = "torrent-hash-2" };
+
+        ITorrentItemWrapper secondTorrent = Substitute.For<ITorrentItemWrapper>();
+        secondTorrent.Hash.Returns("torrent-hash-2");
+
+        DownloadClientConfig clientConfig = downloadService.ClientConfig;
+        IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
+        [
+            new LazyLibrarianRemovalDecision
+            {
+                Item = CreateBookItem(),
+                DeleteReason = DeleteReason.Stalled,
+                RemoveFromClient = true,
+                DownloadClient = clientConfig,
+                DownloadService = downloadService,
+                Torrent = torrent,
+            },
+            new LazyLibrarianRemovalDecision
+            {
+                Item = second,
+                DeleteReason = DeleteReason.Stalled,
+                RemoveFromClient = true,
+                DownloadClient = clientConfig,
+                DownloadService = downloadService,
+                Torrent = secondTorrent,
+            },
+        ];
+
+        _fixture.LazyLibrarianServiceQC
+            .EvaluateAsync(Arg.Any<ArrInstance>(), Arg.Any<IReadOnlyList<IDownloadService>>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(decisions);
+
+        _fixture.MessageBus
+            .Publish(Arg.Is<QueueItemRemoveRequest>(r => r.Target.DownloadId == "torrent-hash"), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new Exception("bus is down")));
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r => r.Target.DownloadId == "torrent-hash-2"),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
     public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueIterator()
     {
         // Arrange

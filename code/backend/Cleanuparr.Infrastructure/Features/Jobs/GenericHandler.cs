@@ -295,7 +295,19 @@ public abstract class GenericHandler : IHandler
                 RemovedFromClient = removedFromClient,
             };
 
-            await PublishRemovalRequest(instance, target, decision.DeleteReason, downloadClient: decision.DownloadClient);
+            try
+            {
+                await PublishRemovalRequest(instance, target, decision.DeleteReason, downloadClient: decision.DownloadClient);
+            }
+            catch (Exception exception)
+            {
+                // A failed publish must not skip the next decision.
+                _logger.LogError(
+                    exception,
+                    "failed to mark item for removal | removed from client: {removed} | {hash} | {title}",
+                    removedFromClient, decision.Item.DownloadId, decision.Item.Title
+                );
+            }
         }
     }
 
