@@ -1,20 +1,21 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import { appLogsSince } from '../helpers/test-lifecycle';
 import {
-  MIN_MAX_STRIKES,
+  arrangeLiveInstance,
   claimBookById,
-  createDownloadClient,
   createStallRule,
-  farFutureCron,
   indexerMock,
   type LazyLibrarianBook,
   liveLazyLibrarian,
-  resetLibrary,
+  MIN_MAX_STRIKES,
+  pinQueueCleanerSchedule,
   qbittorrent,
+  resetLibrary,
   runUntilStrikes,
   setSearchEnabled,
   snatchBook,
   strikeCount,
+  teardownLiveInstance,
   torrentPresent,
   waitForTorrentInClient,
 } from '../helpers/live-lazylibrarian';
@@ -53,15 +54,9 @@ test.describe('LazyLibrarian read-only api key', () => {
       ruleId = undefined;
     }
 
-    if (instanceId) {
-      await api.arr.deleteInstance('lazylibrarian', instanceId);
-      instanceId = undefined;
-    }
-
-    if (clientId) {
-      await api.downloadClient.delete(clientId);
-      clientId = undefined;
-    }
+    await teardownLiveInstance(api, { instanceId, clientId });
+    instanceId = undefined;
+    clientId = undefined;
 
     await resetLibrary(books);
     await qbittorrent.clearAllTorrents();
@@ -85,25 +80,11 @@ test.describe('LazyLibrarian read-only api key', () => {
 
     await setSearchEnabled(api, false);
 
-    const created = await (
-      await api.arr.createInstance('lazylibrarian', {
-        name: 'E2E live lazylibrarian read-only',
-        url: TEST_CONFIG.liveLazyLibrarian.url,
-        apiKey: TEST_CONFIG.liveLazyLibrarian.readOnlyApiKey,
-        version: 1,
-        enabled: true,
-      })
-    ).json();
-    instanceId = created.id;
-    clientId = await createDownloadClient(api);
-
-    const cleanerConfig = await (await api.queueCleaner.getConfig()).json();
-    await api.queueCleaner.updateConfig({
-      ...cleanerConfig,
-      enabled: true,
-      useAdvancedScheduling: true,
-      cronExpression: farFutureCron(),
-    });
+    ({ instanceId, clientId } = await arrangeLiveInstance(api, {
+      name: 'E2E live lazylibrarian read-only',
+      apiKey: TEST_CONFIG.liveLazyLibrarian.readOnlyApiKey,
+    }));
+    await pinQueueCleanerSchedule(api);
 
     const snatched = await snatchBook(claimBookById(books, BOOK_ID));
     await waitForTorrentInClient(snatched.downloadId);

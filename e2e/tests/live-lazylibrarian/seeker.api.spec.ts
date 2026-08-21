@@ -2,24 +2,25 @@ import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { appLogsSince } from '../helpers/test-lifecycle';
 import {
-  MIN_MAX_STRIKES,
+  arrangeLiveInstance,
   claimBookById,
-  createDownloadClient,
   createStallRule,
-  farFutureCron,
   indexerMock,
-  lazyLibrarianLogsSince,
   type LazyLibrarianBook,
+  lazyLibrarianLogsSince,
   liveLazyLibrarian,
-  resetLibrary,
+  MIN_MAX_STRIKES,
+  pinQueueCleanerSchedule,
   qbittorrent,
+  resetLibrary,
   runUntilStrikes,
   runUntilStruckOut,
   setSearchEnabled,
-  type SnatchedBook,
   snatchBook,
-  wantedStatus,
+  type SnatchedBook,
+  teardownLiveInstance,
   waitForTorrentInClient,
+  wantedStatus,
 } from '../helpers/live-lazylibrarian';
 
 /**
@@ -63,25 +64,8 @@ async function arrange(
 ): Promise<{ book: LazyLibrarianBook; snatched: SnatchedBook }> {
   await setSearchEnabled(api, searchEnabled);
 
-  const created = await (
-    await api.arr.createInstance('lazylibrarian', {
-      name: 'E2E live lazylibrarian seeker',
-      url: TEST_CONFIG.liveLazyLibrarian.url,
-      apiKey: TEST_CONFIG.liveLazyLibrarian.apiKey,
-      version: 1,
-      enabled: true,
-    })
-  ).json();
-  instanceId = created.id;
-  clientId = await createDownloadClient(api);
-
-  const config = await (await api.queueCleaner.getConfig()).json();
-  await api.queueCleaner.updateConfig({
-    ...config,
-    enabled: true,
-    useAdvancedScheduling: true,
-    cronExpression: farFutureCron(),
-  });
+  ({ instanceId, clientId } = await arrangeLiveInstance(api, { name: 'E2E live lazylibrarian seeker' }));
+  await pinQueueCleanerSchedule(api);
 
   const book = claimBookById(books, bookId);
   const snatched = await snatchBook(book);
@@ -107,15 +91,9 @@ test.describe('the re-search after a LazyLibrarian removal', () => {
       ruleId = undefined;
     }
 
-    if (instanceId) {
-      await api.arr.deleteInstance('lazylibrarian', instanceId);
-      instanceId = undefined;
-    }
-
-    if (clientId) {
-      await api.downloadClient.delete(clientId);
-      clientId = undefined;
-    }
+    await teardownLiveInstance(api, { instanceId, clientId });
+    instanceId = undefined;
+    clientId = undefined;
 
     await resetLibrary(books);
     await qbittorrent.clearAllTorrents();

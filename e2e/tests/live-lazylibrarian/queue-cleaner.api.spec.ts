@@ -1,24 +1,25 @@
-import { test, expect, TEST_CONFIG } from '../fixtures/base';
+import { test, expect, farFutureCron } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import {
-  MIN_MAX_STRIKES,
+  arrangeLiveInstance,
   claimBookById,
-  createDownloadClient,
   createStallRule,
-  farFutureCron,
   indexerMock,
   type LazyLibrarianBook,
-  type SnatchedBook,
   liveLazyLibrarian,
-  resetLibrary,
+  MIN_MAX_STRIKES,
+  pinQueueCleanerSchedule,
   prepareRelease,
   qbittorrent,
+  resetLibrary,
   runUntilStrikes,
   runUntilStruckOut,
   setSearchEnabled,
   snatchBook,
+  type SnatchedBook,
   snatchPreparedRelease,
   strikeCount,
+  teardownLiveInstance,
   torrentPresent,
   waitForTorrentInClient,
 } from '../helpers/live-lazylibrarian';
@@ -100,25 +101,8 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
   test.beforeEach(async ({ api }) => {
     await setSearchEnabled(api, false);
 
-    const created = await (
-      await api.arr.createInstance('lazylibrarian', {
-        name: 'E2E live lazylibrarian',
-        url: TEST_CONFIG.liveLazyLibrarian.url,
-        apiKey: TEST_CONFIG.liveLazyLibrarian.apiKey,
-        version: 1,
-        enabled: true,
-      })
-    ).json();
-    instanceId = created.id;
-    clientId = await createDownloadClient(api);
-
-    const config = await (await api.queueCleaner.getConfig()).json();
-    await api.queueCleaner.updateConfig({
-      ...config,
-      enabled: true,
-      useAdvancedScheduling: true,
-      cronExpression: farFutureCron(),
-    });
+    ({ instanceId, clientId } = await arrangeLiveInstance(api));
+    await pinQueueCleanerSchedule(api);
   });
 
   test.afterEach(async ({ api }) => {
@@ -126,15 +110,9 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
       await api.queueCleaner.deleteRule(rule.kind, rule.id);
     }
 
-    if (instanceId) {
-      await api.arr.deleteInstance('lazylibrarian', instanceId);
-      instanceId = undefined;
-    }
-
-    if (clientId) {
-      await api.downloadClient.delete(clientId);
-      clientId = undefined;
-    }
+    await teardownLiveInstance(api, { instanceId, clientId });
+    instanceId = undefined;
+    clientId = undefined;
 
     if (savedCleanerConfig) {
       await api.queueCleaner.updateConfig(savedCleanerConfig);

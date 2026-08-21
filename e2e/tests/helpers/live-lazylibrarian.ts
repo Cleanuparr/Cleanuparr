@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import type { CleanuparrApi } from './api';
 import { buildDownloadClientPayload } from './api/download-client';
-import { TEST_CONFIG } from './test-config';
+import { TEST_CONFIG, farFutureCron } from './test-config';
 import { buildMultiFileTorrent, buildSingleFileTorrent, type GeneratedTorrent } from './torrent-fixtures';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
 import { WireMockClient, type Mapping } from './mocks/wiremock-client';
@@ -415,6 +415,58 @@ export async function createDownloadClient(api: CleanuparrApi): Promise<string> 
   return created.id;
 }
 
+export interface LiveInstanceIds {
+  instanceId: string;
+  clientId: string;
+}
+
+/** The lazylibrarian instance and the qBittorrent client every live spec needs. */
+export async function arrangeLiveInstance(
+  api: CleanuparrApi,
+  options: { name?: string; apiKey?: string } = {},
+): Promise<LiveInstanceIds> {
+  const created = await (
+    await api.arr.createInstance('lazylibrarian', {
+      name: options.name ?? 'E2E live lazylibrarian',
+      url: TEST_CONFIG.liveLazyLibrarian.url,
+      apiKey: options.apiKey ?? TEST_CONFIG.liveLazyLibrarian.apiKey,
+      version: 1,
+      enabled: true,
+    })
+  ).json();
+
+  expect(created.id, 'arrangeLiveInstance').toBeTruthy();
+
+  return { instanceId: created.id, clientId: await createDownloadClient(api) };
+}
+
+export async function teardownLiveInstance(
+  api: CleanuparrApi,
+  ids: { instanceId?: string; clientId?: string },
+): Promise<void> {
+  if (ids.instanceId) {
+    await api.arr.deleteInstance('lazylibrarian', ids.instanceId);
+  }
+
+  if (ids.clientId) {
+    await api.downloadClient.delete(ids.clientId);
+  }
+}
+
+/** Only a triggered run may clean, so the schedule is pushed out of the spec's window. */
+export async function pinQueueCleanerSchedule(api: CleanuparrApi): Promise<Record<string, unknown>> {
+  const config = await (await api.queueCleaner.getConfig()).json();
+
+  await api.queueCleaner.updateConfig({
+    ...config,
+    enabled: true,
+    useAdvancedScheduling: true,
+    cronExpression: farFutureCron(),
+  });
+
+  return config;
+}
+
 export async function createStallRule(
   api: CleanuparrApi,
   overrides: Record<string, unknown> = {},
@@ -486,12 +538,6 @@ export async function runUntilStrikes(api: CleanuparrApi, downloadId: string, st
       return;
     }
   }
-}
-
-/** Far enough out that the cron never fires inside a spec. */
-export function farFutureCron(): string {
-  const minutes = (new Date().getUTCMinutes() + 30) % 60;
-  return `0 ${minutes} * * * ?`;
 }
 
 /** getAllBooks has no ORDER BY, so a spec must claim by work id. */

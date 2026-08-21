@@ -1,17 +1,18 @@
-import { test, expect, TEST_CONFIG } from '../fixtures/base';
+import { test, expect } from '../fixtures/base';
 import {
+  arrangeLiveInstance,
   claimBookById,
-  createDownloadClient,
   createStallRule,
-  farFutureCron,
   indexerMock,
   type LazyLibrarianBook,
   liveLazyLibrarian,
+  pinQueueCleanerSchedule,
   qbittorrent,
   resetLibrary,
   runUntilStruckOut,
   setSearchEnabled,
   snatchBook,
+  teardownLiveInstance,
   torrentPresent,
   waitForTorrentInClient,
 } from '../helpers/live-lazylibrarian';
@@ -50,15 +51,9 @@ test.describe('an audiobook removal against a live LazyLibrarian', () => {
       ruleId = undefined;
     }
 
-    if (instanceId) {
-      await api.arr.deleteInstance('lazylibrarian', instanceId);
-      instanceId = undefined;
-    }
-
-    if (clientId) {
-      await api.downloadClient.delete(clientId);
-      clientId = undefined;
-    }
+    await teardownLiveInstance(api, { instanceId, clientId });
+    instanceId = undefined;
+    clientId = undefined;
 
     await resetLibrary(books);
     await qbittorrent.clearAllTorrents();
@@ -71,25 +66,8 @@ test.describe('an audiobook removal against a live LazyLibrarian', () => {
 
     await setSearchEnabled(api, false);
 
-    const created = await (
-      await api.arr.createInstance('lazylibrarian', {
-        name: 'E2E live lazylibrarian audiobook',
-        url: TEST_CONFIG.liveLazyLibrarian.url,
-        apiKey: TEST_CONFIG.liveLazyLibrarian.apiKey,
-        version: 1,
-        enabled: true,
-      })
-    ).json();
-    instanceId = created.id;
-    clientId = await createDownloadClient(api);
-
-    const config = await (await api.queueCleaner.getConfig()).json();
-    await api.queueCleaner.updateConfig({
-      ...config,
-      enabled: true,
-      useAdvancedScheduling: true,
-      cronExpression: farFutureCron(),
-    });
+    ({ instanceId, clientId } = await arrangeLiveInstance(api, { name: 'E2E live lazylibrarian audiobook' }));
+    await pinQueueCleanerSchedule(api);
 
     const snatched = await snatchBook(claimBookById(books, BOOK_ID), { library: 'AudioBook' });
     await waitForTorrentInClient(snatched.downloadId);
