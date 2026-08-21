@@ -90,19 +90,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         await MarkDownloadRemovedAsync(target.DownloadId);
 
-        ContextProvider.SetJobRunId(request.JobRunId);
-        ContextProvider.Set(ContextProvider.Keys.ItemName, target.Title);
-        ContextProvider.Set(ContextProvider.Keys.Hash, target.DownloadId);
+        SetRemovalContext(request, target, instanceType);
         ContextProvider.Set(nameof(QueueRecord), target.Record);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
-        ContextProvider.Set(nameof(InstanceType), instanceType);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
-        ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
-
-        if (request.DownloadClient is not null)
-        {
-            ContextProvider.SetDownloadClient(request.DownloadClient);
-        }
 
         await _eventPublisher.PublishQueueItemDeleted(target.RemoveFromClient, request.DeleteReason);
 
@@ -133,18 +122,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         await MarkDownloadRemovedAsync(target.DownloadId);
 
-        ContextProvider.SetJobRunId(request.JobRunId);
-        ContextProvider.Set(ContextProvider.Keys.ItemName, target.Title);
-        ContextProvider.Set(ContextProvider.Keys.Hash, target.DownloadId);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
-        ContextProvider.Set(nameof(InstanceType), InstanceType.LazyLibrarian);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
-        ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
-
-        if (request.DownloadClient is not null)
-        {
-            ContextProvider.SetDownloadClient(request.DownloadClient);
-        }
+        SetRemovalContext(request, target, InstanceType.LazyLibrarian);
 
         bool snatchCleared = await TryClearSnatchAsync(request, target);
 
@@ -209,6 +187,22 @@ public sealed class QueueItemRemover : IQueueItemRemover
         );
 
         return false;
+    }
+
+    private static void SetRemovalContext(QueueItemRemoveRequest request, RemovalTarget target, InstanceType instanceType)
+    {
+        ContextProvider.SetJobRunId(request.JobRunId);
+        ContextProvider.Set(ContextProvider.Keys.ItemName, target.Title);
+        ContextProvider.Set(ContextProvider.Keys.Hash, target.DownloadId);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
+        ContextProvider.Set(nameof(InstanceType), instanceType);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
+        ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
+
+        if (request.DownloadClient is not null)
+        {
+            ContextProvider.SetDownloadClient(request.DownloadClient);
+        }
     }
 
     private async Task MarkDownloadRemovedAsync(string downloadId)
