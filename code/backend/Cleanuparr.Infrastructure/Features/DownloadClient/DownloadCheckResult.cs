@@ -30,9 +30,7 @@ public sealed record DownloadCheckResult
     public bool ChangeCategory { get; set; }
 
     /// <summary>
-    /// The matched torrent located in the download client during evaluation. Populated when
-    /// <see cref="Found"/> is true so that callers (e.g. LazyLibrarian, which lacks an
-    /// arr-driven removeFromClient equivalent) can act on it without a second lookup.
+    /// The matched torrent, set when <see cref="Found"/> is true.
     /// </summary>
     public ITorrentItemWrapper? Torrent { get; set; }
 }

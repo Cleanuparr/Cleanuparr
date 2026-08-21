@@ -20,9 +20,7 @@ public sealed record BlockFilesResult
     public DeleteReason DeleteReason { get; set; } = DeleteReason.None;
 
     /// <summary>
-    /// The matched torrent located in the download client during evaluation. Populated when
-    /// <see cref="Found"/> is true so that callers (e.g. LazyLibrarian) can act on it
-    /// without a second lookup.
+    /// The matched torrent, set when <see cref="Found"/> is true.
     /// </summary>
     public ITorrentItemWrapper? Torrent { get; set; }
 }
