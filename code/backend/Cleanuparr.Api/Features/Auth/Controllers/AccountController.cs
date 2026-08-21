@@ -127,38 +127,13 @@ public sealed class AccountController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid authenticator or recovery code");
             }
 
-            // Generate new TOTP
-            var secret = _totpService.GenerateSecret();
-            var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
-            var recoveryCodes = _totpService.GenerateRecoveryCodes();
-
-            user.TotpSecret = secret;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-
-            // Replace recovery codes
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            foreach (var code in recoveryCodes)
-            {
-                _usersContext.RecoveryCodes.Add(new RecoveryCode
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    CodeHash = _totpService.HashRecoveryCode(code),
-                    IsUsed = false
-                });
-            }
+            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
 
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("2FA regenerated for user {Username}", user.Username);
 
-            return Ok(new TotpSetupResponse
-            {
-                Secret = secret,
-                QrCodeUri = qrUri,
-                RecoveryCodes = recoveryCodes
-            });
+            return Ok(setup);
         }
         finally
         {
@@ -189,38 +164,13 @@ public sealed class AccountController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
             }
 
-            // Generate new TOTP
-            var secret = _totpService.GenerateSecret();
-            var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
-            var recoveryCodes = _totpService.GenerateRecoveryCodes();
-
-            user.TotpSecret = secret;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-
-            // Replace any existing recovery codes
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            foreach (var code in recoveryCodes)
-            {
-                _usersContext.RecoveryCodes.Add(new RecoveryCode
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    CodeHash = _totpService.HashRecoveryCode(code),
-                    IsUsed = false
-                });
-            }
+            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
 
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("2FA setup generated for user {Username}", user.Username);
 
-            return Ok(new TotpSetupResponse
-            {
-                Secret = secret,
-                QrCodeUri = qrUri,
-                RecoveryCodes = recoveryCodes
-            });
+            return Ok(setup);
         }
         finally
         {
