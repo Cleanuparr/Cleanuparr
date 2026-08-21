@@ -437,7 +437,13 @@ export async function arrangeLiveInstance(
 
   expect(created.id, 'arrangeLiveInstance').toBeTruthy();
 
-  return { instanceId: created.id, clientId: await createDownloadClient(api) };
+  try {
+    return { instanceId: created.id, clientId: await createDownloadClient(api) };
+  } catch (error) {
+    // afterEach never learns the id, so this is the only chance to drop the instance.
+    await api.arr.deleteInstance('lazylibrarian', created.id);
+    throw error;
+  }
 }
 
 export async function teardownLiveInstance(
