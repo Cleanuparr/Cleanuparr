@@ -472,7 +472,7 @@ export async function createStallRule(
   overrides: Record<string, unknown> = {},
 ): Promise<string> {
   const payload = {
-    name: `live-ll-stall-${Math.random().toString(36).slice(2, 8)}`,
+    name: `live-ll-stall-${crypto.randomUUID().slice(0, 8)}`,
     enabled: true,
     maxStrikes: MIN_MAX_STRIKES,
     privacyType: 'Both',
