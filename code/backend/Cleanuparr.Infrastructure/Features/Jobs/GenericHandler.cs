@@ -126,7 +126,7 @@ public abstract class GenericHandler : IHandler
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "failed to process {type} instance | {url}", config.Type, arrInstance.Url);
+                _logger.LogError(exception, "failed to process {Type} instance | {Url}", config.Type, arrInstance.Url);
 
                 if (throwOnFailure)
                 {
@@ -150,7 +150,7 @@ public abstract class GenericHandler : IHandler
     {
         if (_cache.TryGetValue(downloadRemovalKey, out bool _))
         {
-            _logger.LogDebug("skip removal request | already marked for removal | {title}", record.Title);
+            _logger.LogDebug("skip removal request | already marked for removal | {Title}", record.Title);
             return;
         }
 
@@ -193,7 +193,7 @@ public abstract class GenericHandler : IHandler
             ContextProvider.SetDownloadClient(downloadClient);
         }
 
-        _logger.LogInformation("item marked for removal | {title} | {url}", target.Title, instance.Url);
+        _logger.LogInformation("item marked for removal | {Title} | {Url}", target.Title, instance.Url);
         await _eventPublisher.PublishAsync(EventType.DownloadMarkedForDeletion, "Download marked for deletion", EventSeverity.Important,
             configure: e =>
             {
@@ -277,7 +277,7 @@ public abstract class GenericHandler : IHandler
 
             if (_cache.TryGetValue(downloadRemovalKey, out bool _))
             {
-                _logger.LogDebug("skip | already marked for removal | {title}", decision.Item.Title);
+                _logger.LogDebug("skip | already marked for removal | {Title}", decision.Item.Title);
                 continue;
             }
 
@@ -304,7 +304,7 @@ public abstract class GenericHandler : IHandler
                 // A failed publish must not skip the next decision.
                 _logger.LogError(
                     exception,
-                    "failed to mark item for removal | removed from client: {removed} | {hash} | {title}",
+                    "failed to mark item for removal | removed from client: {Removed} | {Hash} | {Title}",
                     removedFromClient, decision.Item.DownloadId, decision.Item.Title
                 );
             }
@@ -322,7 +322,7 @@ public abstract class GenericHandler : IHandler
         if (decision.Item.WasAdoptedByLazyLibrarian)
         {
             _logger.LogInformation(
-                "keeping torrent | LazyLibrarian adopted it | {title} | {hash}",
+                "keeping torrent | LazyLibrarian adopted it | {Title} | {Hash}",
                 decision.Item.Title, decision.Item.DownloadId
             );
 
@@ -332,7 +332,7 @@ public abstract class GenericHandler : IHandler
         if (decision.DownloadService is null || decision.Torrent is null)
         {
             _logger.LogWarning(
-                "skip lazylibrarian delete | torrent reference unavailable | {title} | {hash}",
+                "skip lazylibrarian delete | torrent reference unavailable | {Title} | {Hash}",
                 decision.Item.Title, decision.Item.DownloadId
             );
 
@@ -343,7 +343,7 @@ public abstract class GenericHandler : IHandler
         {
             await _dryRunInterceptor.InterceptAsync(() => decision.DownloadService.DeleteDownload(decision.Torrent, true));
             _logger.LogInformation(
-                "torrent removed from download client {client} | {title}",
+                "torrent removed from download client {Client} | {Title}",
                 decision.DownloadService.ClientConfig.Name, decision.Item.Title
             );
 
@@ -353,7 +353,7 @@ public abstract class GenericHandler : IHandler
         {
             _logger.LogError(
                 exception,
-                "failed to remove torrent from download client {client} | {hash} | {title}",
+                "failed to remove torrent from download client {Client} | {Hash} | {Title}",
                 decision.DownloadService.ClientConfig.Name, decision.Item.DownloadId, decision.Item.Title
             );
 
@@ -374,11 +374,11 @@ public abstract class GenericHandler : IHandler
                 var downloadService = _downloadServiceFactory.GetDownloadService(config);
                 await downloadService.LoginAsync();
                 downloadServices.Add(downloadService);
-                _logger.LogDebug("Created download service for {name}", config.Name);
+                _logger.LogDebug("Created download service for {Name}", config.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating download service for {name}", config.Name);
+                _logger.LogError(ex, "Error creating download service for {Name}", config.Name);
             }
         }
         
@@ -388,7 +388,7 @@ public abstract class GenericHandler : IHandler
         }
         else
         {
-            _logger.LogDebug("Initialized {count} download clients", downloadServices.Count);
+            _logger.LogDebug("Initialized {Count} download clients", downloadServices.Count);
         }
         
         return downloadServices;

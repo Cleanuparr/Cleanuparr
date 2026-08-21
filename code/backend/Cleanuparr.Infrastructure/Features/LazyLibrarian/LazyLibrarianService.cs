@@ -137,7 +137,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
             throw new LazyLibrarianException($"unrecognized version response | {instance.Url}");
         }
 
-        _logger.LogDebug("Connection test successful for {url}", instance.Url);
+        _logger.LogDebug("Connection test successful for {Url}", instance.Url);
     }
 
     private async Task<List<LazyLibrarianWantedRecord>> GetHistoryAsync(ArrInstance instance)
@@ -153,7 +153,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         }
         catch
         {
-            _logger.LogError("queue list failed | {url}", instance.Url);
+            _logger.LogError("queue list failed | {Url}", instance.Url);
             throw;
         }
 
@@ -201,7 +201,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         }
         catch
         {
-            _logger.LogError("{context} failed | {url} | {title}", context, instance.Url, title);
+            _logger.LogError("{Context} failed | {Url} | {Title}", context, instance.Url, title);
             throw;
         }
     }
@@ -330,7 +330,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         // The body can echo the request URI, which carries the api key.
         string redacted = body.Replace(instance.ApiKey, "***", StringComparison.OrdinalIgnoreCase);
 
-        _logger.LogError("{context} was refused | {url} | {body}", context, instance.Url, redacted);
+        _logger.LogError("{Context} was refused | {Url} | {Body}", context, instance.Url, redacted);
 
         throw new LazyLibrarianException($"{context} failed | {instance.Url}");
     }

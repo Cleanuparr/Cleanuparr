@@ -130,7 +130,7 @@ public class StatusController : ControllerBase
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "health check failed for {type} instance | {url}", type, instance.Url);
+                _logger.LogWarning(ex, "health check failed for {Type} instance | {Url}", type, instance.Url);
                 results.Add(new InstanceConnectionResponse
                 {
                     Name = instance.Name,

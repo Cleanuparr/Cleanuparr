@@ -65,11 +65,11 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
         {
             if (ignoredDownloads.Any(ignored => item.DownloadId.Equals(ignored, StringComparison.OrdinalIgnoreCase)))
             {
-                _logger.LogInformation("skip | download is ignored | {title}", item.Title);
+                _logger.LogInformation("skip | download is ignored | {Title}", item.Title);
                 continue;
             }
 
-            _logger.LogDebug("processing | {title} | {id}", item.Title, item.DownloadId);
+            _logger.LogDebug("processing | {Title} | {Id}", item.Title, item.DownloadId);
 
             // The striker fires inside the download service and notifies from context.
             ContextProvider.Set(ContextProvider.Keys.ItemName, item.Title);
@@ -111,14 +111,14 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "Error checking download {dName} with download client {cName}",
+                _logger.LogError(exception, "Error checking download {DownloadName} with download client {ClientName}",
                     item.Title, downloadService.ClientConfig.Name);
             }
         }
 
         if (!check.Found)
         {
-            _logger.LogWarning("Download not found in any torrent client | {title}", item.Title);
+            _logger.LogWarning("Download not found in any torrent client | {Title}", item.Title);
             return null;
         }
 

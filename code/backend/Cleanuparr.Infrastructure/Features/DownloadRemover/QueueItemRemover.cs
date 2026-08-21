@@ -129,7 +129,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
 
         _logger.LogInformation(
-            "queue item reset in LazyLibrarian with reason {reason} | {url} | {title}",
+            "queue item reset in LazyLibrarian with reason {Reason} | {Url} | {Title}",
             request.DeleteReason.ToString(), request.Instance.Url, target.Title
         );
 
@@ -149,7 +149,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         await _lazyLibrarianService.TriggerSearchAsync(request.Instance, item);
 
         _logger.LogInformation(
-            "book search triggered | {url} | book id: {id}",
+            "book search triggered | {Url} | book id: {Id}",
             request.Instance.Url, string.Join(',', item.Books.Select(book => book.BookId))
         );
     }
@@ -163,7 +163,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         if (!target.RemovedFromClient)
         {
             _logger.LogInformation(
-                "search not triggered | the torrent is still in the download client | {title}",
+                "search not triggered | the torrent is still in the download client | {Title}",
                 target.Title
             );
 
@@ -175,7 +175,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         if (progress is null)
         {
-            _logger.LogWarning("search not triggered | no download progress reported | {title}", target.Title);
+            _logger.LogWarning("search not triggered | no download progress reported | {Title}", target.Title);
             return false;
         }
 
@@ -185,7 +185,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         }
 
         _logger.LogWarning(
-            "search not triggered | LazyLibrarian still reports the snatch | {title} | progress: {progress}",
+            "search not triggered | LazyLibrarian still reports the snatch | {Title} | progress: {Progress}",
             target.Title, progress.Progress
         );
 
@@ -244,7 +244,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         if (!seekerConfig.SearchEnabled)
         {
-            _logger.LogDebug("Search not triggered | {name}", target.Title);
+            _logger.LogDebug("Search not triggered | {Name}", target.Title);
             return false;
         }
 
