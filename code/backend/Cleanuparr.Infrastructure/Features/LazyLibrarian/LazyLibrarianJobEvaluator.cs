@@ -1,5 +1,6 @@
 ﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -57,6 +58,10 @@ public abstract class LazyLibrarianJobEvaluator
             }
 
             _logger.LogDebug("processing | {title} | {id}", item.Title, item.DownloadId);
+
+            // The striker fires inside the download service and notifies from context.
+            ContextProvider.Set(ContextProvider.Keys.ItemName, item.Title);
+            ContextProvider.Set(ContextProvider.Keys.Hash, item.DownloadId);
 
             LazyLibrarianRemovalDecision? decision = await EvaluateItemAsync(item, torrentClients, ignoredDownloads);
 
