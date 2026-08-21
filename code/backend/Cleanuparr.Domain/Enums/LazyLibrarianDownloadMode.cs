@@ -6,7 +6,7 @@ namespace Cleanuparr.Domain.Enums;
 /// The provider type LazyLibrarian recorded for a snatch, from its NZBmode column.
 /// Torrent, Torznab and Magnet go to a torrent client.
 /// </summary>
-[JsonConverter(typeof(LazyLibrarianDownloadModeConverter))]
+[JsonConverter(typeof(TolerantEnumConverter<LazyLibrarianDownloadMode>))]
 public enum LazyLibrarianDownloadMode
 {
     Unknown = 0,

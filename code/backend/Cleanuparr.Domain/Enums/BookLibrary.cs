@@ -4,9 +4,9 @@ namespace Cleanuparr.Domain.Enums;
 
 /// <summary>
 /// The LazyLibrarian library a wanted row belongs to, read from its AuxInfo column.
-/// A magazine row carries an issue date there, so it reads as Unknown.
+/// A magazine issue date or a comic issue key reads as Unknown.
 /// </summary>
-[JsonConverter(typeof(BookLibraryConverter))]
+[JsonConverter(typeof(TolerantEnumConverter<BookLibrary>))]
 public enum BookLibrary
 {
     Unknown = 0,

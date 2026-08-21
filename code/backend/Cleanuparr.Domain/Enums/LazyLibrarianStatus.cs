@@ -5,7 +5,7 @@ namespace Cleanuparr.Domain.Enums;
 /// <summary>
 /// The status of a LazyLibrarian wanted row.
 /// </summary>
-[JsonConverter(typeof(LazyLibrarianStatusConverter))]
+[JsonConverter(typeof(TolerantEnumConverter<LazyLibrarianStatus>))]
 public enum LazyLibrarianStatus
 {
     Unknown = 0,

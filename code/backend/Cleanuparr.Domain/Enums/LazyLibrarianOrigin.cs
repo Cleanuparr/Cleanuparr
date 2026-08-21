@@ -6,7 +6,7 @@ namespace Cleanuparr.Domain.Enums;
 /// Whether LazyLibrarian created the download task itself.
 /// It refuses to remove a task it adopted.
 /// </summary>
-[JsonConverter(typeof(LazyLibrarianOriginConverter))]
+[JsonConverter(typeof(TolerantEnumConverter<LazyLibrarianOrigin>))]
 public enum LazyLibrarianOrigin
 {
     Unknown = 0,

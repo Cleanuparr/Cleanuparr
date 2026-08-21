@@ -5,7 +5,7 @@ namespace Cleanuparr.Domain.Enums;
 /// <summary>
 /// Torrent state values reported by Deluge
 /// </summary>
-[JsonConverter(typeof(DelugeStateConverter))]
+[JsonConverter(typeof(TolerantEnumConverter<DelugeState>))]
 public enum DelugeState
 {
     Unknown = 0,
