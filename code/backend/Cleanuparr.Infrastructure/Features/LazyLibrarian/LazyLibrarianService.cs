@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Json;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -133,7 +134,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
         if (version?.Success is not true)
         {
-            throw new Exception($"unrecognized version response | {instance.Url}");
+            throw new LazyLibrarianException($"unrecognized version response | {instance.Url}");
         }
 
         _logger.LogDebug("Connection test successful for {url}", instance.Url);
@@ -162,7 +163,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
         if (!body.TrimStart().StartsWith('['))
         {
-            throw new Exception($"unrecognized queue list response | {instance.Url}");
+            throw new LazyLibrarianException($"unrecognized queue list response | {instance.Url}");
         }
 
         List<LazyLibrarianWantedRecord>? rows =
@@ -170,7 +171,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
         if (rows is null)
         {
-            throw new Exception($"unrecognized queue list response | {instance.Url}");
+            throw new LazyLibrarianException($"unrecognized queue list response | {instance.Url}");
         }
 
         return rows;
@@ -308,7 +309,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
         if (error?.Success is false)
         {
-            throw new Exception($"{context} failed | {instance.Url} | {error.Error?.Message ?? "unknown error"}");
+            throw new LazyLibrarianException($"{context} failed | {instance.Url} | {error.Error?.Message ?? "unknown error"}");
         }
     }
 
@@ -331,6 +332,6 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
         _logger.LogError("{context} was refused | {url} | {body}", context, instance.Url, redacted);
 
-        throw new Exception($"{context} failed | {instance.Url}");
+        throw new LazyLibrarianException($"{context} failed | {instance.Url}");
     }
 }
