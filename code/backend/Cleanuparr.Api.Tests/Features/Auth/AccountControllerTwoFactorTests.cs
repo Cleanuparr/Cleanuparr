@@ -204,12 +204,13 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         string sharedCode = _recoveryCodes[0];
 
+        const int attempts = 8;
         HttpResponseMessage[] responses = await Task.WhenAll(
-            _client.PostAsJsonAsync("/api/account/2fa/regenerate", new { password = Password, totpCode = sharedCode }),
-            _client.PostAsJsonAsync("/api/account/2fa/regenerate", new { password = Password, totpCode = sharedCode }));
+            Enumerable.Range(0, attempts).Select(_ =>
+                _client.PostAsJsonAsync("/api/account/2fa/regenerate", new { password = Password, totpCode = sharedCode })));
 
         responses.Count(response => response.StatusCode is HttpStatusCode.OK).ShouldBe(1);
-        responses.Count(response => response.StatusCode is HttpStatusCode.BadRequest).ShouldBe(1);
+        responses.Count(response => response.StatusCode is HttpStatusCode.BadRequest).ShouldBe(attempts - 1);
         (await CountRecoveryCodes()).ShouldBe(10);
 
         HttpResponseMessage accepted = responses.First(response => response.StatusCode is HttpStatusCode.OK);
