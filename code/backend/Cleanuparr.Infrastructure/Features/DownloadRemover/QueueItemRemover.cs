@@ -148,7 +148,10 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         await _lazyLibrarianService.TriggerSearchAsync(request.Instance, item);
 
-        _logger.LogInformation("book search triggered | {url} | book id: {id}", request.Instance.Url, item.BookId);
+        _logger.LogInformation(
+            "book search triggered | {url} | book id: {id}",
+            request.Instance.Url, string.Join(',', item.Books.Select(book => book.BookId))
+        );
     }
 
     /// <summary>

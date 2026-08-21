@@ -33,29 +33,29 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         List<LazyLibrarianWantedRecord> rows = await GetHistoryAsync(instance);
         HashSet<string> adoptedHashes = FindAdoptedHashes(rows);
 
-        List<LazyLibrarianQueueItem> items = new();
-
-        foreach (LazyLibrarianWantedRecord row in rows)
-        {
-            if (!IsActionableBook(row))
+        // One torrent can back an ebook row and an audiobook row.
+        // They share the download, so they are one item carrying both books.
+        return rows
+            .Where(IsActionableBook)
+            .GroupBy(row => row.DownloadId!, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new LazyLibrarianQueueItem
             {
-                continue;
-            }
-
-            items.Add(new LazyLibrarianQueueItem
-            {
-                DownloadId = row.DownloadId!,
-                Title = row.Title ?? string.Empty,
-                BookId = row.BookId!,
-                Library = row.Library,
-                Source = row.Source,
-                Origin = adoptedHashes.Contains(row.DownloadId!)
+                DownloadId = group.Key,
+                Title = group.First().Title ?? string.Empty,
+                Books = group
+                    .Select(row => new LazyLibrarianBookRef
+                    {
+                        BookId = row.BookId!,
+                        Library = row.Library,
+                    })
+                    .DistinctBy(book => (book.BookId, book.Library))
+                    .ToList(),
+                Source = group.First().Source,
+                Origin = adoptedHashes.Contains(group.Key)
                     ? LazyLibrarianOrigin.Adopted
                     : LazyLibrarianOrigin.New,
-            });
-        }
-
-        return items;
+            })
+            .ToList();
     }
 
     public async Task<IReadOnlyList<string>> GetClaimedHashesAsync(ArrInstance instance)
@@ -95,18 +95,24 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
     public async Task ResetItemAsync(ArrInstance instance, LazyLibrarianQueueItem item)
     {
-        Uri uri = item.IsAudioBook
-            ? BuildApiUri(instance, "queueBook", ("id", item.BookId), ("type", AudioBookLibrary))
-            : BuildApiUri(instance, "queueBook", ("id", item.BookId));
+        foreach (LazyLibrarianBookRef book in item.Books)
+        {
+            Uri uri = book.IsAudioBook
+                ? BuildApiUri(instance, "queueBook", ("id", book.BookId), ("type", AudioBookLibrary))
+                : BuildApiUri(instance, "queueBook", ("id", book.BookId));
 
-        await SendCommandAsync(instance, uri, "queue item reset", item.Title);
+            await SendCommandAsync(instance, uri, "queue item reset", item.Title);
+        }
     }
 
     public async Task TriggerSearchAsync(ArrInstance instance, LazyLibrarianQueueItem item)
     {
-        Uri uri = BuildApiUri(instance, "searchBook", ("id", item.BookId));
+        foreach (LazyLibrarianBookRef book in item.Books)
+        {
+            Uri uri = BuildApiUri(instance, "searchBook", ("id", book.BookId));
 
-        await SendCommandAsync(instance, uri, "book search", item.Title);
+            await SendCommandAsync(instance, uri, "book search", item.Title);
+        }
     }
 
     public async Task HealthCheckAsync(ArrInstance instance)

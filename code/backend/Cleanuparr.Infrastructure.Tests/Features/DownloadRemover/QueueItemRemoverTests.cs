@@ -107,8 +107,7 @@ public class QueueItemRemoverTests : IDisposable
     {
         DownloadId = "HASH1",
         Title = "A Book",
-        BookId = "OL7353617M",
-        Library = library,
+        Books = [new LazyLibrarianBookRef { BookId = "OL7353617M", Library = library }],
         Source = LazyLibrarianSource.QBittorrent,
         Origin = LazyLibrarianOrigin.New,
     };
@@ -144,6 +143,31 @@ public class QueueItemRemoverTests : IDisposable
 
         // Assert
         await _lazyLibrarianService.Received(1).ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>());
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_KeepsEveryBookSharingTheDownload()
+    {
+        // Arrange: one torrent backs an ebook row and an audiobook row, and both have to come back.
+        StubProgress(-1);
+        LazyLibrarianQueueItem item = CreateBookItem() with
+        {
+            Books =
+            [
+                new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
+                new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
+            ],
+        };
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true, item);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _lazyLibrarianService.Received(1)
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Is<LazyLibrarianQueueItem>(x => x.Books.Count == 2));
+        await _lazyLibrarianService.Received(1)
+            .TriggerSearchAsync(Arg.Any<ArrInstance>(), Arg.Is<LazyLibrarianQueueItem>(x => x.Books.Count == 2));
     }
 
     [Fact]

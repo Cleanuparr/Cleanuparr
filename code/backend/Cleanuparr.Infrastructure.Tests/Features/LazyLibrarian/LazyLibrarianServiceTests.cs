@@ -91,7 +91,7 @@ public class LazyLibrarianServiceTests
         IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
 
         // Assert
-        items.ShouldHaveSingleItem().BookId.ShouldBe(bookId);
+        items.ShouldHaveSingleItem().Books.ShouldHaveSingleItem().BookId.ShouldBe(bookId);
     }
 
     [Theory]
@@ -209,7 +209,7 @@ public class LazyLibrarianServiceTests
         IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
 
         // Assert
-        items.ShouldHaveSingleItem().Library.ShouldBe(expected);
+        items.ShouldHaveSingleItem().Books.ShouldHaveSingleItem().Library.ShouldBe(expected);
     }
 
     [Fact]
@@ -235,8 +235,35 @@ public class LazyLibrarianServiceTests
         IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
 
         // Assert
-        items.Count.ShouldBe(2);
-        items.ShouldAllBe(item => item.WasAdoptedByLazyLibrarian);
+        items.ShouldHaveSingleItem().WasAdoptedByLazyLibrarian.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task GetQueueAsync_GroupsEveryBookSharingTheDownload()
+    {
+        // Arrange: one torrent was snatched for the ebook and the audiobook of two books.
+        RespondWith($"[{Row(bookId: "OL1W", auxInfo: "eBook")},{Row(bookId: "OL2W", auxInfo: "AudioBook")}]");
+
+        // Act
+        IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
+
+        // Assert
+        LazyLibrarianQueueItem item = items.ShouldHaveSingleItem();
+        item.Books.Select(book => (book.BookId, book.Library))
+            .ShouldBe([("OL1W", BookLibrary.EBook), ("OL2W", BookLibrary.AudioBook)]);
+    }
+
+    [Fact]
+    public async Task GetQueueAsync_KeepsEachBookOnce()
+    {
+        // Arrange: LazyLibrarian writes one row per search, so the same book can repeat.
+        RespondWith($"[{Row()},{Row()}]");
+
+        // Act
+        IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
+
+        // Assert
+        items.ShouldHaveSingleItem().Books.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -372,12 +399,67 @@ public class LazyLibrarianServiceTests
         _loggedMessages.ShouldAllBe(message => !message.Contains(ApiKey));
     }
 
-    private static LazyLibrarianQueueItem CreateItem() => new()
+    [Fact]
+    public async Task ResetItemAsync_ResetsEveryBookOnTheDownload()
+    {
+        // Arrange
+        List<Uri> requested = [];
+        _httpMessageHandler.SetupResponse((request, _) =>
+        {
+            requested.Add(request.RequestUri!);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("OK", Encoding.UTF8, "text/plain"),
+            });
+        });
+
+        // Act
+        await _service.ResetItemAsync(_instance, CreateItem(
+        [
+            new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
+            new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
+        ]));
+
+        // Assert: the audio status is separate, so the audiobook carries the type parameter.
+        requested.Select(uri => uri.Query).ShouldBe([
+            $"?apikey={ApiKey}&cmd=queueBook&id=OL1W",
+            $"?apikey={ApiKey}&cmd=queueBook&id=OL2W&type=AudioBook",
+        ]);
+    }
+
+    [Fact]
+    public async Task TriggerSearchAsync_SearchesEveryBookOnTheDownload()
+    {
+        // Arrange
+        List<Uri> requested = [];
+        _httpMessageHandler.SetupResponse((request, _) =>
+        {
+            requested.Add(request.RequestUri!);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("OK", Encoding.UTF8, "text/plain"),
+            });
+        });
+
+        // Act
+        await _service.TriggerSearchAsync(_instance, CreateItem(
+        [
+            new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
+            new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
+        ]));
+
+        // Assert
+        requested.Select(uri => uri.Query).ShouldBe([
+            $"?apikey={ApiKey}&cmd=searchBook&id=OL1W",
+            $"?apikey={ApiKey}&cmd=searchBook&id=OL2W",
+        ]);
+    }
+
+    private static LazyLibrarianQueueItem CreateItem(IReadOnlyList<LazyLibrarianBookRef>? books = null) => new()
     {
         DownloadId = "HASH1",
         Title = "A Book",
-        BookId = "OL7353617M",
-        Library = BookLibrary.EBook,
+        Books = books ?? [new LazyLibrarianBookRef { BookId = "OL7353617M", Library = BookLibrary.EBook }],
         Source = LazyLibrarianSource.QBittorrent,
         Origin = LazyLibrarianOrigin.New,
     };

@@ -1583,8 +1583,7 @@ public class QueueCleanerTests : IDisposable
     {
         DownloadId = "torrent-hash",
         Title = "Book",
-        BookId = "OL7353617M",
-        Library = BookLibrary.EBook,
+        Books = [new LazyLibrarianBookRef { BookId = "OL7353617M", Library = BookLibrary.EBook }],
         Source = LazyLibrarianSource.QBittorrent,
         Origin = origin,
     };
@@ -1645,7 +1644,7 @@ public class QueueCleanerTests : IDisposable
         await _fixture.MessageBus.Received(1).Publish(
             Arg.Is<QueueItemRemoveRequest>(r =>
                 r.LazyTarget().RemovedFromClient
-                && r.LazyTarget().Item.BookId == "OL7353617M"
+                && r.LazyTarget().Item.Books.Single().BookId == "OL7353617M"
                 && r.DeleteReason == DeleteReason.Stalled
             ),
             Arg.Any<CancellationToken>()

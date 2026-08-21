@@ -61,7 +61,7 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
 
         List<LazyLibrarianRemovalDecision> decisions = new();
 
-        foreach (LazyLibrarianQueueItem item in Deduplicate(items))
+        foreach (LazyLibrarianQueueItem item in items)
         {
             if (ignoredDownloads.Any(ignored => item.DownloadId.Equals(ignored, StringComparison.OrdinalIgnoreCase)))
             {
@@ -137,13 +137,4 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
             Torrent = check.Torrent,
         };
     }
-
-    /// <summary>
-    /// One torrent can back an ebook row and an audiobook row.
-    /// Acting on both would strike the same torrent twice.
-    /// </summary>
-    private static IEnumerable<LazyLibrarianQueueItem> Deduplicate(IReadOnlyList<LazyLibrarianQueueItem> items) =>
-        items
-            .GroupBy(item => item.DownloadId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First());
 }
