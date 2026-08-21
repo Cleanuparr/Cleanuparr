@@ -12,5 +12,4 @@ public enum BookLibrary
     Unknown = 0,
     EBook,
     AudioBook,
-    Comic,
 }

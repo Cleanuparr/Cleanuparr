@@ -10,7 +10,4 @@ public sealed record LazyLibrarianDownloadProgress
     /// </summary>
     [JsonPropertyName("progress")]
     public int Progress { get; init; }
-
-    [JsonPropertyName("finished")]
-    public bool Finished { get; init; }
 }
