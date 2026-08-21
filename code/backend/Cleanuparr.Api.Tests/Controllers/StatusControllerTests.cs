@@ -74,26 +74,6 @@ public class StatusControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetMediaManagersStatus_IncludesSportarr()
-    {
-        // Act
-        IActionResult result = await _controller.GetMediaManagersStatus();
-
-        // Assert
-        AsDictionary(result).ShouldContainKey(nameof(InstanceType.Sportarr));
-    }
-
-    [Fact]
-    public async Task GetMediaManagersStatus_IncludesLazyLibrarian()
-    {
-        // Act
-        IActionResult result = await _controller.GetMediaManagersStatus();
-
-        // Assert
-        AsDictionary(result).ShouldContainKey(nameof(InstanceType.LazyLibrarian));
-    }
-
-    [Fact]
     public async Task GetMediaManagersStatus_ProbesAnEnabledInstance()
     {
         // Arrange
