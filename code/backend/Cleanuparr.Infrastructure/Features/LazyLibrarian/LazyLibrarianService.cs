@@ -151,9 +151,9 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         {
             response.EnsureSuccessStatusCode();
         }
-        catch
+        catch (Exception exception)
         {
-            _logger.LogError("queue list failed | {Url}", instance.Url);
+            _logger.LogError(exception, "queue list failed | {Url}", instance.Url);
             throw;
         }
 
@@ -199,9 +199,9 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
                 response.Dispose();
             }
         }
-        catch
+        catch (Exception exception)
         {
-            _logger.LogError("{Context} failed | {Url} | {Title}", context, instance.Url, title);
+            _logger.LogError(exception, "{Context} failed | {Url} | {Title}", context, instance.Url, title);
             throw;
         }
     }
