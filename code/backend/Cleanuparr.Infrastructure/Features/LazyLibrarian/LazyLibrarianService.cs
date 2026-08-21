@@ -321,7 +321,9 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         }
 
         // The body can echo the request URI, which carries the api key.
-        _logger.LogError("{context} was refused | {url} | {body}", context, instance.Url, body);
+        string redacted = body.Replace(instance.ApiKey, "***", StringComparison.OrdinalIgnoreCase);
+
+        _logger.LogError("{context} was refused | {url} | {body}", context, instance.Url, redacted);
 
         throw new Exception($"{context} failed | {instance.Url}");
     }

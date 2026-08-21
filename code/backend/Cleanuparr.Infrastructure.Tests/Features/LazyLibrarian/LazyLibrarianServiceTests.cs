@@ -369,6 +369,7 @@ public class LazyLibrarianServiceTests
         // Assert
         exception.Message.ShouldNotContain(ApiKey);
         exception.Message.ShouldNotContain("html");
+        _loggedMessages.ShouldAllBe(message => !message.Contains(ApiKey));
     }
 
     private static LazyLibrarianQueueItem CreateItem() => new()
