@@ -34,8 +34,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         List<LazyLibrarianWantedRecord> rows = await GetHistoryAsync(instance);
         HashSet<string> adoptedHashes = FindAdoptedHashes(rows);
 
-        // One torrent can back an ebook row and an audiobook row.
-        // They share the download, so they are one item carrying both books.
+        // A shared download resets every book on it, and strikes once.
         return rows
             .Where(IsActionableBook)
             .GroupBy(row => row.DownloadId!, StringComparer.OrdinalIgnoreCase)
