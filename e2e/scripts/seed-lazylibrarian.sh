@@ -211,6 +211,10 @@ snapshot() {
 main() {
   bash "$HERE/scripts/setup-test-data.sh" > /dev/null
 
+  # A running container overwrites config.ini when it stops.
+  log "removing any running lazylibrarian"
+  $COMPOSE rm -sf lazylibrarian > /dev/null 2>&1 || true
+
   write_config_ini "$TEST_DATA/lazylibrarian-config"
 
   log "starting lazylibrarian"
