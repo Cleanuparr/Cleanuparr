@@ -185,10 +185,13 @@ test.describe('QueueCleaner against a live LazyLibrarian', () => {
 
     expect((await api.jobs.trigger('QueueCleaner')).status).toBeLessThan(300);
 
+    await new Promise((resolve) => setTimeout(resolve, STRIKE_SETTLE_MS));
+
     // The stall rule is absent, so a strike here could only come from the failed-import path.
-    await expect
-      .poll(() => strikeCount(api, snatched.downloadId), { timeout: STRIKE_SETTLE_MS })
-      .toBe(0);
+    expect(
+      await strikeCount(api, snatched.downloadId),
+      'the failed-import path must not strike a LazyLibrarian item',
+    ).toBe(0);
 
     expect(await torrentPresent(snatched.downloadId), 'LazyLibrarian handles failed imports itself').toBe(true);
     expect(await liveLazyLibrarian.bookStatus(snatched.bookId)).toBe('Snatched');
