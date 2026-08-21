@@ -5,14 +5,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
-public sealed class LazyLibrarianServiceCB : LazyLibrarianJobEvaluator, ILazyLibrarianServiceCB
+public sealed class LazyLibrarianServiceCB : LazyLibrarianJobEvaluator
 {
     public LazyLibrarianServiceCB(ILogger<LazyLibrarianServiceCB> logger, ILazyLibrarianService lazyLibrarianService)
         : base(logger, lazyLibrarianService)
     {
     }
 
-    protected override async Task<LazyLibrarianCheck> CheckAsync(
+    protected override async Task<ClientVerdict> CheckAsync(
         IDownloadService downloadService,
         string hash,
         IReadOnlyList<string> ignoredDownloads
@@ -21,13 +21,12 @@ public sealed class LazyLibrarianServiceCB : LazyLibrarianJobEvaluator, ILazyLib
         BlockFilesResult result = await downloadService.BlockUnwantedFilesAsync(hash, ignoredDownloads);
         ContentBlockerConfig config = ContextProvider.Get<ContentBlockerConfig>();
 
-        return new LazyLibrarianCheck
-        {
-            Found = result.Found,
-            ShouldRemove = result.ShouldRemove,
-            RemoveFromClient = !result.IsPrivate || config.DeletePrivate,
-            DeleteReason = result.DeleteReason,
-            Torrent = result.Torrent,
-        };
+        return new ClientVerdict(
+            result.Found,
+            result.ShouldRemove,
+            !result.IsPrivate || config.DeletePrivate,
+            result.DeleteReason,
+            result.Torrent
+        );
     }
 }

@@ -59,8 +59,8 @@ public class IntegrationTestFixture : IDisposable
     public INotificationPublisher NotificationPublisher { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public ILazyLibrarianService LazyLibrarianService { get; private set; }
-    public ILazyLibrarianServiceQC LazyLibrarianServiceQC { get; private set; }
-    public ILazyLibrarianServiceCB LazyLibrarianServiceCB { get; private set; }
+    public ILazyLibrarianEvaluator LazyLibrarianServiceQC { get; private set; }
+    public ILazyLibrarianEvaluator LazyLibrarianServiceCB { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
     public IHubContext<AppHub> HubContext { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; } = null!;
@@ -90,8 +90,8 @@ public class IntegrationTestFixture : IDisposable
         NotificationPublisher = Substitute.For<INotificationPublisher>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
-        LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianServiceQC>();
-        LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianServiceCB>();
+        LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianEvaluator>();
+        LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianEvaluator>();
         HubContext = CreateMockHubContext();
 
         SetupDefaults();

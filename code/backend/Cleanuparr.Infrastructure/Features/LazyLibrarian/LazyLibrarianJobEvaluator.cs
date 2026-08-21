@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -12,7 +13,7 @@ namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 /// Asks the torrent clients what to do with each queued item.
 /// The subclass supplies the question its job asks.
 /// </summary>
-public abstract class LazyLibrarianJobEvaluator
+public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
 {
     protected readonly ILogger _logger;
     private readonly ILazyLibrarianService _lazyLibrarianService;
@@ -23,7 +24,18 @@ public abstract class LazyLibrarianJobEvaluator
         _lazyLibrarianService = lazyLibrarianService;
     }
 
-    protected abstract Task<LazyLibrarianCheck> CheckAsync(
+    /// <summary>
+    /// A download client's verdict, normalised across the two jobs.
+    /// </summary>
+    protected readonly record struct ClientVerdict(
+        bool Found,
+        bool ShouldRemove,
+        bool RemoveFromClient,
+        DeleteReason DeleteReason,
+        ITorrentItemWrapper? Torrent
+    );
+
+    protected abstract Task<ClientVerdict> CheckAsync(
         IDownloadService downloadService,
         string hash,
         IReadOnlyList<string> ignoredDownloads
@@ -80,7 +92,7 @@ public abstract class LazyLibrarianJobEvaluator
         IReadOnlyList<string> ignoredDownloads
     )
     {
-        LazyLibrarianCheck check = new();
+        ClientVerdict check = default;
         DownloadClientConfig? foundInClient = null;
         IDownloadService? foundInService = null;
 

@@ -16,6 +16,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using LogContext = Serilog.Context.LogContext;
 
@@ -24,7 +25,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 public sealed class QueueCleaner : GenericHandler
 {
     private readonly IConnectivityChecker _connectivityChecker;
-    private readonly ILazyLibrarianServiceQC _lazyLibrarianService;
+    private readonly ILazyLibrarianEvaluator _lazyLibrarianService;
 
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
@@ -37,7 +38,7 @@ public sealed class QueueCleaner : GenericHandler
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
         IConnectivityChecker connectivityChecker,
-        ILazyLibrarianServiceQC lazyLibrarianService
+        [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor

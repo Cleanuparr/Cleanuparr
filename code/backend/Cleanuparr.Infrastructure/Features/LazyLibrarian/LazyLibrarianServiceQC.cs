@@ -3,14 +3,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
 
-public sealed class LazyLibrarianServiceQC : LazyLibrarianJobEvaluator, ILazyLibrarianServiceQC
+public sealed class LazyLibrarianServiceQC : LazyLibrarianJobEvaluator
 {
     public LazyLibrarianServiceQC(ILogger<LazyLibrarianServiceQC> logger, ILazyLibrarianService lazyLibrarianService)
         : base(logger, lazyLibrarianService)
     {
     }
 
-    protected override async Task<LazyLibrarianCheck> CheckAsync(
+    protected override async Task<ClientVerdict> CheckAsync(
         IDownloadService downloadService,
         string hash,
         IReadOnlyList<string> ignoredDownloads
@@ -18,14 +18,13 @@ public sealed class LazyLibrarianServiceQC : LazyLibrarianJobEvaluator, ILazyLib
     {
         DownloadCheckResult result = await downloadService.ShouldRemoveFromArrQueueAsync(hash, ignoredDownloads);
 
-        return new LazyLibrarianCheck
-        {
-            Found = result.Found,
-            ShouldRemove = result.ShouldRemove,
+        return new ClientVerdict(
+            result.Found,
+            result.ShouldRemove,
             // LazyLibrarian has no post-import category, so a category change cannot apply.
-            RemoveFromClient = !result.IsPrivate || result.DeleteFromClient,
-            DeleteReason = result.DeleteReason,
-            Torrent = result.Torrent,
-        };
+            !result.IsPrivate || result.DeleteFromClient,
+            result.DeleteReason,
+            result.Torrent
+        );
     }
 }
