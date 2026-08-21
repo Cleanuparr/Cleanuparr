@@ -55,6 +55,7 @@ https://cleanuparr.github.io/Cleanuparr/docs/screenshots
 - **Whisparr v2**
 - **Whisparr v3**
 - **Sportarr**
+- **LazyLibrarian**
 
 ### Download Clients (latest version)
 - **qBittorrent**
