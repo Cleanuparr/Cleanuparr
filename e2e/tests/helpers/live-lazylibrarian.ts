@@ -500,10 +500,10 @@ export async function strikeCount(api: CleanuparrApi, downloadId: string): Promi
   expect(response.status).toBeLessThan(300);
 
   const body = await response.json();
-  const rows: Array<Record<string, unknown>> = body.items ?? body.data ?? body ?? [];
+  const rows: Array<{ downloadId?: string; totalStrikes?: number }> = body.items ?? body.data ?? body ?? [];
 
   return rows
-    .filter((row) => String(row.downloadId ?? '').toLowerCase() === downloadId.toLowerCase())
+    .filter((row) => (row.downloadId ?? '').toLowerCase() === downloadId.toLowerCase())
     .reduce((total, row) => total + Number(row.totalStrikes ?? 0), 0);
 }
 
