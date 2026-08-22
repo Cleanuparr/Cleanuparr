@@ -82,6 +82,10 @@ public sealed class UserAgentHeaderPipelineTests
         using HttpClient after = dynamicFactory.CreateClient(Constants.HttpClientOidcAuthName);
 
         after.DefaultRequestHeaders.UserAgent.ToString().ShouldBe(AppUserAgent.Value);
+
+        // The setting reaches the next client, never one already handed out.
+        // Every consumer is scoped or disposes per call, so none outlives a change.
+        before.DefaultRequestHeaders.UserAgent.ShouldBeEmpty();
     }
 
     private static void RegisterRetryClient(IDynamicHttpClientFactory dynamicFactory, bool sendUserAgent) =>
