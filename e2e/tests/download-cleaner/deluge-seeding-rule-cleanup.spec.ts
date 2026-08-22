@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -13,6 +13,7 @@ import {
 } from '../helpers/app-api';
 import { DelugeDriver } from '../helpers/torrent-clients/deluge';
 import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
+import { mkdirShared } from '../helpers/shared-volume';
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const DELUGE_DOWNLOADS = join(HOST_DOWNLOADS, 'deluge');
@@ -81,7 +82,7 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
     resetDirectory(DELUGE_DOWNLOADS);
     await deluge.ready();
     await deluge.clearAllTorrents();

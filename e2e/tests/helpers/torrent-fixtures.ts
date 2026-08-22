@@ -1,6 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { chmodSync, mkdirSync, readdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
+import { readdirSync, rmSync, truncateSync } from 'node:fs';
 import { join } from 'node:path';
+import { mkdirShared, writeFileShared } from './shared-volume';
+
+export { chmodIgnoringEPERM } from './shared-volume';
 
 /**
  * Bencode an arbitrary value. Supports integers, Buffers, strings (utf-8),
@@ -88,12 +91,11 @@ function computePieces(data: Buffer, pieceLength: number): Buffer {
  */
 export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 32_768, announce = 'http://tracker.invalid/announce'): GeneratedTorrent {
   const contentPath = join(savePath, name);
-  mkdirSync(contentPath, { recursive: true });
-  chmodIgnoringEPERM(contentPath, 0o777);
+  mkdirShared(contentPath);
 
   const seed = createHash('sha256').update(`cleanuparr-e2e:${name}`).digest();
   const data = generateDeterministicData(seed, sizeBytes);
-  writeFileSync(join(contentPath, 'data.bin'), data);
+  writeFileShared(join(contentPath, 'data.bin'), data);
 
   const pieceLength = 16384;
   const piecesConcat = computePieces(data, pieceLength);
@@ -136,8 +138,7 @@ export function buildMultiFileTorrent(
   }
 
   const contentPath = join(savePath, name);
-  mkdirSync(contentPath, { recursive: true });
-  chmodIgnoringEPERM(contentPath, 0o777);
+  mkdirShared(contentPath);
 
   const fileBuffers: Buffer[] = [];
   const fileEntries: Array<{ length: number; path: string[] }> = [];
@@ -145,7 +146,7 @@ export function buildMultiFileTorrent(
   for (const { filename, sizeBytes = 16384 } of files) {
     const seed = createHash('sha256').update(`cleanuparr-e2e:${name}:${filename}`).digest();
     const buf = generateDeterministicData(seed, sizeBytes);
-    writeFileSync(join(contentPath, filename), buf);
+    writeFileShared(join(contentPath, filename), buf);
     fileBuffers.push(buf);
     fileEntries.push({ length: buf.length, path: [filename] });
   }
@@ -178,12 +179,11 @@ export function buildMultiFileTorrent(
  * `<savePath>/<fileName>`, so the torrent's on-disk entry is the file itself.
  */
 export function buildSingleFileTorrent(savePath: string, fileName: string, sizeBytes = 32_768, announce = 'http://tracker.invalid/announce'): GeneratedTorrent {
-  mkdirSync(savePath, { recursive: true });
-  chmodIgnoringEPERM(savePath, 0o777);
+  mkdirShared(savePath);
 
   const seed = createHash('sha256').update(`cleanuparr-e2e:${fileName}`).digest();
   const data = generateDeterministicData(seed, sizeBytes);
-  writeFileSync(join(savePath, fileName), data);
+  writeFileShared(join(savePath, fileName), data);
 
   const pieceLength = 16384;
   const piecesConcat = computePieces(data, pieceLength);
@@ -229,13 +229,11 @@ export function buildLargeSparseTorrent(
   }
 
   const contentPath = join(savePath, name);
-  mkdirSync(contentPath, { recursive: true });
-  chmodIgnoringEPERM(contentPath, 0o777);
+  mkdirShared(contentPath);
 
   const dataPath = join(contentPath, 'data.bin');
-  writeFileSync(dataPath, Buffer.alloc(0));
+  writeFileShared(dataPath, Buffer.alloc(0));
   truncateSync(dataPath, sizeBytes);
-  chmodIgnoringEPERM(dataPath, 0o666);
 
   // Each full piece holds the same zeros, and it gets the same hash.
   const fullPieceHash = computePieces(Buffer.alloc(pieceLength), pieceLength);
@@ -267,31 +265,13 @@ export function buildLargeSparseTorrent(
 }
 
 /**
- * `chmodSync` that tolerates EPERM. The torrent-client bind mounts
- * (`test-data/downloads/<client>`) are chowned to PUID=1000 by
- * linuxserver.io entrypoints, while CI's Playwright runner is uid 1001
- * and cannot chmod paths it doesn't own. Mode bits are already 0o777
- * from setup-test-data.sh's `chmod -R a+rwX`, so the chmod is best-effort.
- */
-export function chmodIgnoringEPERM(path: string, mode: number): void {
-  try {
-    chmodSync(path, mode);
-  } catch (err) {
-    if ((err as { code?: string }).code !== 'EPERM') {
-      throw err;
-    }
-  }
-}
-
-/**
  * Wipe and recreate a directory. Used at test setup to reset client data.
  */
 export function resetDirectory(path: string): void {
-  mkdirSync(path, { recursive: true });
+  mkdirShared(path);
   for (const entry of readdirSync(path)) {
     rmSync(join(path, entry), { recursive: true, force: true });
   }
-  chmodIgnoringEPERM(path, 0o777);
 }
 
 /**
@@ -299,8 +279,7 @@ export function resetDirectory(path: string): void {
  * unrelated file that the cleaner should classify as orphaned.
  */
 export function writeRandomFile(dir: string, name: string, sizeBytes = 1024): string {
-  mkdirSync(dir, { recursive: true });
   const path = join(dir, name);
-  writeFileSync(path, randomBytes(sizeBytes));
+  writeFileShared(path, randomBytes(sizeBytes));
   return path;
 }

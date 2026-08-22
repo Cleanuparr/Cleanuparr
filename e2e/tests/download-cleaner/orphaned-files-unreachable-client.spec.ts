@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -12,7 +12,8 @@ import {
   triggerJob,
 } from '../helpers/app-api';
 import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
-import { chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
+import { resetDirectory } from '../helpers/torrent-fixtures';
+import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
 
 /**
  * Regression guard for the orphaned-files cleanup safety bail.
@@ -41,10 +42,9 @@ const APP_SCAN_DIR = `${APP_DOWNLOADS}/${SLUG}`;
 const APP_ORPHANED_DIR = `${APP_DOWNLOADS}/${SLUG}/orphaned`;
 
 function writeFile(dir: string, name: string, content = 'real-download'): string {
-  mkdirSync(dir, { recursive: true });
-  chmodIgnoringEPERM(dir, 0o777);
+  mkdirShared(dir);
   const path = join(dir, name);
-  writeFileSync(path, content);
+  writeFileShared(path, content);
   return path;
 }
 
@@ -75,7 +75,7 @@ test.describe.serial('Orphaned files cleanup — refuses to scan when client dat
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
   });
 
   test.beforeEach(async () => {
@@ -83,8 +83,7 @@ test.describe.serial('Orphaned files cleanup — refuses to scan when client dat
     // download. If the scanner runs incorrectly the file gets moved into
     // HOST_ORPHANED_DIR — that's the regression we're guarding against.
     resetDirectory(HOST_SCAN_DIR);
-    mkdirSync(HOST_ORPHANED_DIR, { recursive: true });
-    chmodIgnoringEPERM(HOST_ORPHANED_DIR, 0o777);
+    mkdirShared(HOST_ORPHANED_DIR);
 
     // Each test registers its own client; remove anything stale.
     const existing = await listDownloadClients(token);

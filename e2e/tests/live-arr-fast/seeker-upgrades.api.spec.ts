@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
+import { rmSync, truncateSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
@@ -15,6 +15,7 @@ import {
   triggerSeeker,
 } from '../helpers/seeker-live';
 import { torznabSearchStub } from '../helpers/mocks/torznab-stubs';
+import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
 
 /**
  * Searching an item that already has a file, because its quality is too low.
@@ -61,9 +62,9 @@ async function importLowQualityFile(): Promise<void> {
   await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, { ...movie, qualityProfileId: HD_1080P_PROFILE });
 
   const folder = movieFolder(movie);
-  mkdirSync(folder, { recursive: true });
+  mkdirShared(folder);
   const file = join(folder, IMPORTED_FILE);
-  writeFileSync(file, Buffer.alloc(0));
+  writeFileShared(file, Buffer.alloc(0));
   truncateSync(file, FILE_SIZE_BYTES);
 
   await RADARR.arr.post('/api/v3/command', { name: 'RescanMovie', movieIds: [RADARR.itemId] });

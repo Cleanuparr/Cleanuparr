@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -15,7 +14,8 @@ import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
 import { TransmissionDriver } from '../helpers/torrent-clients/transmission';
 import { DelugeDriver } from '../helpers/torrent-clients/deluge';
 import { UTorrentDriver } from '../helpers/torrent-clients/utorrent';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
+import { buildFolderTorrent, resetDirectory } from '../helpers/torrent-fixtures';
+import { mkdirShared } from '../helpers/shared-volume';
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const CLIENT_DOWNLOADS = '/downloads';
@@ -76,8 +76,7 @@ interface Scenario {
 
 function buildTorrent(physicalSlug: string, name: string, announce: string, subdir = ''): { metainfo: Buffer; infoHash: string; name: string } {
   const dir = subdir ? join(HOST_DOWNLOADS, physicalSlug, subdir) : join(HOST_DOWNLOADS, physicalSlug);
-  mkdirSync(dir, { recursive: true });
-  chmodIgnoringEPERM(dir, 0o777);
+  mkdirShared(dir);
   const fx = buildFolderTorrent(dir, name, 32_768, announce);
   return { metainfo: fx.metainfo, infoHash: fx.infoHash, name };
 }
@@ -191,7 +190,7 @@ test.describe.serial('Dead torrent cleanup', () => {
       useAdvancedScheduling: dc.useAdvancedScheduling ?? false,
       ignoredDownloads: [],
     });
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
   });
 
   test.afterAll(async () => {
