@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -18,6 +17,7 @@ import {
   chmodIgnoringEPERM,
   resetDirectory,
 } from '../helpers/torrent-fixtures';
+import { mkdirShared } from '../helpers/shared-volume';
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const SUBDIR = 'unlinked-large';
@@ -86,7 +86,7 @@ test.describe.serial('Deluge unlinked cleanup with a large torrent', () => {
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
     resetDirectory(HOST_DIR);
     chmodIgnoringEPERM(HOST_DIR, 0o777);
     await deluge.ready();

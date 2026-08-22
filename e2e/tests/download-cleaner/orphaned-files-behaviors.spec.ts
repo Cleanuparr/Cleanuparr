@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, utimesSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -15,7 +15,8 @@ import {
   OrphanedFilesConfigRequest,
 } from '../helpers/app-api';
 import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
+import { buildFolderTorrent, resetDirectory } from '../helpers/torrent-fixtures';
+import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
 
 /**
  * Behavior-level coverage for the orphaned files cleaner that isn't
@@ -64,10 +65,9 @@ function backdateRecursive(path: string, hoursAgo: number): void {
 }
 
 function writeOrphanFile(dir: string, name: string, content = 'orphan'): string {
-  mkdirSync(dir, { recursive: true });
-  chmodIgnoringEPERM(dir, 0o777);
+  mkdirShared(dir);
   const path = join(dir, name);
-  writeFileSync(path, content);
+  writeFileShared(path, content);
   return path;
 }
 
@@ -119,7 +119,7 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
 
     // Bring up qBittorrent and register it with Cleanuparr.
     await driver.ready();
@@ -127,8 +127,7 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
 
     // Seed the decoy torrent. After the orphaned-files fix, an empty client
     // makes the cleaner bail; the decoy gives it something to consider.
-    mkdirSync(HOST_DECOY_PARENT, { recursive: true });
-    chmodIgnoringEPERM(HOST_DECOY_PARENT, 0o777);
+    mkdirShared(HOST_DECOY_PARENT);
     const decoy = buildFolderTorrent(HOST_DECOY_PARENT, DECOY_NAME);
     await driver.addTorrent({
       metainfo: decoy.metainfo,
@@ -164,8 +163,7 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
   test.beforeEach(async () => {
     // Reset filesystem state before each scenario.
     resetDirectory(HOST_SCAN_DIR);
-    mkdirSync(HOST_ORPHANED_DIR, { recursive: true });
-    chmodIgnoringEPERM(HOST_ORPHANED_DIR, 0o777);
+    mkdirShared(HOST_ORPHANED_DIR);
     // The decoy torrent stays registered between tests so the cleaner has at
     // least one torrent visible; its save path is outside HOST_SCAN_DIR, so
     // every entry created here is unclaimed and treated as orphan.

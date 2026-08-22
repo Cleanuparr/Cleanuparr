@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -13,6 +13,7 @@ import {
 } from '../helpers/app-api';
 import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
 import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
+import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
 
 /**
  * This is a regression test for issue #700. The test moves an orphaned
@@ -79,15 +80,13 @@ test.describe.serial('Orphaned files cleanup — cross-device move', () => {
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
-    mkdirSync(HOST_ORPHANED_MOUNT, { recursive: true });
-    chmodIgnoringEPERM(HOST_ORPHANED_MOUNT, 0o777);
+    mkdirShared(HOST_DOWNLOADS);
+    mkdirShared(HOST_ORPHANED_MOUNT);
 
     await driver.ready();
     await driver.clearAllTorrents();
 
-    mkdirSync(HOST_DECOY_PARENT, { recursive: true });
-    chmodIgnoringEPERM(HOST_DECOY_PARENT, 0o777);
+    mkdirShared(HOST_DECOY_PARENT);
     const decoy = buildFolderTorrent(HOST_DECOY_PARENT, DECOY_NAME);
     await driver.addTorrent({
       metainfo: decoy.metainfo,
@@ -127,9 +126,9 @@ test.describe.serial('Orphaned files cleanup — cross-device move', () => {
 
     const orphanRoot = join(HOST_SCAN_DIR, 'xdev-show');
     const orphanTree = join(orphanRoot, 'season 1');
-    mkdirSync(orphanTree, { recursive: true });
-    writeFileSync(join(orphanTree, 'episode.mkv'), 'episode');
-    writeFileSync(join(HOST_SCAN_DIR, 'loose.bin'), 'loose');
+    mkdirShared(orphanTree);
+    writeFileShared(join(orphanTree, 'episode.mkv'), 'episode');
+    writeFileShared(join(HOST_SCAN_DIR, 'loose.bin'), 'loose');
     chmodIgnoringEPERM(HOST_SCAN_DIR, 0o777);
     chmodIgnoringEPERM(orphanRoot, 0o777);
     chmodIgnoringEPERM(orphanTree, 0o777);

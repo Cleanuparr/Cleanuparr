@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -12,7 +12,8 @@ import {
   triggerJob,
 } from '../helpers/app-api';
 import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
+import { buildFolderTorrent, resetDirectory } from '../helpers/torrent-fixtures';
+import { mkdirShared } from '../helpers/shared-volume';
 
 /**
  * An actively-seeding torrent whose display name
@@ -72,7 +73,7 @@ test.describe.serial('Orphaned files cleanup — content path vs display name', 
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
     await driver.ready();
     await driver.clearAllTorrents();
   });
@@ -81,8 +82,7 @@ test.describe.serial('Orphaned files cleanup — content path vs display name', 
     test.setTimeout(180_000);
 
     resetDirectory(HOST_SCAN_DIR);
-    mkdirSync(HOST_ORPHANED_DIR, { recursive: true });
-    chmodIgnoringEPERM(HOST_ORPHANED_DIR, 0o777);
+    mkdirShared(HOST_ORPHANED_DIR);
 
     const diskName = 'keep-renamed';
     const fx = buildFolderTorrent(HOST_SCAN_DIR, diskName);

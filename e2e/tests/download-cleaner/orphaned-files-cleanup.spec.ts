@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -16,10 +16,10 @@ import {
   buildFolderTorrent,
   buildMultiFileTorrent,
   buildSingleFileTorrent,
-  chmodIgnoringEPERM,
   resetDirectory,
   GeneratedTorrent,
 } from '../helpers/torrent-fixtures';
+import { mkdirShared } from '../helpers/shared-volume';
 
 async function waitForTorrents(
   driver: { listTorrents(): Promise<Array<{ hash: string }>> },
@@ -155,7 +155,7 @@ test.describe.serial('Orphaned files cleanup', () => {
       ignoredDownloads: [],
     });
 
-    mkdirSync(HOST_DOWNLOADS, { recursive: true });
+    mkdirShared(HOST_DOWNLOADS);
   });
 
   for (const fixture of ALL_CLIENTS) {
@@ -207,8 +207,7 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
 
         // Fresh scan dir so a previous layout/run doesn't bleed in.
         resetDirectory(dirs.hostScanDir);
-        mkdirSync(dirs.hostOrphanedDir, { recursive: true });
-        chmodIgnoringEPERM(dirs.hostOrphanedDir, 0o777);
+        mkdirShared(dirs.hostOrphanedDir);
 
         // Wipe client state — the session survives across layouts and would
         // otherwise reject re-adding a torrent or leave stale claims.
