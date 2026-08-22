@@ -167,6 +167,34 @@ public sealed class OidcAuthServiceTests : IDisposable
             () => service.StartAuthorization("https://app.test/api/auth/oidc/callback"));
     }
 
+    [Fact]
+    public async Task StartAuthorization_TakesAFreshClientFromTheFactoryToFetchDiscovery()
+    {
+        OidcAuthService.ClearDiscoveryCache();
+        await EnableOidcInConfig();
+
+        MockHttpMessageHandler handler = CreateDiscoveryHandler();
+        IHttpClientFactory factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("OidcAuth").Returns(_ => new HttpClient(handler));
+
+        OidcAuthService service = new(factory, _usersContext, _logger);
+
+        // Drops the call the constructor made.
+        // What remains is what the discovery fetch asks for.
+        factory.ClearReceivedCalls();
+
+        try
+        {
+            await service.StartAuthorization(MockRedirectUri);
+
+            factory.Received().CreateClient("OidcAuth");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
     #endregion
 
     #region HandleCallback Tests

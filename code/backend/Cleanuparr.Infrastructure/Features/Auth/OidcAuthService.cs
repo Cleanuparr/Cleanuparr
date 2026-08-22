@@ -30,6 +30,7 @@ public sealed class OidcAuthService : IOidcAuthService
     private static readonly Timer CleanupTimer = new(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     #pragma warning restore IDE0052
 
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly HttpClient _httpClient;
     private readonly UsersContext _usersContext;
     private readonly ILogger<OidcAuthService> _logger;
@@ -39,6 +40,7 @@ public sealed class OidcAuthService : IOidcAuthService
         UsersContext usersContext,
         ILogger<OidcAuthService> logger)
     {
+        _httpClientFactory = httpClientFactory;
         _httpClient = httpClientFactory.CreateClient("OidcAuth");
         _usersContext = usersContext;
         _logger = logger;
@@ -277,7 +279,7 @@ public sealed class OidcAuthService : IOidcAuthService
             return new ConfigurationManager<OpenIdConnectConfiguration>(
                 metadataAddress,
                 new OpenIdConnectConfigurationRetriever(),
-                new HttpDocumentRetriever(_httpClient) { RequireHttps = !isLocalhost });
+                new FactoryDocumentRetriever(_httpClientFactory, requireHttps: !isLocalhost));
         });
 
         return await configManager.GetConfigurationAsync();
@@ -489,6 +491,31 @@ public sealed class OidcAuthService : IOidcAuthService
     public static void ClearDiscoveryCache()
     {
         ConfigManagers.Clear();
+    }
+
+    /// <summary>
+    /// Fetches the discovery document with a fresh client on every call.
+    /// <see cref="ConfigManagers"/> is static.
+    /// Holding one client there pins its handler past the factory's rotation window.
+    /// </summary>
+    private sealed class FactoryDocumentRetriever : IDocumentRetriever
+    {
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly bool _requireHttps;
+
+        public FactoryDocumentRetriever(IHttpClientFactory httpClientFactory, bool requireHttps)
+        {
+            _httpClientFactory = httpClientFactory;
+            _requireHttps = requireHttps;
+        }
+
+        public Task<string> GetDocumentAsync(string address, CancellationToken cancel)
+        {
+            HttpClient client = _httpClientFactory.CreateClient("OidcAuth");
+            HttpDocumentRetriever retriever = new(client) { RequireHttps = _requireHttps };
+
+            return retriever.GetDocumentAsync(address, cancel);
+        }
     }
 
     private sealed class OidcFlowState
