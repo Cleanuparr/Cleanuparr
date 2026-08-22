@@ -229,7 +229,6 @@ public sealed class QueueCleaner : GenericHandler
                     bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient);
 
                     await PublishQueueItemRemoveRequest(
-                        downloadRemovalKey,
                         instance,
                         record,
                         group.Count() > 1,
@@ -260,7 +259,6 @@ public sealed class QueueCleaner : GenericHandler
                     bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate);
 
                     await PublishQueueItemRemoveRequest(
-                        downloadRemovalKey,
                         instance,
                         record,
                         group.Count() > 1,

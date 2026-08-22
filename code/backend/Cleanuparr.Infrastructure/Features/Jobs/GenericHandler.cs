@@ -137,7 +137,6 @@ public abstract class GenericHandler : IHandler
     }
 
     protected async Task PublishQueueItemRemoveRequest(
-        string downloadRemovalKey,
         ArrInstance instance,
         QueueRecord record,
         bool isPack,
@@ -148,7 +147,7 @@ public abstract class GenericHandler : IHandler
         bool changeCategory = false
     )
     {
-        if (_cache.TryGetValue(downloadRemovalKey, out bool _))
+        if (_cache.TryGetValue(CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url), out bool _))
         {
             _logger.LogDebug("skip removal request | already marked for removal | {Title}", record.Title);
             return;
@@ -185,7 +184,18 @@ public abstract class GenericHandler : IHandler
             DownloadClient = downloadClient,
         };
 
-        await _messageBus.Publish(removeRequest);
+        string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(target.DownloadId, instance.Url);
+        _cache.Set(downloadRemovalKey, true);
+
+        try
+        {
+            await _messageBus.Publish(removeRequest);
+        }
+        catch
+        {
+            _cache.Remove(downloadRemovalKey);
+            throw;
+        }
 
         // Set context for event
         if (downloadClient is not null)
