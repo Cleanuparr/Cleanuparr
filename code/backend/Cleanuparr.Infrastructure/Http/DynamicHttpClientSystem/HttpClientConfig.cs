@@ -18,4 +18,9 @@ public class HttpClientConfig
     public DecompressionMethods AutomaticDecompression { get; set; } = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
     public CertificateValidationType CertificateValidationType { get; set; } = CertificateValidationType.Enabled;
+
+    /// <summary>
+    /// Whether requests from this client carry a User-Agent header.
+    /// </summary>
+    public bool SendUserAgent { get; set; }
 }

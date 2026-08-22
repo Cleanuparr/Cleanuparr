@@ -75,7 +75,8 @@ public class DynamicHttpClientProvider : IDynamicHttpClientProvider
             httpConfig.HttpTimeout,
             clientType,
             retryConfig,
-            httpConfig.HttpCertificateValidation
+            httpConfig.HttpCertificateValidation,
+            httpConfig.HttpSendUserAgent
         );
 
         // Create and configure the client

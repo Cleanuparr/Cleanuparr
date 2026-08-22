@@ -47,7 +47,8 @@ public class HttpClientConfigurationService : IHostedService
                     MaxRetries = config.HttpMaxRetries,
                     ExcludeUnauthorized = true
                 },
-                config.HttpCertificateValidation
+                config.HttpCertificateValidation,
+                config.HttpSendUserAgent
             );
 
             // Register the Deluge client
@@ -59,9 +60,11 @@ public class HttpClientConfigurationService : IHostedService
                     MaxRetries = config.HttpMaxRetries,
                     ExcludeUnauthorized = true
                 },
-                config.HttpCertificateValidation
+                config.HttpCertificateValidation,
+                config.HttpSendUserAgent
             );
-            
+
+
             _logger.LogInformation("Pre-registered standard HTTP client configurations");
         }
         catch (Exception ex)
