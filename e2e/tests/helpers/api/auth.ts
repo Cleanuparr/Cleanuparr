@@ -27,8 +27,8 @@ export class AuthApi {
     return this.client.post('/api/auth/setup/2fa/generate');
   }
 
-  setupVerify2fa(token: string): Promise<Response> {
-    return this.client.post('/api/auth/setup/2fa/verify', { token });
+  setupVerify2fa(code: string): Promise<Response> {
+    return this.client.post('/api/auth/setup/2fa/verify', { code });
   }
 
   setupComplete(): Promise<Response> {
@@ -39,8 +39,8 @@ export class AuthApi {
     return this.client.post('/api/auth/login', { username, password });
   }
 
-  loginTwoFactor(loginToken: string, code: string): Promise<Response> {
-    return this.client.post('/api/auth/login/2fa', { loginToken, code });
+  loginTwoFactor(loginToken: string, code: string, isRecoveryCode = false): Promise<Response> {
+    return this.client.post('/api/auth/login/2fa', { loginToken, code, isRecoveryCode });
   }
 
   refresh(refreshToken: string): Promise<Response> {

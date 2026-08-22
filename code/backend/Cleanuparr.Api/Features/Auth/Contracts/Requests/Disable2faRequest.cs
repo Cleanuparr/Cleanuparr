@@ -8,6 +8,6 @@ public sealed record Disable2faRequest
     public required string Password { get; init; }
 
     [Required]
-    [StringLength(6, MinimumLength = 6)]
+    [StringLength(32)]
     public required string TotpCode { get; init; }
 }

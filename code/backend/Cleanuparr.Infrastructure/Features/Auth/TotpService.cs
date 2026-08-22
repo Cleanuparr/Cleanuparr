@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Cleanuparr.Persistence.Models.Auth;
 using OtpNet;
 
 namespace Cleanuparr.Infrastructure.Features.Auth;
@@ -7,17 +8,20 @@ public sealed class TotpService : ITotpService
 {
     private const string Issuer = "Cleanuparr";
 
+    /// <inheritdoc/>
     public string GenerateSecret()
     {
         var key = KeyGeneration.GenerateRandomKey(20);
         return Base32Encoding.ToString(key);
     }
 
+    /// <inheritdoc/>
     public string GetQrCodeUri(string secret, string username)
     {
         return $"otpauth://totp/{Uri.EscapeDataString(Issuer)}:{Uri.EscapeDataString(username)}?secret={secret}&issuer={Uri.EscapeDataString(Issuer)}&digits=6&period=30";
     }
 
+    /// <inheritdoc/>
     public bool ValidateCode(string secret, string code)
     {
         if (string.IsNullOrWhiteSpace(code) || code.Length != 6)
@@ -37,6 +41,7 @@ public sealed class TotpService : ITotpService
         }
     }
 
+    /// <inheritdoc/>
     public List<string> GenerateRecoveryCodes(int count = 10)
     {
         var codes = new List<string>(count);
@@ -54,6 +59,7 @@ public sealed class TotpService : ITotpService
         return codes;
     }
 
+    /// <inheritdoc/>
     public string HashRecoveryCode(string code)
     {
         // Normalize: remove dashes and uppercase
@@ -61,6 +67,7 @@ public sealed class TotpService : ITotpService
         return BCrypt.Net.BCrypt.HashPassword(normalized, 10);
     }
 
+    /// <inheritdoc/>
     public bool VerifyRecoveryCode(string code, string hash)
     {
         try
@@ -72,5 +79,17 @@ public sealed class TotpService : ITotpService
         {
             return false;
         }
+    }
+
+    /// <inheritdoc/>
+    public bool VerifySecondFactor(User user, string code)
+    {
+        if (ValidateCode(user.TotpSecret, code))
+        {
+            return true;
+        }
+
+        return user.RecoveryCodes
+            .Any(recoveryCode => !recoveryCode.IsUsed && VerifyRecoveryCode(code, recoveryCode.CodeHash));
     }
 }

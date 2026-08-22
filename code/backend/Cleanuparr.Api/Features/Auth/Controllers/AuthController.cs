@@ -145,39 +145,12 @@ public sealed class AuthController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status409Conflict, "Setup already completed. Use account settings to manage 2FA.");
             }
 
-            // Generate new TOTP secret
-            var secret = _totpService.GenerateSecret();
-            var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
-
-            // Generate recovery codes
-            var recoveryCodes = _totpService.GenerateRecoveryCodes();
-
-            // Store secret (will be finalized on verify)
-            user.TotpSecret = secret;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-
-            // Remove old recovery codes and add new ones
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            foreach (var code in recoveryCodes)
-            {
-                _usersContext.RecoveryCodes.Add(new RecoveryCode
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    CodeHash = _totpService.HashRecoveryCode(code),
-                    IsUsed = false
-                });
-            }
+            // Secret is finalized on verify
+            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
 
             await _usersContext.SaveChangesAsync();
 
-            return Ok(new TotpSetupResponse
-            {
-                Secret = secret,
-                QrCodeUri = qrUri,
-                RecoveryCodes = recoveryCodes
-            });
+            return Ok(setup);
         }
         finally
         {
@@ -704,7 +677,11 @@ public sealed class AuthController : ControllerBase
         await UsersContext.Lock.WaitAsync();
         try
         {
-            foreach (var recoveryCode in user.RecoveryCodes.Where(r => !r.IsUsed))
+            List<RecoveryCode> unusedCodes = await _usersContext.RecoveryCodes
+                .Where(r => r.UserId == user.Id && !r.IsUsed)
+                .ToListAsync();
+
+            foreach (var recoveryCode in unusedCodes)
             {
                 if (_totpService.VerifyRecoveryCode(code, recoveryCode.CodeHash))
                 {

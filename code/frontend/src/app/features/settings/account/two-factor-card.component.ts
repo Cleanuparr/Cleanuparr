@@ -52,7 +52,7 @@ export class TwoFactorCardComponent {
     this.regenerating2fa.set(true);
     this.api.regenerate2fa({
       password: this.twoFaPassword(),
-      totpCode: this.twoFaCode(),
+      totpCode: this.twoFaCode().trim(),
     }).subscribe({
       next: (result) => {
         this.newRecoveryCodes.set(result.recoveryCodes);
@@ -140,7 +140,7 @@ export class TwoFactorCardComponent {
     if (!confirmed) return;
 
     this.disabling2fa.set(true);
-    this.api.disable2fa(this.twoFaPassword(), this.twoFaCode()).subscribe({
+    this.api.disable2fa(this.twoFaPassword(), this.twoFaCode().trim()).subscribe({
       next: () => {
         this.toast.success('Two-factor authentication disabled');
         this.twoFaPassword.set('');
