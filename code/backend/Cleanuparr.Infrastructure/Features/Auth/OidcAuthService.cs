@@ -4,8 +4,10 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Cleanuparr.Infrastructure.Features.Auth.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
@@ -30,6 +32,7 @@ public sealed class OidcAuthService : IOidcAuthService
     private static readonly Timer CleanupTimer = new(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     #pragma warning restore IDE0052
 
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly HttpClient _httpClient;
     private readonly UsersContext _usersContext;
     private readonly ILogger<OidcAuthService> _logger;
@@ -39,7 +42,8 @@ public sealed class OidcAuthService : IOidcAuthService
         UsersContext usersContext,
         ILogger<OidcAuthService> logger)
     {
-        _httpClient = httpClientFactory.CreateClient("OidcAuth");
+        _httpClientFactory = httpClientFactory;
+        _httpClient = httpClientFactory.CreateClient(Constants.HttpClientOidcAuthName);
         _usersContext = usersContext;
         _logger = logger;
     }
@@ -277,7 +281,7 @@ public sealed class OidcAuthService : IOidcAuthService
             return new ConfigurationManager<OpenIdConnectConfiguration>(
                 metadataAddress,
                 new OpenIdConnectConfigurationRetriever(),
-                new HttpDocumentRetriever(_httpClient) { RequireHttps = !isLocalhost });
+                new FactoryDocumentRetriever(_httpClientFactory, requireHttps: !isLocalhost));
         });
 
         return await configManager.GetConfigurationAsync();
@@ -489,35 +493,5 @@ public sealed class OidcAuthService : IOidcAuthService
     public static void ClearDiscoveryCache()
     {
         ConfigManagers.Clear();
-    }
-
-    private sealed class OidcFlowState
-    {
-        public required string State { get; init; }
-        public required string Nonce { get; init; }
-        public required string CodeVerifier { get; init; }
-        public required string RedirectUri { get; init; }
-        public string? InitiatorUserId { get; init; }
-        public required DateTimeOffset CreatedAt { get; init; }
-    }
-
-    private sealed class OidcOneTimeCodeEntry
-    {
-        public required string AccessToken { get; init; }
-        public required string RefreshToken { get; init; }
-        public required int ExpiresIn { get; init; }
-        public required DateTimeOffset CreatedAt { get; init; }
-    }
-
-    private sealed class OidcTokenResponse
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("id_token")]
-        public string IdToken { get; set; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonPropertyName("access_token")]
-        public string AccessToken { get; set; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonPropertyName("token_type")]
-        public string TokenType { get; set; } = string.Empty;
     }
 }

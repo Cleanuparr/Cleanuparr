@@ -95,6 +95,9 @@ Cleanuparr/
 - Use meaningful names - avoid abbreviations unless widely understood
 - Keep services focused - single responsibility principle
 - New integrations go under `Features/` subdirectories (e.g., `Infrastructure/Features/Arr/`)
+- **One type per file** - every class, record, struct and enum lives in its own file, named after it
+- **Split as you go** - when a change touches a file holding several types, split that file as part of the change
+- Exception: a test double used by a single spec may stay nested in that spec; doubles shared across specs go in `TestHelpers/`
 
 ### Frontend (TypeScript/Angular)
 - All components must be **standalone** with **ChangeDetectionStrategy.OnPush**

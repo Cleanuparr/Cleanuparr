@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
+using Cleanuparr.Infrastructure.Features.Auth.Models;
 using Microsoft.IdentityModel.Tokens;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
@@ -165,6 +166,34 @@ public sealed class OidcAuthServiceTests : IDisposable
         // Full flow testing is done in integration tests.
         await Should.ThrowAsync<Exception>(
             () => service.StartAuthorization("https://app.test/api/auth/oidc/callback"));
+    }
+
+    [Fact]
+    public async Task StartAuthorization_TakesAFreshClientFromTheFactoryToFetchDiscovery()
+    {
+        OidcAuthService.ClearDiscoveryCache();
+        await EnableOidcInConfig();
+
+        MockHttpMessageHandler handler = CreateDiscoveryHandler();
+        IHttpClientFactory factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("OidcAuth").Returns(_ => new HttpClient(handler));
+
+        OidcAuthService service = new(factory, _usersContext, _logger);
+
+        // Drops the call the constructor made.
+        // What remains is what the discovery fetch asks for.
+        factory.ClearReceivedCalls();
+
+        try
+        {
+            await service.StartAuthorization(MockRedirectUri);
+
+            factory.Received().CreateClient("OidcAuth");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
     }
 
     #endregion
@@ -723,9 +752,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             .GetField("OneTimeCodes", BindingFlags.NonPublic | BindingFlags.Static)!;
         var oneTimeCodes = oneTimeCodesField.GetValue(null)!;
 
-        var entryType = typeof(OidcAuthService)
-            .GetNestedType("OidcOneTimeCodeEntry", BindingFlags.NonPublic)!;
-        var entry = Activator.CreateInstance(entryType)!;
+        var entry = Activator.CreateInstance(typeof(OidcOneTimeCodeEntry))!;
 
         SetReflectionProperty(entry, "AccessToken", "test-access");
         SetReflectionProperty(entry, "RefreshToken", "test-refresh");
@@ -772,9 +799,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
         var pendingFlows = pendingFlowsField.GetValue(null)!;
 
-        var flowType = typeof(OidcAuthService)
-            .GetNestedType("OidcFlowState", BindingFlags.NonPublic)!;
-        var entry = Activator.CreateInstance(flowType)!;
+        var entry = Activator.CreateInstance(typeof(OidcFlowState))!;
         var key = "capacity-test-" + Guid.NewGuid().ToString("N");
 
         SetReflectionProperty(entry, "State", key);

@@ -16,7 +16,7 @@ public sealed class PlexAuthService : IPlexAuthService
 
     public PlexAuthService(IHttpClientFactory httpClientFactory, ILogger<PlexAuthService> logger)
     {
-        _httpClient = httpClientFactory.CreateClient("PlexAuth");
+        _httpClient = httpClientFactory.CreateClient(Constants.HttpClientPlexAuthName);
         _logger = logger;
         _clientIdentifier = GetOrCreateClientIdentifier();
     }
