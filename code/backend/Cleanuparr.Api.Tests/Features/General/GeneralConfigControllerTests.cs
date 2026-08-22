@@ -69,6 +69,7 @@ public class GeneralConfigControllerTests : IDisposable
             DryRun = false,
             HttpMaxRetries = 5,
             HttpTimeout = 60,
+            HttpSendUserAgent = true,
             StatusCheckEnabled = false,
             EncryptionKey = existing.EncryptionKey,
             IgnoredDownloads = new List<string> { "ignored-item" },
@@ -88,6 +89,7 @@ public class GeneralConfigControllerTests : IDisposable
         saved.DisplaySupportBanner.ShouldBeFalse();
         saved.HttpMaxRetries.ShouldBe((ushort)5);
         saved.HttpTimeout.ShouldBe((ushort)60);
+        saved.HttpSendUserAgent.ShouldBeTrue();
         saved.StrikeInactivityWindowHours.ShouldBe((ushort)48);
         saved.IgnoredDownloads.ShouldContain("ignored-item");
     }

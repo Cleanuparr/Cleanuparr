@@ -22,6 +22,7 @@ export interface GeneralConfig {
   httpMaxRetries: number;
   httpTimeout: number;
   httpCertificateValidation: CertificateValidationType;
+  httpSendUserAgent: boolean;
   statusCheckEnabled: boolean;
   strikeInactivityWindowHours: number;
   historyRetentionDays: number;
