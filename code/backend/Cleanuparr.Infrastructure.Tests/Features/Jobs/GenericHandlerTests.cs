@@ -269,8 +269,6 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     public async Task PublishQueueItemRemoveRequest_AlreadyMarked_SkipsPublish()
     {
         // Arrange
-        const string key = "remove-key";
-        _fixture.Cache.Set(key, true);
         var arrConfig = new ArrConfig { Type = InstanceType.Sonarr, Instances = [] };
         var instance = new ArrInstance
         {
@@ -280,12 +278,13 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             ArrConfig = arrConfig,
             Version = 4f,
         };
+        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
+        _fixture.Cache.Set(CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url), true);
 
         // Act
         await _handler.PublicPublishQueueItemRemoveRequest(
-            key,
             instance,
-            NewRecord(seriesId: 1, episodeId: 2),
+            record,
             isPack: false,
             removeFromClient: true,
             DeleteReason.FailedImport);
@@ -311,7 +310,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Act
         await _handler.PublicPublishQueueItemRemoveRequest(
-            "k1", instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
         await _fixture.MessageBus.Received(1)
@@ -338,7 +337,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Act
         await _handler.PublicPublishQueueItemRemoveRequest(
-            "k1", instance, record, isPack: false, removeFromClient: false, DeleteReason.Stalled);
+            instance, record, isPack: false, removeFromClient: false, DeleteReason.Stalled);
 
         // Assert
         await _fixture.MessageBus.Received(1)
@@ -362,7 +361,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Act
         await _handler.PublicPublishQueueItemRemoveRequest(
-            "k1", instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
         await _fixture.MessageBus.Received(1)
@@ -392,7 +391,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Act
         await _handler.PublicPublishQueueItemRemoveRequest(
-            key, instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
         markedWhenPublished.ShouldBeTrue();
@@ -420,7 +419,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(() => _handler.PublicPublishQueueItemRemoveRequest(
-            key, instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
 
         _fixture.Cache.TryGetValue(key, out bool _).ShouldBeFalse();
     }
@@ -647,7 +646,6 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             => ProcessArrConfigAsync(config, throwOnFailure);
 
         public Task PublicPublishQueueItemRemoveRequest(
-            string key,
             ArrInstance instance,
             QueueRecord record,
             bool isPack,
@@ -656,7 +654,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             bool skipSearch = false,
             DownloadClientConfig? downloadClient = null,
             bool changeCategory = false)
-            => PublishQueueItemRemoveRequest(key, instance, record, isPack, removeFromClient, deleteReason, skipSearch, downloadClient, changeCategory);
+            => PublishQueueItemRemoveRequest(instance, record, isPack, removeFromClient, deleteReason, skipSearch, downloadClient, changeCategory);
 
         public async Task<IReadOnlyList<IDownloadService>> PublicGetInitializedDownloadServicesAsync()
             => await GetInitializedDownloadServicesAsync();
