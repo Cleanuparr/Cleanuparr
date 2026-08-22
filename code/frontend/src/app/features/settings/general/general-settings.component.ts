@@ -37,6 +37,7 @@ interface GeneralSettingsFormModel {
   httpMaxRetries: number | null;
   httpTimeout: number | null;
   httpCertificateValidation: CertificateValidationType;
+  httpSendUserAgent: boolean;
   statusCheckEnabled: boolean;
   ignoredDownloads: string[];
   connectivityCheckEnabled: boolean;
@@ -96,6 +97,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     httpMaxRetries: 3,
     httpTimeout: 30,
     httpCertificateValidation: CertificateValidationType.Enabled,
+    httpSendUserAgent: false,
     statusCheckEnabled: true,
     ignoredDownloads: [],
     connectivityCheckEnabled: false,
@@ -185,6 +187,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
           httpMaxRetries: config.httpMaxRetries,
           httpTimeout: config.httpTimeout,
           httpCertificateValidation: config.httpCertificateValidation,
+          httpSendUserAgent: config.httpSendUserAgent ?? false,
           statusCheckEnabled: config.statusCheckEnabled,
           ignoredDownloads: config.ignoredDownloads ?? [],
           connectivityCheckEnabled: config.connectivityCheckEnabled ?? false,
@@ -233,6 +236,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
       httpMaxRetries: m.httpMaxRetries ?? 3,
       httpTimeout: m.httpTimeout ?? 30,
       httpCertificateValidation: m.httpCertificateValidation as CertificateValidationType,
+      httpSendUserAgent: m.httpSendUserAgent,
       statusCheckEnabled: m.statusCheckEnabled,
       strikeInactivityWindowHours: m.strikeInactivityWindowHours ?? 24,
       historyRetentionDays: m.historyRetentionDays ?? 365,

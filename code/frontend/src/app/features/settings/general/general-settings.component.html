@@ -92,6 +92,12 @@
           hint="Enable or disable certificate validation for HTTPS requests"
           helpKey="general:httpCertificateValidation" />
       </div>
+
+      <div class="form-divider"></div>
+
+      <app-toggle label="Send User-Agent Header" featureId="http-user-agent" [formField]="genForm.httpSendUserAgent"
+        hint="When enabled, outgoing requests identify themselves as Cleanuparr/&lt;version&gt;. Turn this on if a reverse proxy or WAF in front of your *arrs or download clients rejects requests that carry no User-Agent."
+        helpKey="general:httpSendUserAgent" />
     </div>
   </app-card>
 
