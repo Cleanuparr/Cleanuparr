@@ -350,7 +350,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         foreach (SeriesSearchItem item in items)
         {
             SonarrCommand command = item.SearchType is SeriesSearchType.Episode
-                ? FindExistingEpisodeCommand(commands) ?? new() { Name = episodeSearch, EpisodeIds = new() }
+                ? commands.FirstOrDefault(x => x.SearchType is SeriesSearchType.Episode) ?? new() { Name = episodeSearch, EpisodeIds = new() }
                 : new();
 
             switch (item.SearchType)
@@ -378,7 +378,7 @@ public class SonarrClient : ArrClient, ISonarrClient
                     throw new ArgumentOutOfRangeException(nameof(item.SearchType), item.SearchType, null);
             }
 
-            if (item.SearchType is SeriesSearchType.Episode && HasExistingEpisodeCommand(commands))
+            if (item.SearchType is SeriesSearchType.Episode && commands.Any(x => x.SearchType is SeriesSearchType.Episode))
             {
                 // only one command will be generated for episodes search
                 continue;
@@ -390,9 +390,4 @@ public class SonarrClient : ArrClient, ISonarrClient
 
         return commands;
     }
-
-    // kept as-is for Sonarr; see SportarrClient for the episode-scoped override
-    protected virtual SonarrCommand? FindExistingEpisodeCommand(List<SonarrCommand> commands) => commands.FirstOrDefault();
-
-    protected virtual bool HasExistingEpisodeCommand(List<SonarrCommand> commands) => commands.Count > 0;
 }
