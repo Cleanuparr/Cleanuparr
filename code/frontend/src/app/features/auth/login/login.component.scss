@@ -1,3 +1,5 @@
+@use 'alerts' as *;
+
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -38,14 +40,8 @@
 }
 
 .retry-countdown {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  @include retry-countdown;
   margin-bottom: var(--space-4);
-  text-align: center;
 }
 
 .login-form {

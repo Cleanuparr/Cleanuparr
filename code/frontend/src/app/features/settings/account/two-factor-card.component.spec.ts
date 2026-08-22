@@ -34,8 +34,13 @@ describe('TwoFactorCardComponent', () => {
     verifyFails?: boolean;
     disableFails?: boolean;
     regenerateFails?: boolean;
+    rateLimitedSeconds?: number;
     confirmAnswer?: boolean;
   } = {}) {
+    const failure = () =>
+      options.rateLimitedSeconds
+        ? { message: 'Account is locked', retryAfterSeconds: options.rateLimitedSeconds }
+        : new Error('boom');
     const toasts: string[] = [];
     const confirmations: ConfirmOptions[] = [];
     const enablePasswords: string[] = [];
@@ -58,11 +63,11 @@ describe('TwoFactorCardComponent', () => {
             },
             disable2fa: (password: string, totpCode: string) => {
               disableCalls.push([password, totpCode]);
-              return options.disableFails ? throwError(() => new Error('boom')) : of(undefined);
+              return options.disableFails ? throwError(failure) : of(undefined);
             },
             regenerate2fa: (request: Regenerate2faRequest) => {
               regenerateCalls.push(request);
-              return options.regenerateFails ? throwError(() => new Error('boom')) : of(REGENERATED);
+              return options.regenerateFails ? throwError(failure) : of(REGENERATED);
             },
           },
         },
@@ -122,6 +127,11 @@ describe('TwoFactorCardComponent', () => {
     return Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.recovery-code')).map((code) =>
       code.textContent!.trim(),
     );
+  }
+
+  function countdown(fixture: ComponentFixture<HostComponent>): string | null {
+    const element = fixture.nativeElement.querySelector('.retry-countdown') as HTMLElement | null;
+    return element ? element.textContent!.trim() : null;
   }
 
   it('shows the disabled status and no secret until setup is started', () => {
@@ -342,6 +352,59 @@ describe('TwoFactorCardComponent', () => {
 
     expect(secret(fixture)).toBeNull();
     expect(recoveryCodes(fixture)).toEqual([]);
+  });
+
+  it('reports the lockout instead of a credentials hint when disabling is rate limited', async () => {
+    const { fixture, toasts } = setup({ enabled: true, disableFails: true, rateLimitedSeconds: 8 });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
+    await card(fixture).confirmDisable2fa();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:Too many failed attempts. Try again in 8s.']);
+  });
+
+  it('reports the lockout instead of a credentials hint when regenerating is rate limited', async () => {
+    const { fixture, toasts } = setup({ enabled: true, regenerateFails: true, rateLimitedSeconds: 4 });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
+    await card(fixture).confirmRegenerate2fa();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:Too many failed attempts. Try again in 4s.']);
+  });
+
+  it('counts the lockout down and blocks both actions until it expires', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const { fixture } = setup({ enabled: true, disableFails: true, rateLimitedSeconds: 3 });
+
+      type(fixture, 'Enter your password', 'my-password');
+      type(fixture, 'Enter 6-digit code or recovery code', '123456');
+      await card(fixture).confirmDisable2fa();
+      fixture.detectChanges();
+
+      expect(countdown(fixture)).toBe('Try again in 3s');
+      expect(button(fixture, 'Disable 2FA').disabled).toBe(true);
+      expect(button(fixture, 'Regenerate 2FA').disabled).toBe(true);
+
+      vi.advanceTimersByTime(2000);
+      fixture.detectChanges();
+
+      expect(countdown(fixture)).toBe('Try again in 1s');
+
+      vi.advanceTimersByTime(1000);
+      fixture.detectChanges();
+
+      expect(countdown(fixture)).toBeNull();
+      expect(button(fixture, 'Disable 2FA').disabled).toBe(false);
+      expect(button(fixture, 'Regenerate 2FA').disabled).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports a rejected regeneration and shows no new codes', async () => {

@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy, inject, input, output, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, DestroyRef, inject, input, output, signal } from '@angular/core';
+import { createRetryCountdown } from '@shared/utils/retry-countdown';
 import { CardComponent, InputComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { AccountApi } from '@core/api/account.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 
@@ -40,6 +42,10 @@ export class TwoFactorCardComponent {
   // Disable flow
   readonly disabling2fa = signal(false);
 
+  // Retry countdown, shared by the regenerate and disable forms
+  private readonly countdown = createRetryCountdown(inject(DestroyRef));
+  readonly retryCountdown = this.countdown.seconds;
+
   async confirmRegenerate2fa(): Promise<void> {
     const confirmed = await this.confirmService.confirm({
       title: 'Regenerate 2FA',
@@ -63,8 +69,8 @@ export class TwoFactorCardComponent {
         this.twoFaCode.set('');
         this.regenerating2fa.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to regenerate 2FA. Check your password and code.');
+      error: (err) => {
+        this.toast.error(this.rateLimitMessage(err) ?? 'Failed to regenerate 2FA. Check your password and code.');
         this.regenerating2fa.set(false);
       },
     });
@@ -130,6 +136,16 @@ export class TwoFactorCardComponent {
     this.newTotpSecret.set('');
   }
 
+  private rateLimitMessage(err: unknown): string | null {
+    const retryAfter = (err as ApiError)?.retryAfterSeconds;
+    if (!retryAfter || retryAfter <= 0) {
+      return null;
+    }
+
+    this.countdown.start(retryAfter);
+    return `Too many failed attempts. Try again in ${retryAfter}s.`;
+  }
+
   async confirmDisable2fa(): Promise<void> {
     const confirmed = await this.confirmService.confirm({
       title: 'Disable 2FA',
@@ -148,8 +164,8 @@ export class TwoFactorCardComponent {
         this.disabling2fa.set(false);
         this.changed.emit();
       },
-      error: () => {
-        this.toast.error('Failed to disable 2FA. Check your password and code.');
+      error: (err) => {
+        this.toast.error(this.rateLimitMessage(err) ?? 'Failed to disable 2FA. Check your password and code.');
         this.disabling2fa.set(false);
       },
     });

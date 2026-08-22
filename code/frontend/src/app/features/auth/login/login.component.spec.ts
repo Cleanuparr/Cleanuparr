@@ -207,6 +207,30 @@ describe('LoginComponent', () => {
     expect(navigations).toEqual([]);
   });
 
+  it('counts down when the server rate limits the second factor step', () => {
+    vi.useFakeTimers();
+    const { fixture } = setup({
+      login: of({ requiresTwoFactor: true, loginToken: 'login-token' }),
+      verify2fa: throwError(() => ({ message: 'Account is locked', retryAfterSeconds: 2 })),
+    });
+    const component = fixture.componentInstance;
+
+    component.submitLogin();
+    component.totpCode.set('000000');
+    fixture.detectChanges();
+
+    component.submit2fa();
+    fixture.detectChanges();
+
+    expect(component.retryCountdown()).toBe(2);
+    expect(errorText(fixture)).toBe('Account is locked');
+
+    vi.advanceTimersByTime(2000);
+    fixture.detectChanges();
+
+    expect(component.retryCountdown()).toBe(0);
+  });
+
   it('hides the Plex and OIDC entry points when the server does not offer them', () => {
     const { fixture } = setup();
 

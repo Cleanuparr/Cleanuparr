@@ -27,6 +27,7 @@ public sealed class AuthController : ControllerBase
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
     private readonly IOidcAuthService _oidcAuthService;
+    private readonly LoginAttemptTracker _loginAttemptTracker;
     private readonly ILogger<AuthController> _logger;
     private readonly IWebHostEnvironment _environment;
 
@@ -38,6 +39,7 @@ public sealed class AuthController : ControllerBase
         ITotpService totpService,
         IPlexAuthService plexAuthService,
         IOidcAuthService oidcAuthService,
+        LoginAttemptTracker loginAttemptTracker,
         ILogger<AuthController> logger,
         IWebHostEnvironment environment)
     {
@@ -48,6 +50,7 @@ public sealed class AuthController : ControllerBase
         _totpService = totpService;
         _plexAuthService = plexAuthService;
         _oidcAuthService = oidcAuthService;
+        _loginAttemptTracker = loginAttemptTracker;
         _logger = logger;
         _environment = environment;
     }
@@ -242,55 +245,66 @@ public sealed class AuthController : ControllerBase
 
         // Always verify the submitted password to prevent timing-based username enumeration
         var userHasPassword = user?.PasswordHash is not null;
-        var passwordHash = user?.PasswordHash ?? _passwordService.DummyHash;
-        var passwordValid = _passwordService.VerifyPassword(request.Password, passwordHash) && userHasPassword;
+        var verifiedHash = user?.PasswordHash ?? _passwordService.DummyHash;
+        var passwordValid = _passwordService.VerifyPassword(request.Password, verifiedHash) && userHasPassword;
 
         if (user is null || !user.SetupCompleted)
         {
             return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials");
         }
 
-        // Check lockout
-        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
+        await UsersContext.Lock.WaitAsync();
+
+        try
         {
-            int remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalSeconds);
-            throw new RateLimitException("Account is locked", remaining);
-        }
+            User current = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
 
-        if (!passwordValid || !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
-        {
-            int retryAfterSeconds = await IncrementFailedAttempts(user.Id);
-            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials",
-                extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
-        }
+            // Check lockout
+            if (LoginAttemptTracker.GetLockoutSecondsRemaining(current) is { } remaining)
+            {
+                throw new RateLimitException("Account is locked", remaining);
+            }
 
-        // Reset failed attempts on successful password verification
-        await ResetFailedAttempts(user.Id);
+            bool credentialsValid = passwordValid
+                && string.Equals(current.Username, request.Username, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(current.PasswordHash, verifiedHash, StringComparison.Ordinal);
 
-        // If 2FA is not enabled, issue tokens directly
-        if (!user.TotpEnabled)
-        {
-            // Re-fetch with tracking since the query above used AsNoTracking
-            var trackedUser = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
-            var tokenResponse = await GenerateTokenResponse(trackedUser);
+            if (!credentialsValid)
+            {
+                int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(current.Id);
+                return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials",
+                    extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
+            }
 
-            _logger.LogInformation("User {Username} logged in (2FA disabled)", user.Username);
+            // If 2FA is not enabled, issue tokens directly
+            if (!current.TotpEnabled)
+            {
+                await _loginAttemptTracker.ResetFailedAttempts(current.Id);
+
+                var tokenResponse = await GenerateTokenResponse(current);
+
+                _logger.LogInformation("User {Username} logged in (2FA disabled)", current.Username);
+
+                return Ok(new LoginResponse
+                {
+                    RequiresTwoFactor = false,
+                    Tokens = tokenResponse
+                });
+            }
+
+            // Password valid - require 2FA
+            var loginToken = _jwtService.GenerateLoginToken(current.Id);
 
             return Ok(new LoginResponse
             {
-                RequiresTwoFactor = false,
-                Tokens = tokenResponse
+                RequiresTwoFactor = true,
+                LoginToken = loginToken
             });
         }
-
-        // Password valid - require 2FA
-        var loginToken = _jwtService.GenerateLoginToken(user.Id);
-
-        return Ok(new LoginResponse
+        finally
         {
-            RequiresTwoFactor = true,
-            LoginToken = loginToken
-        });
+            UsersContext.Lock.Release();
+        }
     }
 
     [HttpPost("login/2fa")]
@@ -307,32 +321,50 @@ public sealed class AuthController : ControllerBase
             return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid or expired login token");
         }
 
-        var user = await _usersContext.Users
-            .Include(u => u.RecoveryCodes)
-            .FirstOrDefaultAsync(u => u.Id == userId.Value);
+        await UsersContext.Lock.WaitAsync();
 
-        if (user is null)
+        try
         {
-            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid login token");
+            var user = await _usersContext.Users
+                .Include(u => u.RecoveryCodes)
+                .FirstOrDefaultAsync(u => u.Id == userId.Value);
+
+            if (user is null)
+            {
+                return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid login token");
+            }
+
+            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            {
+                throw new RateLimitException("Account is locked", remaining);
+            }
+
+            bool codeValid;
+
+            if (request.IsRecoveryCode)
+            {
+                codeValid = await TryUseRecoveryCode(user, request.Code);
+            }
+            else
+            {
+                codeValid = _totpService.ValidateCode(user.TotpSecret, request.Code);
+            }
+
+            if (!codeValid)
+            {
+                int retryAfterSeconds = await _loginAttemptTracker.IncrementFailedAttempts(user.Id);
+                return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid verification code",
+                    extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
+            }
+
+            await _loginAttemptTracker.ResetFailedAttempts(user.Id);
+
+            return Ok(await GenerateTokenResponse(user));
         }
-
-        bool codeValid;
-
-        if (request.IsRecoveryCode)
+        finally
         {
-            codeValid = await TryUseRecoveryCode(user, request.Code);
+            UsersContext.Lock.Release();
         }
-        else
-        {
-            codeValid = _totpService.ValidateCode(user.TotpSecret, request.Code);
-        }
-
-        if (!codeValid)
-        {
-            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid verification code");
-        }
-
-        return Ok(await GenerateTokenResponse(user));
     }
 
     [HttpPost("refresh")]
@@ -672,71 +704,30 @@ public sealed class AuthController : ControllerBase
         };
     }
 
+    /// <summary>
+    /// Claims an unused recovery code.
+    /// Call this while holding <see cref="UsersContext.Lock"/>.
+    /// </summary>
     private async Task<bool> TryUseRecoveryCode(User user, string code)
     {
-        await UsersContext.Lock.WaitAsync();
-        try
-        {
-            List<RecoveryCode> unusedCodes = await _usersContext.RecoveryCodes
-                .Where(r => r.UserId == user.Id && !r.IsUsed)
-                .ToListAsync();
+        List<RecoveryCode> unusedCodes = await _usersContext.RecoveryCodes
+            .Where(r => r.UserId == user.Id && !r.IsUsed)
+            .ToListAsync();
 
-            foreach (var recoveryCode in unusedCodes)
+        foreach (var recoveryCode in unusedCodes)
+        {
+            if (_totpService.VerifyRecoveryCode(code, recoveryCode.CodeHash))
             {
-                if (_totpService.VerifyRecoveryCode(code, recoveryCode.CodeHash))
-                {
-                    recoveryCode.IsUsed = true;
-                    recoveryCode.UsedAt = DateTimeOffset.UtcNow;
-                    await _usersContext.SaveChangesAsync();
+                recoveryCode.IsUsed = true;
+                recoveryCode.UsedAt = DateTimeOffset.UtcNow;
+                await _usersContext.SaveChangesAsync();
 
-                    _logger.LogWarning("Recovery code used for user {Username}", user.Username);
-                    return true;
-                }
+                _logger.LogWarning("Recovery code used for user {Username}", user.Username);
+                return true;
             }
+        }
 
-            return false;
-        }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
-    }
-
-    private async Task<int> IncrementFailedAttempts(Guid userId)
-    {
-        await UsersContext.Lock.WaitAsync();
-        try
-        {
-            var user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
-            user.FailedLoginAttempts++;
-            user.LockoutEnd = DateTimeOffset.UtcNow.AddSeconds(user.FailedLoginAttempts * 2);
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogWarning("Failed login attempt {Attempts} for user {Username}, locked for {Seconds}s",
-                user.FailedLoginAttempts, user.Username, user.FailedLoginAttempts * 2);
-
-            return user.FailedLoginAttempts * 2;
-        }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
-    }
-
-    private async Task ResetFailedAttempts(Guid userId)
-    {
-        await UsersContext.Lock.WaitAsync();
-        try
-        {
-            var user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
-            user.FailedLoginAttempts = 0;
-            user.LockoutEnd = null;
-            await _usersContext.SaveChangesAsync();
-        }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
+        return false;
     }
 
     private static string GenerateApiKey()

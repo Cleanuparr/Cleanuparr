@@ -25,12 +25,32 @@ async function isTwoFactorEnabled(api: CleanuparrApi): Promise<boolean> {
   return account.twoFactorEnabled;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Waits for the lockout to end. Password login shares the same counter. */
+async function waitOutLockout(response: Response): Promise<void> {
+  const body = await response.clone().json();
+  const seconds = body.retryAfterSeconds ?? 2;
+  await sleep(seconds * 1000 + 500);
+}
+
 /** Turns 2FA off again to keep the folder baseline when a test fails. */
 async function forceDisable(api: CleanuparrApi, setup: TwoFactorSetup): Promise<void> {
   if (!(await isTwoFactorEnabled(api))) {
     return;
   }
-  await api.account.disable2fa(TEST_CONFIG.adminPassword, generateTotpCode(setup.secret));
+
+  const first = await api.account.disable2fa(TEST_CONFIG.adminPassword, generateTotpCode(setup.secret));
+  if (first.ok) {
+    return;
+  }
+
+  await waitOutLockout(first);
+
+  const second = await api.account.disable2fa(TEST_CONFIG.adminPassword, generateTotpCode(setup.secret));
+  expect(second.ok).toBe(true);
 }
 
 /** Signs in with a recovery code and returns a client for that session. The code is used up. */
@@ -117,12 +137,60 @@ test.describe('Account — 2FA with recovery codes', () => {
       expect(rejected.status).toBe(400);
       expect(await isTwoFactorEnabled(api)).toBe(true);
 
+      await waitOutLockout(rejected);
+
       const disable = await api.account.disable2fa(
         TEST_CONFIG.adminPassword,
         generateTotpCode(setup.secret),
       );
       expect(disable.status).toBe(200);
       expect(await isTwoFactorEnabled(api)).toBe(false);
+    } finally {
+      await forceDisable(api, setup);
+    }
+  });
+
+  test('repeated bad codes are rate limited', async ({ api }) => {
+    const setup = await enableTwoFactor(api);
+
+    try {
+      const first = await api.account.disable2fa(TEST_CONFIG.adminPassword, 'ZZZZ-ZZZZ');
+      expect(first.status).toBe(400);
+      expect((await first.clone().json()).retryAfterSeconds).toBeGreaterThan(0);
+
+      const second = await api.account.disable2fa(TEST_CONFIG.adminPassword, 'ZZZZ-ZZZZ');
+      expect(second.status).toBe(429);
+      expect(await isTwoFactorEnabled(api)).toBe(true);
+
+      await waitOutLockout(second);
+
+      const disable = await api.account.disable2fa(
+        TEST_CONFIG.adminPassword,
+        generateTotpCode(setup.secret),
+      );
+      expect(disable.status).toBe(200);
+    } finally {
+      await forceDisable(api, setup);
+    }
+  });
+
+  test('repeated bad codes at the 2FA login step are rate limited', async ({ api, anonymousApi }) => {
+    const setup = await enableTwoFactor(api);
+
+    try {
+      const login = await anonymousApi.auth.login(TEST_CONFIG.adminUsername, TEST_CONFIG.adminPassword);
+      expect(login.status).toBe(200);
+
+      const loginToken = (await login.json()).loginToken;
+
+      const first = await anonymousApi.auth.loginTwoFactor(loginToken, '000000');
+      expect(first.status).toBe(401);
+      expect((await first.clone().json()).retryAfterSeconds).toBeGreaterThan(0);
+
+      const second = await anonymousApi.auth.loginTwoFactor(loginToken, '000000');
+      expect(second.status).toBe(429);
+
+      await waitOutLockout(second);
     } finally {
       await forceDisable(api, setup);
     }

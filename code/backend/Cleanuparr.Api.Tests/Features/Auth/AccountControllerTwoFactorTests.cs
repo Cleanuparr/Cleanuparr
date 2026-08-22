@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -156,6 +157,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         disableResponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await IsTwoFactorEnabled()).ShouldBeTrue();
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(6)]
@@ -169,6 +172,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await IsTwoFactorEnabled()).ShouldBeTrue();
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(7)]
@@ -182,6 +187,8 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await IsTwoFactorEnabled()).ShouldBeTrue();
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(8)]
@@ -197,6 +204,101 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         (await IsTwoFactorEnabled()).ShouldBeFalse();
     }
 
+    [Fact, TestPriority(9)]
+    public async Task Disable2fa_WithRepeatedBadCodes_EventuallyRateLimits()
+    {
+        await EnableTwoFactor();
+
+        try
+        {
+            var first = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+            {
+                password = Password,
+                totpCode = "ZZZZ-ZZZZ"
+            });
+
+            first.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+            var firstBody = await first.Content.ReadFromJsonAsync<JsonElement>();
+            firstBody.GetProperty("retryAfterSeconds").GetInt32().ShouldBeGreaterThan(0);
+
+            var second = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+            {
+                password = Password,
+                totpCode = "ZZZZ-ZZZZ"
+            });
+
+            second.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+            (await IsTwoFactorEnabled()).ShouldBeTrue();
+        }
+        finally
+        {
+            await ClearLockout();
+        }
+    }
+
+    [Fact, TestPriority(10)]
+    public async Task Disable2fa_AfterLockoutCleared_ResetsTheCounterOnSuccess()
+    {
+        await SeedFailedAttempts(3);
+
+        var response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+        {
+            password = Password,
+            totpCode = TotpTestHelper.GenerateTotpCode(_secret)
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await IsTwoFactorEnabled()).ShouldBeFalse();
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        var user = await context.Users.FirstAsync();
+
+        user.FailedLoginAttempts.ShouldBe(0);
+        user.LockoutEnd.ShouldBeNull();
+    }
+
+    [Fact, TestPriority(11)]
+    public async Task Login_WithTwoFactorEnabled_KeepsTheFailedAttemptCounter()
+    {
+        await EnableTwoFactor();
+
+        try
+        {
+            await SeedFailedAttempts(3);
+
+            await RequestLoginToken();
+
+            (await ReadFailedAttempts()).ShouldBe(3);
+        }
+        finally
+        {
+            await ClearLockout();
+            await DisableTwoFactor();
+        }
+    }
+
+    [Fact, TestPriority(12)]
+    public async Task Login_WithConcurrentWrongPasswords_LocksOutTheSecondRequest()
+    {
+        await ClearLockout();
+
+        try
+        {
+            HttpResponseMessage[] responses = await Task.WhenAll(
+                _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username = Username, password = "WrongPassword123!" }),
+                _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username = Username, password = "WrongPassword123!" }));
+
+            responses.Count(response => response.StatusCode is HttpStatusCode.Unauthorized).ShouldBe(1);
+            responses.Count(response => response.StatusCode is HttpStatusCode.TooManyRequests).ShouldBe(1);
+        }
+        finally
+        {
+            await ClearLockout();
+        }
+    }
+
     [Fact, TestPriority(20)]
     public async Task Regenerate2fa_WhenIssuedConcurrently_AppliesOnce()
     {
@@ -209,14 +311,17 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
             Enumerable.Range(0, attempts).Select(_ =>
                 _client.PostAsJsonAsync("/api/account/2fa/regenerate", new { password = Password, totpCode = sharedCode })));
 
+        // Losers are rejected as a spent code or as a lockout, depending on which increment lands first
         responses.Count(response => response.StatusCode is HttpStatusCode.OK).ShouldBe(1);
-        responses.Count(response => response.StatusCode is HttpStatusCode.BadRequest).ShouldBe(attempts - 1);
+        responses.Count(response => response.StatusCode is not HttpStatusCode.OK).ShouldBe(attempts - 1);
         (await CountRecoveryCodes()).ShouldBe(10);
 
         HttpResponseMessage accepted = responses.First(response => response.StatusCode is HttpStatusCode.OK);
         JsonElement body = await accepted.Content.ReadFromJsonAsync<JsonElement>();
         _secret = body.GetProperty("secret").GetString()!;
         _recoveryCodes = ReadRecoveryCodes(body);
+
+        await ClearLockout();
     }
 
     [Fact, TestPriority(21)]
@@ -232,6 +337,34 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
             _factory.CreateClient().PostAsJsonAsync("/api/auth/login/2fa", new { loginToken = secondToken, code = sharedCode, isRecoveryCode = true }));
 
         responses.Count(response => response.StatusCode is HttpStatusCode.OK).ShouldBe(1);
+
+        await ClearLockout();
+    }
+
+    [Fact, TestPriority(22)]
+    public async Task Disable2fa_WithConcurrentBadCodes_LocksOutTheSecondRequest()
+    {
+        if (!await IsTwoFactorEnabled())
+        {
+            await EnableTwoFactor();
+        }
+
+        await ClearLockout();
+
+        try
+        {
+            HttpResponseMessage[] responses = await Task.WhenAll(
+                _client.PostAsJsonAsync("/api/account/2fa/disable", new { password = Password, totpCode = "ZZZZ-ZZZZ" }),
+                _client.PostAsJsonAsync("/api/account/2fa/disable", new { password = Password, totpCode = "ZZZZ-ZZZZ" }));
+
+            responses.Count(response => response.StatusCode is HttpStatusCode.BadRequest).ShouldBe(1);
+            responses.Count(response => response.StatusCode is HttpStatusCode.TooManyRequests).ShouldBe(1);
+            (await IsTwoFactorEnabled()).ShouldBeTrue();
+        }
+        finally
+        {
+            await ClearLockout();
+        }
     }
 
     private async Task<string> RequestLoginToken()
@@ -257,6 +390,36 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         return await context.RecoveryCodes.CountAsync();
     }
 
+    private async Task SeedFailedAttempts(int attempts)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        User user = await context.Users.FirstAsync();
+
+        user.FailedLoginAttempts = attempts;
+        user.LockoutEnd = null;
+        await context.SaveChangesAsync();
+    }
+
+    private async Task<int> ReadFailedAttempts()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+        return (await context.Users.AsNoTracking().FirstAsync()).FailedLoginAttempts;
+    }
+
+    private async Task ClearLockout()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        var user = await context.Users.FirstAsync();
+
+        user.FailedLoginAttempts = 0;
+        user.LockoutEnd = null;
+        await context.SaveChangesAsync();
+    }
+
     private async Task EnableTwoFactor()
     {
         var enableResponse = await _client.PostAsJsonAsync("/api/account/2fa/enable", new
@@ -275,6 +438,16 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
             code = TotpTestHelper.GenerateTotpCode(_secret)
         });
         verifyResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    private async Task DisableTwoFactor()
+    {
+        HttpResponseMessage response = await _client.PostAsJsonAsync("/api/account/2fa/disable", new
+        {
+            password = Password,
+            totpCode = TotpTestHelper.GenerateTotpCode(_secret)
+        });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     private async Task<bool> IsTwoFactorEnabled()
