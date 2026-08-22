@@ -73,9 +73,10 @@ public class WhisparrV2ClientTests
         };
 
         // Act
-        await _client.SearchItemsAsync(_arrInstance, items);
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
 
         // Assert
+        ids.ShouldBe(new long[] { 1 });
         var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
         posts.Count.ShouldBe(1);
         var body = _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(posts[0])];
