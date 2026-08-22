@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
@@ -41,7 +42,7 @@ public sealed class OidcAuthService : IOidcAuthService
         ILogger<OidcAuthService> logger)
     {
         _httpClientFactory = httpClientFactory;
-        _httpClient = httpClientFactory.CreateClient("OidcAuth");
+        _httpClient = httpClientFactory.CreateClient(Constants.HttpClientOidcAuthName);
         _usersContext = usersContext;
         _logger = logger;
     }
@@ -511,7 +512,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
         public Task<string> GetDocumentAsync(string address, CancellationToken cancel)
         {
-            HttpClient client = _httpClientFactory.CreateClient("OidcAuth");
+            HttpClient client = _httpClientFactory.CreateClient(Constants.HttpClientOidcAuthName);
             HttpDocumentRetriever retriever = new(client) { RequireHttps = _requireHttps };
 
             return retriever.GetDocumentAsync(address, cancel);

@@ -10,6 +10,10 @@ public static class Constants
 
     public const string HttpClientWithRetryName = "retry";
 
+    public const string HttpClientPlexAuthName = "PlexAuth";
+
+    public const string HttpClientOidcAuthName = "OidcAuth";
+
     public static readonly MemoryCacheEntryOptions DefaultCacheEntryOptions = new()
     {
         SlidingExpiration = TimeSpan.FromMinutes(10)

@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
+using Cleanuparr.Shared.Helpers;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -75,10 +76,10 @@ public static class MainDI
         services.AddSingleton<IDynamicHttpClientProvider, DynamicHttpClientProvider>();
 
         // Add HTTP client for Plex authentication
-        services.AddHttpClient("PlexAuth");
+        services.AddHttpClient(Constants.HttpClientPlexAuthName);
 
         // Add HTTP client for OIDC authentication
-        services.AddHttpClient("OidcAuth");
+        services.AddHttpClient(Constants.HttpClientOidcAuthName);
 
         return services;
     }
