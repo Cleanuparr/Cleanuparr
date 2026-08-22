@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Cleanuparr.Infrastructure.Features.Auth.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
 using Cleanuparr.Shared.Helpers;
@@ -492,60 +493,5 @@ public sealed class OidcAuthService : IOidcAuthService
     public static void ClearDiscoveryCache()
     {
         ConfigManagers.Clear();
-    }
-
-    /// <summary>
-    /// Fetches the discovery document with a fresh client on every call.
-    /// <see cref="ConfigManagers"/> is static.
-    /// Holding one client there pins its handler past the factory's rotation window.
-    /// </summary>
-    private sealed class FactoryDocumentRetriever : IDocumentRetriever
-    {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly bool _requireHttps;
-
-        public FactoryDocumentRetriever(IHttpClientFactory httpClientFactory, bool requireHttps)
-        {
-            _httpClientFactory = httpClientFactory;
-            _requireHttps = requireHttps;
-        }
-
-        public Task<string> GetDocumentAsync(string address, CancellationToken cancel)
-        {
-            HttpClient client = _httpClientFactory.CreateClient(Constants.HttpClientOidcAuthName);
-            HttpDocumentRetriever retriever = new(client) { RequireHttps = _requireHttps };
-
-            return retriever.GetDocumentAsync(address, cancel);
-        }
-    }
-
-    private sealed class OidcFlowState
-    {
-        public required string State { get; init; }
-        public required string Nonce { get; init; }
-        public required string CodeVerifier { get; init; }
-        public required string RedirectUri { get; init; }
-        public string? InitiatorUserId { get; init; }
-        public required DateTimeOffset CreatedAt { get; init; }
-    }
-
-    private sealed class OidcOneTimeCodeEntry
-    {
-        public required string AccessToken { get; init; }
-        public required string RefreshToken { get; init; }
-        public required int ExpiresIn { get; init; }
-        public required DateTimeOffset CreatedAt { get; init; }
-    }
-
-    private sealed class OidcTokenResponse
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("id_token")]
-        public string IdToken { get; set; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonPropertyName("access_token")]
-        public string AccessToken { get; set; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonPropertyName("token_type")]
-        public string TokenType { get; set; } = string.Empty;
     }
 }
