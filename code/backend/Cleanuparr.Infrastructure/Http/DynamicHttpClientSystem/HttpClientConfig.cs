@@ -12,30 +12,10 @@ public class HttpClientConfig
     public int Timeout { get; set; }
     public HttpClientType Type { get; set; }
     public RetryConfig? RetryConfig { get; set; }
-    
+
     // Deluge-specific settings
     public bool AllowAutoRedirect { get; set; } = true;
     public DecompressionMethods AutomaticDecompression { get; set; } = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
     public CertificateValidationType CertificateValidationType { get; set; } = CertificateValidationType.Enabled;
 }
-
-/// <summary>
-/// Retry configuration for HTTP clients
-/// </summary>
-public class RetryConfig
-{
-    public int MaxRetries { get; set; }
-    public bool ExcludeUnauthorized { get; set; } = true;
-}
-
-/// <summary>
-/// Types of HTTP clients that can be configured
-/// </summary>
-public enum HttpClientType
-{
-    Default,
-    WithRetry,
-    Deluge,
-    UTorrent,
-} 
