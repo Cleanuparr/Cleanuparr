@@ -1,5 +1,6 @@
 using System.Net;
 using Cleanuparr.Infrastructure.Services;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
@@ -24,9 +25,19 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
     {
         using var scope = _scopeFactory.CreateScope();
         var configStore = scope.ServiceProvider.GetRequiredService<IHttpClientConfigStore>();
-        
+
         if (!configStore.TryGetConfiguration(name, out HttpClientConfig? config))
             return;
+
+        if (config.SendUserAgent)
+        {
+            options.HttpClientActions.Add(ApplyUserAgent);
+        }
+
+        if (config.Type is HttpClientType.Plain)
+        {
+            return;
+        }
 
         // Configure the HttpClient
         options.HttpClientActions.Add(httpClient =>
@@ -45,6 +56,11 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
                 AddRetryPolicy(builder, config.RetryConfig);
             }
         });
+    }
+
+    internal static void ApplyUserAgent(HttpClient client)
+    {
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(AppUserAgent.Value);
     }
 
     private void ConfigureHandler(HttpMessageHandlerBuilder builder, HttpClientConfig config)
@@ -130,6 +146,7 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
 
     public void Configure(HttpClientFactoryOptions options)
     {
-        // This is called for unnamed clients - we don't need to do anything here
+        // Never called: the factory prefers the named overload.
+        // Unnamed clients reach that one with an empty name.
     }
 } 

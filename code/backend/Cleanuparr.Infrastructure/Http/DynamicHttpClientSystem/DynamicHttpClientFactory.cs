@@ -50,23 +50,24 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         _configStore.AddConfiguration(clientName, config);
     }
 
-    public void RegisterRetryClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType)
+    public void RegisterRetryClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent)
     {
-        var config = new HttpClientConfig
+        HttpClientConfig config = new()
         {
             Name = clientName,
             Timeout = timeout,
             Type = HttpClientType.WithRetry,
             RetryConfig = retryConfig,
-            CertificateValidationType = certificateType
+            CertificateValidationType = certificateType,
+            SendUserAgent = sendUserAgent
         };
-        
+
         RegisterConfiguration(clientName, config);
     }
 
-    public void RegisterDelugeClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType)
+    public void RegisterDelugeClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent)
     {
-        var config = new HttpClientConfig
+        HttpClientConfig config = new()
         {
             Name = clientName,
             Timeout = timeout,
@@ -74,21 +75,23 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
             RetryConfig = retryConfig,
             AllowAutoRedirect = true,
             CertificateValidationType = certificateType,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            SendUserAgent = sendUserAgent
         };
-        
+
         RegisterConfiguration(clientName, config);
     }
 
-    public void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType)
+    public void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent)
     {
-        var config = new HttpClientConfig
+        HttpClientConfig config = new()
         {
             Name = clientName,
             Timeout = timeout,
             Type = clientType,
             RetryConfig = retryConfig,
-            CertificateValidationType = certificateType
+            CertificateValidationType = certificateType,
+            SendUserAgent = sendUserAgent
         };
 
         // Configure Deluge-specific settings if needed
@@ -97,7 +100,19 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
             config.AllowAutoRedirect = true;
             config.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
         }
-        
+
+        RegisterConfiguration(clientName, config);
+    }
+
+    public void RegisterPlainClient(string clientName, bool sendUserAgent)
+    {
+        HttpClientConfig config = new()
+        {
+            Name = clientName,
+            Type = HttpClientType.Plain,
+            SendUserAgent = sendUserAgent
+        };
+
         RegisterConfiguration(clientName, config);
     }
 
@@ -114,7 +129,7 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
     public void UpdateAllClientsFromGeneralConfig(GeneralConfig generalConfig)
     {
         var allConfigurations = _configStore.GetAllConfigurations().ToList();
-        
+
         if (!allConfigurations.Any())
         {
             _logger.LogDebug("No HTTP client configurations to update");
@@ -128,7 +143,8 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
             // Update timeout and certificate validation for all clients
             config.Timeout = generalConfig.HttpTimeout;
             config.CertificateValidationType = generalConfig.HttpCertificateValidation;
-            
+            config.SendUserAgent = generalConfig.HttpSendUserAgent;
+
             // Update retry configuration if it exists
             if (config.RetryConfig != null)
             {

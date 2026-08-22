@@ -22,6 +22,11 @@ public sealed record GeneralConfig : IConfig
     
     public CertificateValidationType HttpCertificateValidation { get; set; } = CertificateValidationType.Enabled;
 
+    /// <summary>
+    /// Whether outbound requests carry a User-Agent header.
+    /// </summary>
+    public bool HttpSendUserAgent { get; set; }
+
 
     public bool StatusCheckEnabled { get; set; } = true;
 

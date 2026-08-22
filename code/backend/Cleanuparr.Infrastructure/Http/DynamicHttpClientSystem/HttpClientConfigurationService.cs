@@ -47,7 +47,8 @@ public class HttpClientConfigurationService : IHostedService
                     MaxRetries = config.HttpMaxRetries,
                     ExcludeUnauthorized = true
                 },
-                config.HttpCertificateValidation
+                config.HttpCertificateValidation,
+                config.HttpSendUserAgent
             );
 
             // Register the Deluge client
@@ -59,9 +60,17 @@ public class HttpClientConfigurationService : IHostedService
                     MaxRetries = config.HttpMaxRetries,
                     ExcludeUnauthorized = true
                 },
-                config.HttpCertificateValidation
+                config.HttpCertificateValidation,
+                config.HttpSendUserAgent
             );
-            
+
+            // These keep the handler defaults they had before the dynamic system existed.
+            // Registering them only puts them in reach of the User-Agent setting.
+            _clientFactory.RegisterPlainClient(Constants.HttpClientPlexAuthName, config.HttpSendUserAgent);
+            _clientFactory.RegisterPlainClient(Constants.HttpClientOidcAuthName, config.HttpSendUserAgent);
+            _clientFactory.RegisterPlainClient(Constants.HttpClientConnectivityName, config.HttpSendUserAgent);
+
+
             _logger.LogInformation("Pre-registered standard HTTP client configurations");
         }
         catch (Exception ex)

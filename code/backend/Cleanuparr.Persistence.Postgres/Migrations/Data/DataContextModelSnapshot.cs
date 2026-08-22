@@ -727,6 +727,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("integer")
                         .HasColumnName("http_max_retries");
 
+                    b.Property<bool>("HttpSendUserAgent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("http_send_user_agent");
+
                     b.Property<int>("HttpTimeout")
                         .HasColumnType("integer")
                         .HasColumnName("http_timeout");

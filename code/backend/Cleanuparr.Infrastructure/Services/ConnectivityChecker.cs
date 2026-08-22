@@ -1,5 +1,6 @@
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Services;
@@ -24,7 +25,7 @@ public sealed class ConnectivityChecker : IConnectivityChecker
             return true;
         }
 
-        using HttpClient client = _httpClientFactory.CreateClient();
+        using HttpClient client = _httpClientFactory.CreateClient(Constants.HttpClientConnectivityName);
         using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(ProbeTimeout);
 

@@ -33,16 +33,20 @@ export interface Mapping {
   metadata?: Record<string, unknown>;
 }
 
+export interface LoggedRequest {
+  method: string;
+  url: string;
+  absoluteUrl: string;
+  headers: Record<string, string | string[]>;
+  body?: string;
+  bodyAsBase64?: string;
+  /** Epoch milliseconds. */
+  loggedDate: number;
+}
+
+/** One serve event: what `GET /__admin/requests` returns, unlike `/requests/find`. */
 export interface RequestLogEntry {
-  request: {
-    method: string;
-    url: string;
-    headers: Record<string, string | string[]>;
-    body?: string;
-    bodyAsBase64?: string;
-    /** Epoch milliseconds. */
-    loggedDate: number;
-  };
+  request: LoggedRequest;
   response: {
     status: number;
     body?: string;
@@ -80,6 +84,14 @@ export class WireMockClient {
     }
   }
 
+  /** Clears the request journal and leaves the mappings in place. */
+  async resetRequests(): Promise<void> {
+    const res = await fetch(`${this.adminUrl}/requests`, { method: 'DELETE' });
+    if (!res.ok) {
+      throw new Error(`Failed to reset WireMock requests at ${this.adminUrl}: ${res.status}`);
+    }
+  }
+
   async resetAll(): Promise<void> {
     const res = await fetch(`${this.adminUrl}/reset`, { method: 'POST' });
     if (!res.ok) {
@@ -96,7 +108,7 @@ export class WireMockClient {
     return data.requests ?? [];
   }
 
-  async findRequests(criteria: { method?: string; urlPath?: string; urlPattern?: string }): Promise<RequestLogEntry[]> {
+  async findRequests(criteria: { method?: string; urlPath?: string; urlPattern?: string }): Promise<LoggedRequest[]> {
     const res = await fetch(`${this.adminUrl}/requests/find`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -112,7 +124,7 @@ export class WireMockClient {
   async waitForRequest(
     criteria: { method?: string; urlPath?: string; urlPattern?: string },
     timeoutMs = 30_000,
-  ): Promise<RequestLogEntry> {
+  ): Promise<LoggedRequest> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       const matches = await this.findRequests(criteria);

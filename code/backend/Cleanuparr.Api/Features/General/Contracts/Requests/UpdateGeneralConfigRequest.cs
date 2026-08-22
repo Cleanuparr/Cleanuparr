@@ -17,6 +17,8 @@ public sealed record UpdateGeneralConfigRequest
 
     public CertificateValidationType HttpCertificateValidation { get; init; } = CertificateValidationType.Enabled;
 
+    public bool HttpSendUserAgent { get; init; }
+
     public bool StatusCheckEnabled { get; init; } = true;
 
     public string EncryptionKey { get; init; } = Guid.NewGuid().ToString();
@@ -42,6 +44,7 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.HttpMaxRetries = HttpMaxRetries;
         existingConfig.HttpTimeout = HttpTimeout;
         existingConfig.HttpCertificateValidation = HttpCertificateValidation;
+        existingConfig.HttpSendUserAgent = HttpSendUserAgent;
         existingConfig.StatusCheckEnabled = StatusCheckEnabled;
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;

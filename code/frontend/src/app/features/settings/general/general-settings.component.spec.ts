@@ -14,6 +14,7 @@ const CONFIG: GeneralConfig = {
   httpMaxRetries: 2,
   httpTimeout: 45,
   httpCertificateValidation: CertificateValidationType.DisabledForLocalAddresses,
+  httpSendUserAgent: true,
   statusCheckEnabled: false,
   strikeInactivityWindowHours: 12,
   historyRetentionDays: 90,
@@ -140,6 +141,7 @@ describe('GeneralSettingsComponent', () => {
     expect(component.genForm.ignoredDownloads().value()).toEqual([]);
     expect(component.genForm.connectivityCheckEnabled().value()).toBe(false);
     expect(component.genForm.connectivityCheckUrls().value()).toEqual([]);
+    expect(component.genForm.httpSendUserAgent().value()).toBe(false);
     expect(component.dirty()).toBe(false);
   });
 
@@ -161,6 +163,7 @@ describe('GeneralSettingsComponent', () => {
       httpMaxRetries: 2,
       httpTimeout: 60,
       httpCertificateValidation: CertificateValidationType.DisabledForLocalAddresses,
+      httpSendUserAgent: true,
       statusCheckEnabled: false,
       strikeInactivityWindowHours: 12,
       historyRetentionDays: 90,

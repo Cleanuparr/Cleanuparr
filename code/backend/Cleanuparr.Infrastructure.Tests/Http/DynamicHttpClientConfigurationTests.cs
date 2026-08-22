@@ -1,5 +1,6 @@
 using System.Net;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
+using Cleanuparr.Shared.Helpers;
 using Shouldly;
 using Xunit;
 
@@ -39,5 +40,15 @@ public sealed class DynamicHttpClientConfigurationTests
         using HttpResponseMessage response = new(HttpStatusCode.InternalServerError);
 
         DynamicHttpClientConfiguration.IsRetryable(response, excludeUnauthorized: true).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ApplyUserAgent_ShouldSetTheProductToken()
+    {
+        using HttpClient client = new();
+
+        DynamicHttpClientConfiguration.ApplyUserAgent(client);
+
+        client.DefaultRequestHeaders.UserAgent.ToString().ShouldBe(AppUserAgent.Value);
     }
 }

@@ -79,10 +79,10 @@ test.describe.serial('QueueCleaner — fractional sizeleft from Sonarr v3', () =
     await expect
       .poll(
         async () => {
-          const requests = (await mocks.arr.findRequests({
+          const requests = await mocks.arr.findRequests({
             method: 'DELETE',
             urlPattern: '/api/v3/queue/.*',
-          })) as unknown as Array<{ url: string }>;
+          });
           return requests.some((r) => r.url.includes(`/api/v3/queue/${RECORD_ID}`));
         },
         { timeout: 60_000, intervals: [1_000] },

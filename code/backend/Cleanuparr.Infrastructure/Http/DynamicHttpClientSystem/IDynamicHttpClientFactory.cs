@@ -26,18 +26,23 @@ public interface IDynamicHttpClientFactory
     /// <summary>
     /// Registers a retry-enabled HttpClient configuration
     /// </summary>
-    void RegisterRetryClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType);
-    
+    void RegisterRetryClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent);
+
     /// <summary>
     /// Registers a Deluge-specific HttpClient configuration
     /// </summary>
-    void RegisterDelugeClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType);
-    
+    void RegisterDelugeClient(string clientName, int timeout, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent);
+
     /// <summary>
     /// Registers a configuration for a download client
     /// </summary>
-    void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType);
-    
+    void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent);
+
+    /// <summary>
+    /// Registers a client that opts out of every handler setting and only carries the User-Agent.
+    /// </summary>
+    void RegisterPlainClient(string clientName, bool sendUserAgent);
+
     /// <summary>
     /// Unregisters a configuration
     /// </summary>
