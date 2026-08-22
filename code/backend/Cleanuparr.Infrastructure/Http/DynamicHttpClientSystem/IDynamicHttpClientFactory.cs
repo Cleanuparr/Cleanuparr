@@ -39,6 +39,11 @@ public interface IDynamicHttpClientFactory
     void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent);
 
     /// <summary>
+    /// Registers a client that opts out of every handler setting and only carries the User-Agent.
+    /// </summary>
+    void RegisterPlainClient(string clientName, bool sendUserAgent);
+
+    /// <summary>
     /// Unregisters a configuration
     /// </summary>
     void UnregisterConfiguration(string clientName);

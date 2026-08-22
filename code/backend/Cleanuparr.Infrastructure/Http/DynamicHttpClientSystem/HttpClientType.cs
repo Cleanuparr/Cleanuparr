@@ -9,4 +9,10 @@ public enum HttpClientType
     WithRetry,
     Deluge,
     UTorrent,
+
+    /// <summary>
+    /// Carries the User-Agent and nothing else.
+    /// No primary handler, no timeout override, no retry policy.
+    /// </summary>
+    Plain,
 }

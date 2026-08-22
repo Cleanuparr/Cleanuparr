@@ -34,6 +34,11 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
             options.HttpClientActions.Add(ApplyUserAgent);
         }
 
+        if (config.Type is HttpClientType.Plain)
+        {
+            return;
+        }
+
         // Configure the HttpClient
         options.HttpClientActions.Add(httpClient =>
         {

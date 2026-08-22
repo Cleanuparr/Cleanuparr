@@ -104,6 +104,18 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         RegisterConfiguration(clientName, config);
     }
 
+    public void RegisterPlainClient(string clientName, bool sendUserAgent)
+    {
+        HttpClientConfig config = new()
+        {
+            Name = clientName,
+            Type = HttpClientType.Plain,
+            SendUserAgent = sendUserAgent
+        };
+
+        RegisterConfiguration(clientName, config);
+    }
+
     public void UnregisterConfiguration(string clientName)
     {
         _configStore.RemoveConfiguration(clientName);

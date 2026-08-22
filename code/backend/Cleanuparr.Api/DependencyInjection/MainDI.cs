@@ -75,12 +75,6 @@ public static class MainDI
         // Add the dynamic HTTP client provider that uses the new system
         services.AddSingleton<IDynamicHttpClientProvider, DynamicHttpClientProvider>();
 
-        // Add HTTP client for Plex authentication
-        services.AddHttpClient(Constants.HttpClientPlexAuthName);
-
-        // Add HTTP client for OIDC authentication
-        services.AddHttpClient(Constants.HttpClientOidcAuthName);
-
         return services;
     }
 

@@ -14,6 +14,8 @@ public static class Constants
 
     public const string HttpClientOidcAuthName = "OidcAuth";
 
+    public const string HttpClientConnectivityName = "Connectivity";
+
     public static readonly MemoryCacheEntryOptions DefaultCacheEntryOptions = new()
     {
         SlidingExpiration = TimeSpan.FromMinutes(10)
