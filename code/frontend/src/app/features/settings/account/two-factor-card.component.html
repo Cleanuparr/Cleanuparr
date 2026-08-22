@@ -134,7 +134,7 @@
           <div class="form-actions">
             <app-button
               variant="primary"
-              [disabled]="enableVerificationCode().length !== 6 || enabling2fa()"
+              [disabled]="enableVerificationCode().trim().length !== 6 || enabling2fa()"
               (clicked)="verifyEnable2fa()"
             >
               @if (enabling2fa()) {

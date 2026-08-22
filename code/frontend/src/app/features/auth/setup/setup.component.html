@@ -153,7 +153,7 @@
           <app-button
             variant="primary"
             class="submit-btn"
-            [disabled]="verificationCode().length !== 6"
+            [disabled]="verificationCode().trim().length !== 6"
             type="submit"
           >
             Verify Code

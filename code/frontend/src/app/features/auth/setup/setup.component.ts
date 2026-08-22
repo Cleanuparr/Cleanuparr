@@ -143,7 +143,7 @@ export class SetupComponent {
     this.loading.set(true);
     this.error.set('');
 
-    this.auth.verifyTotpSetup(this.verificationCode()).subscribe({
+    this.auth.verifyTotpSetup(this.verificationCode().trim()).subscribe({
       next: () => {
         this.totpVerified.set(true);
         this.loading.set(false);

@@ -109,7 +109,7 @@ export class TwoFactorCardComponent {
 
   verifyEnable2fa(): void {
     this.enabling2fa.set(true);
-    this.api.verifyEnable2fa(this.enableVerificationCode()).subscribe({
+    this.api.verifyEnable2fa(this.enableVerificationCode().trim()).subscribe({
       next: () => {
         this.toast.success('Two-factor authentication enabled. Save your recovery codes before dismissing them!');
         this.enableSetup.set(false);

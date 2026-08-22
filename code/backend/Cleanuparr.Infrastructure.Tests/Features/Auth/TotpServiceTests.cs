@@ -68,6 +68,24 @@ public sealed class TotpServiceTests
         _sut.VerifySecondFactor(user, codes[0].Replace("-", string.Empty).ToLowerInvariant()).ShouldBeTrue();
     }
 
+    [Fact]
+    public void VerifySecondFactor_WithPaddedTotpCode_ReturnsTrue()
+    {
+        string secret = _sut.GenerateSecret();
+        User user = CreateUser(secret);
+
+        _sut.VerifySecondFactor(user, $" {ComputeTotp(secret)} ").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void VerifySecondFactor_WithPaddedRecoveryCode_ReturnsTrue()
+    {
+        List<string> codes = _sut.GenerateRecoveryCodes();
+        User user = CreateUser(_sut.GenerateSecret(), codes);
+
+        _sut.VerifySecondFactor(user, $" {codes[0]}\n").ShouldBeTrue();
+    }
+
     private User CreateUser(string secret, List<string>? recoveryCodes = null)
     {
         return new User

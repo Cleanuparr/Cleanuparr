@@ -191,6 +191,24 @@ describe('SetupComponent', () => {
     expect(fixture.nativeElement.querySelector('.recovery-codes')).toBeNull();
   });
 
+  it('accepts a padded verification code and submits it trimmed', () => {
+    const { fixture, verifyTotpCalls } = setup();
+    const component = fixture.componentInstance;
+
+    fillAccount(fixture);
+    component.createAccount();
+    component.verificationCode.set('  123456  ');
+    fixture.detectChanges();
+
+    expect(submitButton(fixture).disabled).toBe(false);
+
+    submitButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(verifyTotpCalls).toEqual(['123456']);
+    expect(component.totpVerified()).toBe(true);
+  });
+
   it('gates the step three advance behind the saved recovery codes checkbox', () => {
     const { fixture } = setup();
     const component = fixture.componentInstance;

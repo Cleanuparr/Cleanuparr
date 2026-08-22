@@ -207,6 +207,20 @@ describe('TwoFactorCardComponent', () => {
     expect(secret(fixture)).toBeNull();
   });
 
+  it('enables 2FA on a pasted code that carries surrounding whitespace', () => {
+    const { fixture, verifiedCodes } = setup();
+
+    type(fixture, 'Enter your password to enable 2FA', 'my-password');
+    click(fixture, 'Enable 2FA');
+    type(fixture, 'Enter 6-digit code from your app', ' 123456 ');
+
+    expect(button(fixture, 'Verify & Enable 2FA').disabled).toBe(false);
+
+    click(fixture, 'Verify & Enable 2FA');
+
+    expect(verifiedCodes).toEqual(['123456']);
+  });
+
   it('keeps the recovery codes on screen after enabling until they are dismissed', () => {
     const { fixture } = setup();
 

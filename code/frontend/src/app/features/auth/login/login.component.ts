@@ -117,7 +117,7 @@ export class LoginComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
 
-    this.auth.verify2fa(this.loginToken(), this.totpCode()).subscribe({
+    this.auth.verify2fa(this.loginToken(), this.totpCode().trim()).subscribe({
       next: () => {
         this.router.navigate(['/dashboard']);
       },
@@ -137,7 +137,7 @@ export class LoginComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
 
-    this.auth.verify2fa(this.loginToken(), this.recoveryCode(), true).subscribe({
+    this.auth.verify2fa(this.loginToken(), this.recoveryCode().trim(), true).subscribe({
       next: () => {
         this.router.navigate(['/dashboard']);
       },
