@@ -138,6 +138,16 @@ SSL certificate validation for HTTPS connections.
 
 </ConfigSection>
 
+<ConfigSection
+  title="HTTP User-Agent"
+>
+
+Cleanuparr sends no `User-Agent` header by default. Enable this setting to identify requests coming from it.
+
+The header contains the name and the version of the app, for example `Cleanuparr/2.0.0`. It applies to every outgoing request.
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>

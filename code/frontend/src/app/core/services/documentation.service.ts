@@ -50,6 +50,7 @@ export class DocumentationService {
       'httpMaxRetries': 'http-max-retries',
       'httpTimeout': 'http-timeout',
       'httpCertificateValidation': 'http-certificate-validation',
+      'httpSendUserAgent': 'http-user-agent',
       'statusCheckEnabled': 'status-check',
       'log.level': 'log-level',
       'log.rollingSizeMB': 'rolling-size-mb',
