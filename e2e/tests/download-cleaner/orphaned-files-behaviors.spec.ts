@@ -45,10 +45,8 @@ const HOST_ORPHANED_DIR = join(HOST_DOWNLOADS, SLUG, 'orphaned');
 const APP_SCAN_DIR = `${APP_DOWNLOADS}/${SLUG}`;
 const APP_ORPHANED_DIR = `${APP_DOWNLOADS}/${SLUG}/orphaned`;
 
-// The cleaner refuses to scan if a download client reports 0 torrents (to
-// avoid moving real downloads when the client is empty or unreachable). The
-// suite needs at least one torrent registered in qBit; we park a decoy
-// outside the scan dir so it never claims a test file.
+// A decoy torrent parked outside the scan dir, so the client is never empty
+// while these knobs are under test. It claims no test file.
 const HOST_DECOY_PARENT = join(HOST_DOWNLOADS, 'qbittorrent');
 const CLIENT_DECOY_PARENT = '/downloads';
 const DECOY_NAME = '__cleanuparr_decoy__';
@@ -125,8 +123,8 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
     await driver.ready();
     await driver.clearAllTorrents();
 
-    // Seed the decoy torrent. After the orphaned-files fix, an empty client
-    // makes the cleaner bail; the decoy gives it something to consider.
+    // Seed the decoy torrent.
+    // An empty client is covered by orphaned-files-empty-client.spec.ts.
     mkdirShared(HOST_DECOY_PARENT);
     const decoy = buildFolderTorrent(HOST_DECOY_PARENT, DECOY_NAME);
     await driver.addTorrent({
@@ -164,9 +162,8 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
     // Reset filesystem state before each scenario.
     resetDirectory(HOST_SCAN_DIR);
     mkdirShared(HOST_ORPHANED_DIR);
-    // The decoy torrent stays registered between tests so the cleaner has at
-    // least one torrent visible; its save path is outside HOST_SCAN_DIR, so
-    // every entry created here is unclaimed and treated as orphan.
+    // The decoy stays registered between tests.
+    // Its save path sits outside HOST_SCAN_DIR, so every entry here is unclaimed.
   });
 
   const configureOrphanedFiles = async (

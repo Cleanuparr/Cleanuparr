@@ -11,26 +11,24 @@ import {
   updateOrphanedFilesConfig,
   triggerJob,
 } from '../helpers/app-api';
-import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
 import { resetDirectory } from '../helpers/torrent-fixtures';
 import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
 
 /**
  * Regression guard for the orphaned-files cleanup safety bail.
  *
- * The cleaner refuses to move anything for a download client when it cannot
- * trust the client's torrent list — either because the call threw (client
- * unreachable / authentication broken) or because the client reported 0
- * torrents. Without this guard, an empty/erroring client makes every file in
- * the scan directory look orphaned and real downloads get moved.
+ * The cleaner moves and purges nothing for a download client whose torrent
+ * list it could not retrieve. Drop that guard and an erroring client makes
+ * every scan-directory entry look unclaimed, so the cleaner moves real
+ * downloads out.
  *
- * Two scenarios, both assert "files remain in the scan dir":
+ * This spec points the client at a port nothing listens on. That hits the
+ * catch path in `TryAddClaimedPathsAsync`, or the LoginAsync skip above it.
+ * Both produce the same outcome for the user.
  *
- *   1. Unreachable host — client registered against a port nothing listens
- *      on. Exercises the catch path (or upstream LoginAsync skip — both lead
- *      to the same user-visible outcome).
- *   2. Reachable client with 0 torrents — qBittorrent up but empty.
- *      Exercises the explicit zero-torrents bail in `TryAddClaimedPathsAsync`.
+ * A reachable client reporting 0 torrents is the opposite case: it claims
+ * nothing, so the cleaner does scan its directories. See
+ * `orphaned-files-empty-client.spec.ts`.
  */
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
@@ -79,9 +77,8 @@ test.describe.serial('Orphaned files cleanup — refuses to scan when client dat
   });
 
   test.beforeEach(async () => {
-    // Each scenario starts with a fresh scan dir and a single fake real
-    // download. If the scanner runs incorrectly the file gets moved into
-    // HOST_ORPHANED_DIR — that's the regression we're guarding against.
+    // A fresh scan dir holding one fake real download.
+    // A scan that runs anyway lands it in HOST_ORPHANED_DIR.
     resetDirectory(HOST_SCAN_DIR);
     mkdirShared(HOST_ORPHANED_DIR);
 
@@ -102,49 +99,10 @@ test.describe.serial('Orphaned files cleanup — refuses to scan when client dat
       name: 'qBittorrent unreachable',
       typeName: 'qBittorrent',
       type: 'Torrent',
-      // Port 1 — nothing listens here. Cleanuparr's qBit client will fail to
-      // connect when the cleaner runs.
+      // Nothing listens on port 1, so the qBit client fails to connect.
       host: 'http://127.0.0.1:1',
       username: 'admin',
       password: 'adminadmin',
-      downloadDirectorySource: '/downloads',
-      downloadDirectoryTarget: APP_SCAN_DIR,
-    });
-    expect(createRes.ok, `createDownloadClient: ${createRes.status}`).toBe(true);
-    const created = await createRes.json();
-
-    const ofcRes = await updateOrphanedFilesConfig(token, created.id, {
-      enabled: true,
-      scanDirectories: [APP_SCAN_DIR],
-      orphanedDirectory: APP_ORPHANED_DIR,
-      minFileAgeHours: 0,
-    });
-    expect(ofcRes.ok, `updateOrphanedFilesConfig: ${ofcRes.status}`).toBe(true);
-
-    await triggerAndSettle(token);
-
-    expect(existsSync(realDownload)).toBe(true);
-    expect(existsSync(join(HOST_ORPHANED_DIR, 'real-download.mkv'))).toBe(false);
-    expect(readdirSync(HOST_ORPHANED_DIR).length).toBe(0);
-  });
-
-  test('Reachable client reporting 0 torrents → files in the scan dir are not moved', async () => {
-    test.setTimeout(120_000);
-
-    const driver = new QBittorrentDriver();
-    await driver.ready();
-    await driver.clearAllTorrents();
-
-    const realDownload = writeFile(HOST_SCAN_DIR, 'real-download.mkv');
-
-    const createRes = await createDownloadClient(token, {
-      enabled: true,
-      name: 'qBittorrent empty',
-      typeName: driver.typeName,
-      type: 'Torrent',
-      host: driver.cleanuparrHost,
-      username: driver.username ?? '',
-      password: driver.password ?? '',
       downloadDirectorySource: '/downloads',
       downloadDirectoryTarget: APP_SCAN_DIR,
     });
