@@ -92,16 +92,16 @@ public class UTorrentResponseParserTests
     }
 
     [Fact]
-    public void ParseTorrentList_RowShorterThan27Fields_SkipsRow()
+    public void ParseTorrentList_RowShorterThan27Fields_Throws()
     {
-        // Arrange — only 5 fields per torrent
+        // Only 5 fields per torrent.
         const string json = """{"build": 1, "torrents": [["HASH", 0, "name", 100, 1000]], "label": []}""";
 
-        // Act
-        var response = _parser.ParseTorrentList(json);
+        // Skipping the row would report zero torrents.
+        UTorrentParsingException exception =
+            Should.Throw<UTorrentParsingException>(() => _parser.ParseTorrentList(json));
 
-        // Assert — short rows are silently skipped
-        response.Torrents.ShouldBeEmpty();
+        exception.Message.ShouldContain("27");
     }
 
     [Fact]

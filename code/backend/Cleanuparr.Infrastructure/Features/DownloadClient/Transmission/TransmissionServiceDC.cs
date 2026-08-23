@@ -25,10 +25,19 @@ public partial class TransmissionService
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
         var result = await _client.TorrentGetAsync(Fields);
-        return result?.Torrents
-            ?.Where(x => !string.IsNullOrEmpty(x.HashString))
+        if (result?.Torrents is null)
+        {
+            throw new InvalidOperationException("Transmission returned no torrent list");
+        }
+
+        List<ITorrentItemWrapper> torrents = result.Torrents
+            .Where(x => !string.IsNullOrEmpty(x.HashString))
             .Select(ITorrentItemWrapper (x) => new TransmissionItemWrapper(x))
-            .ToList() ?? [];
+            .ToList();
+
+        ThrowIfTorrentListCollapsed(result.Torrents.Length, torrents.Count);
+
+        return torrents;
     }
 
     /// <inheritdoc/>

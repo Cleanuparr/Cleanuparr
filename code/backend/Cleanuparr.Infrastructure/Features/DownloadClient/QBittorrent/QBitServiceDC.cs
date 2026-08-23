@@ -47,13 +47,17 @@ public partial class QBitService
         var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
         if (torrentList is null)
         {
-            return [];
+            throw new InvalidOperationException("qBittorrent returned no torrent list");
         }
 
-        return torrentList
+        List<ITorrentItemWrapper> torrents = torrentList
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Select(ITorrentItemWrapper (t) => new QBitItemWrapper(t, [], false))
             .ToList();
+
+        ThrowIfTorrentListCollapsed(torrentList.Count, torrents.Count);
+
+        return torrents;
     }
 
     /// <inheritdoc/>
