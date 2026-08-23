@@ -523,7 +523,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
 
         File.Exists(orphan).ShouldBeFalse();
         File.Exists(Path.Combine(orphanedDir, "orphan.mkv")).ShouldBeTrue();
-        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "no torrents reported").ShouldBeTrue();
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "No torrents reported").ShouldBeTrue();
         _fixture.OrphanedFilesLogger.HasNoLogContaining(LogLevel.Warning, "torrents are unavailable").ShouldBeTrue();
     }
 
