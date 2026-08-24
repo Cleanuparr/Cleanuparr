@@ -3657,6 +3657,161 @@ public class SeekerTests : IDisposable
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
     }
 
+    [Fact]
+    public async Task ExecuteAsync_IgnoreStruckDownloads_ExcludesStruckDownloadFromLimit()
+    {
+        // Arrange: two queued downloads, a limit of two, one struck by the queue cleaner
+        (ArrInstance radarrInstance, IArrClient mockArrClient) =
+            await ArrangeActiveDownloadLimitScenarioAsync(true, "hash1", "hash2");
+        await AddStrikeAsync("hash1", StrikeType.Stalled);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the struck download frees a slot, so the search runs
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IgnoreStruckDownloadsDisabled_CountsStruckDownload()
+    {
+        // Arrange: the same data with the toggle off, which is the default
+        (ArrInstance radarrInstance, IArrClient mockArrClient) =
+            await ArrangeActiveDownloadLimitScenarioAsync(false, "hash1", "hash2");
+        await AddStrikeAsync("hash1", StrikeType.Stalled);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: Seeker counts the struck download, so the limit blocks the search
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IgnoreStruckDownloads_CountsNonQueueCleanerStrike()
+    {
+        // Arrange: a dead torrent strike, which the download cleaner records
+        (ArrInstance radarrInstance, IArrClient mockArrClient) =
+            await ArrangeActiveDownloadLimitScenarioAsync(true, "hash1", "hash2");
+        await AddStrikeAsync("hash1", StrikeType.DeadTorrent);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the download still counts, so the limit blocks the search
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IgnoreStruckDownloads_MatchesTheHashRegardlessOfCasing()
+    {
+        // Arrange: the arr sends an uppercase hash, the download client stored it lowercase
+        (ArrInstance radarrInstance, IArrClient mockArrClient) =
+            await ArrangeActiveDownloadLimitScenarioAsync(true, "ABC123", "DEF456");
+        await AddStrikeAsync("abc123", StrikeType.SlowSpeed);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: Seeker discounts the download whatever the casing
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+    }
+
+    /// <summary>
+    /// Arranges a proactive search whose only blocker is the active download limit of 2.
+    /// </summary>
+    private async Task<(ArrInstance Instance, IArrClient Client)> ArrangeActiveDownloadLimitScenarioAsync(
+        bool ignoreStruckDownloads,
+        params string[] queuedDownloadIds)
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            ActiveDownloadLimit = 2,
+            IgnoreStruckDownloads = ignoreStruckDownloads
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        QueueRecord[] queueRecords = queuedDownloadIds
+            .Select((downloadId, index) => new QueueRecord
+            {
+                Id = index + 1,
+                Title = $"DL {index + 1}",
+                DownloadId = downloadId,
+                Protocol = "torrent",
+                SizeLeft = 1000,
+                MovieId = 10 + index,
+                TrackedDownloadState = "downloading"
+            })
+            .ToArray();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queueRecords));
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        return (radarrInstance, mockArrClient);
+    }
+
+    /// <summary>
+    /// Records one strike against a download, the way the queue cleaner would.
+    /// </summary>
+    private async Task AddStrikeAsync(string storedDownloadId, StrikeType strikeType)
+    {
+        JobRun jobRun = new() { Type = JobType.QueueCleaner };
+        _fixture.EventsContext.JobRuns.Add(jobRun);
+
+        DownloadItem downloadItem = new() { DownloadId = storedDownloadId, Title = storedDownloadId };
+        _fixture.EventsContext.DownloadItems.Add(downloadItem);
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _fixture.EventsContext.Strikes.Add(new Strike
+        {
+            DownloadItemId = downloadItem.Id,
+            JobRunId = jobRun.Id,
+            Type = strikeType
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+    }
+
     #endregion
 
     #region Round-Robin — Additional

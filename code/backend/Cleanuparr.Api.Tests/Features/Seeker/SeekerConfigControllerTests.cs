@@ -52,6 +52,7 @@ public class SeekerConfigControllerTests : IDisposable
         instance.Enabled.ShouldBeFalse();
         instance.SkipTags.ShouldBeEmpty();
         instance.ActiveDownloadLimit.ShouldBe(3);
+        instance.IgnoreStruckDownloads.ShouldBeFalse();
         instance.MinCycleTimeDays.ShouldBe(7);
     }
 
@@ -354,6 +355,7 @@ public class SeekerConfigControllerTests : IDisposable
                     Enabled = true,
                     SkipTags = ["new-tag"],
                     ActiveDownloadLimit = 5,
+                    IgnoreStruckDownloads = true,
                     MinCycleTimeDays = 14
                 },
                 // Create new sonarr config
@@ -377,11 +379,13 @@ public class SeekerConfigControllerTests : IDisposable
         radarrConfig.Enabled.ShouldBeTrue();
         radarrConfig.SkipTags.ShouldContain("new-tag");
         radarrConfig.ActiveDownloadLimit.ShouldBe(5);
+        radarrConfig.IgnoreStruckDownloads.ShouldBeTrue();
         radarrConfig.MinCycleTimeDays.ShouldBe(14);
 
         var sonarrConfig = configs.First(c => c.ArrInstanceId == sonarr.Id);
         sonarrConfig.Enabled.ShouldBeTrue();
         sonarrConfig.SkipTags.ShouldContain("sonarr-tag");
+        sonarrConfig.IgnoreStruckDownloads.ShouldBeFalse();
     }
 
     #endregion
