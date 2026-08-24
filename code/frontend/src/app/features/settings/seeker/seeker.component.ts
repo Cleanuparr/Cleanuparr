@@ -72,6 +72,7 @@ interface InstanceState {
   lastProcessedAt?: string;
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
+  ignoreStruckDownloads: boolean;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;
@@ -161,6 +162,7 @@ export class SeekerComponent implements HasPendingChanges {
           lastProcessedAt: i.lastProcessedAt,
           arrInstanceEnabled: i.arrInstanceEnabled,
           activeDownloadLimit: i.activeDownloadLimit,
+          ignoreStruckDownloads: i.ignoreStruckDownloads,
           minCycleTimeDays: i.minCycleTimeDays,
           monitoredOnly: i.monitoredOnly,
           useCutoff: i.useCutoff,
@@ -225,6 +227,14 @@ export class SeekerComponent implements HasPendingChanges {
     });
   }
 
+  updateInstanceIgnoreStruckDownloads(index: number, ignore: boolean): void {
+    this.instances.update(instances => {
+      const updated = [...instances];
+      updated[index] = { ...updated[index], ignoreStruckDownloads: ignore };
+      return updated;
+    });
+  }
+
   updateInstanceMinCycleTimeDays(index: number, days: number | null): void {
     this.instances.update(instances => {
       const updated = [...instances];
@@ -281,6 +291,7 @@ export class SeekerComponent implements HasPendingChanges {
         enabled: i.enabled,
         skipTags: i.skipTags,
         activeDownloadLimit: i.activeDownloadLimit,
+        ignoreStruckDownloads: i.ignoreStruckDownloads,
         minCycleTimeDays: i.minCycleTimeDays,
         monitoredOnly: i.monitoredOnly,
         useCutoff: i.useCutoff,

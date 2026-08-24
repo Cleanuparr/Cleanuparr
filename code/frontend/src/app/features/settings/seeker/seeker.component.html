@@ -120,6 +120,11 @@
                   (valueChange)="updateInstanceActiveDownloadLimit($index, $event)"
                   helpKey="seeker:activeDownloadLimit"
                 />
+                <app-toggle label="Ignore Struck Downloads" [checked]="instance.ignoreStruckDownloads"
+                  hint="Downloads with a Queue Cleaner strike (stalled, slow, downloading metadata) do not count toward the Active Download Limit"
+                  (checkedChange)="updateInstanceIgnoreStruckDownloads($index, $event)"
+                  helpKey="seeker:ignoreStruckDownloads"
+                  featureId="seeker-ignore-struck-downloads" />
                 <app-number-input
                   label="Min Cycle Time (Days)"
                   placeholder="7"

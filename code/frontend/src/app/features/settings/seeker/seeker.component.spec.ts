@@ -21,6 +21,7 @@ const CONFIG: SeekerConfig = {
       skipTags: ['alpha', 'beta'],
       arrInstanceEnabled: true,
       activeDownloadLimit: 3,
+      ignoreStruckDownloads: false,
       minCycleTimeDays: 7,
       monitoredOnly: true,
       useCutoff: false,
@@ -58,5 +59,15 @@ describe('SeekerComponent', () => {
     expect(chips).toEqual(['alpha', 'beta']);
     expect(fixture.componentInstance.instances()[0].skipTags).toEqual(['alpha', 'beta']);
     expect(fixture.componentInstance.hasPendingChanges()).toBe(false);
+  });
+
+  it('marks pending changes when the struck download toggle flips', () => {
+    const fixture = setup();
+
+    fixture.componentInstance.updateInstanceIgnoreStruckDownloads(0, true);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.instances()[0].ignoreStruckDownloads).toBe(true);
+    expect(fixture.componentInstance.hasPendingChanges()).toBe(true);
   });
 });
