@@ -3,6 +3,7 @@ import { expect } from '@playwright/test';
 import { TEST_CONFIG } from './test-config';
 import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
+import { buildDownloadClientPayload } from './api/download-client';
 import type { ArrType } from './api/arr';
 import { LiveArr, indexerMock, liveRadarr, liveSonarr } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
@@ -314,18 +315,39 @@ export async function addDecoyDownloads(target: SeededArr, count: number): Promi
     });
   }
 
-  // totalRecords, not the record count: a page holds at most 200.
+  // Wait on what Cleanuparr counts: the records with bytes left.
+  // totalRecords also counts a finished record, which never fills a slot.
   await expect
     .poll(async () => {
       await target.arr.refreshMonitoredDownloads();
-      return (await target.arr.queuePage(1)).totalRecords;
+      return activeQueueCount(target);
     }, { timeout: 90_000 })
     .toBeGreaterThanOrEqual(count);
+}
 
-  // Cleanuparr only counts a record with bytes left, so a complete decoy is useless.
-  const page = await target.arr.queuePage(1);
-  const active = (page.records ?? []).filter((record) => record.sizeleft > 0);
-  expect(active.length, 'the decoy downloads should still have bytes left').toBeGreaterThan(0);
+/** Records with bytes left, across every page of the queue. */
+async function activeQueueCount(target: SeededArr): Promise<number> {
+  let active = 0;
+  let seen = 0;
+  let page = 1;
+
+  while (true) {
+    const body = await target.arr.queuePage(page);
+    const records = body.records ?? [];
+
+    if (records.length === 0) {
+      return active;
+    }
+
+    active += records.filter((record) => record.sizeleft > 0).length;
+    seen += records.length;
+
+    if (seen >= body.totalRecords) {
+      return active;
+    }
+
+    page++;
+  }
 }
 
 /**
@@ -338,6 +360,83 @@ export async function expectNoSearch(api: CleanuparrApi, instanceId: string, wai
   await new Promise((resolve) => setTimeout(resolve, waitMs));
 
   expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+}
+
+/** Tracks what arrangeQueueCleaner created, so the teardown can undo it. */
+const createdCleanerRules: string[] = [];
+const createdDownloadClients: string[] = [];
+
+let savedCleanerConfig: Record<string, unknown> | undefined;
+
+/** The cleaner reads the download client directly, so Cleanuparr needs one too. */
+export async function arrangeQueueCleaner(api: CleanuparrApi): Promise<void> {
+  const client = await (
+    await api.downloadClient.create(
+      buildDownloadClientPayload('qbittorrent', {
+        name: 'e2e-live-qbittorrent',
+        host: 'http://localhost:8090',
+        username: 'admin',
+        password: 'adminadmin',
+      }),
+    )
+  ).json();
+
+  expect(client.id, 'the download client should have been created').toBeTruthy();
+  createdDownloadClients.push(client.id);
+
+  const config = await (await api.queueCleaner.getConfig()).json();
+  savedCleanerConfig ??= config;
+
+  const enabled = await api.queueCleaner.updateConfig({ ...config, enabled: true });
+  expect(enabled.ok, `queue cleaner updateConfig: ${enabled.status}`).toBe(true);
+}
+
+/** A rule that strikes every stalled download, whatever its tracker or progress. */
+export async function createStallRule(api: CleanuparrApi, maxStrikes: number): Promise<string> {
+  const rule = await (
+    await api.queueCleaner.createRule('stall', {
+      name: 'e2e-live-stall',
+      enabled: true,
+      maxStrikes,
+      privacyType: 'Both',
+      minCompletionPercentage: 0,
+      maxCompletionPercentage: 100,
+      deletePrivateTorrentsFromClient: true,
+      changeCategory: false,
+      resetStrikesOnProgress: false,
+      minimumProgress: null,
+    })
+  ).json();
+
+  expect(rule.id, 'the stall rule should have been created').toBeTruthy();
+  createdCleanerRules.push(rule.id);
+
+  return rule.id;
+}
+
+/**
+ * Removes the rules, the client and the strikes that arrangeQueueCleaner left.
+ *
+ * A leftover strike would discount a download in the next spec of the folder.
+ */
+export async function teardownQueueCleaner(api: CleanuparrApi): Promise<void> {
+  for (const id of createdCleanerRules.splice(0)) {
+    await api.queueCleaner.deleteRule('stall', id);
+  }
+
+  for (const id of createdDownloadClients.splice(0)) {
+    await api.downloadClient.delete(id);
+  }
+
+  const struck = await (await api.strikes.list({ pageSize: 200 })).json();
+  for (const item of struck.items ?? []) {
+    await api.strikes.delete(item.downloadItemId);
+  }
+
+  if (savedCleanerConfig) {
+    await api.queueCleaner.updateConfig(savedCleanerConfig);
+    savedCleanerConfig = undefined;
+  }
 }
 
 /**

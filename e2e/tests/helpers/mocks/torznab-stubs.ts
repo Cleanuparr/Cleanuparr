@@ -137,3 +137,29 @@ export function grabbableRelease(
     ],
   };
 }
+
+/**
+ * Builds several grabbable releases that share one search feed.
+ *
+ * WireMock keeps one feed per search mode.
+ * A spec that needs two grabbable items advertises both in that one feed.
+ */
+export function grabbableReleases(
+  mode: TorznabSearchMode,
+  titles: string[],
+  category: number,
+): { downloadIds: string[]; mappings: Mapping[] } {
+  const built = titles.map((title) => ({ title, release: grabbableRelease(mode, title, category) }));
+
+  return {
+    downloadIds: built.map((entry) => entry.release.downloadId),
+    mappings: [
+      torznabSearchStub(
+        mode,
+        built.map((entry) => ({ title: entry.title, category, file: `${entry.title}.torrent` })),
+      ),
+      // Index 1 of each release's mappings is its own torrent stub.
+      ...built.map((entry) => entry.release.mappings[1]),
+    ],
+  };
+}

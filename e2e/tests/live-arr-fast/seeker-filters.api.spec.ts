@@ -1,10 +1,13 @@
 import { test, expect } from '../fixtures/base';
+import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
   SONARR,
   addDecoyDownloads,
   arrangeInstance,
+  arrangeQueueCleaner,
+  createStallRule,
   expectNoSearch,
   firstSearchEvent,
   listSearchEvents,
@@ -12,9 +15,12 @@ import {
   restoreLibrary,
   snapshotLibrary,
   teardownInstances,
+  teardownQueueCleaner,
   triggerSeeker,
+  RUN_TAG,
+  TRIGGERED_SEARCH_TIMEOUT,
 } from '../helpers/seeker-live';
-import { grabbableRelease } from '../helpers/mocks/torznab-stubs';
+import { grabbableRelease, grabbableReleases } from '../helpers/mocks/torznab-stubs';
 
 /**
  * The per-instance filters that decide whether the Seeker searches at all.
@@ -27,6 +33,12 @@ const SKIP_TAG = 'e2e-seeker-skip';
 
 /** A search event shows up within a second of the run, so this is generous. */
 const SETTLE_MS = 20_000;
+
+/** The stall rule floor is above one, so one run leaves the grab in the queue. */
+const MAX_STRIKES = 3;
+
+/** The second seeded movie, so a search grabs whichever one the cycle picks. */
+const SECOND_MOVIE_RELEASE = `The.Wild.Robot.2024.1080p.WEB-DL.DDP5.1.H.264-E2E${RUN_TAG}`;
 
 async function mutateMovie(mutate: (movie: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
   const movie = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/movie/${RADARR.itemId}`);
@@ -43,10 +55,72 @@ test.describe('Seeker candidate filters', () => {
   });
 
   test.afterEach(async ({ api }) => {
+    await teardownQueueCleaner(api);
     await teardownInstances(api);
     await restoreLibrary(RADARR, library);
     await resetLiveArrState();
   });
+
+  /**
+   * Searches once, then leaves the grabbed download on one queue cleaner strike.
+   *
+   * A decoy cannot serve here.
+   * The cleaner skips a queue item that matches nothing in the library.
+   */
+  async function grabAndStrike(api: CleanuparrApi, instanceId: string): Promise<void> {
+    // The cycle decides which movie Seeker searches first, so both must be grabbable.
+    await indexerMock.resetAll();
+    await indexerMock.stubMany(
+      grabbableReleases(RADARR.searchMode, [RADARR.release, SECOND_MOVIE_RELEASE], RADARR.category).mappings,
+    );
+
+    await arrangeQueueCleaner(api);
+    await createStallRule(api, MAX_STRIKES);
+
+    await triggerSeeker(api);
+    await expect
+      .poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS })
+      .toBe(1);
+    // Any active download will do, and the arr can refuse a repeat grab of one release.
+    await expect
+      .poll(
+        async () => {
+          await RADARR.arr.refreshMonitoredDownloads();
+          return (await RADARR.arr.queue()).filter((record) => record.sizeleft > 0).length;
+        },
+        { timeout: TRIGGERED_SEARCH_TIMEOUT },
+      )
+      .toBeGreaterThan(0);
+
+    // A run that lands before the torrent stalls strikes nothing, so allow a second one.
+    // Both stay under the rule's 3 strikes, which keeps the download in the queue.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const triggered = await api.jobs.trigger('QueueCleaner');
+      expect(triggered.status).toBeLessThan(300);
+
+      if (await pollStrikeCount(api)) {
+        return;
+      }
+    }
+
+    throw new Error('the queue cleaner never struck the grabbed download');
+  }
+
+  /** Whether a strike landed within the window, without failing the test if none did. */
+  async function pollStrikeCount(api: CleanuparrApi): Promise<boolean> {
+    const deadline = Date.now() + 45_000;
+
+    while (Date.now() < deadline) {
+      const struck = await (await api.strikes.list({ pageSize: 200 })).json();
+      if ((struck.items ?? []).length > 0) {
+        return true;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+    }
+
+    return false;
+  }
 
   test('searches the seeded movie when nothing filters it out', async ({ api }) => {
     const instanceId = await arrangeInstance(api, RADARR);
@@ -91,6 +165,37 @@ test.describe('Seeker candidate filters', () => {
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+  });
+
+  test('searches again while the struck download is ignored', async ({ api }) => {
+    test.setTimeout(420_000);
+
+    // monitoredOnly is off so Seeker can search a second library item.
+    const instanceId = await arrangeInstance(api, RADARR, {
+      instance: { activeDownloadLimit: 1, ignoreStruckDownloads: true, monitoredOnly: false },
+    });
+    await grabAndStrike(api, instanceId);
+
+    await triggerSeeker(api);
+
+    await expect
+      .poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS })
+      .toBe(2);
+  });
+
+  test('counts the struck download while the setting is off', async ({ api }) => {
+    test.setTimeout(420_000);
+
+    const instanceId = await arrangeInstance(api, RADARR, {
+      instance: { activeDownloadLimit: 1, ignoreStruckDownloads: false, monitoredOnly: false },
+    });
+    await grabAndStrike(api, instanceId);
+
+    await triggerSeeker(api);
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+
+    // The struck download still fills the only slot, so the first search stands alone.
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(1);
   });
 
   test('still searches an old release when the grace period is at its longest', async ({ api }) => {
