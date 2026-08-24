@@ -1641,6 +1641,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
+                    b.Property<bool>("IgnoreStruckDownloads")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("ignore_struck_downloads");
+
                     b.Property<string>("LastProcessedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("last_processed_at");

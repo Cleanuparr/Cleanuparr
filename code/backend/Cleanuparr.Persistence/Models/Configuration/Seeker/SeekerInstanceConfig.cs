@@ -59,6 +59,12 @@ public sealed record SeekerInstanceConfig
     public int ActiveDownloadLimit { get; set; } = 3;
 
     /// <summary>
+    /// Excludes downloads that carry a Queue Cleaner strike from the active download count.
+    /// Counted strike types: stalled, slow speed, slow time, downloading metadata.
+    /// </summary>
+    public bool IgnoreStruckDownloads { get; set; }
+
+    /// <summary>
     /// Minimum number of days a cycle must span before a new one can start.
     /// If a cycle completes faster, no searches are triggered until this time has elapsed.
     /// </summary>

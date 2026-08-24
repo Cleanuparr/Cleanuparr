@@ -20,6 +20,8 @@ public sealed record SeekerInstanceConfigResponse
 
     public int ActiveDownloadLimit { get; init; }
 
+    public bool IgnoreStruckDownloads { get; init; }
+
     public int MinCycleTimeDays { get; init; }
 
     public bool MonitoredOnly { get; init; }
