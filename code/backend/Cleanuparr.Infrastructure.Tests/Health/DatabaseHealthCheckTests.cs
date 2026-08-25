@@ -1,5 +1,7 @@
 using Cleanuparr.Infrastructure.Health;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -46,6 +48,45 @@ public class DatabaseHealthCheckTests : IDisposable
 
         // Assert
         healthCheck.ShouldNotBeNull();
+    }
+
+    #endregion
+
+    #region Schema Version Tests
+
+    [Fact]
+    public async Task CheckHealthAsync_WithAFullyMigratedDatabase_ReturnsHealthy()
+    {
+        using SqliteTestDatabase database = SqliteTestDatabase.Create("dbhealth");
+        await using DataContext context = database.CreateContext<DataContext>();
+        await context.Database.MigrateAsync();
+
+        var healthCheck = new DatabaseHealthCheck(context, _logger);
+        HealthCheckResult result = await healthCheck.CheckHealthAsync(null!);
+
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_WhenTheDatabaseHasMigrationsThisBuildDoesNotShip_ReturnsDegraded()
+    {
+        using SqliteTestDatabase database = SqliteTestDatabase.Create("dbhealth");
+        await using DataContext context = database.CreateContext<DataContext>();
+        await context.Database.MigrateAsync();
+
+        // What a rollback leaves behind: history rows naming a migration this build never had.
+        await context.Database.ExecuteSqlRawAsync(
+            """INSERT INTO "__EFMigrationsHistory" ("migration_id", "product_version") VALUES ('99999999999999_FromTheFuture', '99.0.0')""");
+
+        var healthCheck = new DatabaseHealthCheck(context, _logger);
+        HealthCheckResult result = await healthCheck.CheckHealthAsync(null!);
+
+        result.Status.ShouldBe(HealthCheckStatus.Degraded);
+
+        // An operator needs the reason.
+        result.Description.ShouldContain("1 migration(s)");
+        _logger.ReceivedLogContaining(
+            LogLevel.Warning, "Database was written by a newer version");
     }
 
     #endregion

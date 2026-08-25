@@ -31,12 +31,21 @@ public class DatabaseHealthCheck : IHealthCheck
                 return HealthCheckResult.Unhealthy("Cannot connect to database");
             }
 
-            // Optionally check if database schema is up to date
-            var pendingMigrations = await _dataContext.Database.GetPendingMigrationsAsync(cancellationToken);
-            if (pendingMigrations.Any())
+            // Startup applies pending migrations before the web host exists.
+            // A rollback leaves migrations this build does not ship.
+            List<string> unknownMigrations =
+                (await _dataContext.Database.GetAppliedMigrationsAsync(cancellationToken))
+                .Except(_dataContext.Database.GetMigrations())
+                .ToList();
+
+            if (unknownMigrations.Count > 0)
             {
-                _logger.LogWarning("Database has pending migrations: {migrations}", string.Join(", ", pendingMigrations));
-                return HealthCheckResult.Degraded($"Database has {pendingMigrations.Count()} pending migrations");
+                _logger.LogWarning(
+                    "Database was written by a newer version: {Migrations}",
+                    string.Join(", ", unknownMigrations));
+
+                return HealthCheckResult.Degraded(
+                    $"Database has {unknownMigrations.Count} migration(s) this version does not ship");
             }
 
             return HealthCheckResult.Healthy("Database connection successful");
