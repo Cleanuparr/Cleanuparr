@@ -190,7 +190,6 @@ public class ManualEventsController : ControllerBase
     [HttpGet("severities")]
     public async Task<ActionResult<List<string>>> GetSeverities()
     {
-        var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
-        return Ok(severities);
+        return Ok(EnumSentinel.SelectableNames<EventSeverity>());
     }
 }

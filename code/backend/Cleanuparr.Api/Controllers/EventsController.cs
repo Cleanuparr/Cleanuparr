@@ -166,8 +166,7 @@ public class EventsController : ControllerBase
     [HttpGet("types")]
     public async Task<ActionResult<List<string>>> GetEventTypes()
     {
-        var types = Enum.GetNames(typeof(EventType)).ToList();
-        return Ok(types);
+        return Ok(EnumSentinel.SelectableNames<EventType>());
     }
 
     /// <summary>
@@ -176,8 +175,7 @@ public class EventsController : ControllerBase
     [HttpGet("severities")]
     public async Task<ActionResult<List<string>>> GetSeverities()
     {
-        var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
-        return Ok(severities);
+        return Ok(EnumSentinel.SelectableNames<EventSeverity>());
     }
 
     [HttpGet("timeline")]
@@ -207,7 +205,8 @@ public class EventsController : ControllerBase
         foreach (BucketTypeCount row in rows)
         {
             DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, size);
-            EventType type = Enum.Parse<EventType>(row.EventType, ignoreCase: true);
+            // Raw SQL skips the value converters, so mirror what they do with unknown text.
+            EventType type = EnumSentinel.ParseOrUnknown<EventType>(row.EventType);
             byBucketType[(bucket, type)] = row.Count;
             presentSet.Add(type);
         }

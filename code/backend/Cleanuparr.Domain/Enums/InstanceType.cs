@@ -9,4 +9,7 @@ public enum InstanceType
     Whisparr,
     Sportarr,
     LazyLibrarian,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

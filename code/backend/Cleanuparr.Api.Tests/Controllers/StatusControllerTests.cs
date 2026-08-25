@@ -66,11 +66,14 @@ public class StatusControllerTests : IDisposable
         IActionResult result = await _controller.GetMediaManagersStatus();
 
         // Assert: the list drives the response, so a forgotten member would vanish from the UI.
+        // The Unknown sentinel is not a media manager.
         Dictionary<string, List<InstanceConnectionResponse>> status = AsDictionary(result);
-        foreach (InstanceType type in Enum.GetValues<InstanceType>())
+        foreach (InstanceType type in EnumSentinel.SelectableValues<InstanceType>())
         {
             status.ShouldContainKey(type.ToString());
         }
+
+        status.ShouldNotContainKey(EnumSentinel.Unknown);
     }
 
     [Fact]

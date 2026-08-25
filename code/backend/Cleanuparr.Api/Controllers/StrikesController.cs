@@ -148,8 +148,7 @@ public class StrikesController : ControllerBase
     [HttpGet("types")]
     public ActionResult<List<string>> GetStrikeTypes()
     {
-        var types = Enum.GetNames(typeof(StrikeType)).ToList();
-        return Ok(types);
+        return Ok(EnumSentinel.SelectableNames<StrikeType>());
     }
 
     /// <summary>

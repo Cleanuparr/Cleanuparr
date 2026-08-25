@@ -119,15 +119,13 @@ public class ArrClientFactoryTests
     }
 
     [Fact]
-    public void GetClient_UnsupportedType_ThrowsNotImplementedException()
+    public void GetClient_UnknownType_ThrowsNotImplementedException()
     {
-        // Arrange
-        var unsupportedType = (InstanceType)999;
+        // A rolled-back build reads an arr type it does not know as the sentinel.
+        var exception = Should.Throw<NotImplementedException>(() => _factory.GetClient(InstanceType.Unknown, 0f));
 
-        // Act & Assert
-        var exception = Should.Throw<NotImplementedException>(() => _factory.GetClient(unsupportedType, 0f));
         exception.Message.ShouldContain("not yet supported");
-        exception.Message.ShouldContain("999");
+        exception.Message.ShouldContain(nameof(InstanceType.Unknown));
     }
 
     [Theory]

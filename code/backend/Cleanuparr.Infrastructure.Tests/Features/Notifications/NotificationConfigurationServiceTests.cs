@@ -593,7 +593,7 @@ public class NotificationConfigurationServiceTests : IDisposable
 
     public static IEnumerable<object[]> NotificationProviderTypes =>
     [
-        ..Enum.GetValues<NotificationProviderType>()
+        ..EnumSentinel.SelectableValues<NotificationProviderType>()
             .Cast<Object>()
             .Select(x => new[] { x })
             .ToList()

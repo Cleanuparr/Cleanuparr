@@ -3,5 +3,8 @@
 public enum DownloadClientType
 {
     Torrent,
-    Usenet
+    Usenet,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

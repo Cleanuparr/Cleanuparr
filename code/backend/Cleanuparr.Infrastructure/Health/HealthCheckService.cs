@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
@@ -125,9 +126,11 @@ public class HealthCheckService : IHealthCheckService
             await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
             
             // Get all enabled client configurations
-            var enabledClients = await dataContext.DownloadClients
-                .Where(x => x.Enabled)
-                .ToListAsync();
+            var enabledClients = (await dataContext.DownloadClients
+                    .Where(x => x.Enabled)
+                    .ToListAsync())
+                .Where(x => !EnumSentinel.IsUnknown(x.TypeName))
+                .ToList();
             var results = new Dictionary<Guid, HealthStatus>();
             
             // Check health of each enabled client
@@ -251,9 +254,11 @@ public class HealthCheckService : IHealthCheckService
 
             // Get all enabled arr instances across all configs
             // Load configs with instances first, then flatten in memory (SQLite doesn't support APPLY)
-            var configs = await dataContext.ArrConfigs
-                .Include(x => x.Instances)
-                .ToListAsync();
+            var configs = (await dataContext.ArrConfigs
+                    .Include(x => x.Instances)
+                    .ToListAsync())
+                .Where(x => !EnumSentinel.IsUnknown(x.Type))
+                .ToList();
 
             var enabledInstances = configs
                 .SelectMany(c => c.Instances

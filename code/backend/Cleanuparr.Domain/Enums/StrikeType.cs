@@ -8,4 +8,7 @@ public enum StrikeType
     SlowSpeed,
     SlowTime,
     DeadTorrent,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

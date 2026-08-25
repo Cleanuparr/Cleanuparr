@@ -58,6 +58,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .ToListAsync();
 
             var providerDtos = providers
+                .Where(p => !EnumSentinel.IsUnknown(p.Type))
                 .Select(p => new NotificationProviderResponse
                 {
                     Id = p.Id,

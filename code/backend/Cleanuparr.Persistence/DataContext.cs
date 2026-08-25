@@ -16,7 +16,6 @@ using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Serilog.Events;
 
 namespace Cleanuparr.Persistence;
 
@@ -133,57 +132,12 @@ public class DataContext : DbContext
 
         modelBuilder.Entity<GeneralConfig>(entity =>
         {
-            entity.ComplexProperty(e => e.Log, cp =>
-            {
-                cp.Property(l => l.Level).HasConversion<LowercaseEnumConverter<LogEventLevel>>();
-            });
-
             entity.ComplexProperty(e => e.Auth, cp =>
             {
                 cp.Property(a => a.TrustedNetworks)
                     .HasConversion(
                         v => string.Join(',', v),
                         v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
-            });
-        });
-        
-        modelBuilder.Entity<QueueCleanerConfig>(entity =>
-        {
-            entity.ComplexProperty(e => e.FailedImport, cp =>
-            {
-                cp.Property(x => x.PatternMode).HasConversion<LowercaseEnumConverter<PatternMode>>();
-            });
-        });
-        
-        modelBuilder.Entity<ContentBlockerConfig>(entity =>
-        {
-            entity.ComplexProperty(e => e.Sonarr, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
-            });
-            entity.ComplexProperty(e => e.Radarr, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
-            });
-            entity.ComplexProperty(e => e.Lidarr, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
-            });
-            entity.ComplexProperty(e => e.Readarr, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
-            });
-            entity.ComplexProperty(e => e.Whisparr, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
-            });
-            entity.ComplexProperty(e => e.Sportarr, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
-            });
-            entity.ComplexProperty(e => e.LazyLibrarian, cp =>
-            {
-                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
             });
         });
         
@@ -199,8 +153,6 @@ public class DataContext : DbContext
         // Configure new notification system relationships
         modelBuilder.Entity<NotificationConfig>(entity =>
         {
-            entity.Property(e => e.Type).HasConversion(new LowercaseEnumConverter<NotificationProviderType>());
-
             entity.HasOne(p => p.NotifiarrConfiguration)
                   .WithOne(c => c.NotificationConfig)
                   .HasForeignKey<NotifiarrConfig>(c => c.NotificationConfigId)
@@ -395,28 +347,9 @@ public class DataContext : DbContext
                     u => u == null ? 0 : u.OriginalString.GetHashCode(),
                     u => u == null ? null! : new Uri(u.OriginalString, UriKind.RelativeOrAbsolute)));
             }
-
-            var enumProperties = entityType.ClrType.GetProperties()
-                .Where(p => !p.IsDefined(typeof(System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute), true))
-                .Where(p => p.PropertyType.IsEnum ||
-                            (p.PropertyType.IsGenericType &&
-                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
-                             p.PropertyType.GetGenericArguments()[0].IsEnum));
-
-            foreach (var property in enumProperties)
-            {
-                var enumType = property.PropertyType.IsEnum
-                    ? property.PropertyType
-                    : property.PropertyType.GetGenericArguments()[0];
-
-                var converterType = typeof(LowercaseEnumConverter<>).MakeGenericType(enumType);
-                var converter = Activator.CreateInstance(converterType);
-
-                modelBuilder.Entity(entityType.ClrType)
-                    .Property(property.Name)
-                    .HasConversion((ValueConverter)converter!);
-            }
         }
+
+        modelBuilder.ApplyLowercaseEnumConversions();
     }
 
     private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)

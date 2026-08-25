@@ -291,7 +291,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             ArrInstanceId = r.ArrInstanceId,
             ExternalItemId = r.ExternalItemId,
             EpisodeId = r.EpisodeId,
-            ItemType = Enum.Parse<InstanceType>(r.ItemType, ignoreCase: true),
+            ItemType = EnumSentinel.ParseOrUnknown<InstanceType>(r.ItemType),
             Title = r.Title,
             PreviousScore = r.PreviousScore,
             NewScore = r.NewScore,
