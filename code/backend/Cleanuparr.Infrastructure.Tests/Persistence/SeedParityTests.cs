@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
@@ -43,11 +44,11 @@ public class SeedParityTests
             throw new SkipException($"Docker is unavailable, skipping seed parity test: {exception.Message}");
         }
 
-        string sqlitePath = Path.Combine(Path.GetTempPath(), $"cleanuparr-seed-parity-{Guid.NewGuid():N}.db");
+        using SqliteTestDatabase sqlite = SqliteTestDatabase.Create("seed-parity");
 
         try
         {
-            SeedSnapshot sqliteSnapshot = await LoadSqliteSeedAsync(sqlitePath);
+            SeedSnapshot sqliteSnapshot = await LoadSqliteSeedAsync(sqlite);
             SeedSnapshot postgresSnapshot = await LoadPostgresSeedAsync(postgresContainer);
 
             AssertSingletonMatches("general_configs", sqliteSnapshot.GeneralConfig, postgresSnapshot.GeneralConfig);
@@ -62,23 +63,12 @@ public class SeedParityTests
         finally
         {
             await postgresContainer.DisposeAsync();
-
-            if (File.Exists(sqlitePath))
-            {
-                File.Delete(sqlitePath);
-            }
         }
     }
 
-    private static async Task<SeedSnapshot> LoadSqliteSeedAsync(string sqlitePath)
+    private static async Task<SeedSnapshot> LoadSqliteSeedAsync(SqliteTestDatabase sqlite)
     {
-        DbContextOptionsBuilder<DataContext> optionsBuilder = new();
-        optionsBuilder
-            .UseSqlite($"Data Source={sqlitePath}", options => options.MigrationsAssembly("Cleanuparr.Persistence.Sqlite"))
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
-
-        await using DataContext context = new(optionsBuilder.Options, new SqliteDatabaseProvider());
+        await using DataContext context = sqlite.CreateContext<DataContext>();
         await context.Database.MigrateAsync();
 
         return await LoadSnapshotAsync(context);

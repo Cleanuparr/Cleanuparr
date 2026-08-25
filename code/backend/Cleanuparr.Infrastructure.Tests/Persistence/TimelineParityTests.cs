@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Providers;
@@ -42,11 +43,11 @@ public class TimelineParityTests
             throw new SkipException($"Docker is unavailable, skipping timeline parity test: {exception.Message}");
         }
 
-        string sqlitePath = Path.Combine(Path.GetTempPath(), $"cleanuparr-timeline-parity-{Guid.NewGuid():N}.db");
+        using SqliteTestDatabase sqlite = SqliteTestDatabase.Create("timeline-parity");
 
         try
         {
-            List<string> sqliteLabels = await BucketLabelsSqliteAsync(sqlitePath, size);
+            List<string> sqliteLabels = await BucketLabelsSqliteAsync(sqlite, size);
             List<string> postgresLabels = await BucketLabelsPostgresAsync(postgresContainer, size);
 
             postgresLabels.ShouldBe(sqliteLabels);
@@ -54,28 +55,17 @@ public class TimelineParityTests
         finally
         {
             await postgresContainer.DisposeAsync();
-
-            if (File.Exists(sqlitePath))
-            {
-                File.Delete(sqlitePath);
-            }
         }
     }
 
-    private static async Task<List<string>> BucketLabelsSqliteAsync(string sqlitePath, TimelineBucketSize size)
+    private static async Task<List<string>> BucketLabelsSqliteAsync(
+        SqliteTestDatabase sqlite, TimelineBucketSize size)
     {
-        SqliteDatabaseProvider provider = new();
-        DbContextOptionsBuilder<EventsContext> builder = new();
-        builder
-            .UseSqlite($"Data Source={sqlitePath}", options => options.MigrationsAssembly("Cleanuparr.Persistence.Sqlite"))
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
-
-        await using EventsContext context = new(builder.Options, provider);
+        await using EventsContext context = sqlite.CreateContext<EventsContext>();
         await context.Database.MigrateAsync();
         await SeedAsync(context);
 
-        return await BucketLabelsAsync(context, provider, size);
+        return await BucketLabelsAsync(context, sqlite.Provider, size);
     }
 
     private static async Task<List<string>> BucketLabelsPostgresAsync(PostgreSqlContainer container, TimelineBucketSize size)
