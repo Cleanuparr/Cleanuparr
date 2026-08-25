@@ -203,68 +203,24 @@ export class SeekerComponent implements HasPendingChanges {
     return true;
   };
 
+  patchInstance(index: number, patch: Partial<InstanceState>): void {
+    this.instances.update(instances =>
+      instances.map((instance, i) => (i === index ? { ...instance, ...patch } : instance))
+    );
+  }
+
   toggleInstance(index: number): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], enabled: !updated[index].enabled };
-      return updated;
-    });
+    this.patchInstance(index, { enabled: !this.instances()[index].enabled });
   }
 
-  updateInstanceSkipTags(index: number, tags: string[]): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], skipTags: tags };
-      return updated;
-    });
-  }
-
+  // The inputs clear to null.
+  // The config needs a number.
   updateInstanceActiveDownloadLimit(index: number, limit: number | null): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], activeDownloadLimit: limit ?? 3 };
-      return updated;
-    });
-  }
-
-  updateInstanceIgnoreStruckDownloads(index: number, ignore: boolean): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], ignoreStruckDownloads: ignore };
-      return updated;
-    });
+    this.patchInstance(index, { activeDownloadLimit: limit ?? 3 });
   }
 
   updateInstanceMinCycleTimeDays(index: number, days: number | null): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], minCycleTimeDays: days ?? 7 };
-      return updated;
-    });
-  }
-
-  updateInstanceMonitoredOnly(index: number, value: boolean): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], monitoredOnly: value };
-      return updated;
-    });
-  }
-
-  updateInstanceUseCutoff(index: number, value: boolean): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], useCutoff: value };
-      return updated;
-    });
-  }
-
-  updateInstanceUseCustomFormatScore(index: number, value: boolean): void {
-    this.instances.update(instances => {
-      const updated = [...instances];
-      updated[index] = { ...updated[index], useCustomFormatScore: value };
-      return updated;
-    });
+    this.patchInstance(index, { minCycleTimeDays: days ?? 7 });
   }
 
   getInstanceIcon(instanceType: string): string {

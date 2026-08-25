@@ -64,7 +64,7 @@ describe('SeekerComponent', () => {
   it('marks pending changes when the struck download toggle flips', () => {
     const fixture = setup();
 
-    fixture.componentInstance.updateInstanceIgnoreStruckDownloads(0, true);
+    fixture.componentInstance.patchInstance(0, { ignoreStruckDownloads: true });
     fixture.detectChanges();
 
     expect(fixture.componentInstance.instances()[0].ignoreStruckDownloads).toBe(true);

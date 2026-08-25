@@ -92,22 +92,22 @@
               <div class="instance-row__details">
                 <app-toggle label="Monitored Only" [checked]="instance.monitoredOnly"
                   hint="Only search for items that are monitored in the arr app"
-                  (checkedChange)="updateInstanceMonitoredOnly($index, $event)"
+                  (checkedChange)="patchInstance($index, { monitoredOnly: $event })"
                   helpKey="seeker:monitoredOnly" />
                 <app-toggle label="Use Cutoff" [checked]="instance.useCutoff"
                   hint="Skip items that have already met their quality cutoff"
-                  (checkedChange)="updateInstanceUseCutoff($index, $event)"
+                  (checkedChange)="patchInstance($index, { useCutoff: $event })"
                   helpKey="seeker:useCutoff" />
                 <app-toggle label="Use Custom Format Score" [checked]="instance.useCustomFormatScore"
                   hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
-                  (checkedChange)="updateInstanceUseCustomFormatScore($index, $event)"
+                  (checkedChange)="patchInstance($index, { useCustomFormatScore: $event })"
                   helpKey="seeker:useCustomFormatScore" />
                 <app-chip-input
                   label="Skip Tags"
                   placeholder="Add tag..."
                   hint="Arr tags to exclude from search"
                   [value]="instance.skipTags"
-                  (valueChange)="updateInstanceSkipTags($index, $event)"
+                  (valueChange)="patchInstance($index, { skipTags: $event })"
                   helpKey="seeker:skipTags"
                 />
                 <app-number-input
@@ -122,7 +122,7 @@
                 />
                 <app-toggle label="Ignore Struck Downloads" [checked]="instance.ignoreStruckDownloads"
                   hint="Downloads with a Queue Cleaner strike (stalled, slow, downloading metadata) do not count toward the Active Download Limit"
-                  (checkedChange)="updateInstanceIgnoreStruckDownloads($index, $event)"
+                  (checkedChange)="patchInstance($index, { ignoreStruckDownloads: $event })"
                   helpKey="seeker:ignoreStruckDownloads"
                   featureId="seeker-ignore-struck-downloads" />
                 <app-number-input
