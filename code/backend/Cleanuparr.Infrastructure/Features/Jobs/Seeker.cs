@@ -342,11 +342,6 @@ public sealed class Seeker : IHandler
     /// </summary>
     private async Task<int> DiscountStruckDownloadsAsync(List<string> downloadIds, string instanceName)
     {
-        if (downloadIds.Count is 0)
-        {
-            return 0;
-        }
-
         // The download client decides the stored casing, the arr sends its own.
         int struckCount = await _eventsContext.DownloadItems
             .AsNoTracking()
