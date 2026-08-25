@@ -107,19 +107,17 @@ test.describe('Seeker candidate filters', () => {
   }
 
   /** Whether a strike landed within the window, without failing the test if none did. */
-  async function pollStrikeCount(api: CleanuparrApi): Promise<boolean> {
-    const deadline = Date.now() + 45_000;
-
-    while (Date.now() < deadline) {
-      const struck = await (await api.strikes.list({ pageSize: 200 })).json();
-      if ((struck.items ?? []).length > 0) {
-        return true;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
-    }
-
-    return false;
+  function pollStrikeCount(api: CleanuparrApi): Promise<boolean> {
+    return expect
+      .poll(
+        async () => ((await (await api.strikes.list({ pageSize: 200 })).json()).items ?? []).length,
+        { timeout: 45_000, intervals: [2_000] },
+      )
+      .toBeGreaterThan(0)
+      .then(
+        () => true,
+        () => false,
+      );
   }
 
   test('searches the seeded movie when nothing filters it out', async ({ api }) => {
