@@ -97,7 +97,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             if (known.Count != providers.Count)
             {
                 _logger.LogWarning(
-                    "Skipped {count} notification provider(s) of a type this version does not support",
+                    "Skipped {Count} notification provider(s) of a type this version does not support",
                     providers.Count - known.Count);
             }
 
@@ -113,7 +113,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
                 _cacheSemaphore.Release();
             }
 
-            _logger.LogDebug("Loaded {count} notification providers", dtos.Count);
+            _logger.LogDebug("Loaded {Count} notification providers", dtos.Count);
         }
         catch (Exception ex)
         {
