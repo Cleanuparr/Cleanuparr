@@ -207,7 +207,10 @@ public class EventsController : ControllerBase
             DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, size);
             // Raw SQL skips the value converters, so mirror what they do with unknown text.
             EventType type = EnumSentinel.ParseOrUnknown<EventType>(row.EventType);
-            byBucketType[(bucket, type)] = row.Count;
+            // Several unrecognised types read as one.
+            // Their rows have to add up.
+            byBucketType.TryGetValue((bucket, type), out int running);
+            byBucketType[(bucket, type)] = running + row.Count;
             presentSet.Add(type);
         }
 

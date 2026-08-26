@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Providers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Shouldly;
 
@@ -131,5 +132,43 @@ public class EventsControllerTimelineTests : IDisposable
 
         timeline.Types.ShouldBeEmpty();
         timeline.Buckets.ShouldAllBe(b => b.Counts.Count == 0);
+    }
+
+    [Fact]
+    public async Task GetTimeline_SumsEveryUnknownTypeInABucket()
+    {
+        DateOnly today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+        DateTimeOffset sameDay = new(today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero);
+
+        _context.Events.Add(new AppEvent
+        {
+            EventType = EventType.FailedImportStrike,
+            Message = "first unknown",
+            Severity = EventSeverity.Important,
+            Timestamp = sameDay,
+        });
+        _context.Events.Add(new AppEvent
+        {
+            EventType = EventType.StalledStrike,
+            Message = "second unknown",
+            Severity = EventSeverity.Important,
+            Timestamp = sameDay.AddHours(-1),
+        });
+        await _context.SaveChangesAsync();
+
+        // Two types a newer version wrote.
+        // This build reads both as one.
+        await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE events SET event_type = 'fromthefuture' WHERE message = 'first unknown'");
+        await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE events SET event_type = 'alsofromthefuture' WHERE message = 'second unknown'");
+
+        EventTypeTimelineResponse timeline = GetTimeline(await _controller.GetTimeline(hours: 24 * 30));
+
+        timeline.Types.ShouldBe([EnumSentinel.Unknown]);
+
+        DateTimeOffset todayStart = new(today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        EventTypeTimelineBucket todayBucket = timeline.Buckets.Single(b => b.Date == todayStart);
+        todayBucket.Counts[EnumSentinel.Unknown].ShouldBe(2);
     }
 }
