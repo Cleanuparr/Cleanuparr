@@ -7,6 +7,7 @@ using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -230,6 +231,21 @@ public sealed class HealthCheckServiceTests : IDisposable
         results.Count.ShouldBe(2);
         results[Seeded("good")].IsHealthy.ShouldBeTrue();
         results[Seeded("bad")].IsHealthy.ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(nameof(DownloadClientConfig.TypeName))]
+    [InlineData(nameof(DownloadClientConfig.Type))]
+    public async Task A_client_of_a_kind_this_build_does_not_know_is_never_probed(string property)
+    {
+        DownloadClientConfig unknown = SeedClient("from the future");
+        Seed(unknown, SeedClient("supported"));
+        await PoisonAsync(unknown.Id, property);
+
+        IDictionary<Guid, HealthStatus> results = await BuildService().CheckAllClientsHealthAsync();
+
+        results.Keys.ShouldBe([Seeded("supported")]);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Is<DownloadClientConfig>(c => c.Id == unknown.Id));
     }
 
     [Fact]
@@ -703,6 +719,21 @@ public sealed class HealthCheckServiceTests : IDisposable
         using DataContext context = new(_options);
         context.ArrConfigs.Add(new ArrConfig { Id = Guid.NewGuid(), Type = type, Instances = [instance] });
         context.SaveChanges();
+    }
+
+    // The converter refuses to write the sentinel, so the value has to go in behind EF.
+    private async Task PoisonAsync(Guid clientId, string property)
+    {
+        await using DataContext context = new(_options);
+        IEntityType entityType = context.Model.FindEntityType(typeof(DownloadClientConfig))!;
+        StoreObjectIdentifier table = StoreObjectIdentifier.Create(entityType, StoreObjectType.Table)!.Value;
+
+        string column = entityType.FindProperty(property)!.GetColumnName(table)!;
+        string key = entityType.FindProperty(nameof(DownloadClientConfig.Id))!.GetColumnName(table)!;
+
+        await context.Database.ExecuteSqlRawAsync(
+            $"UPDATE \"{table.Name}\" SET \"{column}\" = 'fromthefuture' WHERE \"{key}\" = {{0}}",
+            clientId);
     }
 
     private async Task DeleteClientAsync(Guid clientId)

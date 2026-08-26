@@ -129,7 +129,7 @@ public class HealthCheckService : IHealthCheckService
             var enabledClients = (await dataContext.DownloadClients
                     .Where(x => x.Enabled)
                     .ToListAsync())
-                .Where(x => !EnumSentinel.IsUnknown(x.TypeName))
+                .Where(x => !EnumSentinel.IsUnknown(x.TypeName) && !EnumSentinel.IsUnknown(x.Type))
                 .ToList();
             var results = new Dictionary<Guid, HealthStatus>();
             
