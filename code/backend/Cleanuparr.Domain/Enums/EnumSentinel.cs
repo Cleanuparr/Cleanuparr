@@ -1,5 +1,8 @@
 namespace Cleanuparr.Domain.Enums;
 
+/// <summary>
+/// The member every persisted enum keeps for a value written by a newer version.
+/// </summary>
 public static class EnumSentinel
 {
     /// <summary>
@@ -25,6 +28,7 @@ public static class EnumSentinel
     /// <summary>
     /// Reads a stored member name, falling back to the sentinel.
     /// For raw SQL, which never passes through the EF value converters.
+    /// Throws unless the enum declares the sentinel.
     /// </summary>
     public static TEnum ParseOrUnknown<TEnum>(string? value)
         where TEnum : struct, Enum =>
