@@ -59,7 +59,7 @@ public class ManualEventsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(severity))
         {
-            if (Enum.TryParse<EventSeverity>(severity, true, out var severityEnum))
+            if (EnumSentinel.TryParseSelectable(severity, out EventSeverity severityEnum))
                 query = query.Where(e => e.Severity == severityEnum);
         }
 

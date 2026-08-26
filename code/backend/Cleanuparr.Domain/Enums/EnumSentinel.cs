@@ -33,6 +33,23 @@ public static class EnumSentinel
             : Enum.Parse<TEnum>(Unknown);
 
     /// <summary>
+    /// Reads a member a user asked to filter by, refusing the sentinel.
+    /// The column keeps the text a newer version wrote.
+    /// A query naming the sentinel throws.
+    /// </summary>
+    public static bool TryParseSelectable<TEnum>(string? value, out TEnum parsed)
+        where TEnum : struct, Enum
+    {
+        if (LowercaseEnumName.TryParse(value, out parsed) && !IsUnknown(parsed))
+        {
+            return true;
+        }
+
+        parsed = default;
+        return false;
+    }
+
+    /// <summary>
     /// Members a user can pick from, without the sentinel.
     /// </summary>
     public static List<TEnum> SelectableValues<TEnum>()

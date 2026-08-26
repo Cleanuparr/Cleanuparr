@@ -76,7 +76,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(e => e.QualityProfileName == qualityProfile);
         }
 
-        if (itemType.HasValue)
+        if (itemType.HasValue && !EnumSentinel.IsUnknown(itemType.Value))
         {
             InstanceType typeValue = itemType.Value;
             query = query.Where(e => e.ItemType == typeValue);

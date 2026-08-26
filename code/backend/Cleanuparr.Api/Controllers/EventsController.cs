@@ -62,7 +62,7 @@ public class EventsController : ControllerBase
         // Apply filters
         if (!string.IsNullOrWhiteSpace(severity))
         {
-            if (Enum.TryParse<EventSeverity>(severity, true, out EventSeverity severityEnum))
+            if (EnumSentinel.TryParseSelectable(severity, out EventSeverity severityEnum))
             {
                 query = query.Where(e => e.Severity == severityEnum);
             }
@@ -70,7 +70,7 @@ public class EventsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(eventType))
         {
-            if (Enum.TryParse<EventType>(eventType, true, out EventType eventTypeEnum))
+            if (EnumSentinel.TryParseSelectable(eventType, out EventType eventTypeEnum))
             {
                 query = query.Where(e => e.EventType == eventTypeEnum);
             }
