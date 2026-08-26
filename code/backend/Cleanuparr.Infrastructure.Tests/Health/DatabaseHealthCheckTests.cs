@@ -36,13 +36,15 @@ public class DatabaseHealthCheckTests : IDisposable
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        _dataContext = new DataContext(options);
+        string databaseName = Guid.NewGuid().ToString();
+        _dataContext = InMemoryContext<DataContext>(databaseName);
 
         // Act
-        var healthCheck = new DatabaseHealthCheck(_dataContext, _logger);
+        var healthCheck = new DatabaseHealthCheck(
+            _dataContext,
+            InMemoryContext<EventsContext>(databaseName),
+            InMemoryContext<UsersContext>(databaseName),
+            _logger);
 
         // Assert
         healthCheck.ShouldNotBeNull();
@@ -53,30 +55,29 @@ public class DatabaseHealthCheckTests : IDisposable
     #region Schema Version Tests
 
     [Fact]
-    public async Task CheckHealthAsync_WithAFullyMigratedDatabase_ReturnsHealthy()
+    public async Task CheckHealthAsync_WithFullyMigratedDatabases_ReturnsHealthy()
     {
-        using SqliteTestDatabase database = SqliteTestDatabase.Create("dbhealth");
-        await using DataContext context = database.CreateContext<DataContext>();
-        await context.Database.MigrateAsync();
+        await using MigratedSchemas schemas = await MigratedSchemas.CreateAsync();
 
-        var healthCheck = new DatabaseHealthCheck(context, _logger);
+        var healthCheck = schemas.BuildHealthCheck(_logger);
         HealthCheckResult result = await healthCheck.CheckHealthAsync(null!);
 
         result.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
-    [Fact]
-    public async Task CheckHealthAsync_WhenTheDatabaseHasMigrationsThisBuildDoesNotShip_ReturnsDegraded()
+    [Theory]
+    [InlineData("data")]
+    [InlineData("events")]
+    [InlineData("users")]
+    public async Task CheckHealthAsync_WhenASchemaHasMigrationsThisBuildDoesNotShip_ReturnsDegraded(string schema)
     {
-        using SqliteTestDatabase database = SqliteTestDatabase.Create("dbhealth");
-        await using DataContext context = database.CreateContext<DataContext>();
-        await context.Database.MigrateAsync();
+        await using MigratedSchemas schemas = await MigratedSchemas.CreateAsync();
 
         // What a rollback leaves behind: history rows naming a migration this build never had.
-        await context.Database.ExecuteSqlRawAsync(
+        await schemas.Context(schema).Database.ExecuteSqlRawAsync(
             """INSERT INTO "__EFMigrationsHistory" ("migration_id", "product_version") VALUES ('99999999999999_FromTheFuture', '99.0.0')""");
 
-        var healthCheck = new DatabaseHealthCheck(context, _logger);
+        var healthCheck = schemas.BuildHealthCheck(_logger);
         HealthCheckResult result = await healthCheck.CheckHealthAsync(null!);
 
         result.Status.ShouldBe(HealthCheckStatus.Degraded);
@@ -95,14 +96,15 @@ public class DatabaseHealthCheckTests : IDisposable
     public async Task CheckHealthAsync_WhenDisposedContext_ReturnsUnhealthy()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var disposedContext = new DataContext(options);
+        string databaseName = Guid.NewGuid().ToString();
+        DataContext disposedContext = InMemoryContext<DataContext>(databaseName);
         disposedContext.Dispose();
 
-        var healthCheck = new DatabaseHealthCheck(disposedContext, _logger);
+        var healthCheck = new DatabaseHealthCheck(
+            disposedContext,
+            InMemoryContext<EventsContext>(databaseName),
+            InMemoryContext<UsersContext>(databaseName),
+            _logger);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(null!);
@@ -115,14 +117,15 @@ public class DatabaseHealthCheckTests : IDisposable
     public async Task CheckHealthAsync_WhenUnhealthy_LogsError()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var disposedContext = new DataContext(options);
+        string databaseName = Guid.NewGuid().ToString();
+        DataContext disposedContext = InMemoryContext<DataContext>(databaseName);
         disposedContext.Dispose();
 
-        var healthCheck = new DatabaseHealthCheck(disposedContext, _logger);
+        var healthCheck = new DatabaseHealthCheck(
+            disposedContext,
+            InMemoryContext<EventsContext>(databaseName),
+            InMemoryContext<UsersContext>(databaseName),
+            _logger);
 
         // Act
         await healthCheck.CheckHealthAsync(null!);
@@ -139,14 +142,15 @@ public class DatabaseHealthCheckTests : IDisposable
     public async Task CheckHealthAsync_WhenUnhealthy_DescriptionIndicatesFailure()
     {
         // Arrange
-        var options = new DbContextOptionsBuilder<DataContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-
-        var disposedContext = new DataContext(options);
+        string databaseName = Guid.NewGuid().ToString();
+        DataContext disposedContext = InMemoryContext<DataContext>(databaseName);
         disposedContext.Dispose();
 
-        var healthCheck = new DatabaseHealthCheck(disposedContext, _logger);
+        var healthCheck = new DatabaseHealthCheck(
+            disposedContext,
+            InMemoryContext<EventsContext>(databaseName),
+            InMemoryContext<UsersContext>(databaseName),
+            _logger);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(null!);
@@ -156,4 +160,69 @@ public class DatabaseHealthCheckTests : IDisposable
     }
 
     #endregion
+
+    private static TContext InMemoryContext<TContext>(string databaseName)
+        where TContext : DbContext
+    {
+        DbContextOptionsBuilder<TContext> optionsBuilder = new();
+        optionsBuilder.UseInMemoryDatabase(databaseName: $"{databaseName}-{typeof(TContext).Name}");
+
+        return (TContext)Activator.CreateInstance(typeof(TContext), optionsBuilder.Options)!;
+    }
+
+    /// <summary>
+    /// The three schemas the app migrates at startup, each in its own file like production.
+    /// </summary>
+    private sealed class MigratedSchemas : IAsyncDisposable
+    {
+        private readonly List<SqliteTestDatabase> _databases = [];
+        private DataContext _data = null!;
+        private EventsContext _events = null!;
+        private UsersContext _users = null!;
+
+        public static async Task<MigratedSchemas> CreateAsync()
+        {
+            MigratedSchemas schemas = new();
+            schemas._data = await schemas.MigrateAsync<DataContext>("data");
+            schemas._events = await schemas.MigrateAsync<EventsContext>("events");
+            schemas._users = await schemas.MigrateAsync<UsersContext>("users");
+
+            return schemas;
+        }
+
+        public DbContext Context(string schema) => schema switch
+        {
+            "data" => _data,
+            "events" => _events,
+            "users" => _users,
+            _ => throw new ArgumentOutOfRangeException(nameof(schema), schema, null),
+        };
+
+        public DatabaseHealthCheck BuildHealthCheck(ILogger<DatabaseHealthCheck> logger) =>
+            new(_data, _events, _users, logger);
+
+        public async ValueTask DisposeAsync()
+        {
+            await _data.DisposeAsync();
+            await _events.DisposeAsync();
+            await _users.DisposeAsync();
+
+            foreach (SqliteTestDatabase database in _databases)
+            {
+                database.Dispose();
+            }
+        }
+
+        private async Task<TContext> MigrateAsync<TContext>(string name)
+            where TContext : DbContext
+        {
+            SqliteTestDatabase database = SqliteTestDatabase.Create($"dbhealth-{name}");
+            _databases.Add(database);
+
+            TContext context = database.CreateContext<TContext>();
+            await context.Database.MigrateAsync();
+
+            return context;
+        }
+    }
 }
