@@ -14,8 +14,6 @@ namespace Cleanuparr.Infrastructure.Tests.Health;
 
 /// <summary>
 /// Basic tests for DatabaseHealthCheck.
-/// Note: Full integration testing requires a real database since in-memory provider
-/// doesn't support migrations (GetPendingMigrationsAsync).
 /// </summary>
 public class DatabaseHealthCheckTests : IDisposable
 {

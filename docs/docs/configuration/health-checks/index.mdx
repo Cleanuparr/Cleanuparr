@@ -89,8 +89,7 @@ curl http://localhost:11011/health/detailed
 >
 
 - Tests database connectivity
-- Checks for pending migrations
-- Validates schema integrity
+- Reports `Degraded` when the database has migrations that aren't included in the running build, which can happen after a downgrade
 - Used for readiness probes
 
 </ConfigSection>
