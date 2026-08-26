@@ -39,7 +39,7 @@ public static class EnumSentinel
     /// <summary>
     /// Reads a member a user asked to filter by, refusing the sentinel.
     /// The column keeps the text a newer version wrote.
-    /// A query naming the sentinel throws.
+    /// The EF converter throws when the sentinel reaches a query.
     /// </summary>
     public static bool TryParseSelectable<TEnum>(string? value, out TEnum parsed)
         where TEnum : struct, Enum
