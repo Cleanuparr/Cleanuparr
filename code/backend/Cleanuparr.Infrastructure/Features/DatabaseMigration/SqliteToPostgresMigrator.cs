@@ -37,6 +37,13 @@ public sealed class SqliteToPostgresMigrator
                 }
             }
 
+            // --force wipes the target, it does not make an unreadable source readable.
+            string? newerSource = await FindSourceNewerThanAppAsync(cancellationToken);
+            if (newerSource is not null)
+            {
+                return new MigrationResult(false, newerSource, new Dictionary<string, int>());
+            }
+
             await MigrateSourceSchemaAsync(progress, cancellationToken);
 
             try
@@ -82,6 +89,39 @@ public sealed class SqliteToPostgresMigrator
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresPassword),
             DatabaseConfigProvider.GetRequired(ConfigurationKeys.PostgresDatabase),
             DatabaseConfigProvider.GetOptional(ConfigurationKeys.PostgresExtraParams));
+
+    /// <summary>
+    /// Describes the source databases holding migrations this build does not ship, or null.
+    /// Misses a newer release that shipped no migration: <see cref="ModelDataCopier"/> reports those.
+    /// </summary>
+    private static async Task<string?> FindSourceNewerThanAppAsync(CancellationToken cancellationToken)
+    {
+        string? data = await FindUnknownMigrationsAsync<DataContext>(DbContextKind.Data, cancellationToken);
+        string? events = await FindUnknownMigrationsAsync<EventsContext>(DbContextKind.Events, cancellationToken);
+        string? users = await FindUnknownMigrationsAsync<UsersContext>(DbContextKind.Users, cancellationToken);
+
+        string[] affected = new[] { data, events, users }.OfType<string>().ToArray();
+        if (affected.Length is 0)
+        {
+            return null;
+        }
+
+        return $"The source database was written by a newer version of Cleanuparr: {string.Join("; ", affected)}. "
+            + "Upgrade Cleanuparr to that version (or newer) and re-run the migration.";
+    }
+
+    // Source contexts only: the two providers give the same change different ids.
+    private static async Task<string?> FindUnknownMigrationsAsync<TContext>(DbContextKind kind, CancellationToken cancellationToken)
+        where TContext : DbContext
+    {
+        await using TContext context = BuildSourceContext<TContext>(kind);
+        IEnumerable<string> applied = await context.Database.GetAppliedMigrationsAsync(cancellationToken);
+        string[] unknown = applied.Except(context.Database.GetMigrations()).ToArray();
+
+        return unknown.Length is 0
+            ? null
+            : $"{kind.ToString().ToLowerInvariant()} has {string.Join(", ", unknown)}";
+    }
 
     private async Task MigrateSourceSchemaAsync(IProgress<string>? progress, CancellationToken cancellationToken)
     {
