@@ -47,7 +47,7 @@ public static class EnumConventions
             }
 
             // A fresh instance carries the property initializers.
-            declaredDefaults ??= Activator.CreateInstance(type.ClrType)!;
+            declaredDefaults ??= CreateDefaults(type.ClrType, property);
             object fallback = property.GetValue(declaredDefaults)!;
 
             mapped.SetValueConverter(
@@ -57,6 +57,20 @@ public static class EnumConventions
         foreach (IMutableComplexProperty complexProperty in type.GetComplexProperties())
         {
             Apply(complexProperty.ComplexType);
+        }
+    }
+
+    private static object CreateDefaults(Type clrType, PropertyInfo property)
+    {
+        try
+        {
+            return Activator.CreateInstance(clrType)!;
+        }
+        catch (Exception exception)
+        {
+            throw new InvalidOperationException(
+                $"Cannot read the fallback for {clrType.Name}.{property.Name}: {clrType.Name} has no usable parameterless constructor",
+                exception);
         }
     }
 
