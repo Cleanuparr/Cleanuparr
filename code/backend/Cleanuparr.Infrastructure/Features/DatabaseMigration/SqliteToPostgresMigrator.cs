@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.Reflection;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Configuration;
@@ -74,6 +75,10 @@ public sealed class SqliteToPostgresMigrator
             }
 
             return new MigrationResult(true, null, counts);
+        }
+        catch (UnknownEnumValueException exception)
+        {
+            return new MigrationResult(false, exception.Message, counts);
         }
         catch (Exception exception)
         {

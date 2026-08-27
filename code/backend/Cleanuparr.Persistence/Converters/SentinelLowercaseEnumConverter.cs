@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Cleanuparr.Persistence.Converters;
@@ -21,7 +22,7 @@ public class SentinelLowercaseEnumConverter<TEnum> : ValueConverter<TEnum, strin
 
     private static string Write(TEnum value) =>
         EnumSentinel.IsUnknown(value)
-            ? throw new InvalidOperationException(
+            ? throw new UnknownEnumValueException(
                 $"{typeof(TEnum).Name}.{EnumSentinel.Unknown} is not a database value: filter it in memory.")
             : value.ToString().ToLowerInvariant();
 

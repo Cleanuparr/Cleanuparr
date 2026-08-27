@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.DatabaseMigration;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -16,6 +17,46 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DatabaseMigration;
 
 public class ModelDataCopierTests
 {
+    [Fact]
+    public async Task CopyAsync_names_the_table_holding_values_a_newer_version_wrote()
+    {
+        SqliteConnection sourceConnection = new("DataSource=:memory:");
+        sourceConnection.Open();
+        SqliteConnection targetConnection = new("DataSource=:memory:");
+        targetConnection.Open();
+
+        SqliteDatabaseProvider provider = new();
+
+        DbContextOptions<DataContext> sourceOptions = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlite(sourceConnection)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        DbContextOptions<DataContext> targetOptions = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlite(targetConnection)
+            .UseSnakeCaseNamingConvention()
+            .ReplaceService<IModelCustomizer, KeepKeysModelCustomizer>()
+            .Options;
+
+        await using (DataContext source = new(sourceOptions, provider))
+        {
+            await source.Database.EnsureCreatedAsync();
+            source.ArrConfigs.Add(new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Sonarr });
+            await source.SaveChangesAsync();
+            await source.Database.ExecuteSqlRawAsync("UPDATE arr_configs SET type = 'fromthefuture'");
+        }
+
+        await using DataContext target = new(targetOptions, provider);
+        await target.Database.EnsureCreatedAsync();
+        await using DataContext poisoned = new(sourceOptions, provider);
+
+        ModelDataCopier copier = new();
+        UnknownEnumValueException exception = await Should.ThrowAsync<UnknownEnumValueException>(
+            () => copier.CopyAsync(poisoned, target, null, CancellationToken.None));
+
+        exception.Message.ShouldContain("arr_configs");
+        exception.Message.ShouldContain("Upgrade Cleanuparr");
+    }
+
     [Fact]
     public async Task CopyAsync_reproduces_rows_and_preserves_keys()
     {
