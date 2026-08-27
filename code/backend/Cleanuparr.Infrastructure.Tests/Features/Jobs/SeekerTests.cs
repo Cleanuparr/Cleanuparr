@@ -360,6 +360,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search should NOT be skipped because only 1 unique download (< limit of 2)
         // The cycle completes (no eligible items) but the point is it wasn't blocked by the limit
+        _fixture.DataContext.ChangeTracker.Clear();
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs.FirstAsync();
         instanceConfig.LastProcessedAt.ShouldNotBeNull();
     }
@@ -1321,6 +1322,7 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
+        _fixture.DataContext.ChangeTracker.Clear();
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
         instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
