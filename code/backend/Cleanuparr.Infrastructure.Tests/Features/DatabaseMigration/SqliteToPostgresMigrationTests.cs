@@ -156,6 +156,65 @@ public class SqliteToPostgresMigrationTests
         }
     }
 
+    [SkippableFact]
+    public async Task RunAsync_refuses_a_source_holding_values_a_newer_version_wrote()
+    {
+        PostgreSqlContainer postgresContainer = await StartPostgresOrSkipAsync();
+
+        string tempConfigDir = Path.Combine(Path.GetTempPath(), $"cleanuparr-migrator-unknown-{Guid.NewGuid():N}");
+        string previousConfigPath = ConfigurationPathProvider.GetConfigPath();
+
+        Guid arrConfigId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        Guid appEventId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        Guid userId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+
+        try
+        {
+            ConfigurationPathProvider.SetConfigPath(tempConfigDir);
+            await SeedSqliteSourceAsync(arrConfigId, appEventId, userId);
+            InitializeDatabaseConfig(postgresContainer);
+
+            await UpdateArrConfigTypeAsync("lidarr", "fromthefuture");
+
+            SqliteToPostgresMigrator migrator = new();
+            MigrationResult refused = await migrator.RunAsync(force: false, null, CancellationToken.None);
+
+            refused.Success.ShouldBeFalse();
+            refused.Error.ShouldNotBeNull();
+            refused.Error!.ShouldContain("arr_configs");
+            refused.Error.ShouldContain("Upgrade Cleanuparr");
+            refused.Error.ShouldNotContain("Microsoft.EntityFrameworkCore");
+
+            // The refusal dropped what it created, so the retry needs no --force.
+            await UpdateArrConfigTypeAsync("fromthefuture", "lidarr");
+
+            MigrationResult retry = await migrator.RunAsync(force: false, null, CancellationToken.None);
+            retry.Success.ShouldBeTrue(retry.Error);
+        }
+        finally
+        {
+            DatabaseConfigProvider.Initialize(new ConfigurationBuilder().Build());
+            ConfigurationPathProvider.SetConfigPath(previousConfigPath);
+            await postgresContainer.DisposeAsync();
+
+            if (Directory.Exists(tempConfigDir))
+            {
+                Directory.Delete(tempConfigDir, recursive: true);
+            }
+        }
+    }
+
+    private static async Task UpdateArrConfigTypeAsync(string from, string to)
+    {
+        await using DataContext data = DataContext.CreateStaticInstance();
+        int affected = await data.Database.ExecuteSqlRawAsync(
+            "UPDATE arr_configs SET type = {0} WHERE type = {1}",
+            to,
+            from);
+
+        affected.ShouldBeGreaterThan(0);
+    }
+
     private static async Task<PostgreSqlContainer> StartPostgresOrSkipAsync()
     {
         try
