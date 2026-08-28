@@ -365,6 +365,8 @@ public sealed class Seeker : IHandler
             .Where(d => downloadIds.Contains(d.DownloadId.ToLower()))
             .Where(d => d.IsMarkedForRemoval ||
                         d.Strikes.Any(s => s.JobRunId == lastRunId && QueueCleanerStrikeTypes.Contains(s.Type)))
+            .Select(d => d.DownloadId.ToLower())
+            .Distinct()
             .CountAsync();
 
         if (struckCount > 0)

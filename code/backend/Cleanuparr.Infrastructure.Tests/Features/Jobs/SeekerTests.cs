@@ -3730,6 +3730,26 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_IgnoreStruckDownloads_CountsACasingDuplicateOnce()
+    {
+        // Arrange: three queued downloads against a limit of two, one of them stored twice per casing
+        (ArrInstance radarrInstance, IArrClient mockArrClient) =
+            await ArrangeActiveDownloadLimitScenarioAsync(true, "abc123", "def456", "ghi789");
+        JobRun run = await AddQueueCleanerRunAsync(JobRunStatus.Completed);
+        await AddStrikeAsync("abc123", StrikeType.Stalled, run);
+        await AddStrikeAsync("ABC123", StrikeType.Stalled, run);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the duplicate frees one slot, not two, so two downloads still hold the limit
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_IgnoreStruckDownloads_CountsStrikeFromAnEarlierRun()
     {
         // Arrange: struck two runs ago, then left alone by the newest run
