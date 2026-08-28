@@ -67,14 +67,17 @@ public sealed class QueueItemRemover : IQueueItemRemover
                     throw new NotSupportedException($"removal target {request.Target.GetType().Name} is not supported");
             }
         }
-        catch (HttpRequestException exception)
+        catch (Exception exception)
         {
-            if (exception.StatusCode is not HttpStatusCode.NotFound)
+            // The download is staying in the queue, so nothing should keep treating it as condemned.
+            await ClearRemovalFlagAsync(request.Target.DownloadId);
+
+            if (exception is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
             {
-                throw;
+                throw new Exception($"Item might have already been deleted by your {request.Instance.ArrConfig.Type} instance", exception);
             }
 
-            throw new Exception($"Item might have already been deleted by your {request.Instance.ArrConfig.Type} instance", exception);
+            throw;
         }
         finally
         {
@@ -218,6 +221,15 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 setter.SetProperty(x => x.IsRemoved, true);
                 setter.SetProperty(x => x.IsMarkedForRemoval, false);
             });
+    }
+
+    private async Task ClearRemovalFlagAsync(string downloadId)
+    {
+        string normalized = downloadId.ToLower();
+
+        await _eventsContext.DownloadItems
+            .Where(x => x.DownloadId.ToLower() == normalized && x.IsMarkedForRemoval)
+            .ExecuteUpdateAsync(setter => setter.SetProperty(x => x.IsMarkedForRemoval, false));
     }
 
     private async Task<bool> ShouldQueueSearchAsync(QueueItemRemoveRequest request, RemovalTarget target)

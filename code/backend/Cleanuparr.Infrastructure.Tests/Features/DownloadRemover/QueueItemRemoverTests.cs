@@ -556,6 +556,66 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
+    public async Task RemoveQueueItemAsync_WhenDeleteFails_ClearsTheRemovalFlag()
+    {
+        // Arrange: the arr refuses the delete, so the download stays in the queue
+        var request = CreateRemoveRequest();
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "abc123def456",
+            Title = "Test Record",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient
+            .DeleteQueueItemAsync(
+                Arg.Any<ArrInstance>(),
+                Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<DeleteReason>())
+            .ThrowsAsync(new HttpRequestException("Server error", null, HttpStatusCode.InternalServerError));
+
+        // Act
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _queueItemRemover.RemoveQueueItemAsync(request));
+
+        // Assert: nothing keeps treating the download as condemned
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "abc123def456");
+        item.IsMarkedForRemoval.ShouldBeFalse();
+        item.IsRemoved.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_WhenTheResetFails_ClearsTheRemovalFlag()
+    {
+        // Arrange: the same guarantee for a LazyLibrarian reset that never went through
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "hash1",
+            Title = "A Book",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        StubProgress(-1);
+        _lazyLibrarianService
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(Task.FromException(new Exception("lazylibrarian is down")));
+
+        // Act
+        await Should.ThrowAsync<Exception>(
+            () => _queueItemRemover.RemoveQueueItemAsync(CreateLazyLibrarianRequest(removedFromClient: true)));
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "hash1");
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task RemoveQueueItemAsync_WhenNonHttpError_Rethrows()
     {
         // Arrange
