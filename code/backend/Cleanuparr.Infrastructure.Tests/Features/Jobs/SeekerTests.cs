@@ -3792,6 +3792,34 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_IgnoreStruckDownloads_IgnoresNewerCompletedRunFromAnotherJob()
+    {
+        // Arrange: another job completed after the Queue Cleaner run that recorded the strike
+        (ArrInstance radarrInstance, IArrClient mockArrClient) =
+            await ArrangeActiveDownloadLimitScenarioAsync(true, "hash1", "hash2");
+        JobRun queueCleanerRun = await AddQueueCleanerRunAsync(JobRunStatus.Completed, minutesAgo: 30);
+        await AddStrikeAsync("hash1", StrikeType.Stalled, queueCleanerRun);
+
+        _fixture.EventsContext.JobRuns.Add(new JobRun
+        {
+            Type = JobType.DownloadCleaner,
+            StartedAt = DateTimeOffset.UtcNow,
+            CompletedAt = DateTimeOffset.UtcNow,
+            Status = JobRunStatus.Completed
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: only Queue Cleaner runs define which queue strikes are current
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_IgnoreStruckDownloads_CountsEverythingWithoutACompletedRun()
     {
         // Arrange: a strike recorded against a run that never completed
