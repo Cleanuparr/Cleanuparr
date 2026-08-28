@@ -31,14 +31,18 @@ const CONFIG: SeekerConfig = {
 };
 
 describe('SeekerComponent', () => {
+  let updateConfig: ReturnType<typeof vi.fn>;
+
   function setup(): ComponentFixture<SeekerComponent> {
+    updateConfig = vi.fn(() => of(undefined));
+
     TestBed.configureTestingModule({
       providers: [
         {
           provide: SeekerApi,
           useValue: {
             getConfig: () => of(CONFIG),
-            updateConfig: () => of(undefined),
+            updateConfig,
           },
         },
       ],
@@ -61,13 +65,31 @@ describe('SeekerComponent', () => {
     expect(fixture.componentInstance.hasPendingChanges()).toBe(false);
   });
 
-  it('marks pending changes when the struck download toggle flips', () => {
+  it('saves the struck download toggle flipped through the DOM', () => {
     const fixture = setup();
+    const toggle = fixture.nativeElement.querySelector(
+      '[aria-label="Ignore Struck Downloads"]',
+    ) as HTMLButtonElement;
 
-    fixture.componentInstance.patchInstance(0, { ignoreStruckDownloads: true });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+
+    toggle.click();
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.instances()[0].ignoreStruckDownloads).toBe(true);
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
     expect(fixture.componentInstance.hasPendingChanges()).toBe(true);
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(updateConfig).toHaveBeenCalledTimes(1);
+    expect(updateConfig.mock.calls[0][0].instances[0].ignoreStruckDownloads).toBe(true);
+    expect(fixture.componentInstance.hasPendingChanges()).toBe(false);
   });
+
+  function saveButton(fixture: ComponentFixture<SeekerComponent>): HTMLButtonElement {
+    return Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
+      (button as HTMLElement).textContent!.includes('Save Settings'),
+    ) as HTMLButtonElement;
+  }
 });
