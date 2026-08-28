@@ -64,6 +64,7 @@ public sealed class SeekerConfigController : ControllerBase
                 LastProcessedAt = seekerConfig?.LastProcessedAt,
                 ArrInstanceEnabled = instance.Enabled,
                 ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 3,
+                IgnoreStruckDownloads = seekerConfig?.IgnoreStruckDownloads ?? false,
                 MinCycleTimeDays = seekerConfig?.MinCycleTimeDays ?? 7,
                 MonitoredOnly = seekerConfig?.MonitoredOnly ?? true,
                 UseCutoff = seekerConfig?.UseCutoff ?? false,
@@ -126,6 +127,7 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.Enabled = instanceReq.Enabled;
                     existing.SkipTags = instanceReq.SkipTags;
                     existing.ActiveDownloadLimit = instanceReq.ActiveDownloadLimit;
+                    existing.IgnoreStruckDownloads = instanceReq.IgnoreStruckDownloads;
                     existing.MinCycleTimeDays = instanceReq.MinCycleTimeDays;
                     existing.MonitoredOnly = instanceReq.MonitoredOnly;
                     existing.UseCutoff = instanceReq.UseCutoff;
@@ -139,6 +141,7 @@ public sealed class SeekerConfigController : ControllerBase
                         Enabled = instanceReq.Enabled,
                         SkipTags = instanceReq.SkipTags,
                         ActiveDownloadLimit = instanceReq.ActiveDownloadLimit,
+                        IgnoreStruckDownloads = instanceReq.IgnoreStruckDownloads,
                         MinCycleTimeDays = instanceReq.MinCycleTimeDays,
                         MonitoredOnly = instanceReq.MonitoredOnly,
                         UseCutoff = instanceReq.UseCutoff,

@@ -115,6 +115,11 @@ public sealed class Striker : IStriker
         _context.Strikes.RemoveRange(strikesToDelete);
         await _context.SaveChangesAsync();
 
+        // Removal can fail and leave the flag behind.
+        await _context.DownloadItems
+            .Where(d => d.Id == downloadItem.Id && d.IsMarkedForRemoval && !d.Strikes.Any())
+            .ExecuteUpdateAsync(setter => setter.SetProperty(d => d.IsMarkedForRemoval, false));
+
         _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, resetCount, itemName);
 
         await _eventPublisher.PublishStrikeReset(strikeType, resetCount, hash, itemName);

@@ -37,6 +37,18 @@ public sealed class Seeker : IHandler
         "importBlocked"
     };
 
+    /// <summary>
+    /// Strike types that the Queue Cleaner records against a download.
+    /// Seeker leaves a download struck with one of these out of the active download count.
+    /// </summary>
+    private static readonly StrikeType[] QueueCleanerStrikeTypes =
+    [
+        StrikeType.Stalled,
+        StrikeType.SlowSpeed,
+        StrikeType.SlowTime,
+        StrikeType.DownloadingMetadata
+    ];
+
     private readonly ILogger<Seeker> _logger;
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
@@ -283,11 +295,16 @@ public sealed class Seeker : IHandler
         // Check active download limit using the fetched queue data
         if (instanceConfig.ActiveDownloadLimit > 0)
         {
-            int activeDownloads = queueRecords
+            List<string> downloadIds = queueRecords
                 .Where(r => r.SizeLeft > 0 && !string.IsNullOrEmpty(r.DownloadId))
-                .Select(r => r.DownloadId)
+                .Select(r => r.DownloadId.ToLowerInvariant())
                 .Distinct()
-                .Count();
+                .ToList();
+
+            int activeDownloads = instanceConfig.IgnoreStruckDownloads
+                ? await DiscountStruckDownloadsAsync(downloadIds, arrInstance.Name)
+                : downloadIds.Count;
+
             if (activeDownloads >= instanceConfig.ActiveDownloadLimit)
             {
                 _logger.LogInformation(
@@ -318,6 +335,48 @@ public sealed class Seeker : IHandler
         await _dataContext.SaveChangesAsync();
 
         return searched;
+    }
+
+    /// <summary>
+    /// Counts the queued downloads the Queue Cleaner left alone on its last completed run.
+    /// </summary>
+    private async Task<int> DiscountStruckDownloadsAsync(List<string> downloadIds, string instanceName)
+    {
+        // A run still in flight or a failed one has only struck part of the queue.
+        Guid lastRunId = await _eventsContext.JobRuns
+            .AsNoTracking()
+            .Where(j => j.Type == JobType.QueueCleaner && j.Status == JobRunStatus.Completed)
+            .OrderByDescending(j => j.StartedAt)
+            .Select(j => j.Id)
+            .FirstOrDefaultAsync();
+
+        if (lastRunId == Guid.Empty)
+        {
+            _logger.LogDebug(
+                "No completed Queue Cleaner run to read strikes from, counting every download for {InstanceName}",
+                instanceName);
+
+            return downloadIds.Count;
+        }
+
+        // The download client decides the stored casing, the arr sends its own.
+        int struckCount = await _eventsContext.DownloadItems
+            .AsNoTracking()
+            .Where(d => downloadIds.Contains(d.DownloadId.ToLower()))
+            .Where(d => d.IsMarkedForRemoval ||
+                        d.Strikes.Any(s => s.JobRunId == lastRunId && QueueCleanerStrikeTypes.Contains(s.Type)))
+            .Select(d => d.DownloadId.ToLower())
+            .Distinct()
+            .CountAsync();
+
+        if (struckCount > 0)
+        {
+            _logger.LogDebug(
+                "Discounting {Count} struck downloads from the active download count for {InstanceName}",
+                struckCount, instanceName);
+        }
+
+        return downloadIds.Count - struckCount;
     }
 
     private async Task<bool> ProcessInstanceAsync(

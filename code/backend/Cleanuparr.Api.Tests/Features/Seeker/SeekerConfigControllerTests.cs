@@ -52,7 +52,27 @@ public class SeekerConfigControllerTests : IDisposable
         instance.Enabled.ShouldBeFalse();
         instance.SkipTags.ShouldBeEmpty();
         instance.ActiveDownloadLimit.ShouldBe(3);
+        instance.IgnoreStruckDownloads.ShouldBeFalse();
         instance.MinCycleTimeDays.ShouldBe(7);
+    }
+
+    [Fact]
+    public async Task GetSeekerConfig_WithIgnoreStruckDownloadsEnabled_ReturnsEnabledValue()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            IgnoreStruckDownloads = true
+        });
+        await _dataContext.SaveChangesAsync();
+
+        var result = await _controller.GetSeekerConfig();
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldHaveSingleItem().IgnoreStruckDownloads.ShouldBeTrue();
     }
 
     [Fact]
@@ -354,6 +374,7 @@ public class SeekerConfigControllerTests : IDisposable
                     Enabled = true,
                     SkipTags = ["new-tag"],
                     ActiveDownloadLimit = 5,
+                    IgnoreStruckDownloads = true,
                     MinCycleTimeDays = 14
                 },
                 // Create new sonarr config
@@ -377,11 +398,13 @@ public class SeekerConfigControllerTests : IDisposable
         radarrConfig.Enabled.ShouldBeTrue();
         radarrConfig.SkipTags.ShouldContain("new-tag");
         radarrConfig.ActiveDownloadLimit.ShouldBe(5);
+        radarrConfig.IgnoreStruckDownloads.ShouldBeTrue();
         radarrConfig.MinCycleTimeDays.ShouldBe(14);
 
         var sonarrConfig = configs.First(c => c.ArrInstanceId == sonarr.Id);
         sonarrConfig.Enabled.ShouldBeTrue();
         sonarrConfig.SkipTags.ShouldContain("sonarr-tag");
+        sonarrConfig.IgnoreStruckDownloads.ShouldBeFalse();
     }
 
     #endregion

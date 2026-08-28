@@ -43,6 +43,7 @@ test.describe('Seeker — per-instance config', () => {
       expect(instance).toHaveProperty('enabled');
       expect(instance).toHaveProperty('skipTags');
       expect(instance).toHaveProperty('activeDownloadLimit');
+      expect(instance).toHaveProperty('ignoreStruckDownloads');
       expect(instance).toHaveProperty('minCycleTimeDays');
       expect(instance).toHaveProperty('monitoredOnly');
       expect(instance).toHaveProperty('useCutoff');
@@ -55,6 +56,7 @@ test.describe('Seeker — per-instance config', () => {
     expect(radarr.monitoredOnly).toBe(true);
     expect(radarr.useCutoff).toBe(false);
     expect(radarr.useCustomFormatScore).toBe(false);
+    expect(radarr.ignoreStruckDownloads).toBe(false);
   });
 
   test('updates per-instance settings independently', async ({ api }) => {
@@ -63,7 +65,14 @@ test.describe('Seeker — per-instance config', () => {
 
     const instances = current.instances.map((i: { arrInstanceId: string }) => {
       if (i.arrInstanceId === radarrId) {
-        return { ...i, enabled: true, monitoredOnly: false, useCutoff: true, useCustomFormatScore: true };
+        return {
+          ...i,
+          enabled: true,
+          monitoredOnly: false,
+          useCutoff: true,
+          useCustomFormatScore: true,
+          ignoreStruckDownloads: true,
+        };
       }
       if (i.arrInstanceId === sonarrId) {
         return { ...i, enabled: true, monitoredOnly: true, useCutoff: true, useCustomFormatScore: false };
@@ -81,6 +90,8 @@ test.describe('Seeker — per-instance config', () => {
     expect(radarr.monitoredOnly).toBe(false);
     expect(radarr.useCutoff).toBe(true);
     expect(radarr.useCustomFormatScore).toBe(true);
+    expect(radarr.ignoreStruckDownloads).toBe(true);
+    expect(sonarr.ignoreStruckDownloads).toBe(false);
     expect(sonarr.monitoredOnly).toBe(true);
     expect(sonarr.useCutoff).toBe(true);
     expect(sonarr.useCustomFormatScore).toBe(false);

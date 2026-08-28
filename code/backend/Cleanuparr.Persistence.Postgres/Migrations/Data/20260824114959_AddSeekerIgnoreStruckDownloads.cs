@@ -1,0 +1,31 @@
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+#nullable disable
+
+namespace Cleanuparr.Persistence.Postgres.Migrations.Data
+{
+    /// <inheritdoc />
+    public partial class AddSeekerIgnoreStruckDownloads : Migration
+    {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<bool>(
+                name: "ignore_struck_downloads",
+                schema: "data",
+                table: "seeker_instance_configs",
+                type: "boolean",
+                nullable: false,
+                defaultValue: false);
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.DropColumn(
+                name: "ignore_struck_downloads",
+                schema: "data",
+                table: "seeker_instance_configs");
+        }
+    }
+}

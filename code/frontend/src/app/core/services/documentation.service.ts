@@ -228,6 +228,7 @@ export class DocumentationService {
       'enabled': 'instance-enabled',
       'skipTags': 'instance-skip-tags',
       'activeDownloadLimit': 'instance-active-download-limit',
+      'ignoreStruckDownloads': 'instance-ignore-struck-downloads',
       'minCycleTimeDays': 'instance-min-cycle-time-days',
     },
   };

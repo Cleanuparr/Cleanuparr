@@ -45,4 +45,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'sportarr-blocklist' },
   { id: 'lazylibrarian-blocklist' },
   { id: 'http-user-agent' },
+  { id: 'seeker-ignore-struck-downloads' },
 ];

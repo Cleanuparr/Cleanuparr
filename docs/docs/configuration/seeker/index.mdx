@@ -207,6 +207,29 @@ Only items that a download client has are counted. Items that are still queued i
 
 Set to `0` to disable this check and always run the proactive search regardless of queue activity.
 
+Enable Ignore Struck Downloads below to leave the downloads that Queue Cleaner flagged out of this count.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Ignore Struck Downloads"
+>
+
+When enabled, a download that Queue Cleaner struck on its most recent completed run does not count toward the Active Download Limit. A slow or stalled download stops holding a slot, so Seeker keeps searching for releases that can still complete.
+
+<Important>
+Use carefully! Because of the volatility of strikes, downloads that continuously receive strikes and recover may cause more downloads than expected to accumulate in the queue.
+</Important>
+
+The strike types that count are:
+
+- **Stalled**
+- **Slow Speed**
+- **Slow Time**
+- **Downloading Metadata**
+
+Only downloads that have received strikes in the most recent completed `Queue Cleaner` run are ignored from the active downloads limit.
+
 </ConfigSection>
 
 <ConfigSection
