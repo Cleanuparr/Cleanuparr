@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -204,6 +205,43 @@ public class StrikerTests : IDisposable
         // Assert - Next strike should be treated as first (returns false)
         var result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
         result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ResetStrikeAsync_ClearsRemovalFlagWhenNoStrikesRemain()
+    {
+        // Arrange - a download condemned by the queue cleaner whose removal never went through
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 1;
+
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Act - the download recovers
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert
+        DownloadItem item = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ResetStrikeAsync_KeepsRemovalFlagWhenAnotherTypeStillHasStrikes()
+    {
+        // Arrange - maxed on slow speed, struck once for stalling
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 1;
+
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.SlowSpeed);
+        await _striker.StrikeAndCheckLimit(hash, itemName, 5, StrikeType.Stalled);
+
+        // Act
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert - the slow speed strikes still condemn the download
+        DownloadItem item = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        item.IsMarkedForRemoval.ShouldBeTrue();
     }
 
     [Fact]
