@@ -57,6 +57,25 @@ public class SeekerConfigControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSeekerConfig_WithIgnoreStruckDownloadsEnabled_ReturnsEnabledValue()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            IgnoreStruckDownloads = true
+        });
+        await _dataContext.SaveChangesAsync();
+
+        var result = await _controller.GetSeekerConfig();
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldHaveSingleItem().IgnoreStruckDownloads.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task GetSeekerConfig_OnlyReturnsSonarrAndRadarrInstances()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);

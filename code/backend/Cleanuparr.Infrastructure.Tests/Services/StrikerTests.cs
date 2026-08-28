@@ -245,6 +245,23 @@ public class StrikerTests : IDisposable
     }
 
     [Fact]
+    public async Task ResetStrikeAsync_KeepsRemovalFlagWhenRequestedTypeHasNoStrikes()
+    {
+        // Arrange - slow speed condemned the download, but no stalled strike exists to reset
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+
+        await _striker.StrikeAndCheckLimit(hash, itemName, 1, StrikeType.SlowSpeed);
+
+        // Act
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert - resetting an absent reason is not evidence that the download recovered
+        DownloadItem item = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        item.IsMarkedForRemoval.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ResetStrikeAsync_OnlyResetsSpecifiedType()
     {
         // Arrange
