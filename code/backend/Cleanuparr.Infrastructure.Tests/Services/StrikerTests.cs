@@ -10,6 +10,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,6 +18,7 @@ using Shouldly;
 using Xunit;
 
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.Integration;
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
@@ -27,14 +29,15 @@ public class StrikerTests : IDisposable
     private readonly ILogger<Striker> _logger;
     private readonly EventPublisher _eventPublisher;
     private readonly Striker _striker;
+    private readonly Guid _jobRunId;
 
     public StrikerTests()
     {
         _strikerContext = CreateInMemoryEventsContext();
         _logger = Substitute.For<ILogger<Striker>>();
 
-        // Create EventPublisher with mocked dependencies
-        var eventsContext = CreateInMemoryEventsContext();
+        // The striker and the publisher share one scoped context in production.
+        // Event foreign keys to strikes and job runs only resolve inside one database.
         var hubContext = Substitute.For<IHubContext<AppHub>>();
         var hubClients = Substitute.For<IHubClients>();
         var clientProxy = Substitute.For<IClientProxy>();
@@ -49,7 +52,7 @@ public class StrikerTests : IDisposable
         dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
         _eventPublisher = new EventPublisher(
-            eventsContext,
+            _strikerContext,
             hubContext,
             eventLogger,
             notificationPublisher,
@@ -62,7 +65,10 @@ public class StrikerTests : IDisposable
         Striker.RecurringHashes.Clear();
 
         // Set up required JobRunId for tests
-        ContextProvider.SetJobRunId(Guid.NewGuid());
+        _jobRunId = Guid.NewGuid();
+        _strikerContext.JobRuns.Add(new JobRun { Id = _jobRunId, Type = JobType.QueueCleaner });
+        _strikerContext.SaveChanges();
+        ContextProvider.SetJobRunId(_jobRunId);
 
         // Set up required context for recurring item events and FailedImport strikes
         ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
@@ -79,9 +85,19 @@ public class StrikerTests : IDisposable
 
     private static EventsContext CreateInMemoryEventsContext()
     {
-        var options = new DbContextOptionsBuilder<EventsContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+        return TestEventsContextFactory.Create();
+    }
+
+    /// <summary>
+    /// A second context over the same database, standing in for a concurrent job.
+    /// </summary>
+    private EventsContext CreateConcurrentContext()
+    {
+        DbContextOptions<EventsContext> options = new DbContextOptionsBuilder<EventsContext>()
+            .UseSqlite((SqliteConnection)_strikerContext.Database.GetDbConnection())
+            .UseSnakeCaseNamingConvention()
             .Options;
+
         return new EventsContext(options);
     }
 
@@ -221,7 +237,8 @@ public class StrikerTests : IDisposable
         await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
 
         // Assert
-        DownloadItem item = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
         item.IsMarkedForRemoval.ShouldBeFalse();
     }
 
@@ -240,7 +257,8 @@ public class StrikerTests : IDisposable
         await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
 
         // Assert - the slow speed strikes still condemn the download
-        DownloadItem item = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
         item.IsMarkedForRemoval.ShouldBeTrue();
     }
 
@@ -257,8 +275,39 @@ public class StrikerTests : IDisposable
         await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
 
         // Assert - resetting an absent reason is not evidence that the download recovered
-        DownloadItem item = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
         item.IsMarkedForRemoval.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ResetStrikeAsync_KeepsRemovalFlagWhenAnotherJobStrikesConcurrently()
+    {
+        // Arrange - another job condemns the same download
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+
+        await _striker.StrikeAndCheckLimit(hash, itemName, 5, StrikeType.Stalled);
+
+        await using EventsContext concurrent = CreateConcurrentContext();
+        DownloadItem condemned = await concurrent.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        concurrent.Strikes.Add(new Strike
+        {
+            DownloadItemId = condemned.Id,
+            JobRunId = _jobRunId,
+            Type = StrikeType.SlowSpeed,
+        });
+        condemned.IsMarkedForRemoval = true;
+        await concurrent.SaveChangesAsync();
+
+        // Act - the reset only knows its own strike
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert - the other job's strike still condemns the download
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        item.IsMarkedForRemoval.ShouldBeTrue();
+        (await _strikerContext.Strikes.AsNoTracking().CountAsync(x => x.DownloadItemId == item.Id)).ShouldBe(1);
     }
 
     [Fact]

@@ -69,7 +69,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         }
         catch (Exception exception)
         {
-            // The download is staying in the queue, so nothing should keep treating it as condemned.
+            // A failed removal leaves the download in the queue.
             await ClearRemovalFlagAsync(request.Target.DownloadId);
 
             if (exception is HttpRequestException { StatusCode: HttpStatusCode.NotFound })
