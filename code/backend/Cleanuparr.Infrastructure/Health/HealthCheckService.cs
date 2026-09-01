@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -123,6 +123,8 @@ public class HealthCheckService : IHealthCheckService
                 var status = await CheckClientHealthAsync(clientConfig.Id);
                 results[clientConfig.Id] = status;
             }
+            
+            PruneClientHealthStatuses(results.Keys);
             
             return results;
         }
@@ -284,6 +286,8 @@ public class HealthCheckService : IHealthCheckService
                 }
             }
 
+            PruneArrHealthStatuses(results.Keys);
+
             return results;
         }
         catch (Exception ex)
@@ -308,6 +312,38 @@ public class HealthCheckService : IHealthCheckService
         lock (_lockObject)
         {
             return new Dictionary<Guid, ArrHealthStatus>(_arrHealthStatuses);
+        }
+    }
+
+    /// <summary>
+    /// Drops cached clients that have been invalidated.
+    /// </summary>
+    private void PruneClientHealthStatuses(IEnumerable<Guid> checkedClientIds)
+    {
+        HashSet<Guid> live = checkedClientIds.ToHashSet();
+
+        lock (_lockObject)
+        {
+            foreach (Guid stale in _healthStatuses.Keys.Where(id => !live.Contains(id)).ToList())
+            {
+                _healthStatuses.Remove(stale);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Drops cached arr instances that have been invalidated.
+    /// </summary>
+    private void PruneArrHealthStatuses(IEnumerable<Guid> checkedInstanceIds)
+    {
+        HashSet<Guid> live = checkedInstanceIds.ToHashSet();
+
+        lock (_lockObject)
+        {
+            foreach (Guid stale in _arrHealthStatuses.Keys.Where(id => !live.Contains(id)).ToList())
+            {
+                _arrHealthStatuses.Remove(stale);
+            }
         }
     }
 
