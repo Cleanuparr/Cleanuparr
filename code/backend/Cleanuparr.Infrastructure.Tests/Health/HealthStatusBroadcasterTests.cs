@@ -54,6 +54,37 @@ public sealed class HealthStatusBroadcasterTests
             Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task A_dropped_arr_instance_is_broadcast_to_every_connection()
+    {
+        Guid instanceId = Guid.NewGuid();
+
+        HealthStatusBroadcaster broadcaster = BuildBroadcaster();
+        await broadcaster.StartAsync(CancellationToken.None);
+
+        _healthCheckService.ArrInstanceHealthRemoved += Raise.EventWith(new ArrInstanceHealthRemovedEventArgs(instanceId));
+
+        await _allClients.Received(1).SendCoreAsync(
+            "ArrInstanceRemoved",
+            Arg.Is<object?[]>(args => args.Length == 1 && Equals(args[0], instanceId)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Stopping_unsubscribes_from_arr_removals()
+    {
+        HealthStatusBroadcaster broadcaster = BuildBroadcaster();
+        await broadcaster.StartAsync(CancellationToken.None);
+        await broadcaster.StopAsync(CancellationToken.None);
+
+        _healthCheckService.ArrInstanceHealthRemoved += Raise.EventWith(new ArrInstanceHealthRemovedEventArgs(Guid.NewGuid()));
+
+        await _allClients.DidNotReceive().SendCoreAsync(
+            "ArrInstanceRemoved",
+            Arg.Any<object?[]>(),
+            Arg.Any<CancellationToken>());
+    }
+
     private HealthStatusBroadcaster BuildBroadcaster() =>
         new(NullLogger<HealthStatusBroadcaster>.Instance, _healthCheckService, _hubContext);
 }

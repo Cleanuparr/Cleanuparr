@@ -319,6 +319,39 @@ public sealed class HealthCheckServiceTests : IDisposable
         service.GetAllClientHealth().Count.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task A_sweep_in_flight_does_not_drop_a_client_checked_after_it_started()
+    {
+        Seed(SeedClient("slow"));
+
+        TaskCompletionSource probeEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<HealthCheckResult> releaseProbe = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        IDownloadService slowService = Substitute.For<IDownloadService>();
+        slowService.HealthCheckAsync().Returns(_ =>
+        {
+            probeEntered.TrySetResult();
+            return releaseProbe.Task;
+        });
+        _downloadServiceFactory
+            .GetDownloadService(Arg.Is<DownloadClientConfig>(c => c.Name == "slow"))
+            .Returns(slowService);
+
+        HealthCheckService service = BuildService();
+        Task<IDictionary<Guid, HealthStatus>> sweep = service.CheckAllClientsHealthAsync();
+        await probeEntered.Task;
+
+        // A client enabled after the sweep took its snapshot, checked while the sweep is still running.
+        DownloadClientConfig late = SeedClient("late");
+        Seed(late);
+        await service.CheckClientHealthAsync(late.Id);
+
+        releaseProbe.SetResult(new HealthCheckResult { IsHealthy = true });
+        await sweep;
+
+        service.GetClientHealth(late.Id).ShouldNotBeNull();
+    }
+
     #endregion
 
     #region Single arr instance check
@@ -414,6 +447,33 @@ public sealed class HealthCheckServiceTests : IDisposable
 
         service.GetAllArrInstanceHealth().Keys.ShouldBe([Seeded("kept")]);
         service.GetArrInstanceHealth(removedId).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Dropping_an_arr_instance_announces_the_removal()
+    {
+        SeedArr(InstanceType.Sonarr, "removed", enabled: true);
+        SeedArr(InstanceType.Radarr, "kept", enabled: true);
+
+        HealthCheckService service = BuildService();
+        await service.CheckAllArrInstancesHealthAsync();
+
+        List<Guid> announced = [];
+        service.ArrInstanceHealthRemoved += (_, e) => announced.Add(e.InstanceId);
+
+        Guid removedId = Seeded("removed");
+        await using (DataContext context = new(_options))
+        {
+            ArrConfig config = await context.ArrConfigs
+                .Include(c => c.Instances)
+                .FirstAsync(c => c.Instances.Any(i => i.Id == removedId));
+            config.Instances.Remove(config.Instances.First(i => i.Id == removedId));
+            await context.SaveChangesAsync();
+        }
+
+        await service.CheckAllArrInstancesHealthAsync();
+
+        announced.ShouldBe([removedId]);
     }
 
     [Fact]

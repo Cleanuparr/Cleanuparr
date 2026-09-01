@@ -28,6 +28,11 @@ public class HealthCheckService : IHealthCheckService
     /// </summary>
     public event EventHandler<ClientHealthRemovedEventArgs>? ClientHealthRemoved;
 
+    /// <summary>
+    /// Occurs when an arr instance is no longer covered by the health sweep
+    /// </summary>
+    public event EventHandler<ArrInstanceHealthRemovedEventArgs>? ArrInstanceHealthRemoved;
+
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
         IServiceScopeFactory scopeFactory
@@ -110,7 +115,10 @@ public class HealthCheckService : IHealthCheckService
     public async Task<IDictionary<Guid, HealthStatus>> CheckAllClientsHealthAsync()
     {
         _logger.LogDebug("Checking health for all enabled clients");
-        
+
+        // Captured before anything is awaited: an entry written later belongs to a newer check.
+        HashSet<Guid> knownAtStart = SnapshotClientIds();
+
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -129,7 +137,7 @@ public class HealthCheckService : IHealthCheckService
                 results[clientConfig.Id] = status;
             }
             
-            PruneClientHealthStatuses(results.Keys);
+            PruneClientHealthStatuses(results.Keys, knownAtStart);
             
             return results;
         }
@@ -233,6 +241,9 @@ public class HealthCheckService : IHealthCheckService
     {
         _logger.LogDebug("Checking health for all enabled arr instances");
 
+        // Captured before anything is awaited: an entry written later belongs to a newer check.
+        HashSet<Guid> knownAtStart = SnapshotArrInstanceIds();
+
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -291,7 +302,7 @@ public class HealthCheckService : IHealthCheckService
                 }
             }
 
-            PruneArrHealthStatuses(results.Keys);
+            PruneArrHealthStatuses(results.Keys, knownAtStart);
 
             return results;
         }
@@ -323,14 +334,30 @@ public class HealthCheckService : IHealthCheckService
     /// <summary>
     /// Drops cached clients that have been invalidated.
     /// </summary>
-    private void PruneClientHealthStatuses(IEnumerable<Guid> checkedClientIds)
+    private HashSet<Guid> SnapshotClientIds()
+    {
+        lock (_lockObject)
+        {
+            return _healthStatuses.Keys.ToHashSet();
+        }
+    }
+
+    private HashSet<Guid> SnapshotArrInstanceIds()
+    {
+        lock (_lockObject)
+        {
+            return _arrHealthStatuses.Keys.ToHashSet();
+        }
+    }
+
+    private void PruneClientHealthStatuses(IEnumerable<Guid> checkedClientIds, HashSet<Guid> knownAtStart)
     {
         HashSet<Guid> live = checkedClientIds.ToHashSet();
         List<Guid> removed = [];
 
         lock (_lockObject)
         {
-            foreach (Guid stale in _healthStatuses.Keys.Where(id => !live.Contains(id)).ToList())
+            foreach (Guid stale in knownAtStart.Where(id => !live.Contains(id)).ToList())
             {
                 _healthStatuses.Remove(stale);
                 removed.Add(stale);
@@ -347,16 +374,24 @@ public class HealthCheckService : IHealthCheckService
     /// <summary>
     /// Drops cached arr instances that have been invalidated.
     /// </summary>
-    private void PruneArrHealthStatuses(IEnumerable<Guid> checkedInstanceIds)
+    private void PruneArrHealthStatuses(IEnumerable<Guid> checkedInstanceIds, HashSet<Guid> knownAtStart)
     {
         HashSet<Guid> live = checkedInstanceIds.ToHashSet();
+        List<Guid> removed = [];
 
         lock (_lockObject)
         {
-            foreach (Guid stale in _arrHealthStatuses.Keys.Where(id => !live.Contains(id)).ToList())
+            foreach (Guid stale in knownAtStart.Where(id => !live.Contains(id)).ToList())
             {
                 _arrHealthStatuses.Remove(stale);
+                removed.Add(stale);
             }
+        }
+
+        foreach (Guid instanceId in removed)
+        {
+            _logger.LogDebug("Arr instance {instanceId} dropped from the health cache", instanceId);
+            ArrInstanceHealthRemoved?.Invoke(this, new ArrInstanceHealthRemovedEventArgs(instanceId));
         }
     }
 
