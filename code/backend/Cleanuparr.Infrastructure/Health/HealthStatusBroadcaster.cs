@@ -59,13 +59,13 @@ public class HealthStatusBroadcaster : IHostedService
     {
         try
         {
-            _logger.LogDebug("Broadcasting health status removal for arr instance {instanceId}", e.InstanceId);
+            _logger.LogDebug("Broadcasting health status removal for arr instance {InstanceId}", e.InstanceId);
 
             await _hubContext.Clients.All.SendAsync("ArrInstanceRemoved", e.InstanceId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error broadcasting health status removal for arr instance {instanceId}", e.InstanceId);
+            _logger.LogError(ex, "Error broadcasting health status removal for arr instance {InstanceId}", e.InstanceId);
         }
     }
 
@@ -73,13 +73,13 @@ public class HealthStatusBroadcaster : IHostedService
     {
         try
         {
-            _logger.LogDebug("Broadcasting health status removal for client {clientId}", e.ClientId);
+            _logger.LogDebug("Broadcasting health status removal for client {ClientId}", e.ClientId);
 
             await _hubContext.Clients.All.SendAsync("ClientRemoved", e.ClientId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error broadcasting health status removal for client {clientId}", e.ClientId);
+            _logger.LogError(ex, "Error broadcasting health status removal for client {ClientId}", e.ClientId);
         }
     }
 
@@ -87,7 +87,7 @@ public class HealthStatusBroadcaster : IHostedService
     {
         try
         {
-            _logger.LogDebug("Broadcasting health status change for client {clientId}", e.ClientId);
+            _logger.LogDebug("Broadcasting health status change for client {ClientId}", e.ClientId);
             
             // Broadcast to all clients
             await _hubContext.Clients.All.SendAsync("HealthStatusChanged", e.Status);
@@ -95,20 +95,20 @@ public class HealthStatusBroadcaster : IHostedService
             // Send degradation messages
             if (e.IsDegraded)
             {
-                _logger.LogWarning("Client {clientId} health degraded", e.ClientId);
+                _logger.LogWarning("Client {ClientId} health degraded", e.ClientId);
                 await _hubContext.Clients.All.SendAsync("ClientDegraded", e.Status);
             }
             
             // Send recovery messages
             if (e.IsRecovered)
             {
-                _logger.LogInformation("Client {clientId} health recovered", e.ClientId);
+                _logger.LogInformation("Client {ClientId} health recovered", e.ClientId);
                 await _hubContext.Clients.All.SendAsync("ClientRecovered", e.Status);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error broadcasting health status change for client {clientId}", e.ClientId);
+            _logger.LogError(ex, "Error broadcasting health status change for client {ClientId}", e.ClientId);
         }
     }
 }
