@@ -331,9 +331,6 @@ public class HealthCheckService : IHealthCheckService
         }
     }
 
-    /// <summary>
-    /// Drops cached clients that have been invalidated.
-    /// </summary>
     private Dictionary<Guid, HealthStatus> SnapshotClients()
     {
         lock (_lockObject)
