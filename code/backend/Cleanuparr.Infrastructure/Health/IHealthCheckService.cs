@@ -11,6 +11,16 @@ public interface IHealthCheckService
     event EventHandler<ClientHealthChangedEventArgs> ClientHealthChanged;
 
     /// <summary>
+    /// Occurs when a client is no longer covered by the health sweep
+    /// </summary>
+    event EventHandler<ClientHealthRemovedEventArgs> ClientHealthRemoved;
+
+    /// <summary>
+    /// Occurs when an arr instance is no longer covered by the health sweep
+    /// </summary>
+    event EventHandler<ArrInstanceHealthRemovedEventArgs> ArrInstanceHealthRemoved;
+
+    /// <summary>
     /// Checks the health of a specific download client
     /// </summary>
     /// <param name="clientId">The client ID to check</param>

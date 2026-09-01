@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +23,16 @@ public class HealthCheckService : IHealthCheckService
     /// </summary>
     public event EventHandler<ClientHealthChangedEventArgs>? ClientHealthChanged;
 
+    /// <summary>
+    /// Occurs when a client is no longer covered by the health sweep
+    /// </summary>
+    public event EventHandler<ClientHealthRemovedEventArgs>? ClientHealthRemoved;
+
+    /// <summary>
+    /// Occurs when an arr instance is no longer covered by the health sweep
+    /// </summary>
+    public event EventHandler<ArrInstanceHealthRemovedEventArgs>? ArrInstanceHealthRemoved;
+
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
         IServiceScopeFactory scopeFactory
@@ -35,7 +45,7 @@ public class HealthCheckService : IHealthCheckService
     /// <inheritdoc />
     public async Task<HealthStatus> CheckClientHealthAsync(Guid clientId)
     {
-        _logger.LogDebug("Checking health for client {clientId}", clientId);
+        _logger.LogDebug("Checking health for client {ClientId}", clientId);
 
         try
         {
@@ -49,7 +59,7 @@ public class HealthCheckService : IHealthCheckService
             
             if (downloadClientConfig is null)
             {
-                _logger.LogWarning("Client {clientId} not found in configuration", clientId);
+                _logger.LogWarning("Client {ClientId} not found in configuration", clientId);
                 var notFoundStatus = new HealthStatus
                 {
                     ClientId = clientId,
@@ -86,7 +96,7 @@ public class HealthCheckService : IHealthCheckService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error performing health check for client {clientId}", clientId);
+            _logger.LogError(ex, "Error performing health check for client {ClientId}", clientId);
             
             var status = new HealthStatus
             {
@@ -105,7 +115,10 @@ public class HealthCheckService : IHealthCheckService
     public async Task<IDictionary<Guid, HealthStatus>> CheckAllClientsHealthAsync()
     {
         _logger.LogDebug("Checking health for all enabled clients");
-        
+
+        // Captured before anything is awaited: a later check replaces the instance and survives the prune.
+        Dictionary<Guid, HealthStatus> knownAtStart = SnapshotClients();
+
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -123,6 +136,8 @@ public class HealthCheckService : IHealthCheckService
                 var status = await CheckClientHealthAsync(clientConfig.Id);
                 results[clientConfig.Id] = status;
             }
+            
+            PruneClientHealthStatuses(knownAtStart);
             
             return results;
         }
@@ -154,7 +169,7 @@ public class HealthCheckService : IHealthCheckService
     /// <inheritdoc />
     public async Task<ArrHealthStatus> CheckArrInstanceHealthAsync(Guid instanceId)
     {
-        _logger.LogDebug("Checking health for arr instance {instanceId}", instanceId);
+        _logger.LogDebug("Checking health for arr instance {InstanceId}", instanceId);
 
         try
         {
@@ -175,7 +190,7 @@ public class HealthCheckService : IHealthCheckService
 
             if (arrInstance is null)
             {
-                _logger.LogWarning("Arr instance {instanceId} not found in configuration", instanceId);
+                _logger.LogWarning("Arr instance {InstanceId} not found in configuration", instanceId);
                 var notFoundStatus = new ArrHealthStatus
                 {
                     InstanceId = instanceId,
@@ -206,7 +221,7 @@ public class HealthCheckService : IHealthCheckService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error performing health check for arr instance {instanceId}", instanceId);
+            _logger.LogError(ex, "Error performing health check for arr instance {InstanceId}", instanceId);
 
             var status = new ArrHealthStatus
             {
@@ -225,6 +240,9 @@ public class HealthCheckService : IHealthCheckService
     public async Task<IDictionary<Guid, ArrHealthStatus>> CheckAllArrInstancesHealthAsync()
     {
         _logger.LogDebug("Checking health for all enabled arr instances");
+
+        // Captured before anything is awaited: a later check replaces the instance and survives the prune.
+        Dictionary<Guid, ArrHealthStatus> knownAtStart = SnapshotArrInstances();
 
         try
         {
@@ -266,7 +284,7 @@ public class HealthCheckService : IHealthCheckService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error performing health check for arr instance {instanceId} ({instanceName})",
+                    _logger.LogError(ex, "Error performing health check for arr instance {InstanceId} ({InstanceName})",
                         entry.Instance.Id, entry.Instance.Name);
 
                     var status = new ArrHealthStatus
@@ -283,6 +301,8 @@ public class HealthCheckService : IHealthCheckService
                     results[entry.Instance.Id] = status;
                 }
             }
+
+            PruneArrHealthStatuses(knownAtStart);
 
             return results;
         }
@@ -311,6 +331,80 @@ public class HealthCheckService : IHealthCheckService
         }
     }
 
+    private Dictionary<Guid, HealthStatus> SnapshotClients()
+    {
+        lock (_lockObject)
+        {
+            return new Dictionary<Guid, HealthStatus>(_healthStatuses);
+        }
+    }
+
+    private Dictionary<Guid, ArrHealthStatus> SnapshotArrInstances()
+    {
+        lock (_lockObject)
+        {
+            return new Dictionary<Guid, ArrHealthStatus>(_arrHealthStatuses);
+        }
+    }
+
+    /// <summary>
+    /// Drops cached clients that have been invalidated.
+    /// </summary>
+    private void PruneClientHealthStatuses(Dictionary<Guid, HealthStatus> knownAtStart)
+    {
+        List<Guid> removed = [];
+
+        lock (_lockObject)
+        {
+            foreach ((Guid clientId, HealthStatus snapshot) in knownAtStart)
+            {
+                if (!_healthStatuses.TryGetValue(clientId, out HealthStatus? cached)
+                    || !ReferenceEquals(cached, snapshot))
+                {
+                    continue;
+                }
+
+                _healthStatuses.Remove(clientId);
+                removed.Add(clientId);
+            }
+        }
+
+        foreach (Guid clientId in removed)
+        {
+            _logger.LogDebug("Client {ClientId} dropped from the health cache", clientId);
+            ClientHealthRemoved?.Invoke(this, new ClientHealthRemovedEventArgs(clientId));
+        }
+    }
+
+    /// <summary>
+    /// Drops cached arr instances that have been invalidated.
+    /// </summary>
+    private void PruneArrHealthStatuses(Dictionary<Guid, ArrHealthStatus> knownAtStart)
+    {
+        List<Guid> removed = [];
+
+        lock (_lockObject)
+        {
+            foreach ((Guid instanceId, ArrHealthStatus snapshot) in knownAtStart)
+            {
+                if (!_arrHealthStatuses.TryGetValue(instanceId, out ArrHealthStatus? cached)
+                    || !ReferenceEquals(cached, snapshot))
+                {
+                    continue;
+                }
+
+                _arrHealthStatuses.Remove(instanceId);
+                removed.Add(instanceId);
+            }
+        }
+
+        foreach (Guid instanceId in removed)
+        {
+            _logger.LogDebug("Arr instance {InstanceId} dropped from the health cache", instanceId);
+            ArrInstanceHealthRemoved?.Invoke(this, new ArrInstanceHealthRemovedEventArgs(instanceId));
+        }
+    }
+
     private void UpdateArrHealthStatus(ArrHealthStatus newStatus)
     {
         ArrHealthStatus? previousStatus;
@@ -327,7 +421,7 @@ public class HealthCheckService : IHealthCheckService
         if (isStateChange)
         {
             _logger.LogInformation(
-                "Arr instance {instanceId} ({instanceName}) health changed: {status}",
+                "Arr instance {InstanceId} ({InstanceName}) health changed: {Status}",
                 newStatus.InstanceId,
                 newStatus.InstanceName,
                 newStatus.IsHealthy ? "Healthy" : "Unhealthy");
@@ -355,7 +449,7 @@ public class HealthCheckService : IHealthCheckService
         if (isStateChange)
         {
             _logger.LogInformation(
-                "Client {clientId} health changed: {status}", 
+                "Client {ClientId} health changed: {Status}", 
                 newStatus.ClientId, 
                 newStatus.IsHealthy ? "Healthy" : "Unhealthy");
             
