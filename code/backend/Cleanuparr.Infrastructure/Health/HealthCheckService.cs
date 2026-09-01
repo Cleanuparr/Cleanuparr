@@ -23,6 +23,11 @@ public class HealthCheckService : IHealthCheckService
     /// </summary>
     public event EventHandler<ClientHealthChangedEventArgs>? ClientHealthChanged;
 
+    /// <summary>
+    /// Occurs when a client is no longer covered by the health sweep
+    /// </summary>
+    public event EventHandler<ClientHealthRemovedEventArgs>? ClientHealthRemoved;
+
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
         IServiceScopeFactory scopeFactory
@@ -321,13 +326,21 @@ public class HealthCheckService : IHealthCheckService
     private void PruneClientHealthStatuses(IEnumerable<Guid> checkedClientIds)
     {
         HashSet<Guid> live = checkedClientIds.ToHashSet();
+        List<Guid> removed = [];
 
         lock (_lockObject)
         {
             foreach (Guid stale in _healthStatuses.Keys.Where(id => !live.Contains(id)).ToList())
             {
                 _healthStatuses.Remove(stale);
+                removed.Add(stale);
             }
+        }
+
+        foreach (Guid clientId in removed)
+        {
+            _logger.LogDebug("Client {clientId} dropped from the health cache", clientId);
+            ClientHealthRemoved?.Invoke(this, new ClientHealthRemovedEventArgs(clientId));
         }
     }
 

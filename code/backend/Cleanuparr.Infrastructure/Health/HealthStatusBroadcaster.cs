@@ -36,6 +36,7 @@ public class HealthStatusBroadcaster : IHostedService
         
         // Subscribe to health status change events
         _healthCheckService.ClientHealthChanged += OnClientHealthChanged;
+        _healthCheckService.ClientHealthRemoved += OnClientHealthRemoved;
         
         return Task.CompletedTask;
     }
@@ -47,10 +48,25 @@ public class HealthStatusBroadcaster : IHostedService
         
         // Unsubscribe from health status change events
         _healthCheckService.ClientHealthChanged -= OnClientHealthChanged;
+        _healthCheckService.ClientHealthRemoved -= OnClientHealthRemoved;
         
         return Task.CompletedTask;
     }
     
+    private async void OnClientHealthRemoved(object? sender, ClientHealthRemovedEventArgs e)
+    {
+        try
+        {
+            _logger.LogDebug("Broadcasting health status removal for client {clientId}", e.ClientId);
+
+            await _hubContext.Clients.All.SendAsync("ClientRemoved", e.ClientId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error broadcasting health status removal for client {clientId}", e.ClientId);
+        }
+    }
+
     private async void OnClientHealthChanged(object? sender, ClientHealthChangedEventArgs e)
     {
         try

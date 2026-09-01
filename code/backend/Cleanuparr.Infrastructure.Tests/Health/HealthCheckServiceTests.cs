@@ -91,6 +91,45 @@ public sealed class HealthCheckServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Dropping_a_client_announces_the_removal()
+    {
+        DownloadClientConfig removed = SeedClient("removed");
+        Seed(removed, SeedClient("kept"));
+
+        HealthCheckService service = BuildService();
+        await service.CheckAllClientsHealthAsync();
+
+        List<Guid> announced = [];
+        service.ClientHealthRemoved += (_, e) => announced.Add(e.ClientId);
+
+        await using (DataContext context = new(_options))
+        {
+            context.DownloadClients.Remove(await context.DownloadClients.FirstAsync(c => c.Id == removed.Id));
+            await context.SaveChangesAsync();
+        }
+
+        await service.CheckAllClientsHealthAsync();
+
+        announced.ShouldBe([removed.Id]);
+    }
+
+    [Fact]
+    public async Task A_sweep_that_drops_nothing_announces_nothing()
+    {
+        Seed(SeedClient("kept"));
+
+        HealthCheckService service = BuildService();
+        await service.CheckAllClientsHealthAsync();
+
+        List<Guid> announced = [];
+        service.ClientHealthRemoved += (_, e) => announced.Add(e.ClientId);
+
+        await service.CheckAllClientsHealthAsync();
+
+        announced.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_failed_sweep_keeps_what_was_already_cached()
     {
         Seed(SeedClient("first"));
