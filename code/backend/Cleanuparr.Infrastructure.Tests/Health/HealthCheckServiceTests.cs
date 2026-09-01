@@ -382,6 +382,39 @@ public sealed class HealthCheckServiceTests : IDisposable
         announced.ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task A_contested_entry_is_dropped_by_the_next_sweep()
+    {
+        Seed(SeedClient("gate"), SeedClient("doomed"));
+
+        HealthCheckService service = BuildService();
+        await service.CheckAllClientsHealthAsync();
+
+        await DeleteClientAsync(Seeded("doomed"));
+
+        (TaskCompletionSource entered, TaskCompletionSource<HealthCheckResult> release) = GateProbeFor("gate");
+
+        List<Guid> announced = [];
+        service.ClientHealthRemoved += (_, e) => announced.Add(e.ClientId);
+
+        Task<IDictionary<Guid, HealthStatus>> sweep = service.CheckAllClientsHealthAsync();
+        await entered.Task;
+
+        // A check racing the delete writes a fresh entry the running sweep must not claim.
+        await service.CheckClientHealthAsync(Seeded("doomed"));
+
+        release.SetResult(new HealthCheckResult { IsHealthy = true });
+        await sweep;
+
+        service.GetClientHealth(Seeded("doomed")).ShouldNotBeNull();
+        announced.ShouldBeEmpty();
+
+        await service.CheckAllClientsHealthAsync();
+
+        service.GetClientHealth(Seeded("doomed")).ShouldBeNull();
+        announced.ShouldBe([Seeded("doomed")]);
+    }
+
     #endregion
 
     #region Single arr instance check
