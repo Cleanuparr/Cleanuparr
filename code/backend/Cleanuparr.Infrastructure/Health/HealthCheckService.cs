@@ -116,8 +116,8 @@ public class HealthCheckService : IHealthCheckService
     {
         _logger.LogDebug("Checking health for all enabled clients");
 
-        // Captured before anything is awaited: an entry written later belongs to a newer check.
-        HashSet<Guid> knownAtStart = SnapshotClientIds();
+        // Captured before anything is awaited: a later check replaces the instance and survives the prune.
+        Dictionary<Guid, HealthStatus> knownAtStart = SnapshotClients();
 
         try
         {
@@ -137,7 +137,7 @@ public class HealthCheckService : IHealthCheckService
                 results[clientConfig.Id] = status;
             }
             
-            PruneClientHealthStatuses(results.Keys, knownAtStart);
+            PruneClientHealthStatuses(knownAtStart);
             
             return results;
         }
@@ -241,8 +241,8 @@ public class HealthCheckService : IHealthCheckService
     {
         _logger.LogDebug("Checking health for all enabled arr instances");
 
-        // Captured before anything is awaited: an entry written later belongs to a newer check.
-        HashSet<Guid> knownAtStart = SnapshotArrInstanceIds();
+        // Captured before anything is awaited: a later check replaces the instance and survives the prune.
+        Dictionary<Guid, ArrHealthStatus> knownAtStart = SnapshotArrInstances();
 
         try
         {
@@ -302,7 +302,7 @@ public class HealthCheckService : IHealthCheckService
                 }
             }
 
-            PruneArrHealthStatuses(results.Keys, knownAtStart);
+            PruneArrHealthStatuses(knownAtStart);
 
             return results;
         }
@@ -334,33 +334,41 @@ public class HealthCheckService : IHealthCheckService
     /// <summary>
     /// Drops cached clients that have been invalidated.
     /// </summary>
-    private HashSet<Guid> SnapshotClientIds()
+    private Dictionary<Guid, HealthStatus> SnapshotClients()
     {
         lock (_lockObject)
         {
-            return _healthStatuses.Keys.ToHashSet();
+            return new Dictionary<Guid, HealthStatus>(_healthStatuses);
         }
     }
 
-    private HashSet<Guid> SnapshotArrInstanceIds()
+    private Dictionary<Guid, ArrHealthStatus> SnapshotArrInstances()
     {
         lock (_lockObject)
         {
-            return _arrHealthStatuses.Keys.ToHashSet();
+            return new Dictionary<Guid, ArrHealthStatus>(_arrHealthStatuses);
         }
     }
 
-    private void PruneClientHealthStatuses(IEnumerable<Guid> checkedClientIds, HashSet<Guid> knownAtStart)
+    /// <summary>
+    /// Drops cached clients that have been invalidated.
+    /// </summary>
+    private void PruneClientHealthStatuses(Dictionary<Guid, HealthStatus> knownAtStart)
     {
-        HashSet<Guid> live = checkedClientIds.ToHashSet();
         List<Guid> removed = [];
 
         lock (_lockObject)
         {
-            foreach (Guid stale in knownAtStart.Where(id => !live.Contains(id)).ToList())
+            foreach ((Guid clientId, HealthStatus snapshot) in knownAtStart)
             {
-                _healthStatuses.Remove(stale);
-                removed.Add(stale);
+                if (!_healthStatuses.TryGetValue(clientId, out HealthStatus? cached)
+                    || !ReferenceEquals(cached, snapshot))
+                {
+                    continue;
+                }
+
+                _healthStatuses.Remove(clientId);
+                removed.Add(clientId);
             }
         }
 
@@ -374,17 +382,22 @@ public class HealthCheckService : IHealthCheckService
     /// <summary>
     /// Drops cached arr instances that have been invalidated.
     /// </summary>
-    private void PruneArrHealthStatuses(IEnumerable<Guid> checkedInstanceIds, HashSet<Guid> knownAtStart)
+    private void PruneArrHealthStatuses(Dictionary<Guid, ArrHealthStatus> knownAtStart)
     {
-        HashSet<Guid> live = checkedInstanceIds.ToHashSet();
         List<Guid> removed = [];
 
         lock (_lockObject)
         {
-            foreach (Guid stale in knownAtStart.Where(id => !live.Contains(id)).ToList())
+            foreach ((Guid instanceId, ArrHealthStatus snapshot) in knownAtStart)
             {
-                _arrHealthStatuses.Remove(stale);
-                removed.Add(stale);
+                if (!_arrHealthStatuses.TryGetValue(instanceId, out ArrHealthStatus? cached)
+                    || !ReferenceEquals(cached, snapshot))
+                {
+                    continue;
+                }
+
+                _arrHealthStatuses.Remove(instanceId);
+                removed.Add(instanceId);
             }
         }
 

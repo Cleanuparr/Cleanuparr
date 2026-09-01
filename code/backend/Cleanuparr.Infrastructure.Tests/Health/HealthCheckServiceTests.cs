@@ -352,6 +352,36 @@ public sealed class HealthCheckServiceTests : IDisposable
         service.GetClientHealth(late.Id).ShouldNotBeNull();
     }
 
+    [Fact]
+    public async Task A_sweep_in_flight_does_not_drop_a_client_rechecked_after_it_started()
+    {
+        Seed(SeedClient("gate"), SeedClient("flipped"));
+
+        HealthCheckService service = BuildService();
+        await service.CheckAllClientsHealthAsync();
+
+        // Disabled before the sweep reads the configuration, so the sweep will not cover it.
+        await SetClientEnabledAsync(Seeded("flipped"), enabled: false);
+
+        (TaskCompletionSource entered, TaskCompletionSource<HealthCheckResult> release) = GateProbeFor("gate");
+
+        List<Guid> announced = [];
+        service.ClientHealthRemoved += (_, e) => announced.Add(e.ClientId);
+
+        Task<IDictionary<Guid, HealthStatus>> sweep = service.CheckAllClientsHealthAsync();
+        await entered.Task;
+
+        // Re-enabled and rechecked while the sweep is still parked on the other probe.
+        await SetClientEnabledAsync(Seeded("flipped"), enabled: true);
+        await service.CheckClientHealthAsync(Seeded("flipped"));
+
+        release.SetResult(new HealthCheckResult { IsHealthy = true });
+        await sweep;
+
+        service.GetClientHealth(Seeded("flipped")).ShouldNotBeNull();
+        announced.ShouldBeEmpty();
+    }
+
     #endregion
 
     #region Single arr instance check
@@ -477,6 +507,43 @@ public sealed class HealthCheckServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_sweep_in_flight_does_not_drop_an_arr_instance_rechecked_after_it_started()
+    {
+        SeedArr(InstanceType.Sonarr, "gate", enabled: true);
+        SeedArr(InstanceType.Radarr, "flipped", enabled: true);
+
+        HealthCheckService service = BuildService();
+        await service.CheckAllArrInstancesHealthAsync();
+
+        await SetArrInstanceEnabledAsync(Seeded("flipped"), enabled: false);
+
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _instanceHealthChecker
+            .CheckAsync(Arg.Any<InstanceType>(), Arg.Is<ArrInstance>(i => i.Name == "gate"))
+            .Returns(_ =>
+            {
+                entered.TrySetResult();
+                return release.Task;
+            });
+
+        List<Guid> announced = [];
+        service.ArrInstanceHealthRemoved += (_, e) => announced.Add(e.InstanceId);
+
+        Task<IDictionary<Guid, ArrHealthStatus>> sweep = service.CheckAllArrInstancesHealthAsync();
+        await entered.Task;
+
+        await SetArrInstanceEnabledAsync(Seeded("flipped"), enabled: true);
+        await service.CheckArrInstanceHealthAsync(Seeded("flipped"));
+
+        release.SetResult();
+        await sweep;
+
+        service.GetArrInstanceHealth(Seeded("flipped")).ShouldNotBeNull();
+        announced.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_failed_arr_sweep_keeps_what_was_already_cached()
     {
         SeedArr(InstanceType.Sonarr, "main", enabled: true);
@@ -527,6 +594,40 @@ public sealed class HealthCheckServiceTests : IDisposable
                     ? Arg.Any<ArrInstance>()
                     : Arg.Is<ArrInstance>(i => i.Name == forInstanceNamed))
             .Returns(Task.FromException(exception));
+    }
+
+    private (TaskCompletionSource Entered, TaskCompletionSource<HealthCheckResult> Release) GateProbeFor(string clientName)
+    {
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<HealthCheckResult> release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        IDownloadService gated = Substitute.For<IDownloadService>();
+        gated.HealthCheckAsync().Returns(_ =>
+        {
+            entered.TrySetResult();
+            return release.Task;
+        });
+        RegisterDownloadService(gated, clientName);
+
+        return (entered, release);
+    }
+
+    private async Task SetClientEnabledAsync(Guid clientId, bool enabled)
+    {
+        await using DataContext context = new(_options);
+        DownloadClientConfig stored = await context.DownloadClients.FirstAsync(c => c.Id == clientId);
+        stored.Enabled = enabled;
+        await context.SaveChangesAsync();
+    }
+
+    private async Task SetArrInstanceEnabledAsync(Guid instanceId, bool enabled)
+    {
+        await using DataContext context = new(_options);
+        ArrConfig config = await context.ArrConfigs
+            .Include(c => c.Instances)
+            .FirstAsync(c => c.Instances.Any(i => i.Id == instanceId));
+        config.Instances.First(i => i.Id == instanceId).Enabled = enabled;
+        await context.SaveChangesAsync();
     }
 
     private DownloadClientConfig SeedClient(string name)
