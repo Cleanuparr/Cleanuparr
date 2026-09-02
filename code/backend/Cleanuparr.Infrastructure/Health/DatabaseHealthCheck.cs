@@ -1,5 +1,6 @@
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 
@@ -11,11 +12,19 @@ namespace Cleanuparr.Infrastructure.Health;
 public class DatabaseHealthCheck : IHealthCheck
 {
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
+    private readonly UsersContext _usersContext;
     private readonly ILogger<DatabaseHealthCheck> _logger;
 
-    public DatabaseHealthCheck(DataContext dataContext, ILogger<DatabaseHealthCheck> logger)
+    public DatabaseHealthCheck(
+        DataContext dataContext,
+        EventsContext eventsContext,
+        UsersContext usersContext,
+        ILogger<DatabaseHealthCheck> logger)
     {
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
+        _usersContext = usersContext;
         _logger = logger;
     }
 
@@ -23,20 +32,28 @@ public class DatabaseHealthCheck : IHealthCheck
     {
         try
         {
-            // Try to execute a simple query to verify database connectivity
-            var canConnect = await _dataContext.Database.CanConnectAsync(cancellationToken);
-            
-            if (!canConnect)
+            List<string> unknownMigrations = [];
+
+            foreach ((string name, DatabaseFacade database) in Schemas())
             {
-                return HealthCheckResult.Unhealthy("Cannot connect to database");
+                if (!await database.CanConnectAsync(cancellationToken))
+                {
+                    return HealthCheckResult.Unhealthy($"Cannot connect to the {name} database");
+                }
+
+                unknownMigrations.AddRange(
+                    (await database.GetAppliedMigrationsAsync(cancellationToken))
+                    .Except(database.GetMigrations())
+                    .Select(migration => $"{name}: {migration}"));
             }
 
-            // Optionally check if database schema is up to date
-            var pendingMigrations = await _dataContext.Database.GetPendingMigrationsAsync(cancellationToken);
-            if (pendingMigrations.Any())
+            if (unknownMigrations.Count > 0)
             {
-                _logger.LogWarning("Database has pending migrations: {migrations}", string.Join(", ", pendingMigrations));
-                return HealthCheckResult.Degraded($"Database has {pendingMigrations.Count()} pending migrations");
+                _logger.LogWarning(
+                    "Database was written by a newer version: {Migrations}",
+                    string.Join(", ", unknownMigrations));
+
+                return HealthCheckResult.Degraded($"Database has {unknownMigrations.Count} migration(s) this version does not ship");
             }
 
             return HealthCheckResult.Healthy("Database connection successful");
@@ -47,4 +64,11 @@ public class DatabaseHealthCheck : IHealthCheck
             return HealthCheckResult.Unhealthy("Database health check failed", ex);
         }
     }
-} 
+
+    private IEnumerable<(string Name, DatabaseFacade Database)> Schemas()
+    {
+        yield return ("data", _dataContext.Database);
+        yield return ("events", _eventsContext.Database);
+        yield return ("users", _usersContext.Database);
+    }
+}
