@@ -9,5 +9,8 @@ public enum SearchCommandStatus
     Started,
     Completed,
     Failed,
-    TimedOut
+    TimedOut,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

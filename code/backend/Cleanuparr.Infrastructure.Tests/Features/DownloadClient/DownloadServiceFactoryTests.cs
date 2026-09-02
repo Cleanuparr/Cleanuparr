@@ -185,7 +185,7 @@ public class DownloadServiceFactoryTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Name = "Unsupported Client",
-            TypeName = (DownloadClientTypeName)999, // Invalid type
+            TypeName = DownloadClientTypeName.Unknown,
             Type = DownloadClientType.Torrent,
             Host = new Uri("http://test.example.com"),
             Enabled = true

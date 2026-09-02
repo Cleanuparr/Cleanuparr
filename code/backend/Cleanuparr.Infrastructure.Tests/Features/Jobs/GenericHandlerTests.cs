@@ -18,6 +18,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Cleanuparr.Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -550,6 +551,29 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         _handler.CapturedDownloadClients.ShouldNotBeNull();
         _handler.CapturedDownloadClients!.Count.ShouldBe(1);
         _handler.CapturedDownloadClients[0].Name.ShouldBe("enabled-1");
+    }
+
+    // A rolled-back build has no service for a client kind it does not know.
+    // The job must never see the row.
+    [Theory]
+    [InlineData("TypeName")]
+    [InlineData("Type")]
+    public async Task ExecuteAsync_ExcludesDownloadClientsOfAnUnknownKind(string column)
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext, name: "supported", enabled: true);
+        DownloadClientConfig unknown = TestDataContextFactory.AddDownloadClient(
+            _fixture.DataContext, name: "from the future", typeName: DownloadClientTypeName.Deluge, enabled: true);
+        await _fixture.DataContext.Database.ExecuteSqlRawAsync(
+            $"UPDATE download_clients SET \"{column}\" = 'fromthefuture' WHERE \"Id\" = {{0}}",
+            unknown.Id);
+
+        // Act
+        await _handler.ExecuteAsync();
+
+        // Assert
+        _handler.CapturedDownloadClients.ShouldNotBeNull();
+        _handler.CapturedDownloadClients!.Select(c => c.Name).ShouldBe(["supported"]);
     }
 
     #endregion

@@ -9,4 +9,7 @@ public enum NotificationProviderType
     Telegram,
     Discord,
     Gotify,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

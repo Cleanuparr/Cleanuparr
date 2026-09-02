@@ -62,7 +62,7 @@ public class EventsController : ControllerBase
         // Apply filters
         if (!string.IsNullOrWhiteSpace(severity))
         {
-            if (Enum.TryParse<EventSeverity>(severity, true, out EventSeverity severityEnum))
+            if (EnumSentinel.TryParseSelectable(severity, out EventSeverity severityEnum))
             {
                 query = query.Where(e => e.Severity == severityEnum);
             }
@@ -70,7 +70,7 @@ public class EventsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(eventType))
         {
-            if (Enum.TryParse<EventType>(eventType, true, out EventType eventTypeEnum))
+            if (EnumSentinel.TryParseSelectable(eventType, out EventType eventTypeEnum))
             {
                 query = query.Where(e => e.EventType == eventTypeEnum);
             }
@@ -166,8 +166,7 @@ public class EventsController : ControllerBase
     [HttpGet("types")]
     public async Task<ActionResult<List<string>>> GetEventTypes()
     {
-        var types = Enum.GetNames(typeof(EventType)).ToList();
-        return Ok(types);
+        return Ok(EnumSentinel.SelectableNames<EventType>());
     }
 
     /// <summary>
@@ -176,8 +175,7 @@ public class EventsController : ControllerBase
     [HttpGet("severities")]
     public async Task<ActionResult<List<string>>> GetSeverities()
     {
-        var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
-        return Ok(severities);
+        return Ok(EnumSentinel.SelectableNames<EventSeverity>());
     }
 
     [HttpGet("timeline")]
@@ -207,8 +205,12 @@ public class EventsController : ControllerBase
         foreach (BucketTypeCount row in rows)
         {
             DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, size);
-            EventType type = Enum.Parse<EventType>(row.EventType, ignoreCase: true);
-            byBucketType[(bucket, type)] = row.Count;
+            // Raw SQL skips the value converters, so mirror what they do with unknown text.
+            EventType type = EnumSentinel.ParseOrUnknown<EventType>(row.EventType);
+            // Several unrecognised types read as one.
+            // Their rows have to add up.
+            byBucketType.TryGetValue((bucket, type), out int running);
+            byBucketType[(bucket, type)] = running + row.Count;
             presentSet.Add(type);
         }
 

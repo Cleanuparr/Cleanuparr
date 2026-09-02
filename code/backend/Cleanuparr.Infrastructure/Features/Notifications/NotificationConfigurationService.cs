@@ -93,7 +93,15 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
                 .AsNoTracking()
                 .ToListAsync();
 
-            var dtos = providers.Select(MapToDto).ToList();
+            List<NotificationConfig> known = providers.Where(p => !EnumSentinel.IsUnknown(p.Type)).ToList();
+            if (known.Count != providers.Count)
+            {
+                _logger.LogWarning(
+                    "Skipped {Count} notification provider(s) of a type this version does not support",
+                    providers.Count - known.Count);
+            }
+
+            var dtos = known.Select(MapToDto).ToList();
 
             await _cacheSemaphore.WaitAsync();
             try
@@ -105,7 +113,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
                 _cacheSemaphore.Release();
             }
 
-            _logger.LogDebug("Loaded {count} notification providers", dtos.Count);
+            _logger.LogDebug("Loaded {Count} notification providers", dtos.Count);
         }
         catch (Exception ex)
         {

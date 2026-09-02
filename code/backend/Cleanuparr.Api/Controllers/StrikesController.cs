@@ -53,7 +53,7 @@ public class StrikesController : ControllerBase
         // Filter by strike type: only show items that have strikes of this type
         if (!string.IsNullOrWhiteSpace(type))
         {
-            if (Enum.TryParse<StrikeType>(type, true, out var strikeType))
+            if (EnumSentinel.TryParseSelectable(type, out StrikeType strikeType))
                 query = query.Where(d => d.Strikes.Any(s => s.Type == strikeType));
         }
 
@@ -148,8 +148,7 @@ public class StrikesController : ControllerBase
     [HttpGet("types")]
     public ActionResult<List<string>> GetStrikeTypes()
     {
-        var types = Enum.GetNames(typeof(StrikeType)).ToList();
-        return Ok(types);
+        return Ok(EnumSentinel.SelectableNames<StrikeType>());
     }
 
     /// <summary>

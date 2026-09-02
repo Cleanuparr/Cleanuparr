@@ -59,7 +59,7 @@ public class ManualEventsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(severity))
         {
-            if (Enum.TryParse<EventSeverity>(severity, true, out var severityEnum))
+            if (EnumSentinel.TryParseSelectable(severity, out EventSeverity severityEnum))
                 query = query.Where(e => e.Severity == severityEnum);
         }
 
@@ -190,7 +190,6 @@ public class ManualEventsController : ControllerBase
     [HttpGet("severities")]
     public async Task<ActionResult<List<string>>> GetSeverities()
     {
-        var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
-        return Ok(severities);
+        return Ok(EnumSentinel.SelectableNames<EventSeverity>());
     }
 }

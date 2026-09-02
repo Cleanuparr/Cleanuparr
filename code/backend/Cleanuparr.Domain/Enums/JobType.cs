@@ -8,4 +8,7 @@ public enum JobType
     BlacklistSynchronizer,
     Seeker,
     CustomFormatScoreSyncer,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

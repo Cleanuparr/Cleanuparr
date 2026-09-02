@@ -7,4 +7,7 @@ public enum EventSeverity
     Warning,
     Important,
     Error,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

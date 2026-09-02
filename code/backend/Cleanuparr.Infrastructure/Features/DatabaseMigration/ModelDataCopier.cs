@@ -1,4 +1,5 @@
 using System.Reflection;
+using Cleanuparr.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -85,23 +86,33 @@ public sealed class ModelDataCopier
         int count = 0;
         IAsyncEnumerable<TEntity> rows = source.Set<TEntity>().AsNoTracking().AsAsyncEnumerable();
 
-        await foreach (TEntity entity in rows.WithCancellation(cancellationToken))
+        try
         {
-            target.Set<TEntity>().Add(entity);
-            count++;
+            await foreach (TEntity entity in rows.WithCancellation(cancellationToken))
+            {
+                target.Set<TEntity>().Add(entity);
+                count++;
 
-            if (count % BatchSize == 0)
+                if (count % BatchSize == 0)
+                {
+                    await target.SaveChangesAsync(cancellationToken);
+                    target.ChangeTracker.Clear();
+                    progress?.Report($"{table}: {count} rows copied...");
+                }
+            }
+
+            if (target.ChangeTracker.Entries().Any())
             {
                 await target.SaveChangesAsync(cancellationToken);
                 target.ChangeTracker.Clear();
-                progress?.Report($"{table}: {count} rows copied...");
             }
         }
-
-        if (target.ChangeTracker.Entries().Any())
+        catch (Exception exception) when (exception.GetBaseException() is UnknownEnumValueException)
         {
-            await target.SaveChangesAsync(cancellationToken);
-            target.ChangeTracker.Clear();
+            throw new UnknownEnumValueException(
+                $"Cannot copy {table}: it holds values a newer version of Cleanuparr wrote. "
+                + "Upgrade Cleanuparr to that version (or newer) and re-run the migration.",
+                exception);
         }
 
         return count;

@@ -54,6 +54,19 @@ public class CustomFormatScoreControllerTests : IDisposable
         body.GetProperty("Items").GetArrayLength().ShouldBe(2);
     }
 
+    // The sentinel is not a database value.
+    [Fact]
+    public async Task GetCustomFormatScores_WithTheUnknownItemType_IgnoresTheFilter()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "Movie A", currentScore: 100, cutoffScore: 500);
+
+        var result = await _controller.GetCustomFormatScores(itemType: InstanceType.Unknown);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("Items").GetArrayLength().ShouldBe(1);
+    }
+
     [Fact]
     public async Task GetCustomFormatScores_WithPageSizeAboveMaximum_ClampsToHundred()
     {

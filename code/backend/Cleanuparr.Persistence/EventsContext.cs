@@ -103,12 +103,6 @@ public class EventsContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<Strike>(entity =>
-        {
-            entity.Property(e => e.Type)
-                .HasConversion(new LowercaseEnumConverter<StrikeType>());
-        });
-
         modelBuilder.Entity<ManualEvent>(entity =>
         {
             // Race-proof gate: at most one UNRESOLVED event per (Type, ItemHash).
@@ -145,29 +139,7 @@ public class EventsContext : DbContext
             entity.HasIndex(s => s.ArrInstanceId);
         });
 
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            var enumProperties = entityType.ClrType.GetProperties()
-                .Where(p => !p.IsDefined(typeof(System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute), true))
-                .Where(p => p.PropertyType.IsEnum ||
-                            (p.PropertyType.IsGenericType &&
-                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
-                             p.PropertyType.GetGenericArguments()[0].IsEnum));
-
-            foreach (var property in enumProperties)
-            {
-                var enumType = property.PropertyType.IsEnum 
-                    ? property.PropertyType 
-                    : property.PropertyType.GetGenericArguments()[0];
-
-                var converterType = typeof(LowercaseEnumConverter<>).MakeGenericType(enumType);
-                var converter = Activator.CreateInstance(converterType);
-
-                modelBuilder.Entity(entityType.ClrType)
-                    .Property(property.Name)
-                    .HasConversion((ValueConverter)converter);
-            }
-        }
+        modelBuilder.ApplyLowercaseEnumConversions();
     }
     
     private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)

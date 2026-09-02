@@ -90,9 +90,12 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(QueueCleanerConfig), await _dataContext.QueueCleanerConfigs.AsNoTracking().FirstAsync(cancellationToken));
             ContextProvider.Set(nameof(ContentBlockerConfig), await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync(cancellationToken));
             ContextProvider.Set(nameof(DownloadCleanerConfig), await _dataContext.DownloadCleanerConfigs.AsNoTracking().FirstAsync(cancellationToken));
-            ContextProvider.Set(nameof(DownloadClientConfig), await _dataContext.DownloadClients.AsNoTracking()
-                .Where(x => x.Enabled)
-                .ToListAsync(cancellationToken));
+            // A kind this build does not know has no service to build.
+            ContextProvider.Set(nameof(DownloadClientConfig), (await _dataContext.DownloadClients.AsNoTracking()
+                    .Where(x => x.Enabled)
+                    .ToListAsync(cancellationToken))
+                .Where(x => !EnumSentinel.IsUnknown(x.TypeName) && !EnumSentinel.IsUnknown(x.Type))
+                .ToList());
         }
         finally
         {

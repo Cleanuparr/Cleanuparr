@@ -76,7 +76,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(e => e.QualityProfileName == qualityProfile);
         }
 
-        if (itemType.HasValue)
+        if (itemType.HasValue && !EnumSentinel.IsUnknown(itemType.Value))
         {
             InstanceType typeValue = itemType.Value;
             query = query.Where(e => e.ItemType == typeValue);
@@ -291,7 +291,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             ArrInstanceId = r.ArrInstanceId,
             ExternalItemId = r.ExternalItemId,
             EpisodeId = r.EpisodeId,
-            ItemType = Enum.Parse<InstanceType>(r.ItemType, ignoreCase: true),
+            ItemType = EnumSentinel.ParseOrUnknown<InstanceType>(r.ItemType),
             Title = r.Title,
             PreviousScore = r.PreviousScore,
             NewScore = r.NewScore,

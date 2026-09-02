@@ -14,4 +14,7 @@ public enum EventType
     DownloadMarkedForDeletion,
     SearchTriggered,
     StrikeReset,
+
+    /// <summary>Text this build does not know.</summary>
+    Unknown = EnumSentinel.UnknownValue,
 }

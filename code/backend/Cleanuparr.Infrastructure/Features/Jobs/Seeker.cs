@@ -331,7 +331,6 @@ public sealed class Seeker : IHandler
 
         // Update LastProcessedAt so round-robin moves on
         instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
-        _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
         await _dataContext.SaveChangesAsync();
 
         return searched;
@@ -595,7 +594,6 @@ public sealed class Seeker : IHandler
             if (!isDryRun)
             {
                 instanceConfig.CurrentCycleId = Guid.NewGuid();
-                _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
                 await _dataContext.SaveChangesAsync();
             }
 
@@ -784,7 +782,6 @@ public sealed class Seeker : IHandler
             if (!isDryRun)
             {
                 instanceConfig.CurrentCycleId = Guid.NewGuid();
-                _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
                 await _dataContext.SaveChangesAsync();
             }
 

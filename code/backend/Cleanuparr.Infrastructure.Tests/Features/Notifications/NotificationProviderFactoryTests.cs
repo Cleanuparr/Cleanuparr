@@ -266,7 +266,7 @@ public class NotificationProviderFactoryTests
         {
             Id = Guid.NewGuid(),
             Name = "TestUnsupported",
-            Type = (NotificationProviderType)999, // Invalid type
+            Type = NotificationProviderType.Unknown,
             IsEnabled = true,
             Configuration = new object()
         };

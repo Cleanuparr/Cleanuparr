@@ -21,7 +21,7 @@ public class StatusController : ControllerBase
     private readonly IInstanceHealthChecker _healthChecker;
 
     // Every member is seeded in arr_configs, so a new one must not be forgotten here.
-    private static readonly IReadOnlyList<InstanceType> ArrTypes = Enum.GetValues<InstanceType>();
+    private static readonly IReadOnlyList<InstanceType> ArrTypes = EnumSentinel.SelectableValues<InstanceType>();
 
     public StatusController(
         ILogger<StatusController> logger,

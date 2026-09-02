@@ -1,3 +1,4 @@
+using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Auth;
 using Cleanuparr.Persistence.Providers;
 using Cleanuparr.Shared.Helpers;
@@ -74,8 +75,6 @@ public class UsersContext : DbContext
             entity.HasIndex(u => u.Username).IsUnique();
             entity.HasIndex(u => u.ApiKey).IsUnique();
 
-            entity.ComplexProperty(u => u.Oidc);
-
             entity.HasMany(u => u.RecoveryCodes)
                 .WithOne(r => r.User)
                 .HasForeignKey(r => r.UserId)
@@ -104,6 +103,8 @@ public class UsersContext : DbContext
             entity.Property(v => v.FeatureId)
                 .HasMaxLength(64);
         });
+
+        modelBuilder.ApplyLowercaseEnumConversions();
     }
 
     private void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)

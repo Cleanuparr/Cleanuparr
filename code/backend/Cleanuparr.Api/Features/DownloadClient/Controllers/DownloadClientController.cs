@@ -3,6 +3,7 @@ using System.Linq;
 
 using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
@@ -46,6 +47,7 @@ public sealed class DownloadClientController : ControllerBase
                 .ToListAsync();
 
             clients = clients
+                .Where(c => !EnumSentinel.IsUnknown(c.TypeName) && !EnumSentinel.IsUnknown(c.Type))
                 .OrderBy(c => c.TypeName)
                 .ThenBy(c => c.Name)
                 .ToList();
