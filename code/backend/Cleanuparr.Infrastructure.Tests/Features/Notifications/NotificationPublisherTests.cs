@@ -328,7 +328,7 @@ public class NotificationPublisherTests
 
         // Assert
         capturedContext.ShouldNotBeNull();
-        capturedContext.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
+        capturedContext.Data["Seeding hours"].ShouldBe("25");
     }
 
     [Fact]
@@ -348,6 +348,86 @@ public class NotificationPublisherTests
 
         // Act
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
+
+        // Assert
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.Data.ContainsKey("Url") &&
+                 c.Data["Url"] == "https://qbit.external.com/"));
+    }
+
+    #endregion
+
+    #region NotifyDownloadStopped Tests
+
+    [Fact]
+    public async Task NotifyDownloadStopped_SendsNotificationWithCorrectContext()
+    {
+        // Arrange
+        SetupDownloadCleanerContext();
+
+        NotificationProviderDto providerDto = CreateProviderDto();
+        INotificationProvider provider = Substitute.For<INotificationProvider>();
+
+        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadStopped)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
+
+        // Act
+        await _publisher.NotifyDownloadStopped(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
+
+        // Assert
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.EventType == NotificationEventType.DownloadStopped &&
+                 c.Description == "Test Download is no longer seeding. It stays in the download client and its files stay on disk." &&
+                 c.Data["Category"] == "movies" &&
+                 c.Data["Ratio"] == "2.5" &&
+                 c.Data["Seeding hours"] == "48"));
+    }
+
+    [Fact]
+    public async Task NotifyDownloadStopped_WithSeedingTime_RoundsToWholeHours()
+    {
+        // Arrange
+        SetupDownloadCleanerContext();
+
+        NotificationProviderDto providerDto = CreateProviderDto();
+        INotificationProvider provider = Substitute.For<INotificationProvider>();
+        NotificationContext? capturedContext = null;
+
+        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadStopped)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
+
+        // Act
+        await _publisher.NotifyDownloadStopped(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
+
+        // Assert
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
+    }
+
+    [Fact]
+    public async Task NotifyDownloadStopped_WithDownloadClientUrl_IncludesUrlInNotification()
+    {
+        // Arrange
+        SetupDownloadCleanerContext();
+        ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("https://qbit.external.com"));
+
+        NotificationProviderDto providerDto = CreateProviderDto();
+        INotificationProvider provider = Substitute.For<INotificationProvider>();
+
+        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadStopped)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
+
+        // Act
+        await _publisher.NotifyDownloadStopped(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
         await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
@@ -565,6 +645,22 @@ public class NotificationPublisherTests
     }
 
     [Fact]
+    public async Task NotifyDownloadStopped_WhenExceptionOccurs_LogsError()
+    {
+        // Arrange
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ThrowsAsync(new Exception("Error"));
+
+        SetupDownloadCleanerContext();
+
+        // Act
+        await _publisher.NotifyDownloadStopped(1.0, TimeSpan.FromHours(1), "test", CleanReason.MaxRatioReached);
+
+        // Assert
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify download stopped");
+    }
+
+    [Fact]
     public async Task NotifyCategoryChanged_WhenExceptionOccurs_LogsError()
     {
         // Arrange
@@ -657,6 +753,7 @@ public class NotificationPublisherTests
                 OnSlowStrike = true,
                 OnQueueItemDeleted = true,
                 OnDownloadCleaned = true,
+                OnDownloadStopped = true,
                 OnCategoryChanged = true,
                 OnSearchTriggered = true,
                 OnSearchItemGrabbed = true

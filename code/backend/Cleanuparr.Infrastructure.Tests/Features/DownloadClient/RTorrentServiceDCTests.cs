@@ -299,6 +299,116 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
         }
     }
 
+    public class StopDownload_Tests : RTorrentServiceDCTests
+    {
+        public StopDownload_Tests(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task NormalizesHashToUppercase()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("lowercase");
+            mockTorrent.SavePath.Returns("/test/path");
+
+            _fixture.ClientWrapper
+                .StopTorrentAsync("LOWERCASE")
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .StopTorrentAsync("LOWERCASE");
+        }
+
+        [Fact]
+        public async Task DoesNotDeleteTheTorrent()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("LOWERCASE");
+            mockTorrent.SavePath.Returns("/test/path");
+
+            _fixture.ClientWrapper
+                .StopTorrentAsync(Arg.Any<string>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteTorrentAsync(Arg.Any<string>());
+        }
+
+        [Fact]
+        public async Task LeavesTheSourceFilesOnDisk()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            string savePath = Path.Combine(Path.GetTempPath(), "cleanuparr-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(savePath);
+            await File.WriteAllTextAsync(Path.Combine(savePath, "file.mkv"), "content");
+
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("HASH1");
+            mockTorrent.SavePath.Returns(savePath);
+
+            _fixture.ClientWrapper
+                .StopTorrentAsync(Arg.Any<string>())
+                .Returns(Task.CompletedTask);
+
+            try
+            {
+                // Act
+                await sut.StopDownload(mockTorrent);
+
+                // Assert
+                Directory.Exists(savePath).ShouldBeTrue();
+                File.Exists(Path.Combine(savePath, "file.mkv")).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(savePath, recursive: true);
+            }
+        }
+    }
+
+    public class IsStopped_Tests : RTorrentServiceDCTests
+    {
+        public IsStopped_Tests(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public void ReturnsTrueWhenStateIsStopped()
+        {
+            // Arrange
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 0 });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ReturnsFalseWhenStateIsStarted()
+        {
+            // Arrange
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1 });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeFalse();
+        }
+    }
+
     public class CreateCategoryAsync_Tests : RTorrentServiceDCTests
     {
         public CreateCategoryAsync_Tests(RTorrentServiceFixture fixture) : base(fixture)

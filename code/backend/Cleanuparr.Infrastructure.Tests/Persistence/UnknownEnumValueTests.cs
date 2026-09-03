@@ -1,7 +1,9 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.State;
@@ -143,6 +145,46 @@ public sealed class UnknownEnumValueTests : IAsyncLifetime
 
         // Dropping the row would leave the app with no malware settings.
         config.Sonarr.BlocklistType.ShouldBe(BlocklistType.Blacklist);
+    }
+
+    [Fact]
+    public async Task Seeding_rule_action_reads_an_unknown_value_as_the_sentinel()
+    {
+        Guid ruleId = Guid.CreateVersion7();
+
+        await using (DataContext seed = CreateDataContext())
+        {
+            DownloadClientConfig client = new()
+            {
+                Id = Guid.CreateVersion7(),
+                Name = "Test qBittorrent",
+                TypeName = DownloadClientTypeName.qBittorrent,
+                Type = DownloadClientType.Torrent,
+                Enabled = true,
+                Host = new Uri("http://localhost:8080")
+            };
+
+            seed.DownloadClients.Add(client);
+            seed.QBitSeedingRules.Add(new QBitSeedingRule
+            {
+                Id = ruleId,
+                Name = "completed",
+                Categories = ["completed"],
+                MaxRatio = 1,
+                DownloadClientConfigId = client.Id
+            });
+            await seed.SaveChangesAsync();
+
+            await seed.Database.ExecuteSqlRawAsync(
+                "UPDATE q_bit_seeding_rules SET action = 'fromthefuture' WHERE id = {0}",
+                ruleId);
+        }
+
+        await using DataContext context = CreateDataContext();
+        QBitSeedingRule rule = await context.QBitSeedingRules.SingleAsync(x => x.Id == ruleId);
+
+        // Falling back to ordinal 0 would delete downloads a newer version meant to stop.
+        rule.Action.ShouldBe(SeedingRuleAction.Unknown);
     }
 
     private async Task PoisonLidarrAsync()

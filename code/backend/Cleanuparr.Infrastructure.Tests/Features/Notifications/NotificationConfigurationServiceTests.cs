@@ -174,6 +174,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     [InlineData(NotificationEventType.SlowTimeStrike)]
     [InlineData(NotificationEventType.QueueItemDeleted)]
     [InlineData(NotificationEventType.DownloadCleaned)]
+    [InlineData(NotificationEventType.DownloadStopped)]
     [InlineData(NotificationEventType.CategoryChanged)]
     [InlineData(NotificationEventType.SearchTriggered)]
     [InlineData(NotificationEventType.SearchItemGrabbed)]
@@ -185,6 +186,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         bool onSlow = eventType is NotificationEventType.SlowSpeedStrike or NotificationEventType.SlowTimeStrike;
         bool onDeleted = eventType == NotificationEventType.QueueItemDeleted;
         bool onCleaned = eventType == NotificationEventType.DownloadCleaned;
+        bool onStopped = eventType == NotificationEventType.DownloadStopped;
         bool onCategory = eventType == NotificationEventType.CategoryChanged;
         bool onSearchTriggered = eventType == NotificationEventType.SearchTriggered;
         bool onSearchItemGrabbed = eventType == NotificationEventType.SearchItemGrabbed;
@@ -200,6 +202,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             OnSlowStrike = onSlow,
             OnQueueItemDeleted = onDeleted,
             OnDownloadCleaned = onCleaned,
+            OnDownloadStopped = onStopped,
             OnCategoryChanged = onCategory,
             OnSearchTriggered = onSearchTriggered,
             OnSearchItemGrabbed = onSearchItemGrabbed,

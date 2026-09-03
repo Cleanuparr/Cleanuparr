@@ -958,6 +958,88 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         }
     }
 
+    public class StopDownload_Tests : QBitServiceDCTests
+    {
+        public StopDownload_Tests(QBitServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task CallsClientPause()
+        {
+            // Arrange
+            QBitService sut = _fixture.CreateSut();
+            const string hash = "test-hash";
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
+
+            _fixture.ClientWrapper
+                .PauseAsync(Arg.Is<IEnumerable<string>>(h => h.Contains(hash)))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .PauseAsync(Arg.Is<IEnumerable<string>>(h => h.Contains(hash)));
+        }
+
+        [Fact]
+        public async Task DoesNotDeleteTheTorrent()
+        {
+            // Arrange
+            QBitService sut = _fixture.CreateSut();
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("test-hash");
+
+            _fixture.ClientWrapper
+                .PauseAsync(Arg.Any<IEnumerable<string>>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
+        }
+    }
+
+    public class IsStopped_Tests : QBitServiceDCTests
+    {
+        public IsStopped_Tests(QBitServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Theory]
+        [InlineData(TorrentState.PausedUpload)]
+        [InlineData(TorrentState.PausedDownload)]
+        public void ReturnsTrueForPausedStates(TorrentState state)
+        {
+            // Arrange
+            QBitItemWrapper wrapper = new QBitItemWrapper(
+                new TorrentInfo { Hash = "hash1", State = state }, Array.Empty<TorrentTracker>(), false);
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
+        }
+
+        [Theory]
+        [InlineData(TorrentState.Uploading)]
+        [InlineData(TorrentState.Downloading)]
+        [InlineData(TorrentState.StalledUpload)]
+        public void ReturnsFalseForRunningStates(TorrentState state)
+        {
+            // Arrange
+            QBitItemWrapper wrapper = new QBitItemWrapper(
+                new TorrentInfo { Hash = "hash1", State = state }, Array.Empty<TorrentTracker>(), false);
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeFalse();
+        }
+    }
+
     public class ChangeTorrentCategoryAsync_Tests : QBitServiceDCTests
     {
         public ChangeTorrentCategoryAsync_Tests(QBitServiceFixture fixture) : base(fixture)
