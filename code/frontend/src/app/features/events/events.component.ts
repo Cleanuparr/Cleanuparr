@@ -16,6 +16,7 @@ import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
+import { EventType } from '@shared/models/enums';
 import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.component';
 
 @Component({
@@ -232,14 +233,26 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   // Helpers
   eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    const t = eventType.toLowerCase();
-    if (t === 'strikereset') return 'success';
-    if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
-    if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
-    if (t === 'downloadcleaned') return 'success';
-    if (t === 'downloadstopped') return 'info';
-    if (t.includes('strike') || t === 'categorychanged') return 'info';
-    return 'default';
+    switch (eventType) {
+      case EventType.StrikeReset:
+      case EventType.DownloadCleaned:
+        return 'success';
+      case EventType.FailedImportStrike:
+      case EventType.QueueItemDeleted:
+        return 'error';
+      case EventType.StalledStrike:
+      case EventType.DownloadMarkedForDeletion:
+        return 'warning';
+      case EventType.DownloadStopped:
+      case EventType.DownloadingMetadataStrike:
+      case EventType.SlowSpeedStrike:
+      case EventType.SlowTimeStrike:
+      case EventType.DeadTorrentStrike:
+      case EventType.CategoryChanged:
+        return 'info';
+      default:
+        return 'default';
+    }
   }
 
   eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {

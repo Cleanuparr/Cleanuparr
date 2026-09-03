@@ -21,7 +21,7 @@ import {
   createDefaultUnlinkedConfig, createDefaultDeadTorrentConfig, createDefaultOrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
-import { ScheduleUnit, DownloadClientTypeName } from '@shared/models/enums';
+import { ScheduleUnit, DownloadClientTypeName, SeedingRuleAction } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
@@ -91,6 +91,8 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
   private readonly savedSnapshot = signal('');
   private readonly orphanedFilesSnapshots = signal<Record<string, string>>({});
+
+  readonly SeedingRuleAction = SeedingRuleAction;
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
 
