@@ -92,7 +92,7 @@ export class DocumentationService {
       'unlinkedUseTag': 'use-tag',
       'unlinkedIgnoredRootDir': 'ignored-root-directory',
       'unlinkedCategories': 'unlinked-categories',
-      'deadTorrentEnabled': 'enable-dead-torrent',
+      'deadTorrentEnabled': 'enable-dead-torrent-handling',
       'deadTorrentTargetCategory': 'dead-torrent-target-category',
       'deadTorrentUseTag': 'dead-torrent-use-tag',
       'deadTorrentStrikes': 'dead-torrent-strikes',
