@@ -8,12 +8,18 @@ namespace Cleanuparr.Domain.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SeedingRuleAction
 {
-    /// <summary>Remove the download from the client.</summary>
+    /// <summary>
+    /// Remove the download from the client.
+    /// </summary>
     Delete,
 
-    /// <summary>Stop the download in the client and leave it there.</summary>
+    /// <summary>
+    /// Stop the download in the client and leave it there.
+    /// </summary>
     Stop,
 
-    /// <summary>Text this build does not know.</summary>
+    /// <summary>
+    /// Text this build does not know.
+    /// </summary>
     Unknown = EnumSentinel.UnknownValue,
 }
