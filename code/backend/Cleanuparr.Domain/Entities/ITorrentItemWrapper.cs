@@ -49,6 +49,11 @@ public interface ITorrentItemWrapper
     /// </summary>
     IReadOnlyList<string> Tags { get; }
 
+    /// <summary>
+    /// Whether the download client has this torrent stopped or paused.
+    /// </summary>
+    bool IsStopped { get; }
+
     bool IsDownloading();
 
     bool IsStalled();

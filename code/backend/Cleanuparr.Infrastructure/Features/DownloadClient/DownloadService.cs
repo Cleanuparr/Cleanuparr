@@ -242,6 +242,13 @@ public abstract class DownloadService : IDownloadService
     /// <param name="torrent">The torrent to delete</param>
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
+
+    /// <summary>
+    /// Stops the specified download in the download client, leaving it there.
+    /// Each client implementation handles the stop according to its API requirements.
+    /// </summary>
+    /// <param name="torrent">The torrent to stop</param>
+    public abstract Task StopDownload(ITorrentItemWrapper torrent);
     
     private SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, DateTime? lastActivity, ISeedingRule seedingRule)
     {

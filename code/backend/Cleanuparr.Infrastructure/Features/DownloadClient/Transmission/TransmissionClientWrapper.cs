@@ -37,4 +37,7 @@ public sealed class TransmissionClientWrapper : ITransmissionClientWrapper
 
     public Task TorrentRemoveAsync(long[] ids, bool deleteLocalData)
         => _client.TorrentRemoveAsync(ids, deleteLocalData);
+
+    public Task TorrentStopAsync(long[] ids)
+        => _client.TorrentStopAsync(Array.ConvertAll(ids, id => (object)id));
 }

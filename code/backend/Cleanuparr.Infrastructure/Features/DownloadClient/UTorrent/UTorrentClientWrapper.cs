@@ -40,4 +40,7 @@ public sealed class UTorrentClientWrapper : IUTorrentClientWrapper
 
     public Task RemoveTorrentsAsync(List<string> hashes, bool deleteData)
         => _client.RemoveTorrentsAsync(hashes, deleteData);
+
+    public Task StopTorrentsAsync(List<string> hashes)
+        => _client.StopTorrentsAsync(hashes);
 }

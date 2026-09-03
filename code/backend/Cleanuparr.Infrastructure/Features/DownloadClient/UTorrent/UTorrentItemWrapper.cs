@@ -65,6 +65,10 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     public IReadOnlyList<string> Tags => Array.Empty<string>();
 
+    public bool IsStopped =>
+        (Info.Status & UTorrentStatus.Started) == 0 ||
+        (Info.Status & UTorrentStatus.Paused) != 0;
+
     public bool IsDownloading() =>
         (Info.Status & UTorrentStatus.Started) != 0 &&
         (Info.Status & UTorrentStatus.Checked) != 0 &&
