@@ -76,7 +76,7 @@ export function createDefaultSeedingRule(): SeedingRule {
     maxSeedTime: -1,
     minSeeders: 0,
     maxInactiveDays: -1,
-    action: 'delete',
+    action: SeedingRuleAction.Delete,
     deleteSourceFiles: true,
   };
 }

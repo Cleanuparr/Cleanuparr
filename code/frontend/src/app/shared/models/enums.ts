@@ -136,4 +136,7 @@ export enum CleanReason {
 
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
 
-export type SeedingRuleAction = 'delete' | 'stop';
+export enum SeedingRuleAction {
+  Delete = 'Delete',
+  Stop = 'Stop',
+}

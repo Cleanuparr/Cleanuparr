@@ -151,8 +151,8 @@
                         }
                       </div>
                       <div class="rule-card__details">
-                        <span>Action: {{ rule.action === 'stop' ? 'Stop' : 'Delete' }}</span>
-                        @if (rule.action === 'delete') {
+                        <span>Action: {{ rule.action }}</span>
+                        @if (rule.action === 'Delete') {
                           <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
                         }
                       </div>

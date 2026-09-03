@@ -34,8 +34,8 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
 ];
 
 const ACTION_OPTIONS: SelectOption[] = [
-  { label: 'Delete', value: 'delete' },
-  { label: 'Stop', value: 'stop' },
+  { label: 'Delete', value: SeedingRuleAction.Delete },
+  { label: 'Stop', value: SeedingRuleAction.Stop },
 ];
 
 @Component({
@@ -65,7 +65,7 @@ export class SeedingRuleModalComponent {
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
   readonly actionOptions = ACTION_OPTIONS;
 
-  readonly isDeleteAction = computed(() => this.model().action === 'delete');
+  readonly isDeleteAction = computed(() => this.model().action === SeedingRuleAction.Delete);
 
   private readonly ruleChipInputs = viewChildren<ChipInputComponent>('ruleChipInput');
   readonly hasUncommittedInputs = computed(() =>
@@ -82,7 +82,7 @@ export class SeedingRuleModalComponent {
   private readonly defaults: SeedingRuleFormModel = {
     name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
     privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
-    maxSeedTime: -1, minSeeders: 0, maxInactiveDays: -1, action: 'delete',
+    maxSeedTime: -1, minSeeders: 0, maxInactiveDays: -1, action: SeedingRuleAction.Delete,
     deleteSourceFiles: true,
   };
   readonly model = signal<SeedingRuleFormModel>({ ...this.defaults });

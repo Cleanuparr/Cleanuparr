@@ -9,7 +9,7 @@ import {
   OrphanedFilesConfig,
   SeedingRule,
 } from '@shared/models/download-cleaner-config.model';
-import { DownloadClientTypeName, ScheduleUnit, TorrentPrivacyType } from '@shared/models/enums';
+import { DownloadClientTypeName, ScheduleUnit, SeedingRuleAction, TorrentPrivacyType } from '@shared/models/enums';
 import { DownloadCleanerComponent } from './download-cleaner.component';
 
 const RULE_A: SeedingRule = {
@@ -22,7 +22,7 @@ const RULE_A: SeedingRule = {
   maxRatio: 2,
   minSeedTime: 0,
   maxSeedTime: 240,
-  action: 'delete',
+  action: SeedingRuleAction.Delete,
   deleteSourceFiles: true,
 };
 
@@ -36,7 +36,7 @@ const RULE_B: SeedingRule = {
   maxRatio: -1,
   minSeedTime: 24,
   maxSeedTime: 720,
-  action: 'delete',
+  action: SeedingRuleAction.Delete,
   deleteSourceFiles: false,
 };
 
