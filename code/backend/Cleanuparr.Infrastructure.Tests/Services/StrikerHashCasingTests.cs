@@ -16,7 +16,8 @@ namespace Cleanuparr.Infrastructure.Tests.Services;
 
 /// <summary>
 /// The *arr apps report an uppercase download id while the download clients report a lowercase hash.
-/// These strike the same torrent through both casings against a real migrated database.
+/// Both casings are one torrent: striking through either lands on the same lowercase row.
+/// Struck against a real migrated database, since the invariant is the stored column's.
 /// </summary>
 public sealed class StrikerHashCasingTests : IAsyncLifetime
 {
@@ -48,7 +49,7 @@ public sealed class StrikerHashCasingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Same_torrent_struck_through_both_casings_splits_into_two_download_items()
+    public async Task Same_torrent_struck_through_both_casings_shares_one_download_item()
     {
         // The context is async local, so the strikes must claim the job run from inside the test.
         ContextProvider.SetJobRunId(_jobRunId);
@@ -70,13 +71,9 @@ public sealed class StrikerHashCasingTests : IAsyncLifetime
             .OrderBy(d => d.DownloadId)
             .ToListAsync();
 
-        // Today one torrent yields two rows with its strikes split across them.
-        // Once the casing is normalised this must become a single row holding both strikes.
-        items.Count.ShouldBe(2);
-        items[0].DownloadId.ShouldBe(UppercaseHash);
-        items[1].DownloadId.ShouldBe(LowercaseHash);
-        items[0].Strikes.Count.ShouldBe(1);
-        items[1].Strikes.Count.ShouldBe(1);
+        items.Count.ShouldBe(1);
+        items[0].DownloadId.ShouldBe(LowercaseHash);
+        items[0].Strikes.Count.ShouldBe(2);
     }
 
     private static Striker CreateStriker(EventsContext context)
