@@ -111,6 +111,13 @@ export class TransmissionDriver implements TorrentClientDriver {
     return t?.downloadDir as string | undefined;
   }
 
+  /** Transmission reports status 0 (TR_STATUS_STOPPED) for a stopped torrent. */
+  async isStopped(infoHash: string): Promise<boolean> {
+    const args = await this.call('torrent-get', { ids: [infoHash], fields: ['hashString', 'status'] });
+    const t = (args.torrents ?? [])[0];
+    return t?.status === 0;
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     await this.call('torrent-remove', {
       ids: [infoHash],

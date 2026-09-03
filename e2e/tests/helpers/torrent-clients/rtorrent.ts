@@ -69,6 +69,11 @@ export class RTorrentDriver implements TorrentClientDriver {
     void infoHash;
   }
 
+  /** rTorrent reports d.state 0 for a stopped torrent and 1 for a started one. */
+  async isStopped(infoHash: string): Promise<boolean> {
+    return (await this.call('d.state', [infoHash.toUpperCase()])) === 0;
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     // d.erase removes the torrent from rTorrent's session without touching
     // the data on disk.
