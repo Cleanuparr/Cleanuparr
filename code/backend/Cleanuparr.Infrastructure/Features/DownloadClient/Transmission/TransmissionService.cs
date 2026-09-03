@@ -41,6 +41,7 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         TorrentFields.TOTAL_SIZE,
         TorrentFields.LABELS,
         TorrentFields.IS_FINISHED,
+        TorrentFields.ADDED_DATE,
     ];
 
     public TransmissionService(

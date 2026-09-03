@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using Shouldly;
 using Transmission.API.RPC.Entity;
@@ -508,5 +509,190 @@ public class TransmissionItemWrapperTests
 
         // Assert
         result.ShouldBeFalse();
+    }
+
+    // TrackerHealth property tests
+    [Fact]
+    public void TrackerHealth_WithNullTrackerStats_ReturnsUnsupported()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new() { TrackerStats = null };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithEmptyTrackerStats_ReturnsUnsupported()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new() { TrackerStats = Array.Empty<TransmissionTorrentTrackerStats>() };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithSuccessfulAnnounce_ReturnsWorking()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new() { HasAnnounced = true, LastAnnounceSucceeded = true },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Working);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithAllAnnouncesFailedAndUnregisteredResult_ReturnsUnregistered()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new()
+                {
+                    HasAnnounced = true,
+                    LastAnnounceSucceeded = false,
+                    LastAnnounceResult = "Unregistered torrent",
+                },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unregistered);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithAllAnnouncesFailedAndOutageResult_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new()
+                {
+                    HasAnnounced = true,
+                    LastAnnounceSucceeded = false,
+                    LastAnnounceResult = "Connection timed out",
+                },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithAnnounceInFlight_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new()
+                {
+                    AnnounceState = 3,
+                    HasAnnounced = true,
+                    LastAnnounceSucceeded = false,
+                    LastAnnounceResult = "Unregistered torrent",
+                },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithTrackerThatNeverAnnounced_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new() { HasAnnounced = false, LastAnnounceSucceeded = false },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithOnlyBackupTrackers_ReturnsUnsupported()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new()
+                {
+                    IsBackup = true,
+                    HasAnnounced = true,
+                    LastAnnounceSucceeded = false,
+                    LastAnnounceResult = "Unregistered torrent",
+                },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void AddedOn_ReturnsCorrectValue()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new() { AddedDate = 1700000000L };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        DateTimeOffset? result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBe(DateTimeOffset.FromUnixTimeSeconds(1700000000L));
     }
 }

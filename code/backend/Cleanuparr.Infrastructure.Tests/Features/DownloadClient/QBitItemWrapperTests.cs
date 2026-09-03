@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using QBittorrent.Client;
 using Shouldly;
@@ -649,5 +650,267 @@ public class QBitItemWrapperTests
 
         // Assert
         result.ShouldBeFalse();
+    }
+
+    // TrackerHealth property tests
+    [Fact]
+    public void TrackerHealth_WithEmptyTrackers_ReturnsUnsupported()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers = [];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithWorkingTracker_ReturnsWorking()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.Working,
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Working);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithAllTrackersFailingAndUnregisteredMessage_ReturnsUnregistered()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.NotWorking,
+                Message = "Unregistered torrent",
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unregistered);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithAllTrackersFailingAndOutageMessage_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.NotWorking,
+                Message = "Connection timed out",
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithOneWorkingTrackerBesideAFailingOne_ReturnsWorking()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.Working,
+            },
+            new()
+            {
+                Url = "http://dead.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.NotWorking,
+                Message = "Unregistered torrent",
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Working);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithUpdatingTrackerBesideAFailingOne_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.Updating,
+            },
+            new()
+            {
+                Url = "http://dead.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.NotWorking,
+                Message = "Unregistered torrent",
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(6)]
+    public void TrackerHealth_WithFailureStatusBeyondTheKnownEnum_ReturnsUnregistered(int status)
+    {
+        // qBittorrent 5.2+ emits statuses 5 and 6, which the client library's enum does not name.
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = (TorrentTrackerStatus)status,
+                Message = "Unregistered torrent",
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        result.ShouldBe(TrackerHealth.Unregistered);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithNullTrackerStatus_ReturnsUnsupported()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = null,
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithWorkingDhtPseudoTracker_IgnoresItAndReturnsUnregistered()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = "** [DHT] **",
+                TrackerStatus = TorrentTrackerStatus.Working,
+            },
+            new()
+            {
+                Url = "http://tracker.example.com/announce",
+                TrackerStatus = TorrentTrackerStatus.NotWorking,
+                Message = "Unregistered torrent",
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unregistered);
+    }
+
+    [Fact]
+    public void AddedOn_ReturnsCorrectValue()
+    {
+        // Arrange
+        DateTime expectedAddedOn = new(2024, 5, 17, 8, 30, 0, DateTimeKind.Utc);
+        TorrentInfo torrentInfo = new() { AddedOn = expectedAddedOn };
+        List<TorrentTracker> trackers = [];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        DateTimeOffset? result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBe(new DateTimeOffset(expectedAddedOn));
+    }
+
+    [Fact]
+    public void AddedOn_WhenClientKindIsUnspecified_IsReadAsUtc()
+    {
+        // Arrange
+        // The client's deserializer hands back the correct UTC wall time with an unspecified kind.
+        DateTime addedOn = new(2024, 5, 17, 8, 30, 0, DateTimeKind.Unspecified);
+        TorrentInfo torrentInfo = new() { AddedOn = addedOn };
+        List<TorrentTracker> trackers = [];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        DateTimeOffset? result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBe(new DateTimeOffset(2024, 5, 17, 8, 30, 0, TimeSpan.Zero));
+        result!.Value.Offset.ShouldBe(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void AddedOn_WhenNull_ReturnsNull()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new() { AddedOn = null };
+        List<TorrentTracker> trackers = [];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        DateTimeOffset? result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBeNull();
     }
 }

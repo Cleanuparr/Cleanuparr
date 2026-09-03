@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
 using Cleanuparr.Infrastructure.Services;
@@ -47,6 +48,59 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
 
     /// <inheritdoc/>
     public int? SeederCount => Info.TotalSeeds;
+
+    /// <inheritdoc/>
+    public TrackerHealth TrackerHealth
+    {
+        get
+        {
+            // qBittorrent lists "** [DHT] **" as a Working tracker, and one leaked pseudo-row would mask a dead tracker.
+            List<TorrentTracker> realTrackers = _trackers
+                .Where(tracker => tracker.Url?.Contains("**") is not true)
+                .ToList();
+
+            if (realTrackers.Count == 0)
+            {
+                return TrackerHealth.Unsupported;
+            }
+
+            // No status number changes verdict class across versions, so the client version does not matter here:
+            // 3 (updating) exists only on 4.6 to 5.1.
+            // 5 and 6 exist only on 5.2+.
+            // 4 means failed on both.
+            if (realTrackers.Any(tracker => (int?)tracker.TrackerStatus is 2))
+            {
+                return TrackerHealth.Working;
+            }
+
+            if (realTrackers.Any(tracker => (int?)tracker.TrackerStatus is 1 or 3))
+            {
+                return TrackerHealth.Inconclusive;
+            }
+
+            List<TorrentTracker> failing = realTrackers
+                .Where(tracker => (int?)tracker.TrackerStatus is 4 or 5 or 6)
+                .ToList();
+
+            if (failing.Count == 0)
+            {
+                return TrackerHealth.Unsupported;
+            }
+
+            if (failing.Any(tracker => TrackerMessageClassifier.Classify(tracker.Message) is TrackerHealth.Unregistered))
+            {
+                return TrackerHealth.Unregistered;
+            }
+
+            return TrackerHealth.Inconclusive;
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>qBittorrent sends <c>added_on</c> as a UTC instant that deserializes with an unspecified kind.</remarks>
+    public DateTimeOffset? AddedOn => Info.AddedOn is { } addedOn
+        ? new DateTimeOffset(addedOn, TimeSpan.Zero)
+        : null;
 
     public long Eta => Info.EstimatedTime?.TotalSeconds is { } eta ? (long)eta : 0;
     

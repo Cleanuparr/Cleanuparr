@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
 using Cleanuparr.Infrastructure.Services;
 
@@ -46,6 +47,15 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     /// <inheritdoc/>
     public int? SeederCount => Info.SeedsInSwarm;
+
+    /// <inheritdoc/>
+    /// <remarks>µTorrent exposes no per-tracker state: its only failure hint is a generic error bit that also covers disk errors.</remarks>
+    public TrackerHealth TrackerHealth => TrackerHealth.Unsupported;
+
+    /// <inheritdoc/>
+    public DateTimeOffset? AddedOn => Info.DateAdded > 0
+        ? DateTimeOffset.FromUnixTimeSeconds(Info.DateAdded)
+        : null;
 
     public long Eta => Info.ETA;
     

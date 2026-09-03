@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Services;
 using Transmission.API.RPC.Entity;
@@ -58,6 +59,65 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
             return max is >= 0 ? checked((int)max.Value) : null;
         }
     }
+
+    /// <inheritdoc/>
+    public TrackerHealth TrackerHealth
+    {
+        get
+        {
+            if (Info.TrackerStats is not { Length: > 0 } trackerStats)
+            {
+                return TrackerHealth.Unsupported;
+            }
+
+            // Transmission pins backup entries at announce state INACTIVE, so only the live entry of a tier carries usable state.
+            List<TransmissionTorrentTrackerStats> active = trackerStats
+                .Where(stats => stats.IsBackup is not true)
+                .ToList();
+
+            if (active.Count == 0)
+            {
+                return TrackerHealth.Unsupported;
+            }
+
+            if (active.Any(stats => stats.LastAnnounceSucceeded is true))
+            {
+                return TrackerHealth.Working;
+            }
+
+            // Announce state 3 is TR_TRACKER_ACTIVE: an announce is in flight and has no result yet.
+            if (active.Any(stats => stats.AnnounceState == 3))
+            {
+                return TrackerHealth.Inconclusive;
+            }
+
+            if (active.Any(stats => stats.HasAnnounced is not true))
+            {
+                return TrackerHealth.Inconclusive;
+            }
+
+            List<TransmissionTorrentTrackerStats> failing = active
+                .Where(stats => stats.HasAnnounced is true && stats.LastAnnounceSucceeded is false)
+                .ToList();
+
+            if (failing.Count == 0)
+            {
+                return TrackerHealth.Unsupported;
+            }
+
+            if (failing.Any(stats => TrackerMessageClassifier.Classify(stats.LastAnnounceResult) is TrackerHealth.Unregistered))
+            {
+                return TrackerHealth.Unregistered;
+            }
+
+            return TrackerHealth.Inconclusive;
+        }
+    }
+
+    /// <inheritdoc/>
+    public DateTimeOffset? AddedOn => Info.AddedDate is { } addedDate
+        ? DateTimeOffset.FromUnixTimeSeconds(addedDate)
+        : null;
 
     public long Eta => Info.Eta ?? 0;
     
