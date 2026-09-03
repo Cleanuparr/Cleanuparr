@@ -13,17 +13,22 @@ namespace Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 /// <inheritdoc cref="IDeadTorrentService" />
 public sealed class DeadTorrentService : IDeadTorrentService
 {
+    private static readonly TimeSpan UnregisteredGracePeriod = TimeSpan.FromHours(1);
+
     private readonly ILogger<DeadTorrentService> _logger;
     private readonly DataContext _dataContext;
+    private readonly TimeProvider _timeProvider;
     private readonly IStriker _striker;
 
     public DeadTorrentService(
         ILogger<DeadTorrentService> logger,
         DataContext dataContext,
+        TimeProvider timeProvider,
         IStriker striker)
     {
         _logger = logger;
         _dataContext = dataContext;
+        _timeProvider = timeProvider;
         _striker = striker;
     }
 
@@ -72,11 +77,23 @@ public sealed class DeadTorrentService : IDeadTorrentService
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
 
-            if (torrent.SeederCount > 0)
+            bool unregistered = torrent.TrackerHealth is TrackerHealth.Unregistered
+                                && !WithinGracePeriod(torrent);
+
+            if (torrent.SeederCount > 0 && !unregistered)
             {
                 await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, StrikeType.DeadTorrent);
                 continue;
             }
+
+            string reason = unregistered ? "tracker reports unregistered" : "no seeders";
+
+            _logger.LogDebug(
+                "dead torrent candidate | {reason} | seeders: {seeders} | tracker: {health} | {name}",
+                reason,
+                torrent.SeederCount,
+                torrent.TrackerHealth,
+                torrent.Name);
 
             bool shouldMove = await _striker.StrikeAndCheckLimit(
                 torrent.Hash,
@@ -92,10 +109,21 @@ public sealed class DeadTorrentService : IDeadTorrentService
             await downloadService.ChangeTorrentCategoryAsync(torrent, config.TargetCategory, config.UseTag);
 
             _logger.LogInformation(
-                "dead torrent moved to {target} | tag: {useTag} | {name}",
+                "dead torrent moved to {target} | {reason} | tag: {useTag} | {name}",
                 config.TargetCategory,
+                reason,
                 config.UseTag,
                 torrent.Name);
         }
+    }
+
+    private bool WithinGracePeriod(ITorrentItemWrapper torrent)
+    {
+        if (torrent.AddedOn is null)
+        {
+            return false;
+        }
+
+        return _timeProvider.GetUtcNow() - torrent.AddedOn.Value < UnregisteredGracePeriod;
     }
 }

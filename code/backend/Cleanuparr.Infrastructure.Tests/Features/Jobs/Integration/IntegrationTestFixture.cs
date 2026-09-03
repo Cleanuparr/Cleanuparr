@@ -156,6 +156,7 @@ public class IntegrationTestFixture : IDisposable
         DeadTorrentService = new DeadTorrentService(
             Substitute.For<ILogger<DeadTorrentService>>(),
             DataContext,
+            TimeProvider,
             Striker);
         OrphanedFilesService = new OrphanedFilesCleanupService(
             Substitute.For<ILogger<OrphanedFilesCleanupService>>(),
