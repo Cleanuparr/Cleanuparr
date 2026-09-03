@@ -225,6 +225,26 @@ Supported by **qBittorrent** only.
 </ConfigSection>
 
 <ConfigSection
+  title="Action"
+>
+
+What happens to a download once it meets the rule's cleanup conditions:
+- **Delete**: the download is removed from the download client.
+- **Stop**: the torrent is stopped in the download client and stays there, files and all.
+
+**Delete Source Files** applies to **Delete** only.
+
+Available for all download clients: qBittorrent, Transmission, Deluge, rTorrent, and µTorrent.
+
+<Note>
+Later runs skip a torrent that is already stopped, so the rule fires once and sends one notification.
+
+Cleanuparr never resumes a stopped torrent: restarting it is up to you.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
   title="Delete Source Files"
 >
 
