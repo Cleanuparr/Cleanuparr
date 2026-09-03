@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -139,6 +139,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             OnSlowStrike = config.OnSlowStrike,
             OnQueueItemDeleted = config.OnQueueItemDeleted,
             OnDownloadCleaned = config.OnDownloadCleaned,
+            OnDownloadStopped = config.OnDownloadStopped,
             OnCategoryChanged = config.OnCategoryChanged,
             OnSearchTriggered = config.OnSearchTriggered,
             OnSearchItemGrabbed = config.OnSearchItemGrabbed
@@ -176,6 +177,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             NotificationEventType.SlowSpeedStrike or NotificationEventType.SlowTimeStrike => events.OnSlowStrike,
             NotificationEventType.QueueItemDeleted => events.OnQueueItemDeleted,
             NotificationEventType.DownloadCleaned => events.OnDownloadCleaned,
+            NotificationEventType.DownloadStopped => events.OnDownloadStopped,
             NotificationEventType.CategoryChanged => events.OnCategoryChanged,
             NotificationEventType.SearchTriggered => events.OnSearchTriggered,
             NotificationEventType.SearchItemGrabbed => events.OnSearchItemGrabbed,

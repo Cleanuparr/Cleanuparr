@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
 
@@ -28,6 +28,8 @@ public sealed record NotificationConfig
     public bool OnQueueItemDeleted { get; init; }
     
     public bool OnDownloadCleaned { get; init; }
+    
+    public bool OnDownloadStopped { get; init; }
     
     public bool OnCategoryChanged { get; init; }
 
@@ -73,6 +75,7 @@ public sealed record NotificationConfig
         OnSlowStrike ||
         OnQueueItemDeleted ||
         OnDownloadCleaned ||
+        OnDownloadStopped ||
         OnCategoryChanged ||
         OnSearchTriggered ||
         OnSearchItemGrabbed;

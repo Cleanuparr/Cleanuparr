@@ -1,4 +1,4 @@
-using Cleanuparr.Api.Extensions;
+﻿using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 using Cleanuparr.Api.Features.Notifications.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
@@ -72,6 +72,7 @@ public sealed class NotificationProvidersController : ControllerBase
                         OnSlowStrike = p.OnSlowStrike,
                         OnQueueItemDeleted = p.OnQueueItemDeleted,
                         OnDownloadCleaned = p.OnDownloadCleaned,
+                        OnDownloadStopped = p.OnDownloadStopped,
                         OnCategoryChanged = p.OnCategoryChanged,
                         OnSearchTriggered = p.OnSearchTriggered,
                         OnSearchItemGrabbed = p.OnSearchItemGrabbed
@@ -152,6 +153,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -219,6 +221,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -289,6 +292,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -350,6 +354,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -422,6 +427,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -501,6 +507,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -583,6 +590,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -659,6 +667,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -758,6 +767,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
@@ -826,6 +836,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
@@ -897,6 +908,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
@@ -955,6 +967,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
@@ -986,6 +999,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = provider.OnSlowStrike,
                 OnQueueItemDeleted = provider.OnQueueItemDeleted,
                 OnDownloadCleaned = provider.OnDownloadCleaned,
+                OnDownloadStopped = provider.OnDownloadStopped,
                 OnCategoryChanged = provider.OnCategoryChanged,
                 OnSearchTriggered = provider.OnSearchTriggered,
                 OnSearchItemGrabbed = provider.OnSearchItemGrabbed
@@ -1044,6 +1058,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -1117,6 +1132,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -1180,6 +1196,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
@@ -1246,6 +1263,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -1326,6 +1344,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -1403,6 +1422,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
@@ -1459,6 +1479,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = newProvider.OnSlowStrike,
                 OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnDownloadStopped = newProvider.OnDownloadStopped,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
@@ -1532,6 +1553,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSlowStrike = updatedProvider.OnSlowStrike,
                 OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnDownloadStopped = updatedProvider.OnDownloadStopped,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
@@ -1595,6 +1617,7 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSlowStrike = false,
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
+                    OnDownloadStopped = false,
                     OnCategoryChanged = false,
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false
