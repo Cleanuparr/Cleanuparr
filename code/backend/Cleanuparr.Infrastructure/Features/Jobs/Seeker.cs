@@ -358,13 +358,12 @@ public sealed class Seeker : IHandler
             return downloadIds.Count;
         }
 
-        // The download client decides the stored casing, the arr sends its own.
         int struckCount = await _eventsContext.DownloadItems
             .AsNoTracking()
-            .Where(d => downloadIds.Contains(d.DownloadId.ToLower()))
+            .Where(d => downloadIds.Contains(d.DownloadId))
             .Where(d => d.IsMarkedForRemoval ||
                         d.Strikes.Any(s => s.JobRunId == lastRunId && QueueCleanerStrikeTypes.Contains(s.Type)))
-            .Select(d => d.DownloadId.ToLower())
+            .Select(d => d.DownloadId)
             .Distinct()
             .CountAsync();
 
