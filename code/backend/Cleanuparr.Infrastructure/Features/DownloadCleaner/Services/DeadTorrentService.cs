@@ -57,6 +57,12 @@ public sealed class DeadTorrentService : IDeadTorrentService
                 : !config.TargetCategory.Equals(t.Category, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
+        _logger.LogDebug(
+            "dead torrent scan | {candidates}/{total} candidates | categories: {categories}",
+            candidates.Count,
+            clientDownloads.Count,
+            string.Join(", ", config.Categories));
+
         if (candidates.Count is 0)
         {
             return;
