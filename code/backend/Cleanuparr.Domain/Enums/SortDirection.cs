@@ -8,8 +8,13 @@ namespace Cleanuparr.Domain.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SortDirection
 {
-    /// <summary>Ascending order.</summary>
+    /// <summary>
+    /// Ascending order.
+    /// </summary>
     Asc,
-    /// <summary>Descending order.</summary>
+
+    /// <summary>
+    /// Descending order.
+    /// </summary>
     Desc,
 }

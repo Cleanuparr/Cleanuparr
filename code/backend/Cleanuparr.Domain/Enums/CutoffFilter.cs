@@ -8,10 +8,18 @@ namespace Cleanuparr.Domain.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum CutoffFilter
 {
-    /// <summary>Include all items regardless of cutoff status.</summary>
+    /// <summary>
+    /// Include all items regardless of cutoff status.
+    /// </summary>
     All,
-    /// <summary>Include only items whose current score is below the cutoff.</summary>
+
+    /// <summary>
+    /// Include only items whose current score is below the cutoff.
+    /// </summary>
     Below,
-    /// <summary>Include only items whose current score meets or exceeds the cutoff.</summary>
+
+    /// <summary>
+    /// Include only items whose current score meets or exceeds the cutoff.
+    /// </summary>
     Met,
 }
