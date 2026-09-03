@@ -201,6 +201,9 @@
         <app-toggle label="Download Cleaned" [formField]="modalForm.onDownloadCleaned"
           hint="Notify when a download is cleaned"
           helpKey="notifications:onDownloadCleaned" />
+        <app-toggle label="Download Stopped" [formField]="modalForm.onDownloadStopped"
+          hint="Notify when a download is stopped instead of removed. The torrent stays in the download client and its files stay on disk."
+          helpKey="notifications:onDownloadStopped" />
         <app-toggle label="Category Changed" [formField]="modalForm.onCategoryChanged"
           hint="Notify when a download's category is changed"
           helpKey="notifications:onCategoryChanged" />

@@ -273,6 +273,7 @@ export class DashboardComponent {
     if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
     if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
     if (t === 'downloadcleaned') return 'success';
+    if (t === 'downloadstopped') return 'info';
     if (t.includes('strike') || t === 'categorychanged') return 'info';
     return 'default';
   }

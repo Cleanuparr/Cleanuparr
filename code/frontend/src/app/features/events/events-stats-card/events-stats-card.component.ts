@@ -27,6 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
   SearchTriggered: '#8b5cf6',
   DownloadMarkedForDeletion: '#ec4899',
   DownloadCleaned: '#22c55e',
+  DownloadStopped: '#6366f1',
   StrikeReset: '#10b981',
 };
 

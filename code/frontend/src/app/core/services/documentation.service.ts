@@ -143,6 +143,7 @@ export class DocumentationService {
       'onSlowStrike': 'event-configuration',
       'onQueueItemDeleted': 'event-configuration',
       'onDownloadCleaned': 'event-configuration',
+      'onDownloadStopped': 'event-configuration',
       'onCategoryChanged': 'event-configuration',
       'onSearchTriggered': 'event-configuration',
       'onSearchItemGrabbed': 'event-configuration',
