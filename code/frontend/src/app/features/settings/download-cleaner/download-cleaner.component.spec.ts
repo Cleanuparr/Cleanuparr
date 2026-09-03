@@ -22,6 +22,7 @@ const RULE_A: SeedingRule = {
   maxRatio: 2,
   minSeedTime: 0,
   maxSeedTime: 240,
+  action: 'delete',
   deleteSourceFiles: true,
 };
 
@@ -35,6 +36,7 @@ const RULE_B: SeedingRule = {
   maxRatio: -1,
   minSeedTime: 24,
   maxSeedTime: 720,
+  action: 'delete',
   deleteSourceFiles: false,
 };
 

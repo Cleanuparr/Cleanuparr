@@ -9,7 +9,7 @@ import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { SeedingRule } from '@shared/models/download-cleaner-config.model';
-import { TorrentPrivacyType } from '@shared/models/enums';
+import { SeedingRuleAction, TorrentPrivacyType } from '@shared/models/enums';
 
 interface SeedingRuleFormModel {
   name: string;
@@ -23,6 +23,7 @@ interface SeedingRuleFormModel {
   maxSeedTime: number | null;
   minSeeders: number | null;
   maxInactiveDays: number | null;
+  action: SeedingRuleAction;
   deleteSourceFiles: boolean;
 }
 
@@ -30,6 +31,11 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Public', value: TorrentPrivacyType.Public },
   { label: 'Private', value: TorrentPrivacyType.Private },
   { label: 'Both', value: TorrentPrivacyType.Both },
+];
+
+const ACTION_OPTIONS: SelectOption[] = [
+  { label: 'Delete', value: 'delete' },
+  { label: 'Stop', value: 'stop' },
 ];
 
 @Component({
@@ -57,6 +63,9 @@ export class SeedingRuleModalComponent {
   readonly saved = output<void>();
 
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
+  readonly actionOptions = ACTION_OPTIONS;
+
+  readonly isDeleteAction = computed(() => this.model().action === 'delete');
 
   private readonly ruleChipInputs = viewChildren<ChipInputComponent>('ruleChipInput');
   readonly hasUncommittedInputs = computed(() =>
@@ -73,7 +82,8 @@ export class SeedingRuleModalComponent {
   private readonly defaults: SeedingRuleFormModel = {
     name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
     privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
-    maxSeedTime: -1, minSeeders: 0, maxInactiveDays: -1, deleteSourceFiles: true,
+    maxSeedTime: -1, minSeeders: 0, maxInactiveDays: -1, action: 'delete',
+    deleteSourceFiles: true,
   };
   readonly model = signal<SeedingRuleFormModel>({ ...this.defaults });
   readonly form = form(this.model, (p) => {
@@ -116,6 +126,7 @@ export class SeedingRuleModalComponent {
           maxSeedTime: r.maxSeedTime,
           minSeeders: r.minSeeders ?? 0,
           maxInactiveDays: r.maxInactiveDays ?? -1,
+          action: r.action,
           deleteSourceFiles: r.deleteSourceFiles,
         } : { ...this.defaults };
         this.model.set(next);
@@ -148,6 +159,7 @@ export class SeedingRuleModalComponent {
       maxSeedTime: m.maxSeedTime ?? -1,
       minSeeders: m.minSeeders ?? 0,
       maxInactiveDays: m.maxInactiveDays ?? -1,
+      action: m.action,
       deleteSourceFiles: m.deleteSourceFiles,
     };
 

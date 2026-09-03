@@ -1,4 +1,4 @@
-import { TorrentPrivacyType } from './enums';
+import { SeedingRuleAction, TorrentPrivacyType } from './enums';
 
 export interface SeedingRule {
   id?: string;
@@ -14,6 +14,7 @@ export interface SeedingRule {
   maxSeedTime: number;
   minSeeders?: number;
   maxInactiveDays?: number;
+  action: SeedingRuleAction;
   deleteSourceFiles: boolean;
 }
 
@@ -75,6 +76,7 @@ export function createDefaultSeedingRule(): SeedingRule {
     maxSeedTime: -1,
     minSeeders: 0,
     maxInactiveDays: -1,
+    action: 'delete',
     deleteSourceFiles: true,
   };
 }
