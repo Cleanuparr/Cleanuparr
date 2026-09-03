@@ -9,6 +9,7 @@ import { NumberInputComponent } from './number-input.component';
     [min]="min()"
     [max]="max()"
     [step]="step()"
+    [offValue]="offValue()"
     (valueChange)="onChange($event)"
   />`,
 })
@@ -17,6 +18,7 @@ class HostComponent {
   readonly min = signal<number | undefined>(undefined);
   readonly max = signal<number | undefined>(undefined);
   readonly step = signal(1);
+  readonly offValue = signal<number | undefined>(undefined);
   readonly emissions: (number | null)[] = [];
 
   onChange(value: number | null): void {
@@ -133,6 +135,49 @@ describe('NumberInputComponent', () => {
 
     expect(host.value()).toBe(0);
     expect(host.emissions).toEqual([]);
+  });
+
+  it('steps between the off value and zero without stopping in the gap', () => {
+    const fixture = setup();
+    const host = fixture.componentInstance;
+    host.min.set(-1);
+    host.step.set(0.1);
+    host.offValue.set(-1);
+    host.value.set(-1);
+    fixture.detectChanges();
+
+    button(fixture, 'Increase').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(0);
+
+    button(fixture, 'Decrease').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(-1);
+    expect(host.emissions).toEqual([0, -1]);
+  });
+
+  it('snaps a typed value from inside the gap to the nearer edge on blur', () => {
+    const fixture = setup();
+    const host = fixture.componentInstance;
+    host.min.set(-1);
+    host.offValue.set(-1);
+    host.value.set(-0.9);
+    fixture.detectChanges();
+
+    field(fixture).dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(-1);
+
+    host.value.set(-0.3);
+    fixture.detectChanges();
+    field(fixture).dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(0);
+    expect(host.emissions).toEqual([-1, 0]);
   });
 
   it('ignores increment while disabled', () => {
