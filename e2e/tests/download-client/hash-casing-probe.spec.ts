@@ -11,6 +11,9 @@ import { mkdirShared } from '../helpers/shared-volume';
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const CLIENT_DOWNLOADS = '/downloads';
 
+/** Sentinel a write op stores, lowercase because Deluge only accepts such label ids. */
+const PROBE_VALUE = 'probecase';
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -25,8 +28,8 @@ interface DriverLike {
 }
 
 /**
- * What a by-hash read did.
- *   found: the client resolved the hash to the torrent
+ * What a by-hash operation did.
+ *   found: the client resolved the hash, and for a write the new value landed
  *   empty: the call succeeded but resolved nothing, as uTorrent and Deluge do
  *   error: the call failed or the client raised a fault, as rTorrent does
  */
@@ -36,6 +39,21 @@ interface ProbeResult {
   outcome: ProbeOutcome;
   /** Evidence for the outcome, printed in the matrix. */
   detail: string;
+}
+
+/** One operation the production code performs, probed with a hash of a chosen casing. */
+interface ProbeOp {
+  /** Call shape as the backend issues it, printed in the matrix. */
+  readonly name: string;
+  /**
+   * Runs the operation against `hash`.
+   *
+   * A write op writes through `hash` and then reads the value back through
+   * `nativeHash`, because rTorrent and uTorrent both answer an unusable hash with
+   * a success-shaped response, so only the read-back shows whether anything
+   * happened. Every write restores the value it replaced.
+   */
+  run(hash: string, nativeHash: string): Promise<ProbeResult>;
 }
 
 /**
@@ -48,20 +66,23 @@ interface ProbeResult {
  * hash through verbatim and reports what the client returns verbatim.
  */
 interface RawClient {
-  /** Human-readable name of the operation `probe` issues. */
-  readonly probeOp: string;
+  /** The production operations this client is probed with. */
+  readonly ops: ProbeOp[];
   /** Performs the same handshake as the matching driver. */
   connect(): Promise<void>;
   /** Info hashes exactly as the client spells them. */
   nativeHashes(): Promise<string[]>;
-  /** Reads one torrent by hash. Throws when the client rejects the call. */
-  probe(hash: string): Promise<ProbeResult>;
 }
 
 class RawQBittorrent implements RawClient {
-  readonly probeOp = 'GET torrents/info?hashes=';
   private readonly host = 'http://localhost:8090';
   private cookie = '';
+
+  readonly ops: ProbeOp[] = [
+    { name: 'GET torrents/info?hashes=', run: (hash) => this.probeInfo(hash) },
+    { name: 'GET torrents/properties?hash=', run: (hash) => this.probeProperties(hash) },
+    { name: 'GET torrents/files?hash=', run: (hash) => this.probeFiles(hash) },
+  ];
 
   async connect(): Promise<void> {
     const body = new URLSearchParams({ username: 'admin', password: 'adminadmin' });
@@ -81,32 +102,55 @@ class RawQBittorrent implements RawClient {
     return this.cookie ? { Cookie: this.cookie } : {};
   }
 
-  private async info(query: string): Promise<Array<{ hash: string }>> {
-    const res = await fetch(`${this.host}/api/v2/torrents/info${query}`, { headers: this.headers() });
+  private async get(path: string): Promise<unknown> {
+    const res = await fetch(`${this.host}/api/v2/${path}`, { headers: this.headers() });
     if (!res.ok) {
-      throw new Error(`qBittorrent info: ${res.status} ${await res.text()}`);
+      throw new Error(`qBittorrent ${path}: ${res.status} ${(await res.text()).trim().slice(0, 80)}`);
     }
-    return (await res.json()) as Array<{ hash: string }>;
+    return res.json();
+  }
+
+  private async info(query: string): Promise<Array<{ hash: string }>> {
+    return (await this.get(`torrents/info${query}`)) as Array<{ hash: string }>;
   }
 
   async nativeHashes(): Promise<string[]> {
     return (await this.info('')).map((t) => t.hash);
   }
 
-  async probe(hash: string): Promise<ProbeResult> {
+  private async probeInfo(hash: string): Promise<ProbeResult> {
     const items = await this.info(`?hashes=${hash}`);
     if (items.length === 0) {
       return { outcome: 'empty', detail: '[] returned' };
     }
     return { outcome: 'found', detail: `hash=${items[0].hash}` };
   }
+
+  private async probeProperties(hash: string): Promise<ProbeResult> {
+    const props = (await this.get(`torrents/properties?hash=${hash}`)) as Record<string, unknown> | null;
+    if (!props || Object.keys(props).length === 0) {
+      return { outcome: 'empty', detail: '{} returned' };
+    }
+    return { outcome: 'found', detail: `save_path=${String(props.save_path)}` };
+  }
+
+  private async probeFiles(hash: string): Promise<ProbeResult> {
+    const files = (await this.get(`torrents/files?hash=${hash}`)) as Array<{ name: string }>;
+    if (files.length === 0) {
+      return { outcome: 'empty', detail: '[] returned' };
+    }
+    return { outcome: 'found', detail: `${files.length} file(s)` };
+  }
 }
 
 class RawTransmission implements RawClient {
-  readonly probeOp = 'torrent-get ids:[hash]';
   private readonly rpc = 'http://localhost:9091/transmission/rpc';
   private readonly auth = `Basic ${Buffer.from('transmission:transmission').toString('base64')}`;
   private sessionId = '';
+
+  // Every Transmission write path resolves a numeric torrent id, never a hash, so
+  // there is nothing beyond the lookup to probe.
+  readonly ops: ProbeOp[] = [{ name: 'torrent-get ids:[hash]', run: (hash) => this.probeGet(hash) }];
 
   private async post(
     method: string,
@@ -147,7 +191,7 @@ class RawTransmission implements RawClient {
     return torrents.map((t) => t.hashString);
   }
 
-  async probe(hash: string): Promise<ProbeResult> {
+  private async probeGet(hash: string): Promise<ProbeResult> {
     const { result, torrents } = await this.post('torrent-get', { ids: [hash], fields: ['hashString'] });
     if (result !== 'success') {
       return { outcome: 'error', detail: `result=${result}` };
@@ -160,10 +204,15 @@ class RawTransmission implements RawClient {
 }
 
 class RawDeluge implements RawClient {
-  readonly probeOp = 'web.get_torrent_status';
   private readonly json = 'http://localhost:8112/json';
   private cookie = '';
   private requestId = 1;
+
+  readonly ops: ProbeOp[] = [
+    { name: 'web.get_torrent_status', run: (hash) => this.probeStatus(hash) },
+    { name: 'web.get_torrent_files', run: (hash) => this.probeFiles(hash) },
+    { name: 'label.set_torrent', run: (hash, native) => this.probeSetLabel(hash, native) },
+  ];
 
   private async post(method: string, params: unknown[]): Promise<unknown> {
     const res = await fetch(this.json, {
@@ -200,7 +249,7 @@ class RawDeluge implements RawClient {
     return Object.keys(result ?? {});
   }
 
-  async probe(hash: string): Promise<ProbeResult> {
+  private async probeStatus(hash: string): Promise<ProbeResult> {
     const result = (await this.post('web.get_torrent_status', [hash, ['name']])) as Record<string, unknown> | null;
     const fields = Object.keys(result ?? {});
     if (fields.length === 0) {
@@ -208,14 +257,55 @@ class RawDeluge implements RawClient {
     }
     return { outcome: 'found', detail: `name=${String((result as Record<string, unknown>).name)}` };
   }
+
+  private async probeFiles(hash: string): Promise<ProbeResult> {
+    const result = (await this.post('web.get_torrent_files', [hash])) as Record<string, unknown> | null;
+    const fields = Object.keys(result ?? {});
+    if (fields.length === 0) {
+      return { outcome: 'empty', detail: result === null ? 'null returned' : '{} returned' };
+    }
+    return { outcome: 'found', detail: `keys=${fields.join(',')}` };
+  }
+
+  /** `web.get_torrent_status` answers `label` with '' whatever the plugin holds, so the read goes to the daemon. */
+  private async label(hash: string): Promise<string> {
+    const result = (await this.post('core.get_torrents_status', [{}, ['label']])) as Record<
+      string,
+      { label?: string }
+    > | null;
+    return result?.[hash]?.label ?? '';
+  }
+
+  private async probeSetLabel(hash: string, nativeHash: string): Promise<ProbeResult> {
+    // set_torrent rejects a label that was never added.
+    const labels = (await this.post('label.get_labels', [])) as string[];
+    if (!labels.includes(PROBE_VALUE)) {
+      await this.post('label.add', [PROBE_VALUE]);
+    }
+
+    const before = await this.label(nativeHash);
+    await this.post('label.set_torrent', [hash, PROBE_VALUE]);
+    const after = await this.label(nativeHash);
+    if (after !== PROBE_VALUE) {
+      return { outcome: 'empty', detail: `label stayed ${after === '' ? '(none)' : after}` };
+    }
+
+    await this.post('label.set_torrent', [nativeHash, before]);
+    return { outcome: 'found', detail: `label became ${PROBE_VALUE}` };
+  }
 }
 
 class RawUTorrent implements RawClient {
-  readonly probeOp = 'action=getfiles&hash=';
   private readonly host = 'http://localhost:8083';
   private readonly auth = `Basic ${Buffer.from('admin:').toString('base64')}`;
   private token = '';
   private cookie = '';
+
+  readonly ops: ProbeOp[] = [
+    { name: 'action=getfiles&hash=', run: (hash) => this.probeFiles(hash) },
+    { name: 'action=getprops&hash=', run: (hash) => this.probeProps(hash) },
+    { name: 'action=setprops&hash=&s=label', run: (hash, native) => this.probeSetLabel(hash, native) },
+  ];
 
   async connect(): Promise<void> {
     const res = await fetch(`${this.host}/gui/token.html`, { headers: { Authorization: this.auth } });
@@ -243,7 +333,11 @@ class RawUTorrent implements RawClient {
     if (!res.ok) {
       throw new Error(`uTorrent ${query}: ${res.status}`);
     }
-    return (await res.json()) as Record<string, unknown>;
+    const body = (await res.json()) as Record<string, unknown>;
+    if (typeof body.error === 'string') {
+      throw new Error(`uTorrent ${query}: ${body.error}`);
+    }
+    return body;
   }
 
   async nativeHashes(): Promise<string[]> {
@@ -251,11 +345,8 @@ class RawUTorrent implements RawClient {
     return (body.torrents ?? []).map((row) => String(row[0]));
   }
 
-  async probe(hash: string): Promise<ProbeResult> {
+  private async probeFiles(hash: string): Promise<ProbeResult> {
     const body = await this.get(`action=getfiles&hash=${hash}`);
-    if (typeof body.error === 'string') {
-      throw new Error(`uTorrent getfiles: ${body.error}`);
-    }
     // A found torrent answers files:[hash, [[name, size, downloaded, priority], ...]].
     const files = body.files;
     if (!Array.isArray(files) || files.length < 2) {
@@ -268,11 +359,51 @@ class RawUTorrent implements RawClient {
     }
     return { outcome: 'found', detail: `echoed hash ${String(files[0])}, ${count} file(s)` };
   }
+
+  private async props(hash: string): Promise<Record<string, unknown> | undefined> {
+    const body = (await this.get(`action=getprops&hash=${hash}`)) as { props?: Array<Record<string, unknown>> };
+    return body.props?.[0];
+  }
+
+  private async probeProps(hash: string): Promise<ProbeResult> {
+    const props = await this.props(hash);
+    if (!props) {
+      return { outcome: 'empty', detail: 'props:[] returned' };
+    }
+    return { outcome: 'found', detail: `echoed hash ${String(props.hash)}` };
+  }
+
+  /** getprops carries no label, so the read goes to the list row, where it sits at index 11. */
+  private async label(hash: string): Promise<string> {
+    const body = (await this.get('list=1')) as { torrents?: unknown[][] };
+    const row = (body.torrents ?? []).find((r) => String(r[0]) === hash);
+    return row ? String(row[11]) : '';
+  }
+
+  private async probeSetLabel(hash: string, nativeHash: string): Promise<ProbeResult> {
+    const before = await this.label(nativeHash);
+    await this.get(`action=setprops&hash=${hash}&s=label&v=${PROBE_VALUE}`);
+    const after = await this.label(nativeHash);
+    if (after !== PROBE_VALUE) {
+      return { outcome: 'empty', detail: `label stayed ${after === '' ? '(none)' : after}` };
+    }
+
+    await this.get(`action=setprops&hash=${nativeHash}&s=label&v=${before}`);
+    return { outcome: 'found', detail: `label became ${PROBE_VALUE}` };
+  }
 }
 
 class RawRTorrent implements RawClient {
-  readonly probeOp = 'd.name';
   private readonly rpc = 'http://localhost:8088/RPC2';
+
+  readonly ops: ProbeOp[] = [
+    { name: 'd.name', run: (hash) => this.probeName(hash) },
+    { name: 'd.is_private', run: (hash) => this.probeIsPrivate(hash) },
+    { name: 'f.multicall f.path=', run: (hash) => this.probeMulticall('f.multicall', hash, 'f.path=') },
+    { name: 't.multicall t.url=', run: (hash) => this.probeMulticall('t.multicall', hash, 't.url=') },
+    { name: 'd.custom1', run: (hash, native) => this.probeCustom1Read(hash, native) },
+    { name: 'd.custom1.set', run: (hash, native) => this.probeCustom1Write(hash, native) },
+  ];
 
   async connect(): Promise<void> {
     await this.call('system.client_version', []);
@@ -297,19 +428,72 @@ class RawRTorrent implements RawClient {
     return xml;
   }
 
+  /** First scalar of a response, whichever XML-RPC type rTorrent wrapped it in. */
+  private static scalar(xml: string): string | undefined {
+    return xml.match(/<(string|i4|i8|boolean)>([\s\S]*?)<\/\1>/)?.[2];
+  }
+
+  private async custom1(hash: string): Promise<string | undefined> {
+    return RawRTorrent.scalar(await this.call('d.custom1', [hash]));
+  }
+
   async nativeHashes(): Promise<string[]> {
     // Every string in a d.hash-only multicall response is an info hash.
     const xml = await this.call('d.multicall2', ['', 'main', 'd.hash=']);
     return [...xml.matchAll(/<string>([0-9a-fA-F]{40})<\/string>/g)].map((m) => m[1]);
   }
 
-  async probe(hash: string): Promise<ProbeResult> {
+  private async probeName(hash: string): Promise<ProbeResult> {
     const xml = await this.call('d.name', [hash]);
-    const name = xml.match(/<string>([\s\S]*?)<\/string>/)?.[1] ?? '';
+    const name = RawRTorrent.scalar(xml) ?? '';
     if (name === '') {
       return { outcome: 'empty', detail: 'empty d.name' };
     }
     return { outcome: 'found', detail: `d.name=${name}` };
+  }
+
+  private async probeIsPrivate(hash: string): Promise<ProbeResult> {
+    const value = RawRTorrent.scalar(await this.call('d.is_private', [hash]));
+    if (value === undefined) {
+      return { outcome: 'empty', detail: 'no scalar in response' };
+    }
+    return { outcome: 'found', detail: `d.is_private=${value}` };
+  }
+
+  private async probeMulticall(method: string, hash: string, field: string): Promise<ProbeResult> {
+    const xml = await this.call(method, [hash, '', field]);
+    const count = [...xml.matchAll(/<string>/g)].length;
+    if (count === 0) {
+      return { outcome: 'empty', detail: `no ${field} rows` };
+    }
+    return { outcome: 'found', detail: `${count} ${field} row(s)` };
+  }
+
+  private async probeCustom1Read(hash: string, nativeHash: string): Promise<ProbeResult> {
+    const before = (await this.custom1(nativeHash)) ?? '';
+    // Seeding separates a resolving read from an unknown hash answering blank.
+    await this.call('d.custom1.set', [nativeHash, PROBE_VALUE]);
+    try {
+      const value = (await this.custom1(hash)) ?? '';
+      if (value !== PROBE_VALUE) {
+        return { outcome: 'empty', detail: `d.custom1=${value === '' ? '(none)' : value}` };
+      }
+      return { outcome: 'found', detail: `d.custom1=${value}` };
+    } finally {
+      await this.call('d.custom1.set', [nativeHash, before]);
+    }
+  }
+
+  private async probeCustom1Write(hash: string, nativeHash: string): Promise<ProbeResult> {
+    const before = (await this.custom1(nativeHash)) ?? '';
+    await this.call('d.custom1.set', [hash, PROBE_VALUE]);
+    const after = (await this.custom1(nativeHash)) ?? '';
+    if (after !== PROBE_VALUE) {
+      return { outcome: 'empty', detail: `d.custom1 stayed ${after === '' ? '(none)' : after}` };
+    }
+
+    await this.call('d.custom1.set', [nativeHash, before]);
+    return { outcome: 'found', detail: `d.custom1 became ${PROBE_VALUE}` };
   }
 }
 
@@ -320,13 +504,22 @@ interface ClientUnderProbe {
   /** Host directory bind-mounted as the client's /downloads. */
   slug: string;
   raw: RawClient;
-  /** What we believe the flipped-case read does, printed next to what it did. */
+  /** What we believe a flipped-case hash does, printed next to what it did. */
   expectation: 'resolves' | 'does not resolve';
+  /** Carried into every row of this client, for facts a probe cannot measure. */
+  clientNote?: string;
 }
 
 const clients: ClientUnderProbe[] = [
   { key: 'qBittorrent', driver: new QBittorrentDriver(), slug: 'qbittorrent', raw: new RawQBittorrent(), expectation: 'resolves' },
-  { key: 'Transmission', driver: new TransmissionDriver(), slug: 'transmission', raw: new RawTransmission(), expectation: 'resolves' },
+  {
+    key: 'Transmission',
+    driver: new TransmissionDriver(),
+    slug: 'transmission',
+    raw: new RawTransmission(),
+    expectation: 'resolves',
+    clientNote: 'writes take a numeric Id, not a hash, so only the lookup is probed',
+  },
   { key: 'Deluge', driver: new DelugeDriver(), slug: 'deluge', raw: new RawDeluge(), expectation: 'does not resolve' },
   { key: 'uTorrent', driver: new UTorrentDriver(), slug: 'utorrent', raw: new RawUTorrent(), expectation: 'resolves' },
   { key: 'rTorrent', driver: new RTorrentDriver(), slug: 'rtorrent', raw: new RawRTorrent(), expectation: 'does not resolve' },
@@ -337,9 +530,9 @@ interface ProbeRow {
   reachable: boolean;
   nativeCasing: string;
   nativeHash: string;
-  probeOp: string;
+  op: string;
   flippedHash: string;
-  /** The native-cased read, proving the raw transport works at all. */
+  /** The native-cased call, proving the raw transport works at all. */
   control: ProbeOutcome | 'n/a';
   controlDetail: string;
   flipped: ProbeOutcome | 'n/a';
@@ -371,13 +564,22 @@ function errorText(err: unknown): string {
   return text.replace(/\s+/g, ' ').slice(0, 160);
 }
 
-/** Runs one raw read, turning a rejected call into the `error` outcome. */
-async function runProbe(raw: RawClient, hash: string): Promise<ProbeResult> {
+function addNote(row: ProbeRow, text: string): void {
+  row.note = row.note ? `${row.note}; ${text}` : text;
+}
+
+/** Runs one raw operation, turning a rejected call into the `error` outcome. */
+async function runOp(op: ProbeOp, hash: string, nativeHash: string): Promise<ProbeResult> {
   try {
-    return await raw.probe(hash);
+    return await op.run(hash, nativeHash);
   } catch (err) {
     return { outcome: 'error', detail: errorText(err) };
   }
+}
+
+/** A flipped result only counts once the native-cased control resolved. */
+function isConclusive(row: ProbeRow): boolean {
+  return row.control === 'found' && row.flipped !== 'n/a';
 }
 
 async function waitForRegistered(driver: DriverLike, infoHash: string, timeoutMs = 30_000): Promise<void> {
@@ -393,68 +595,84 @@ async function waitForRegistered(driver: DriverLike, infoHash: string, timeoutMs
 }
 
 function renderMatrix(rows: ProbeRow[]): string {
-  const header = ['client', 'native casing', 'probe op', 'native read', 'flipped read', 'expected', 'matches'];
+  const header = ['client', 'native casing', 'op', 'native call', 'flipped call', 'expected', 'matches'];
   const body = rows.map((r) => [
     r.client,
     r.reachable ? r.nativeCasing : 'unreachable',
-    r.probeOp,
+    r.op,
     r.control,
     r.flipped,
     r.expectation,
-    r.flipped === 'n/a' ? '?' : String((r.flipped === 'found') === (r.expectation === 'resolves')),
+    isConclusive(r) ? String((r.flipped === 'found') === (r.expectation === 'resolves')) : '?',
   ]);
   const widths = header.map((h, i) => Math.max(h.length, ...body.map((row) => row[i].length)));
   const line = (cells: string[]): string => cells.map((c, i) => c.padEnd(widths[i])).join('  ').trimEnd();
 
   const table = [line(header), line(widths.map((w) => '-'.repeat(w))), ...body.map(line)];
   const detail = rows.flatMap((r) => [
-    `${r.client}:`,
+    `${r.client} ${r.op}:`,
     `  native hash   ${r.nativeHash || '(none read)'}`,
     `  flipped hash  ${r.flippedHash || '(not probed)'}`,
-    `  native read   ${r.control}: ${r.controlDetail || '-'}`,
-    `  flipped read  ${r.flipped}: ${r.flippedDetail || '-'}`,
+    `  native call   ${r.control}: ${r.controlDetail || '-'}`,
+    `  flipped call  ${r.flipped}: ${r.flippedDetail || '-'}`,
     ...(r.note ? [`  note          ${r.note}`] : []),
   ]);
 
-  return [...table, '', ...detail].join('\n');
+  const label = (r: ProbeRow): string => `${r.client} ${r.op} (${r.flipped})`;
+  const conclusive = rows.filter(isConclusive);
+  const sensitive = conclusive.filter((r) => r.flipped !== 'found').map(label);
+  const insensitive = conclusive.filter((r) => r.flipped === 'found').map(label);
+  const inconclusive = rows.filter((r) => !isConclusive(r)).map((r) => `${r.client} ${r.op}`);
+
+  const summary = [
+    `case-SENSITIVE: ${sensitive.length > 0 ? sensitive.join(', ') : 'none'}`,
+    `case-insensitive: ${insensitive.length > 0 ? insensitive.join(', ') : 'none'}`,
+    ...(inconclusive.length > 0 ? [`inconclusive: ${inconclusive.join(', ')}`] : []),
+  ];
+
+  return [...table, '', ...detail, '', ...summary].join('\n');
 }
 
 /**
  * Measures whether each download client resolves a torrent by an info hash whose
- * case differs from the one it reports natively. Every outcome is recorded rather
- * than asserted: the point is to publish what the clients actually do, including
- * results that contradict what we assumed.
+ * case differs from the one it reports natively, across the operations the backend
+ * actually performs. Every outcome is recorded rather than asserted: the point is
+ * to publish what the clients actually do, including results that contradict what
+ * we assumed.
  */
 test.describe('Download client hash casing', () => {
-  test('records whether a by-hash read is case-sensitive per client', async () => {
-    test.setTimeout(300_000);
+  test('records which by-hash operations are case-sensitive per client', async () => {
+    test.setTimeout(600_000);
     mkdirShared(HOST_DOWNLOADS);
 
     const rows: ProbeRow[] = [];
 
     for (const c of clients) {
-      const row: ProbeRow = {
+      const clientRows: ProbeRow[] = c.raw.ops.map((op) => ({
         client: c.key,
         reachable: false,
         nativeCasing: '-',
         nativeHash: '',
-        probeOp: c.raw.probeOp,
+        op: op.name,
         flippedHash: '',
         control: 'n/a',
         controlDetail: '',
         flipped: 'n/a',
         flippedDetail: '',
         expectation: c.expectation,
-        note: '',
-      };
-      rows.push(row);
+        note: c.clientNote ?? '',
+      }));
+      rows.push(...clientRows);
 
       try {
         await c.driver.ready();
         await c.driver.clearAllTorrents();
         await c.raw.connect();
-        row.reachable = true;
+        for (const row of clientRows) {
+          row.reachable = true;
+        }
 
+        // One torrent serves every op, so each write op puts back what it replaced.
         const fixture = buildFolderTorrent(join(HOST_DOWNLOADS, c.slug), `probe-${c.slug}`);
         await c.driver.addTorrent({
           metainfo: fixture.metainfo,
@@ -466,26 +684,35 @@ test.describe('Download client hash casing', () => {
 
         const native = (await c.raw.nativeHashes()).find((h) => h.toLowerCase() === fixture.infoHash);
         if (!native) {
-          row.note = `raw list never reported ${fixture.infoHash}`;
+          for (const row of clientRows) {
+            addNote(row, `raw list never reported ${fixture.infoHash}`);
+          }
           continue;
         }
-        row.nativeHash = native;
-        row.nativeCasing = classifyCasing(native);
-        row.flippedHash = flipCase(native);
+        const flippedHash = flipCase(native);
 
-        const control = await runProbe(c.raw, native);
-        row.control = control.outcome;
-        row.controlDetail = control.detail;
+        for (const [index, op] of c.raw.ops.entries()) {
+          const row = clientRows[index];
+          row.nativeHash = native;
+          row.nativeCasing = classifyCasing(native);
+          row.flippedHash = flippedHash;
 
-        const flipped = await runProbe(c.raw, row.flippedHash);
-        row.flipped = flipped.outcome;
-        row.flippedDetail = flipped.detail;
+          const control = await runOp(op, native, native);
+          row.control = control.outcome;
+          row.controlDetail = control.detail;
 
-        if (control.outcome !== 'found') {
-          row.note = 'native-cased read did not resolve either, so the flipped result proves nothing';
+          const flipped = await runOp(op, flippedHash, native);
+          row.flipped = flipped.outcome;
+          row.flippedDetail = flipped.detail;
+
+          if (control.outcome !== 'found') {
+            addNote(row, 'the native-cased call did not resolve either, so the flipped result proves nothing');
+          }
         }
       } catch (err) {
-        row.note = errorText(err);
+        for (const row of clientRows) {
+          addNote(row, errorText(err));
+        }
       } finally {
         await c.driver.clearAllTorrents().catch(() => {});
       }
@@ -495,7 +722,7 @@ test.describe('Download client hash casing', () => {
     console.log(`\n${matrix}\n`);
     await test.info().attach('hash-casing-matrix.txt', { body: matrix, contentType: 'text/plain' });
 
-    const unreachable = rows.filter((r) => !r.reachable).map((r) => r.client);
+    const unreachable = [...new Set(rows.filter((r) => !r.reachable).map((r) => r.client))];
     expect.soft(unreachable, 'clients the probe could not reach').toEqual([]);
   });
 });
