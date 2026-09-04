@@ -92,6 +92,9 @@ public class EventsContext : DbContext
 
         modelBuilder.Entity<AppEvent>(entity =>
         {
+            entity.Property(e => e.ItemHash)
+                .HasConversion(new LowercaseStringConverter());
+
             entity.HasOne(e => e.Strike)
                 .WithMany()
                 .HasForeignKey(e => e.StrikeId)
@@ -110,6 +113,12 @@ public class EventsContext : DbContext
             entity.HasIndex(e => new { e.Type, e.ItemHash })
                 .IsUnique()
                 .HasFilter(_provider.GetUnresolvedEventFilter());
+        });
+
+        modelBuilder.Entity<DownloadItem>(entity =>
+        {
+            entity.Property(d => d.DownloadId)
+                .HasConversion(new LowercaseStringConverter());
         });
 
         modelBuilder.Entity<SeekerHistory>(entity =>

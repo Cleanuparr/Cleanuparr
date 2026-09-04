@@ -212,10 +212,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
     private async Task MarkDownloadRemovedAsync(string downloadId)
     {
-        string normalized = downloadId.ToLower();
-
         await _eventsContext.DownloadItems
-            .Where(x => x.DownloadId.ToLower() == normalized)
+            .Where(x => x.DownloadId == downloadId)
             .ExecuteUpdateAsync(setter =>
             {
                 setter.SetProperty(x => x.IsRemoved, true);
@@ -225,10 +223,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
     private async Task ClearRemovalFlagAsync(string downloadId)
     {
-        string normalized = downloadId.ToLower();
-
         await _eventsContext.DownloadItems
-            .Where(x => x.DownloadId.ToLower() == normalized && x.IsMarkedForRemoval)
+            .Where(x => x.DownloadId == downloadId && x.IsMarkedForRemoval)
             .ExecuteUpdateAsync(setter => setter.SetProperty(x => x.IsMarkedForRemoval, false));
     }
 

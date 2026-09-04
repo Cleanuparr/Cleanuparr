@@ -113,6 +113,19 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
+    public async Task PublishAsync_WithUppercaseItemHash_StoresItLowercase()
+    {
+        // Act
+        await _publisher.PublishAsync(EventType.StalledStrike, "Strike received", EventSeverity.Warning,
+            configure: e => e.ItemHash = "ABC123");
+
+        // Assert: the column holds the canonical casing, whatever the arr reported
+        AppEvent? savedEvent = await _context.Events.AsNoTracking().FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.ItemHash.ShouldBe("abc123");
+    }
+
+    [Fact]
     public async Task PublishAsync_WithTrackingId_SavesTrackingId()
     {
         // Arrange

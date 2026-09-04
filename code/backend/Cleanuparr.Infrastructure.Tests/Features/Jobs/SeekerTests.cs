@@ -3734,7 +3734,7 @@ public class SeekerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_IgnoreStruckDownloads_CountsACasingDuplicateOnce()
     {
-        // Arrange: three queued downloads against a limit of two, one of them stored twice per casing
+        // Arrange: three queued downloads, a limit of two, one struck through both casings
         (ArrInstance radarrInstance, IArrClient mockArrClient) =
             await ArrangeActiveDownloadLimitScenarioAsync(true, "abc123", "def456", "ghi789");
         JobRun run = await AddQueueCleanerRunAsync(JobRunStatus.Completed);
@@ -3746,7 +3746,16 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: the duplicate frees one slot, not two, so two downloads still hold the limit
+        // Assert: both casings converged on one lowercase row carrying both strikes
+        List<DownloadItem> storedItems = await _fixture.EventsContext.DownloadItems
+            .AsNoTracking()
+            .Include(d => d.Strikes)
+            .ToListAsync();
+        storedItems.Count.ShouldBe(1);
+        storedItems[0].DownloadId.ShouldBe("abc123");
+        storedItems[0].Strikes.Count.ShouldBe(2);
+
+        // The struck download frees one slot, not two, so two downloads still hold the limit
         await mockArrClient.DidNotReceive()
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
     }
@@ -3933,14 +3942,21 @@ public class SeekerTests : IDisposable
     {
         jobRun ??= await AddQueueCleanerRunAsync(JobRunStatus.Completed);
 
-        DownloadItem downloadItem = new()
+        // The stored id is normalised, so another casing strikes the existing row.
+        DownloadItem? downloadItem = await _fixture.EventsContext.DownloadItems
+            .FirstOrDefaultAsync(d => d.DownloadId == storedDownloadId);
+
+        if (downloadItem is null)
         {
-            DownloadId = storedDownloadId,
-            Title = storedDownloadId,
-            IsMarkedForRemoval = isMarkedForRemoval
-        };
-        _fixture.EventsContext.DownloadItems.Add(downloadItem);
-        await _fixture.EventsContext.SaveChangesAsync();
+            downloadItem = new DownloadItem
+            {
+                DownloadId = storedDownloadId,
+                Title = storedDownloadId,
+                IsMarkedForRemoval = isMarkedForRemoval
+            };
+            _fixture.EventsContext.DownloadItems.Add(downloadItem);
+            await _fixture.EventsContext.SaveChangesAsync();
+        }
 
         _fixture.EventsContext.Strikes.Add(new Strike
         {
