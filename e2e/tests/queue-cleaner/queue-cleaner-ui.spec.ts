@@ -34,6 +34,8 @@ test.describe('Queue Cleaner UI', () => {
     await ensureToggle(enabled, true);
     const adv = toggle(page, 'Advanced Scheduling');
     await expect(adv).toBeVisible();
+
+    await ensureToggle(adv, false);
     await expect(page.locator('app-select').filter({ hasText: 'Schedule Unit' })).toBeVisible();
 
     await ensureToggle(adv, true);
