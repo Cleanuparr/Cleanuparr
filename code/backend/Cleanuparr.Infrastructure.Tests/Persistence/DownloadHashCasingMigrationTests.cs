@@ -12,8 +12,8 @@ using Xunit;
 namespace Cleanuparr.Infrastructure.Tests.Persistence;
 
 /// <summary>
-/// NormalizeDownloadHashCasing has to merge the case-variant download_items rows an older build could create,
-/// keeping every strike, and leave a case-sensitive unique index behind that still bites.
+/// NormalizeDownloadHashCasing merges the case-variant rows an older build left.
+/// Every strike survives, and the unique index still bites afterwards.
 /// </summary>
 [Collection("SeedParity")]
 public class DownloadHashCasingMigrationTests
@@ -40,7 +40,7 @@ public class DownloadHashCasingMigrationTests
 
     private static readonly Guid JobRunId = new("11111111-1111-1111-1111-111111111111");
 
-    // Ordered so the survivor is unambiguously the lowest id under both TEXT and uuid comparison.
+    // Ordered so the survivor is the lowest id under both TEXT and uuid comparison.
     private static readonly Guid SurvivorId = new("00000000-0000-0000-0000-000000000001");
 
     private static readonly Guid SecondId = new("00000000-0000-0000-0000-000000000002");
@@ -235,7 +235,7 @@ public class DownloadHashCasingMigrationTests
         strikes.Count(strike => strike.DownloadItemId == SurvivorId).ShouldBe(6);
         strikes.Count(strike => strike.DownloadItemId == ControlId).ShouldBe(2);
 
-        // The merge keeps both Stalled strikes the two rows recorded in the same job run, rather than collapsing them.
+        // The merge keeps both Stalled strikes from the same job run.
         strikes
             .Count(strike => strike.DownloadItemId == SurvivorId
                 && strike.Type == StrikeType.Stalled
@@ -248,7 +248,7 @@ public class DownloadHashCasingMigrationTests
         List<string> indexes = await context.Database.SqlQueryRaw<string>(indexProbe).ToListAsync();
         indexes.ShouldBe(new[] { "ix_download_items_download_id" });
 
-        // Whatever casing the caller holds now lands on the surviving row, so a second insert has to collide.
+        // Any casing now lands on the surviving row, so a second insert collides.
         context.DownloadItems.Add(new DownloadItem { DownloadId = UpperHash, Title = "Torrent.Duplicate" });
         await Should.ThrowAsync<DbUpdateException>(() => context.SaveChangesAsync());
     }

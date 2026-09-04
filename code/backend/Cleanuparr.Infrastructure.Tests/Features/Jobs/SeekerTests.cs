@@ -3734,7 +3734,7 @@ public class SeekerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_IgnoreStruckDownloads_CountsACasingDuplicateOnce()
     {
-        // Arrange: three queued downloads against a limit of two, one of them struck through both casings
+        // Arrange: three queued downloads, a limit of two, one struck through both casings
         (ArrInstance radarrInstance, IArrClient mockArrClient) =
             await ArrangeActiveDownloadLimitScenarioAsync(true, "abc123", "def456", "ghi789");
         JobRun run = await AddQueueCleanerRunAsync(JobRunStatus.Completed);
@@ -3942,7 +3942,7 @@ public class SeekerTests : IDisposable
     {
         jobRun ??= await AddQueueCleanerRunAsync(JobRunStatus.Completed);
 
-        // The stored id is normalised, so another casing of the same hash strikes the existing row.
+        // The stored id is normalised, so another casing strikes the existing row.
         DownloadItem? downloadItem = await _fixture.EventsContext.DownloadItems
             .FirstOrDefaultAsync(d => d.DownloadId == storedDownloadId);
 
