@@ -103,7 +103,16 @@ export class StrikesApi {
 export class StatsApi {
   constructor(private readonly client: ApiClient) {}
 
-  get(query?: { hours?: number; includeEvents?: number; includeStrikes?: number }): Promise<Response> {
-    return this.client.get(`/api/stats${toQs(query)}`);
+  get(query?: { hours?: number; includeDryRun?: boolean }): Promise<Response> {
+    return this.client.get(`/api/v2/stats${toQs(query)}`);
+  }
+
+  timeline(query?: {
+    metric?: string;
+    hours?: number;
+    bucket?: string;
+    includeDryRun?: boolean;
+  }): Promise<Response> {
+    return this.client.get(`/api/v2/stats/timeline${toQs(query)}`);
   }
 }
