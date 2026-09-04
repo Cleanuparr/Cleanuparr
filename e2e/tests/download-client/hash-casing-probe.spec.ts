@@ -634,11 +634,9 @@ function renderMatrix(rows: ProbeRow[]): string {
 }
 
 /**
- * Measures whether each download client resolves a torrent by an info hash whose
- * case differs from the one it reports natively, across the operations the backend
- * actually performs. Every outcome is recorded rather than asserted: the point is
- * to publish what the clients actually do, including results that contradict what
- * we assumed.
+ * Measures whether each client resolves a torrent by a hash in the other case.
+ * Covers the operations the backend performs, not just a lookup.
+ * Every outcome is recorded rather than asserted, so a surprising result is published.
  */
 test.describe('Download client hash casing', () => {
   test('records which by-hash operations are case-sensitive per client', async () => {

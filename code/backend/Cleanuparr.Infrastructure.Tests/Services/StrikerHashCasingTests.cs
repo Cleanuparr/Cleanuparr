@@ -15,7 +15,8 @@ using Xunit;
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
 /// <summary>
-/// The *arr apps report an uppercase download id while the download clients report a lowercase hash.
+/// The *arr apps report an uppercase download id.
+/// The download clients report a lowercase hash.
 /// Both casings are one torrent: striking through either lands on the same lowercase row.
 /// Struck against a real migrated database, since the invariant is the stored column's.
 /// </summary>

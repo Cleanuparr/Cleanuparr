@@ -10,8 +10,8 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // download_id is now written lowercase, so rows stored in another casing became unreachable.
-            // The unique index is case-sensitive, so the same torrent can already sit in several rows.
+            // download_id is written lowercase now, so other casings became unreachable.
+            // The unique index is case-sensitive, so one torrent can sit in several rows.
             migrationBuilder.DropIndex(
                 name: "ix_download_items_download_id",
                 schema: "events",
@@ -84,7 +84,8 @@ WHERE id IN (SELECT id FROM ranked WHERE rank_in_group > 1);
             migrationBuilder.Sql("UPDATE events.download_items SET download_id = lower(download_id);");
 
             // events.item_hash carries no unique index, so it needs no merge.
-            // manual_events.item_hash is left alone: it is normalized in code and its unique index is filtered.
+            // manual_events.item_hash is left alone: it is normalized in code.
+        // Its unique index is filtered, so lowercasing could collide.
             migrationBuilder.Sql("UPDATE events.events SET item_hash = lower(item_hash) WHERE item_hash IS NOT NULL;");
 
             migrationBuilder.CreateIndex(
@@ -98,7 +99,8 @@ WHERE id IN (SELECT id FROM ranked WHERE rank_in_group > 1);
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Nothing to undo: the merge cannot be unmerged, and the index is identical before and after Up.
+            // Nothing to undo: the merge cannot be unmerged.
+        // The index is identical before and after Up.
         }
     }
 }
