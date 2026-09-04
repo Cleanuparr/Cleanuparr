@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,20 +18,22 @@ namespace Cleanuparr.Infrastructure.Tests.Stats;
 public class StatsServiceV2Tests : IDisposable
 {
     private readonly EventsContext _context;
+    private readonly IHealthCheckService _health;
+    private readonly IJobManagementService _jobs;
     private readonly StatsService _service;
 
     public StatsServiceV2Tests()
     {
         _context = TestEventsContextFactory.Create();
 
-        IHealthCheckService health = Substitute.For<IHealthCheckService>();
-        health.GetAllClientHealth().Returns(new Dictionary<Guid, HealthStatus>());
-        health.GetAllArrInstanceHealth().Returns(new Dictionary<Guid, ArrHealthStatus>());
+        _health = Substitute.For<IHealthCheckService>();
+        _health.GetAllClientHealth().Returns(new Dictionary<Guid, HealthStatus>());
+        _health.GetAllArrInstanceHealth().Returns(new Dictionary<Guid, ArrHealthStatus>());
 
-        IJobManagementService jobs = Substitute.For<IJobManagementService>();
-        jobs.GetAllJobs().ReturnsForAnyArgs(Task.FromResult<IReadOnlyList<JobInfo>>([]));
+        _jobs = Substitute.For<IJobManagementService>();
+        _jobs.GetAllJobs().ReturnsForAnyArgs(Task.FromResult<IReadOnlyList<JobInfo>>([]));
 
-        _service = new StatsService(Substitute.For<ILogger<StatsService>>(), _context, health, jobs, new SqliteDatabaseProvider());
+        _service = new StatsService(Substitute.For<ILogger<StatsService>>(), _context, _health, _jobs, new SqliteDatabaseProvider());
     }
 
     public void Dispose()
@@ -59,6 +62,14 @@ public class StatsServiceV2Tests : IDisposable
         SearchReason = searchReason,
         GrabbedItems = grabbedItems ?? [],
         IsDryRun = isDryRun,
+    };
+
+    private static JobRun Run(JobType type, JobRunStatus? status, DateTimeOffset startedAt) => new()
+    {
+        Id = Guid.NewGuid(),
+        Type = type,
+        Status = status,
+        StartedAt = startedAt,
     };
 
     [Fact]
@@ -194,6 +205,165 @@ public class StatsServiceV2Tests : IDisposable
 
         List<TimelineBucketDto> malware = await _service.GetTimelineAsync("malwareBlocked", 24);
         malware.Sum(b => b.Count).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_AggregatesJobRunsWithinTheTimeframe()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        _context.JobRuns.Add(Run(JobType.QueueCleaner, JobRunStatus.Completed, now.AddHours(-2)));
+        _context.JobRuns.Add(Run(JobType.QueueCleaner, JobRunStatus.Failed, now.AddHours(-1)));
+        _context.JobRuns.Add(Run(JobType.MalwareBlocker, JobRunStatus.Completed, now.AddHours(-3)));
+        _context.JobRuns.Add(Run(JobType.QueueCleaner, JobRunStatus.Completed, now.AddHours(-100)));
+        await _context.SaveChangesAsync();
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        stats.Jobs.Total.ShouldBe(3);
+        stats.Jobs.Completed.ShouldBe(2);
+        stats.Jobs.Failed.ShouldBe(1);
+
+        JobTypeV2Stats queueCleaner = stats.Jobs.ByType["QueueCleaner"];
+        queueCleaner.Total.ShouldBe(2);
+        queueCleaner.Completed.ShouldBe(1);
+        queueCleaner.Failed.ShouldBe(1);
+        queueCleaner.LastRunAt!.Value.ShouldBe(now.AddHours(-1), TimeSpan.FromSeconds(1));
+        queueCleaner.NextRunAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_JobsCarryTheNextScheduledRun()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset nextQueueCleanerRun = now.AddMinutes(5);
+        DateTimeOffset nextSeekerRun = now.AddMinutes(30);
+
+        _context.JobRuns.Add(Run(JobType.QueueCleaner, JobRunStatus.Completed, now.AddHours(-1)));
+        await _context.SaveChangesAsync();
+
+        _jobs.GetAllJobs().ReturnsForAnyArgs(Task.FromResult<IReadOnlyList<JobInfo>>(
+        [
+            new JobInfo { JobType = nameof(JobType.QueueCleaner), NextRunTime = nextQueueCleanerRun },
+            new JobInfo { JobType = nameof(JobType.Seeker), NextRunTime = nextSeekerRun },
+        ]));
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        stats.Jobs.ByType["QueueCleaner"].NextRunAt.ShouldBe(nextQueueCleanerRun);
+
+        // A job that never ran in the timeframe is still listed, with its schedule and no runs.
+        JobTypeV2Stats seeker = stats.Jobs.ByType["Seeker"];
+        seeker.Total.ShouldBe(0);
+        seeker.LastRunAt.ShouldBeNull();
+        seeker.NextRunAt.ShouldBe(nextSeekerRun);
+
+        stats.Jobs.Total.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_ProjectsCachedHealthSnapshots()
+    {
+        Guid clientId = Guid.NewGuid();
+        Guid instanceId = Guid.NewGuid();
+        DateTimeOffset checkedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+
+        _health.GetAllClientHealth().Returns(new Dictionary<Guid, HealthStatus>
+        {
+            [clientId] = new()
+            {
+                ClientId = clientId,
+                ClientName = "qbit",
+                ClientTypeName = DownloadClientTypeName.qBittorrent,
+                IsHealthy = false,
+                LastChecked = checkedAt,
+                ResponseTime = TimeSpan.FromMilliseconds(250),
+                ErrorMessage = "connection refused",
+            },
+        });
+        _health.GetAllArrInstanceHealth().Returns(new Dictionary<Guid, ArrHealthStatus>
+        {
+            [instanceId] = new()
+            {
+                InstanceId = instanceId,
+                InstanceName = "sonarr",
+                InstanceType = InstanceType.Sonarr,
+                IsHealthy = true,
+                LastChecked = checkedAt,
+            },
+        });
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        DownloadClientHealthDto client = stats.Health.DownloadClients.ShouldHaveSingleItem();
+        client.Id.ShouldBe(clientId);
+        client.Name.ShouldBe("qbit");
+        client.Type.ShouldBe(nameof(DownloadClientTypeName.qBittorrent));
+        client.IsHealthy.ShouldBeFalse();
+        client.LastChecked.ShouldBe(checkedAt);
+        client.ResponseTimeMs.ShouldBe(250);
+        client.ErrorMessage.ShouldBe("connection refused");
+
+        ArrInstanceHealthDto instance = stats.Health.ArrInstances.ShouldHaveSingleItem();
+        instance.Id.ShouldBe(instanceId);
+        instance.Name.ShouldBe("sonarr");
+        instance.Type.ShouldBe(nameof(InstanceType.Sonarr));
+        instance.IsHealthy.ShouldBeTrue();
+        instance.ErrorMessage.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_CountsStrikesOfEveryTypeAndRecoveries()
+    {
+        _context.Events.Add(Event(EventType.StalledStrike));
+        _context.Events.Add(Event(EventType.SlowSpeedStrike));
+        _context.Events.Add(Event(EventType.DeadTorrentStrike));
+        _context.Events.Add(Event(EventType.StrikeReset));
+        _context.Events.Add(Event(EventType.SlowTimeStrike, isDryRun: true));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled));
+        await _context.SaveChangesAsync();
+
+        List<TimelineBucketDto> strikes = await _service.GetTimelineAsync("strikesIssued", 24);
+        strikes.Sum(b => b.Count).ShouldBe(3);
+
+        List<TimelineBucketDto> strikesWithDryRun = await _service.GetTimelineAsync("strikesIssued", 24, includeDryRun: true);
+        strikesWithDryRun.Sum(b => b.Count).ShouldBe(4);
+
+        List<TimelineBucketDto> recovered = await _service.GetTimelineAsync("recovered", 24);
+        recovered.Sum(b => b.Count).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_UnknownMetricCountsEveryEventType()
+    {
+        _context.Events.Add(Event(EventType.StalledStrike));
+        _context.Events.Add(Event(EventType.StrikeReset));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled));
+        await _context.SaveChangesAsync();
+
+        List<TimelineBucketDto> events = await _service.GetTimelineAsync("events", 24);
+        events.Sum(b => b.Count).ShouldBe(3);
+
+        List<TimelineBucketDto> unknown = await _service.GetTimelineAsync("not-a-metric", 24);
+        unknown.Sum(b => b.Count).ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_BucketsHourlyForShortTimeframesAndDailyBeyond()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        _context.Events.Add(Event(EventType.StrikeReset, timestamp: now));
+        _context.Events.Add(Event(EventType.StrikeReset, timestamp: now.AddHours(-2)));
+        _context.Events.Add(Event(EventType.StrikeReset, timestamp: now.AddDays(-3)));
+        await _context.SaveChangesAsync();
+
+        List<TimelineBucketDto> hourly = await _service.GetTimelineAsync("recovered", 24);
+        hourly.Sum(b => b.Count).ShouldBe(2);
+        hourly.Count(b => b.Count > 0).ShouldBe(2);
+
+        List<TimelineBucketDto> daily = await _service.GetTimelineAsync("recovered", 168);
+        daily.Sum(b => b.Count).ShouldBe(3);
+        daily.Count(b => b.Count > 0).ShouldBe(2);
+        daily.ShouldAllBe(b => b.Date.TimeOfDay == TimeSpan.Zero);
     }
 
     [Fact]
