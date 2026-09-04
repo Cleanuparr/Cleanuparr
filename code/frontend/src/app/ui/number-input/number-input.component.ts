@@ -25,6 +25,8 @@ export class NumberInputComponent {
   min = input<number>();
   max = input<number>();
   step = input(1);
+  /** Sentinel below the usable range (e.g. -1 for "disabled"); values between it and 0 are skipped. */
+  offValue = input<number>();
   suffix = input<string>();
   error = input<string>();
   hint = input<string>();
@@ -54,11 +56,21 @@ export class NumberInputComponent {
       if (maxVal != null) {
         clamped = Math.min(clamped, maxVal);
       }
+      clamped = this.snapOutOfGap(clamped);
       if (clamped !== current) {
         this.value.set(clamped);
       }
     }
     this.blurred.emit(event);
+  }
+
+  /** Pulls a value sitting in the unusable gap onto whichever edge is closer. */
+  private snapOutOfGap(value: number): number {
+    const off = this.offValue();
+    if (off == null || value <= off || value >= 0) {
+      return value;
+    }
+    return value <= off / 2 ? off : 0;
   }
 
   private stepDecimals(): number {
@@ -77,6 +89,11 @@ export class NumberInputComponent {
   private applyStep(direction: 1 | -1): void {
     if (this.disabled()) return;
     const current = this.value() ?? 0;
+    const off = this.offValue();
+    if (off != null && direction === 1 && current === off) {
+      this.value.set(0);
+      return;
+    }
     const next = parseFloat((current + direction * this.step()).toFixed(this.stepDecimals()));
     const minVal = this.min();
     const maxVal = this.max();
@@ -86,6 +103,9 @@ export class NumberInputComponent {
     }
     if (maxVal != null) {
       clamped = Math.min(clamped, maxVal);
+    }
+    if (off != null && clamped > off && clamped < 0) {
+      clamped = off;
     }
     this.value.set(clamped);
   }

@@ -26,12 +26,16 @@
         [hint]="isSelectedClientTransmission() ? 'Torrent must have all of these labels. Empty means any labels.' : 'Torrent must have all of these tags. Empty means any tags.'"
         helpKey="download-cleaner:tagsAll" #ruleChipInput />
     }
-    <app-number-input label="Max Ratio" [formField]="form.maxRatio" [step]="0.1"
-      hint="Maximum ratio to seed before removing (-1 means disabled)"
-      helpKey="download-cleaner:maxRatio" />
-    <app-number-input label="Min Seed Time" [formField]="form.minSeedTime" suffix="hours"
-      hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
-      helpKey="download-cleaner:minSeedTime" />
+    <div class="form-grid full-width">
+      <app-number-input label="Max Ratio" [formField]="form.maxRatio" [step]="0.1" [offValue]="-1"
+        hint="Maximum ratio to seed before removing (-1 means disabled)"
+        helpKey="download-cleaner:maxRatio" />
+      @if (isMaxRatioEnabled()) {
+        <app-number-input label="Min Seed Time" [formField]="form.minSeedTime" suffix="hours"
+          hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
+          helpKey="download-cleaner:minSeedTime" />
+      }
+    </div>
     <app-number-input label="Max Seed Time" [formField]="form.maxSeedTime" suffix="hours"
       hint="Maximum time to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxSeedTime" />
@@ -46,16 +50,18 @@
         helpKey="download-cleaner:minSeeders" />
     }
     @if (disabledError()) {
-      <div class="category-error">{{ disabledError() }}</div>
+      <div class="category-error full-width">{{ disabledError() }}</div>
     }
-    <app-select class="full-width" label="Action" [options]="actionOptions" [formField]="form.action" featureId="seeding-rule-action"
-      hint="What to do when the rule matches. Stop only stops the torrent in the download client and leaves it and its files in place."
-      helpKey="download-cleaner:action" />
-    @if (isDeleteAction()) {
-      <app-toggle class="full-width" label="Delete Source Files" [formField]="form.deleteSourceFiles"
-        hint="When enabled, the files on the disk will be deleted when the torrent is removed"
-        helpKey="download-cleaner:deleteSourceFiles" />
-    }
+    <div class="form-grid full-width">
+      <app-select label="Action" [options]="actionOptions" [formField]="form.action" featureId="seeding-rule-action"
+        hint="What to do when the rule matches. Stop only stops the torrent in the download client and leaves it and its files in place."
+        helpKey="download-cleaner:action" />
+      @if (isDeleteAction()) {
+        <app-toggle label="Delete Source Files" [formField]="form.deleteSourceFiles"
+          hint="When enabled, the files on the disk will be deleted when the torrent is removed"
+          helpKey="download-cleaner:deleteSourceFiles" />
+      }
+    </div>
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="visible.set(false)">Cancel</app-button>
