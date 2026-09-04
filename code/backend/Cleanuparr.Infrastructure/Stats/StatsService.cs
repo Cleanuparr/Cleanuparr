@@ -34,26 +34,6 @@ public class StatsService : IStatsService
         _databaseProvider = databaseProvider;
     }
 
-    /// <inheritdoc />
-    public async Task<StatsResponse> GetStatsAsync(int hours = 24, int includeEvents = 0, int includeStrikes = 0)
-    {
-        var cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
-
-        var eventStats = await GetEventStatsAsync(cutoff, hours, includeEvents);
-        var strikeStats = await GetStrikeStatsAsync(cutoff, hours, includeStrikes);
-        var jobStats = await GetJobStatsAsync(cutoff, hours);
-        var healthStats = GetHealthStats();
-
-        return new StatsResponse
-        {
-            Events = eventStats,
-            Strikes = strikeStats,
-            Jobs = jobStats,
-            Health = healthStats,
-            GeneratedAt = DateTimeOffset.UtcNow
-        };
-    }
-
     private static readonly Dictionary<EventType, StrikeType> StrikeEventToType = new()
     {
         [EventType.StalledStrike] = StrikeType.Stalled,
@@ -277,11 +257,7 @@ public class StatsService : IStatsService
         public int Count { get; set; }
     }
 
-    /// <summary>
-    /// Builds the per-job-type run stats for the timeframe, enriched with each job's next scheduled run.
-    /// Shared by the v1 and v2 job-stats projections.
-    /// </summary>
-    private async Task<Dictionary<string, JobTypeStats>> BuildJobTypeStatsAsync(DateTimeOffset cutoff)
+    private async Task<JobV2Stats> GetJobV2StatsAsync(DateTimeOffset cutoff)
     {
         var jobRuns = await _eventsContext.JobRuns
             .Where(j => j.StartedAt >= cutoff)
@@ -296,11 +272,11 @@ public class StatsService : IStatsService
             })
             .ToListAsync();
 
-        Dictionary<string, JobTypeStats> byType = jobRuns.ToDictionary(
+        Dictionary<string, JobTypeV2Stats> byType = jobRuns.ToDictionary(
             j => j.Type.ToString(),
-            j => new JobTypeStats
+            j => new JobTypeV2Stats
             {
-                TotalRuns = j.TotalRuns,
+                Total = j.TotalRuns,
                 Completed = j.Completed,
                 Failed = j.Failed,
                 LastRunAt = j.LastRunAt,
@@ -309,134 +285,22 @@ public class StatsService : IStatsService
         var allJobs = await _jobManagementService.GetAllJobs();
         foreach (var job in allJobs)
         {
-            if (byType.TryGetValue(job.JobType, out JobTypeStats? stats))
+            if (byType.TryGetValue(job.JobType, out JobTypeV2Stats? stats))
             {
                 stats.NextRunAt = job.NextRunTime;
             }
             else
             {
-                byType[job.JobType] = new JobTypeStats { NextRunAt = job.NextRunTime };
+                byType[job.JobType] = new JobTypeV2Stats { NextRunAt = job.NextRunTime };
             }
         }
 
-        return byType;
-    }
-
-    private async Task<JobV2Stats> GetJobV2StatsAsync(DateTimeOffset cutoff)
-    {
-        Dictionary<string, JobTypeStats> byType = await BuildJobTypeStatsAsync(cutoff);
-
-        Dictionary<string, JobTypeV2Stats> byTypeV2 = byType.ToDictionary(
-            kvp => kvp.Key,
-            kvp => new JobTypeV2Stats
-            {
-                Total = kvp.Value.TotalRuns,
-                Completed = kvp.Value.Completed,
-                Failed = kvp.Value.Failed,
-                LastRunAt = kvp.Value.LastRunAt,
-                NextRunAt = kvp.Value.NextRunAt,
-            });
-
         return new JobV2Stats
         {
-            Total = byTypeV2.Values.Sum(s => s.Total),
-            Completed = byTypeV2.Values.Sum(s => s.Completed),
-            Failed = byTypeV2.Values.Sum(s => s.Failed),
-            ByType = byTypeV2,
-        };
-    }
-
-    private async Task<EventStats> GetEventStatsAsync(DateTimeOffset cutoff, int hours, int includeEvents)
-    {
-        var eventsByType = await _eventsContext.Events
-            .Where(e => e.Timestamp >= cutoff)
-            .GroupBy(e => e.EventType)
-            .Select(g => new { Type = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var eventsBySeverity = await _eventsContext.Events
-            .Where(e => e.Timestamp >= cutoff)
-            .GroupBy(e => e.Severity)
-            .Select(g => new { Severity = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var stats = new EventStats
-        {
-            TotalCount = eventsByType.Sum(e => e.Count),
-            ByType = eventsByType.ToDictionary(e => e.Type.ToString(), e => e.Count),
-            BySeverity = eventsBySeverity.ToDictionary(e => e.Severity.ToString(), e => e.Count),
-            TimeframeHours = hours
-        };
-
-        if (includeEvents > 0)
-        {
-            stats.RecentItems = await _eventsContext.Events
-                .Where(e => e.Timestamp >= cutoff)
-                .OrderByDescending(e => e.Timestamp)
-                .Take(includeEvents)
-                .Select(e => new RecentEventDto
-                {
-                    Id = e.Id,
-                    Timestamp = e.Timestamp,
-                    EventType = e.EventType.ToString(),
-                    Message = e.Message,
-                    Severity = e.Severity.ToString(),
-                })
-                .ToListAsync();
-        }
-
-        return stats;
-    }
-
-    private async Task<StrikeStats> GetStrikeStatsAsync(DateTimeOffset cutoff, int hours, int includeStrikes)
-    {
-        var strikesByType = await _eventsContext.Strikes
-            .Where(s => s.CreatedAt >= cutoff)
-            .GroupBy(s => s.Type)
-            .Select(g => new { Type = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        var itemsRemoved = await _eventsContext.DownloadItems
-            .Where(d => d.IsRemoved && d.Strikes.Any(s => s.CreatedAt >= cutoff))
-            .CountAsync();
-
-        var stats = new StrikeStats
-        {
-            TotalCount = strikesByType.Sum(s => s.Count),
-            ByType = strikesByType.ToDictionary(s => s.Type.ToString(), s => s.Count),
-            ItemsRemoved = itemsRemoved,
-            TimeframeHours = hours
-        };
-
-        if (includeStrikes > 0)
-        {
-            stats.RecentItems = await _eventsContext.Strikes
-                .Include(s => s.DownloadItem)
-                .Where(s => s.CreatedAt >= cutoff)
-                .OrderByDescending(s => s.CreatedAt)
-                .Take(includeStrikes)
-                .Select(s => new RecentStrikeDto
-                {
-                    Id = s.Id,
-                    Type = s.Type.ToString(),
-                    CreatedAt = s.CreatedAt,
-                    DownloadId = s.DownloadItem.DownloadId,
-                    Title = s.DownloadItem.Title
-                })
-                .ToListAsync();
-        }
-
-        return stats;
-    }
-
-    private async Task<JobStats> GetJobStatsAsync(DateTimeOffset cutoff, int hours)
-    {
-        Dictionary<string, JobTypeStats> byType = await BuildJobTypeStatsAsync(cutoff);
-
-        return new JobStats
-        {
+            Total = byType.Values.Sum(s => s.Total),
+            Completed = byType.Values.Sum(s => s.Completed),
+            Failed = byType.Values.Sum(s => s.Failed),
             ByType = byType,
-            TimeframeHours = hours
         };
     }
 
