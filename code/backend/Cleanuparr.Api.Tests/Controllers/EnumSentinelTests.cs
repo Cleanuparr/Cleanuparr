@@ -27,6 +27,7 @@ public sealed class EnumSentinelTests
     [InlineData(typeof(StrikeType))]
     [InlineData(typeof(JobType))]
     [InlineData(typeof(SearchCommandStatus))]
+    [InlineData(typeof(SeedingRuleAction))]
     public void Identity_enums_pin_the_sentinel_to_its_own_value(Type enumType)
     {
         Convert.ToInt32(Enum.Parse(enumType, EnumSentinel.Unknown))

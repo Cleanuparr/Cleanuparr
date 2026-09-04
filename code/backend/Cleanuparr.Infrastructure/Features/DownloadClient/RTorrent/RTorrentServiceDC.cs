@@ -84,6 +84,13 @@ public partial class RTorrentService
         }
     }
 
+    /// <inheritdoc/>
+    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    {
+        string hash = torrent.Hash.ToUpperInvariant();
+        await _client.StopTorrentAsync(hash);
+    }
+
     /// <summary>
     /// rTorrent doesn't have native category management. Labels are stored in d.custom1
     /// and are created implicitly when set. This is a no-op.

@@ -14,4 +14,5 @@ public interface IUTorrentClientWrapper
     Task SetTorrentLabelAsync(string hash, string label);
     Task SetFilesPriorityAsync(string hash, List<int> fileIndexes, int priority);
     Task RemoveTorrentsAsync(List<string> hashes, bool deleteData);
+    Task StopTorrentsAsync(List<string> hashes);
 }

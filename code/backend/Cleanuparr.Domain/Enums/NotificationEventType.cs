@@ -11,5 +11,6 @@ public enum NotificationEventType
     DownloadCleaned,
     CategoryChanged,
     SearchTriggered,
-    SearchItemGrabbed
+    SearchItemGrabbed,
+    DownloadStopped
 }

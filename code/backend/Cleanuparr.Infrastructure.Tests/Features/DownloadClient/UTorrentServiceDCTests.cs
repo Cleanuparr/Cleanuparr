@@ -367,6 +367,122 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
         }
     }
 
+    public class StopDownload_Tests : UTorrentServiceDCTests
+    {
+        public StopDownload_Tests(UTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task CallsClientStop()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+            const string hash = "TEST-HASH";
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
+
+            _fixture.ClientWrapper
+                .StopTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .StopTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")));
+        }
+
+        [Fact]
+        public async Task NormalizesHashToLowercase()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+            const string hash = "UPPERCASE-HASH";
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
+
+            _fixture.ClientWrapper
+                .StopTorrentsAsync(Arg.Any<List<string>>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .StopTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("uppercase-hash")));
+        }
+
+        [Fact]
+        public async Task DoesNotDeleteTheTorrent()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("TEST-HASH");
+
+            _fixture.ClientWrapper
+                .StopTorrentsAsync(Arg.Any<List<string>>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .RemoveTorrentsAsync(Arg.Any<List<string>>(), Arg.Any<bool>());
+        }
+    }
+
+    public class IsStopped_Tests : UTorrentServiceDCTests
+    {
+        public IsStopped_Tests(UTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public void ReturnsTrueWhenStartedBitIsClear()
+        {
+            // Arrange
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Status = UTorrentStatus.Checked },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ReturnsTrueWhenPausedBitIsSet()
+        {
+            // Arrange
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem
+                {
+                    Hash = "hash1",
+                    Status = UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Paused
+                },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ReturnsFalseWhenStartedAndNotPaused()
+        {
+            // Arrange
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Status = UTorrentStatus.Started | UTorrentStatus.Checked },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeFalse();
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : UTorrentServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(UTorrentServiceFixture fixture) : base(fixture)

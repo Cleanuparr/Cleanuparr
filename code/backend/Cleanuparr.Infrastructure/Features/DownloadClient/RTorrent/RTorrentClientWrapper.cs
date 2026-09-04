@@ -29,6 +29,9 @@ public sealed class RTorrentClientWrapper : IRTorrentClientWrapper
     public Task DeleteTorrentAsync(string hash)
         => _client.DeleteTorrentAsync(hash);
 
+    public Task StopTorrentAsync(string hash)
+        => _client.StopTorrentAsync(hash);
+
     public Task SetFilePriorityAsync(string hash, int fileIndex, int priority)
         => _client.SetFilePriorityAsync(hash, fileIndex, priority);
 

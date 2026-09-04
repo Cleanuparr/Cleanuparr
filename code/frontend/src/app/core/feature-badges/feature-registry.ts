@@ -46,4 +46,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'lazylibrarian-blocklist' },
   { id: 'http-user-agent' },
   { id: 'seeker-ignore-struck-downloads' },
+  { id: 'seeding-rule-action' },
 ];

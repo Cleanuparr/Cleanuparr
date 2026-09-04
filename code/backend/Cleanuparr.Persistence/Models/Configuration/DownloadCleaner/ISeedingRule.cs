@@ -42,6 +42,11 @@ public interface ISeedingRule : IConfig
 
     bool DeleteSourceFiles { get; set; }
 
+    /// <summary>
+    /// What happens to a download that matched this rule.
+    /// </summary>
+    SeedingRuleAction Action { get; set; }
+
     void ValidateRule()
     {
         if (string.IsNullOrEmpty(Name.Trim()))
@@ -72,6 +77,11 @@ public interface ISeedingRule : IConfig
         if (MinSeedTime < 0)
         {
             throw new ValidationException("Min seed time can not be negative");
+        }
+
+        if (Action is SeedingRuleAction.Unknown)
+        {
+            throw new ValidationException("Unknown seeding rule action");
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Cleanuparr.Infrastructure.Features.Notifications.Models;
+﻿namespace Cleanuparr.Infrastructure.Features.Notifications.Models;
 
 public sealed record NotificationEventFlags
 {
@@ -11,6 +11,8 @@ public sealed record NotificationEventFlags
     public bool OnQueueItemDeleted { get; init; }
     
     public bool OnDownloadCleaned { get; init; }
+    
+    public bool OnDownloadStopped { get; init; }
     
     public bool OnCategoryChanged { get; init; }
 

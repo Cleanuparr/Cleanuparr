@@ -151,7 +151,10 @@
                         }
                       </div>
                       <div class="rule-card__details">
-                        <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
+                        <span>Action: {{ rule.action }}</span>
+                        @if (rule.action === SeedingRuleAction.Delete) {
+                          <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
+                        }
                       </div>
                     </div>
                   }

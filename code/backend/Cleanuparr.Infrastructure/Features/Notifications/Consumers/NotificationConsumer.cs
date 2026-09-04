@@ -54,6 +54,11 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
                         NotificationEventType.DownloadCleaned, 
                         ConvertToNotificationContext(downloadCleanedNotification, NotificationEventType.DownloadCleaned));
                     break;
+                case DownloadStoppedNotification downloadStoppedNotification:
+                    await _notificationService.SendNotificationAsync(
+                        NotificationEventType.DownloadStopped, 
+                        ConvertToNotificationContext(downloadStoppedNotification, NotificationEventType.DownloadStopped));
+                    break;
                 case CategoryChangedNotification categoryChangedNotification:
                     await _notificationService.SendNotificationAsync(
                         NotificationEventType.CategoryChanged, 

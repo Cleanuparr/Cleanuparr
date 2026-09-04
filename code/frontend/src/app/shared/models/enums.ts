@@ -135,3 +135,24 @@ export enum CleanReason {
 }
 
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
+
+export enum SeedingRuleAction {
+  Delete = 'Delete',
+  Stop = 'Stop',
+}
+
+export enum EventType {
+  FailedImportStrike = 'FailedImportStrike',
+  StalledStrike = 'StalledStrike',
+  DownloadingMetadataStrike = 'DownloadingMetadataStrike',
+  SlowSpeedStrike = 'SlowSpeedStrike',
+  SlowTimeStrike = 'SlowTimeStrike',
+  DeadTorrentStrike = 'DeadTorrentStrike',
+  QueueItemDeleted = 'QueueItemDeleted',
+  DownloadCleaned = 'DownloadCleaned',
+  CategoryChanged = 'CategoryChanged',
+  DownloadMarkedForDeletion = 'DownloadMarkedForDeletion',
+  SearchTriggered = 'SearchTriggered',
+  StrikeReset = 'StrikeReset',
+  DownloadStopped = 'DownloadStopped',
+}

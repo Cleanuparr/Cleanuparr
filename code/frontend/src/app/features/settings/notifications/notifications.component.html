@@ -56,6 +56,9 @@
           @if (provider.events.onDownloadCleaned) {
             <span class="event-tag">Download Cleaned</span>
           }
+          @if (provider.events.onDownloadStopped) {
+            <span class="event-tag">Download Stopped</span>
+          }
           @if (provider.events.onCategoryChanged) {
             <span class="event-tag">Category Changed</span>
           }

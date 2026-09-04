@@ -11,6 +11,7 @@ export type TorrentClientType = 'qBittorrent' | 'Transmission' | 'Deluge' | 'uTo
  *     client; the spec always passes deleteFiles=false to leave the orphan
  *     on disk so the cleaner has something to detect
  *   - `listTorrents()` — used to assert state after operations
+ *   - `isStopped(hash)`: mirrors the stopped definition of the backend item wrapper
  *
  * `host` is the URL the *Cleanuparr backend* should be configured with — not
  * necessarily the URL the test helper itself talks to (some clients require
@@ -27,6 +28,11 @@ export interface TorrentClientDriver {
   addTorrent(input: { metainfo: Buffer; savePath: string; name: string; infoHash: string }): Promise<void>;
   deleteTorrent(infoHash: string): Promise<void>;
   listTorrents(): Promise<Array<{ hash: string; name: string }>>;
+  /**
+   * Each driver mirrors the stopped definition of its backend item wrapper.
+   * False when the client does not know the torrent.
+   */
+  isStopped(infoHash: string): Promise<boolean>;
   /**
    * Remove every torrent currently registered with the client without deleting
    * data on disk. Called at the start of each test to make the spec

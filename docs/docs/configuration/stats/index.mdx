@@ -116,6 +116,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
       "DeadTorrentStrike": 1,
       "QueueItemDeleted": 13,
       "DownloadCleaned": 6,
+      "DownloadStopped": 2,
       "CategoryChanged": 4,
       "DownloadMarkedForDeletion": 2,
       "SearchTriggered": 8,
@@ -272,6 +273,7 @@ The raw event audit for the timeframe. The higher-level sections (`strikes`, `re
   - `DeadTorrentStrike`: A strike given because the torrent had no seeders (dead).
   - `QueueItemDeleted`: A download was removed from the *arr queue.
   - `DownloadCleaned`: A finished download was removed after meeting its seeding goals.
+  - `DownloadStopped`: A finished download was stopped in the download client after meeting its seeding goals, instead of being removed.
   - `CategoryChanged`: A download's category or tag was changed.
   - `DownloadMarkedForDeletion`: A download was flagged for removal, just before it is deleted.
   - `SearchTriggered`: The Seeker started a search for a missing or upgradeable item.
@@ -330,7 +332,7 @@ The number of **Malware blocked** can be derived from the sum of the `AllFilesBl
   title="cleaned"
 >
 
-Downloads cleaned by the `Download Cleaner` in the timeframe.
+Downloads deleted by the `Download Cleaner` in the timeframe. Seeding rules with the `Stop` action are counted as `DownloadStopped` events instead.
 
 - **total**: Total cleaned downloads in the timeframe.
 - **byReason**: Cleaned downloads grouped by reason. Possible reasons:

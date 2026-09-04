@@ -6,6 +6,7 @@ using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -46,7 +47,8 @@ public class SeedingRulesControllerTests : IDisposable
         double maxSeedTime = -1,
         int minSeeders = 0,
         double maxInactiveDays = -1,
-        bool deleteSourceFiles = true)
+        bool deleteSourceFiles = true,
+        SeedingRuleAction action = SeedingRuleAction.Delete)
     {
         return new SeedingRuleRequest
         {
@@ -63,6 +65,7 @@ public class SeedingRulesControllerTests : IDisposable
             MinSeeders = minSeeders,
             MaxInactiveDays = maxInactiveDays,
             DeleteSourceFiles = deleteSourceFiles,
+            Action = action,
         };
     }
 
@@ -277,6 +280,49 @@ public class SeedingRulesControllerTests : IDisposable
         GetCreatedRule<TransmissionSeedingRule>(result).TagsAny.ShouldBe(new List<string> { "tag1" });
     }
 
+    [Theory]
+    [InlineData(DownloadClientTypeName.qBittorrent)]
+    [InlineData(DownloadClientTypeName.Transmission)]
+    [InlineData(DownloadClientTypeName.Deluge)]
+    [InlineData(DownloadClientTypeName.uTorrent)]
+    [InlineData(DownloadClientTypeName.rTorrent)]
+    public async Task CreateSeedingRule_WithStopAction_ReturnsStopAction(DownloadClientTypeName typeName)
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext, typeName, $"Test {typeName}");
+        SeedingRuleRequest request = CreateValidRequest(action: SeedingRuleAction.Stop);
+
+        IActionResult result = await _controller.CreateSeedingRule(client.Id, request);
+
+        result.ShouldBeOfType<CreatedAtActionResult>();
+        SeedingRuleResponse rule = GetRulesFromOk(await _controller.GetSeedingRules(client.Id)).Single();
+        rule.Action.ShouldBe(SeedingRuleAction.Stop);
+    }
+
+    [Fact]
+    public async Task CreateSeedingRule_ActionOmitted_DefaultsToDelete()
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        SeedingRuleRequest request = new()
+        {
+            Name = "Rule without an action",
+            Categories = ["movies"],
+            MaxRatio = 2.0,
+        };
+
+        IActionResult result = await _controller.CreateSeedingRule(client.Id, request);
+
+        GetCreatedRule<QBitSeedingRule>(result).Action.ShouldBe(SeedingRuleAction.Delete);
+    }
+
+    [Fact]
+    public async Task CreateSeedingRule_UnknownAction_ThrowsValidationException()
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        SeedingRuleRequest request = CreateValidRequest(action: SeedingRuleAction.Unknown);
+
+        await Should.ThrowAsync<ValidationException>(() => _controller.CreateSeedingRule(client.Id, request));
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // UpdateSeedingRule
     // ──────────────────────────────────────────────────────────────────────
@@ -375,6 +421,36 @@ public class SeedingRulesControllerTests : IDisposable
 
         // Both maxRatio and maxSeedTime negative → validation failure
         var request = CreateValidRequest(maxRatio: -1, maxSeedTime: -1);
+
+        await Should.ThrowAsync<ValidationException>(() => _controller.UpdateSeedingRule(rule.Id, request));
+    }
+
+    [Theory]
+    [InlineData(DownloadClientTypeName.qBittorrent)]
+    [InlineData(DownloadClientTypeName.Transmission)]
+    [InlineData(DownloadClientTypeName.Deluge)]
+    [InlineData(DownloadClientTypeName.uTorrent)]
+    [InlineData(DownloadClientTypeName.rTorrent)]
+    public async Task UpdateSeedingRule_ChangedToStopAction_ReturnsStopAction(DownloadClientTypeName typeName)
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext, typeName, $"Test {typeName}");
+        await _controller.CreateSeedingRule(client.Id, CreateValidRequest());
+        Guid ruleId = GetRulesFromOk(await _controller.GetSeedingRules(client.Id)).Single().Id;
+
+        IActionResult result = await _controller.UpdateSeedingRule(ruleId, CreateValidRequest(action: SeedingRuleAction.Stop));
+
+        result.ShouldBeOfType<OkObjectResult>();
+        SeedingRuleResponse rule = GetRulesFromOk(await _controller.GetSeedingRules(client.Id)).Single();
+        rule.Action.ShouldBe(SeedingRuleAction.Stop);
+    }
+
+    [Fact]
+    public async Task UpdateSeedingRule_UnknownAction_ThrowsValidationException()
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        QBitSeedingRule rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
+
+        SeedingRuleRequest request = CreateValidRequest(action: SeedingRuleAction.Unknown);
 
         await Should.ThrowAsync<ValidationException>(() => _controller.UpdateSeedingRule(rule.Id, request));
     }

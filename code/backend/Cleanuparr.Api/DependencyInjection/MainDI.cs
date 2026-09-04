@@ -34,6 +34,7 @@ public static class MainDI
                 config.AddConsumer<NotificationConsumer<SlowTimeStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<QueueItemDeletedNotification>>();
                 config.AddConsumer<NotificationConsumer<DownloadCleanedNotification>>();
+                config.AddConsumer<NotificationConsumer<DownloadStoppedNotification>>();
                 config.AddConsumer<NotificationConsumer<CategoryChangedNotification>>();
 
                 config.UsingInMemory((context, cfg) =>
@@ -60,6 +61,7 @@ public static class MainDI
                         e.ConfigureConsumer<NotificationConsumer<SlowTimeStrikeNotification>>(context);
                         e.ConfigureConsumer<NotificationConsumer<QueueItemDeletedNotification>>(context);
                         e.ConfigureConsumer<NotificationConsumer<DownloadCleanedNotification>>(context);
+                        e.ConfigureConsumer<NotificationConsumer<DownloadStoppedNotification>>(context);
                         e.ConfigureConsumer<NotificationConsumer<CategoryChangedNotification>>(context);
                         e.ConcurrentMessageLimit = 1;
                         e.PrefetchCount = 1;

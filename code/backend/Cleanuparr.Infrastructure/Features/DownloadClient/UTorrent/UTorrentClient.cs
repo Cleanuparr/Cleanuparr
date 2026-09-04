@@ -231,6 +231,27 @@ public sealed class UTorrentClient
     }
 
     /// <summary>
+    /// Stops torrents in µTorrent
+    /// </summary>
+    /// <param name="hashes">List of torrent hashes to stop</param>
+    public async Task StopTorrentsAsync(List<string> hashes)
+    {
+        try
+        {
+            foreach (var hash in hashes)
+            {
+                var request = UTorrentRequestFactory.CreateStopTorrentRequest(hash);
+                await SendAuthenticatedRequestAsync(request);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop torrents in µTorrent client '{ClientName}'", _config.Name);
+            throw new UTorrentException($"Failed to stop torrents: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
     /// Sends an authenticated request to the µTorrent API
     /// Handles automatic authentication and retry logic
     /// </summary>

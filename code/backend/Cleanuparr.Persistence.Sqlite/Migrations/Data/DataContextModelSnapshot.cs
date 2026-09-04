@@ -163,6 +163,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("action");
+
                     b.Property<string>("Categories")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -306,6 +311,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("action");
+
                     b.Property<string>("Categories")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -384,6 +394,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("action");
+
                     b.Property<string>("Categories")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -443,6 +458,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("action");
 
                     b.Property<string>("Categories")
                         .IsRequired()
@@ -517,6 +537,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("action");
 
                     b.Property<string>("Categories")
                         .IsRequired()
@@ -1159,6 +1184,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<bool>("OnDownloadCleaned")
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_download_cleaned");
+
+                    b.Property<bool>("OnDownloadStopped")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("on_download_stopped");
 
                     b.Property<bool>("OnFailedImportStrike")
                         .HasColumnType("INTEGER")

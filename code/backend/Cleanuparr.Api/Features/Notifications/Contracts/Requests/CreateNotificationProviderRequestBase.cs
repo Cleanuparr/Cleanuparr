@@ -1,4 +1,4 @@
-namespace Cleanuparr.Api.Features.Notifications.Contracts.Requests;
+﻿namespace Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 
 public abstract record CreateNotificationProviderRequestBase
 {
@@ -15,6 +15,8 @@ public abstract record CreateNotificationProviderRequestBase
     public bool OnQueueItemDeleted { get; init; }
     
     public bool OnDownloadCleaned { get; init; }
+    
+    public bool OnDownloadStopped { get; init; }
     
     public bool OnCategoryChanged { get; init; }
 

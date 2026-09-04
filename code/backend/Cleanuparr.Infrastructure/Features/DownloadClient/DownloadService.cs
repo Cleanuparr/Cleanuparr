@@ -187,6 +187,21 @@ public abstract class DownloadService : IDownloadService
             
             _logger.LogTrace("Seeding rule matched | {seedingRule} | {name}", seedingRule.Name, torrent.Name);
 
+            if (seedingRule.Action is SeedingRuleAction.Unknown)
+            {
+                _logger.LogWarning(
+                    "Skipping seeding rule with an action this version does not know | {seedingRule} | {name}",
+                    seedingRule.Name,
+                    torrent.Name
+                );
+                continue;
+            }
+
+            if (seedingRule.Action is SeedingRuleAction.Stop && torrent.IsStopped)
+            {
+                continue;
+            }
+
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             SetDownloadClientContext();
@@ -199,9 +214,13 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
+            bool stopping = seedingRule.Action is SeedingRuleAction.Stop;
+
             try
             {
-                await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
+                await _dryRunInterceptor.InterceptAsync(() => stopping
+                    ? StopDownload(torrent)
+                    : DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
             }
             catch (Exception exception)
             {
@@ -210,11 +229,21 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
+            string reason = result.Reason is CleanReason.MaxRatioReached
+                ? "MAX_RATIO & MIN_SEED_TIME"
+                : "MAX_SEED_TIME";
+
+            if (stopping)
+            {
+                _logger.LogInformation("download stopped | {reason} reached | {name}", reason, torrent.Name);
+
+                await _eventPublisher.PublishDownloadStopped(torrent.Ratio, seedingTime, torrent.Category ?? string.Empty, result.Reason);
+                continue;
+            }
+
             _logger.LogInformation(
                 "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",
-                result.Reason is CleanReason.MaxRatioReached
-                    ? "MAX_RATIO & MIN_SEED_TIME"
-                    : "MAX_SEED_TIME",
+                reason,
                 seedingRule.DeleteSourceFiles,
                 torrent.Name
             );
@@ -242,6 +271,13 @@ public abstract class DownloadService : IDownloadService
     /// <param name="torrent">The torrent to delete</param>
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
+
+    /// <summary>
+    /// Stops the specified download in the download client, leaving it there.
+    /// Each client implementation handles the stop according to its API requirements.
+    /// </summary>
+    /// <param name="torrent">The torrent to stop</param>
+    public abstract Task StopDownload(ITorrentItemWrapper torrent);
     
     private SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, DateTime? lastActivity, ISeedingRule seedingRule)
     {

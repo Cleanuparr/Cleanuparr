@@ -36,6 +36,11 @@ public interface IEventPublisher
     Task PublishDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason);
 
     /// <summary>
+    /// Records that a download was stopped and sends a notification.
+    /// </summary>
+    Task PublishDownloadStopped(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason);
+
+    /// <summary>
     /// Records that the category or the tag of a download changed.
     /// </summary>
     Task PublishCategoryChanged(string oldCategory, string newCategory, bool isTag = false);

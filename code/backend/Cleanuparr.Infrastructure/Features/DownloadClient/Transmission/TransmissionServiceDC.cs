@@ -77,6 +77,13 @@ public partial class TransmissionService
         await _client.TorrentRemoveAsync([transmissionTorrent.Info.Id], deleteSourceFiles);
     }
 
+    /// <inheritdoc/>
+    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    {
+        TransmissionItemWrapper transmissionTorrent = (TransmissionItemWrapper)torrent;
+        await _client.TorrentStopAsync([transmissionTorrent.Info.Id]);
+    }
+
     public override async Task CreateCategoryAsync(string name)
     {
         await Task.CompletedTask;
