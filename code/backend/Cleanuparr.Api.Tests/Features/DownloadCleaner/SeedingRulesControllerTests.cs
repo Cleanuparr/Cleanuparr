@@ -323,6 +323,15 @@ public class SeedingRulesControllerTests : IDisposable
         await Should.ThrowAsync<ValidationException>(() => _controller.CreateSeedingRule(client.Id, request));
     }
 
+    [Fact]
+    public async Task CreateSeedingRule_UndefinedAction_ThrowsValidationException()
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        SeedingRuleRequest request = CreateValidRequest(action: (SeedingRuleAction)5);
+
+        await Should.ThrowAsync<ValidationException>(() => _controller.CreateSeedingRule(client.Id, request));
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // UpdateSeedingRule
     // ──────────────────────────────────────────────────────────────────────
@@ -451,6 +460,17 @@ public class SeedingRulesControllerTests : IDisposable
         QBitSeedingRule rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
 
         SeedingRuleRequest request = CreateValidRequest(action: SeedingRuleAction.Unknown);
+
+        await Should.ThrowAsync<ValidationException>(() => _controller.UpdateSeedingRule(rule.Id, request));
+    }
+
+    [Fact]
+    public async Task UpdateSeedingRule_UndefinedAction_ThrowsValidationException()
+    {
+        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        QBitSeedingRule rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
+
+        SeedingRuleRequest request = CreateValidRequest(action: (SeedingRuleAction)5);
 
         await Should.ThrowAsync<ValidationException>(() => _controller.UpdateSeedingRule(rule.Id, request));
     }

@@ -79,7 +79,7 @@ public interface ISeedingRule : IConfig
             throw new ValidationException("Min seed time can not be negative");
         }
 
-        if (Action is SeedingRuleAction.Unknown)
+        if (Action is not SeedingRuleAction.Delete and not SeedingRuleAction.Stop)
         {
             throw new ValidationException("Unknown seeding rule action");
         }
