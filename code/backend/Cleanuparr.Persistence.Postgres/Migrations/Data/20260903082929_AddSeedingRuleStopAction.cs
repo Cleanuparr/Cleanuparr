@@ -48,7 +48,7 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                 table: "notification_configs",
                 type: "boolean",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: false);
 
             migrationBuilder.AddColumn<string>(
                 name: "action",

@@ -126,8 +126,8 @@ function createDefaultModalModel(): NotificationModalModel {
     gotifyServerUrl: '', gotifyApplicationToken: '', gotifyPriority: '5',
     pushoverApiToken: '', pushoverUserKey: '', pushoverDevices: [], pushoverPriority: PushoverPriority.Normal,
     pushoverRetry: 30, pushoverExpire: 3600, pushoverSound: '', pushoverCustomSound: '', pushoverTags: [],
-    onFailedImportStrike: true, onStalledStrike: true, onSlowStrike: true, onQueueItemDeleted: true,
-    onDownloadCleaned: true, onDownloadStopped: true, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false,
+    onFailedImportStrike: false, onStalledStrike: false, onSlowStrike: false, onQueueItemDeleted: false,
+    onDownloadCleaned: false, onDownloadStopped: false, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false,
   };
 }
 

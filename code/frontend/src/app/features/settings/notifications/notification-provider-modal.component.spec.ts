@@ -14,12 +14,12 @@ import {
 import { NotificationProviderModalComponent } from './notification-provider-modal.component';
 
 const DEFAULT_EVENTS = {
-  onFailedImportStrike: true,
-  onStalledStrike: true,
-  onSlowStrike: true,
-  onQueueItemDeleted: true,
-  onDownloadCleaned: true,
-  onDownloadStopped: true,
+  onFailedImportStrike: false,
+  onStalledStrike: false,
+  onSlowStrike: false,
+  onQueueItemDeleted: false,
+  onDownloadCleaned: false,
+  onDownloadStopped: false,
   onCategoryChanged: false,
   onSearchTriggered: false,
   onSearchItemGrabbed: false,

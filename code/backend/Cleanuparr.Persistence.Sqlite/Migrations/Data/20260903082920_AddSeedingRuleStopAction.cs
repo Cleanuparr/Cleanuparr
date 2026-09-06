@@ -43,7 +43,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 table: "notification_configs",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: false);
 
             migrationBuilder.AddColumn<string>(
                 name: "action",
