@@ -198,7 +198,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Warning, "Failed to send notification");
+        _logger.HasLogContaining(LogLevel.Warning, "Failed to send notification").ShouldBeTrue();
     }
 
     [Fact]
@@ -609,7 +609,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "failed to notify strike");
+        _logger.HasLogContaining(LogLevel.Error, "failed to notify strike").ShouldBeTrue();
     }
 
     [Fact]
@@ -625,7 +625,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify queue item deleted");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify queue item deleted").ShouldBeTrue();
     }
 
     [Fact]
@@ -641,7 +641,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadCleaned(1.0, TimeSpan.FromHours(1), "test", CleanReason.MaxRatioReached);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify download cleaned");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify download cleaned").ShouldBeTrue();
     }
 
     [Fact]
@@ -657,7 +657,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadStopped(1.0, TimeSpan.FromHours(1), "test", CleanReason.MaxRatioReached);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify download stopped");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify download stopped").ShouldBeTrue();
     }
 
     [Fact]
@@ -673,7 +673,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyCategoryChanged("old", "new", false);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify category changed");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify category changed").ShouldBeTrue();
     }
 
     #endregion
@@ -731,7 +731,7 @@ public class NotificationPublisherTests
         await _publisher.NotifySearchItemGrabbed("Movie A", ["Movie.A.2024"], InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify search item grabbed");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify search item grabbed").ShouldBeTrue();
     }
 
     #endregion

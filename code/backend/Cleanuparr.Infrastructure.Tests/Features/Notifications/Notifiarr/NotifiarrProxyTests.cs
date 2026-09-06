@@ -152,7 +152,7 @@ public class NotifiarrProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Trace, "sending notification");
+        _logger.HasLogContaining(LogLevel.Trace, "sending notification").ShouldBeTrue();
     }
 
     #endregion

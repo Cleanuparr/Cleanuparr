@@ -123,7 +123,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         var sut = CreateSut();
         await ExecuteWithTimeAdvance(sut);
 
-        _fixture.OrphanedFilesLogger.ReceivedLogContaining(LogLevel.Debug, "No orphaned files settings have been configured");
+        _fixture.OrphanedFilesLogger.HasLogContaining(LogLevel.Debug, "No orphaned files settings have been configured").ShouldBeTrue();
     }
 
     [Fact]
@@ -327,7 +327,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
 
         File.Exists(link).ShouldBeTrue();
         File.Exists(target).ShouldBeTrue();
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "reparse point");
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "reparse point").ShouldBeTrue();
     }
 
     [Fact]
@@ -352,7 +352,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         DownloadCleaner sut = CreateSut();
         await ExecuteWithTimeAdvance(sut);
 
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "Scan directory does not exist");
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "Scan directory does not exist").ShouldBeTrue();
         File.Exists(orphan).ShouldBeFalse();
         Directory.GetFiles(orphanedDir).ShouldContain(f => Path.GetFileName(f) == "orphan.mkv");
     }
@@ -496,8 +496,8 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
 
         File.Exists(fileThatWouldBeMoved).ShouldBeTrue();
         (Directory.Exists(orphanedDir) && Directory.GetFiles(orphanedDir).Length > 0).ShouldBeFalse();
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Error, "Failed to get torrents");
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "torrents are unavailable or empty");
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Error, "Failed to get torrents").ShouldBeTrue();
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "torrents are unavailable or empty").ShouldBeTrue();
     }
 
     [Fact]
@@ -523,8 +523,8 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
 
         File.Exists(fileThatWouldBeMoved).ShouldBeTrue();
         (Directory.Exists(orphanedDir) && Directory.GetFiles(orphanedDir).Length > 0).ShouldBeFalse();
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Debug, "No torrents found");
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "torrents are unavailable or empty");
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Debug, "No torrents found").ShouldBeTrue();
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "torrents are unavailable or empty").ShouldBeTrue();
     }
 
     [Fact]
@@ -585,7 +585,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         await svc.DidNotReceive().GetAllTorrentsLite();
-        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "no scan directories configured");
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "no scan directories configured").ShouldBeTrue();
     }
 
     [Fact]
@@ -604,8 +604,8 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
 
         await svcA.DidNotReceive().GetAllTorrentsLite();
         await svcB.DidNotReceive().GetAllTorrentsLite();
-        _fixture.OrphanedFilesLogger.ReceivedLogContaining(LogLevel.Warning, "no scan directories configured", count: 2);
-        _fixture.OrphanedFilesLogger.DidNotReceiveLogContaining(LogLevel.Debug, "claimed paths across all clients");
+        _fixture.OrphanedFilesLogger.HasLogContaining(LogLevel.Warning, "no scan directories configured", count: 2).ShouldBeTrue();
+        _fixture.OrphanedFilesLogger.HasNoLogContaining(LogLevel.Debug, "claimed paths across all clients").ShouldBeTrue();
     }
 
     [Fact]

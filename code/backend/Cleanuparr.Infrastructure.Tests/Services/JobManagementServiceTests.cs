@@ -66,7 +66,7 @@ public class JobManagementServiceTests
 
         // Assert
         result.ShouldBeFalse();
-        _logger.ReceivedLogContaining(LogLevel.Error, "does not exist");
+        _logger.HasLogContaining(LogLevel.Error, "does not exist").ShouldBeTrue();
     }
 
     [Fact]

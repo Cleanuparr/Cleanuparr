@@ -80,7 +80,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Warning, "no internet connectivity");
+        _logger.HasLogContaining(LogLevel.Warning, "no internet connectivity").ShouldBeTrue();
         await _fixture.ArrQueueIterator
             .DidNotReceive()
             .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>());
@@ -112,7 +112,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - no debug message about no active stall rules
-        _logger.DidNotReceiveLogContaining(LogLevel.Debug, "No active stall rules found");
+        _logger.HasNoLogContaining(LogLevel.Debug, "No active stall rules found").ShouldBeTrue();
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No active stall rules found");
+        _logger.HasLogContaining(LogLevel.Debug, "No active stall rules found").ShouldBeTrue();
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - no debug message about no active slow rules
-        _logger.DidNotReceiveLogContaining(LogLevel.Debug, "No active slow rules found");
+        _logger.HasNoLogContaining(LogLevel.Debug, "No active slow rules found").ShouldBeTrue();
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No active slow rules found");
+        _logger.HasLogContaining(LogLevel.Debug, "No active slow rules found").ShouldBeTrue();
     }
 
     [Fact]
@@ -251,7 +251,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "download is ignored");
+        _logger.HasLogContaining(LogLevel.Information, "download is ignored").ShouldBeTrue();
     }
 
     [Fact]
@@ -302,7 +302,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "download is ignored");
+        _logger.HasLogContaining(LogLevel.Information, "download is ignored").ShouldBeTrue();
     }
 
     [Fact]
@@ -352,7 +352,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "already marked for removal");
+        _logger.HasLogContaining(LogLevel.Debug, "already marked for removal").ShouldBeTrue();
     }
 
     [Fact]
@@ -616,7 +616,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Warning, "Download not found in any torrent client");
+        _logger.HasLogContaining(LogLevel.Warning, "Download not found in any torrent client").ShouldBeTrue();
     }
 
     [Fact]
@@ -798,7 +798,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "skip | item is missing the content id");
+        _logger.HasLogContaining(LogLevel.Information, "skip | item is missing the content id").ShouldBeTrue();
 
         await _fixture.MessageBus.DidNotReceive().Publish(
             Arg.Any<QueueItemRemoveRequest>(),
@@ -950,7 +950,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Error checking download");
+        _logger.HasLogContaining(LogLevel.Error, "Error checking download").ShouldBeTrue();
     }
 
     #endregion
@@ -1029,7 +1029,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should log "skip removal request | already marked for removal" from GenericHandler
-        _logger.ReceivedLogContaining(LogLevel.Debug, "skip removal request");
+        _logger.HasLogContaining(LogLevel.Debug, "skip removal request").ShouldBeTrue();
 
         // Verify no publish was made
         await _fixture.MessageBus.DidNotReceive().Publish(

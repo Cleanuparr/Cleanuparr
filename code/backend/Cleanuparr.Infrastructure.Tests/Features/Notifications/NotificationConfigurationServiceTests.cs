@@ -311,7 +311,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         await _service.InvalidateCacheAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "cache invalidated");
+        _logger.HasLogContaining(LogLevel.Debug, "cache invalidated").ShouldBeTrue();
     }
 
     #endregion
@@ -352,7 +352,7 @@ public class NotificationConfigurationServiceTests : IDisposable
 
         // Assert
         result.ShouldBeEmpty();
-        logger.ReceivedLogContaining(LogLevel.Error, "Failed to load notification providers");
+        logger.HasLogContaining(LogLevel.Error, "Failed to load notification providers").ShouldBeTrue();
     }
 
     #endregion

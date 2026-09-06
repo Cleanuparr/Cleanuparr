@@ -84,8 +84,8 @@ public class DatabaseHealthCheckTests : IDisposable
 
         // An operator needs the reason.
         result.Description.ShouldContain("1 migration(s)");
-        _logger.ReceivedLogContaining(
-            LogLevel.Warning, "Database was written by a newer version");
+        _logger.HasLogContaining(
+            LogLevel.Warning, "Database was written by a newer version").ShouldBeTrue();
     }
 
     #endregion

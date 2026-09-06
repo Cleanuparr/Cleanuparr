@@ -63,7 +63,7 @@ public class DownloadRemoverConsumerTests
         await _consumer.Consume(context);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "failed to remove queue item");
+        _logger.HasLogContaining(LogLevel.Error, "failed to remove queue item").ShouldBeTrue();
     }
 
     [Fact]
