@@ -84,15 +84,15 @@ public interface IDownloadService : IDisposable
     /// <summary>
     /// Deletes a download item.
     /// </summary>
-    /// <param name="item">The torrent item.</param>
+    /// <param name="torrent">The torrent item.</param>
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent. Defaults to true.</param>
-    public Task DeleteDownload(ITorrentItemWrapper item, bool deleteSourceFiles);
+    public Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
 
     /// <summary>
     /// Stops a download, leaving it in the client.
     /// </summary>
-    /// <param name="item">The torrent item.</param>
-    public Task StopDownload(ITorrentItemWrapper item);
+    /// <param name="torrent">The torrent item.</param>
+    public Task StopDownload(ITorrentItemWrapper torrent);
 
     /// <summary>
     /// Creates a category.
