@@ -238,9 +238,9 @@ public sealed class UTorrentClient
     {
         try
         {
-            foreach (var hash in hashes)
+            foreach (string hash in hashes)
             {
-                var request = UTorrentRequestFactory.CreateStopTorrentRequest(hash);
+                UTorrentRequest request = UTorrentRequestFactory.CreateStopTorrentRequest(hash);
                 await SendAuthenticatedRequestAsync(request);
             }
         }
