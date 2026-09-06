@@ -181,16 +181,16 @@ public abstract class DownloadService : IDownloadService
 
             if (seedingRule is null)
             {
-                _logger.LogTrace("No seeding rules matched | {name}", torrent.Name);
+                _logger.LogTrace("No seeding rules matched | {Name}", torrent.Name);
                 continue;
             }
             
-            _logger.LogTrace("Seeding rule matched | {seedingRule} | {name}", seedingRule.Name, torrent.Name);
+            _logger.LogTrace("Seeding rule matched | {SeedingRule} | {Name}", seedingRule.Name, torrent.Name);
 
             if (seedingRule.Action is SeedingRuleAction.Unknown)
             {
                 _logger.LogWarning(
-                    "Skipping seeding rule with an action this version does not know | {seedingRule} | {name}",
+                    "Skipping seeding rule with an action this version does not know | {SeedingRule} | {Name}",
                     seedingRule.Name,
                     torrent.Name
                 );
@@ -225,7 +225,7 @@ public abstract class DownloadService : IDownloadService
             catch (Exception exception)
             {
                 // The download stays in the client. The run continues with the next download.
-                _logger.LogError(exception, "failed to clean download | {name}", torrent.Name);
+                _logger.LogError(exception, "failed to clean download | {Name}", torrent.Name);
                 continue;
             }
 
@@ -235,14 +235,14 @@ public abstract class DownloadService : IDownloadService
 
             if (stopping)
             {
-                _logger.LogInformation("download stopped | {reason} reached | {name}", reason, torrent.Name);
+                _logger.LogInformation("download stopped | {Reason} reached | {Name}", reason, torrent.Name);
 
                 await _eventPublisher.PublishDownloadStopped(torrent.Ratio, seedingTime, torrent.Category ?? string.Empty, result.Reason);
                 continue;
             }
 
             _logger.LogInformation(
-                "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",
+                "download cleaned | {Reason} reached | delete files: {DeleteFiles} | {Name}",
                 reason,
                 seedingRule.DeleteSourceFiles,
                 torrent.Name
