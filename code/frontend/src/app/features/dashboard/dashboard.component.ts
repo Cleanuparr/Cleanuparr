@@ -15,9 +15,15 @@ import { CfScoreApi, CfScoreStats, CfScoreUpgradesResponse } from '@core/api/cf-
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ManualEvent } from '@core/models/event.models';
-import { EventType, JobType } from '@shared/models/enums';
+import { JobType } from '@shared/models/enums';
 import { StatsCardComponent } from './stats-card/stats-card.component';
 import { mergeUnresolvedManualEvents } from './manual-events.util';
+import {
+  eventMarkerClass,
+  eventSeverity,
+  eventTypeSeverity,
+  formatEventType,
+} from '@shared/utils/event-display.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -253,54 +259,13 @@ export class DashboardComponent {
   }
 
   // Event helpers
-  eventMarkerClass(eventType: string, severity: string): string {
-    const t = eventType.toLowerCase();
-    if (t === 'strikereset') {
-      return 'success';
-    }
-    if (t.includes('strike')) {
-      const s = severity.toLowerCase();
-      if (s === 'error') return 'error';
-      if (s === 'warning') return 'warning';
-      return 'warning'; // strikes default to yellow/amber
-    }
-    return this.eventSeverity(severity);
-  }
+  readonly eventMarkerClass = eventMarkerClass;
 
-  eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    switch (eventType) {
-      case EventType.StrikeReset:
-      case EventType.DownloadCleaned:
-        return 'success';
-      case EventType.FailedImportStrike:
-      case EventType.QueueItemDeleted:
-        return 'error';
-      case EventType.StalledStrike:
-      case EventType.DownloadMarkedForDeletion:
-        return 'warning';
-      case EventType.DownloadStopped:
-      case EventType.DownloadingMetadataStrike:
-      case EventType.SlowSpeedStrike:
-      case EventType.SlowTimeStrike:
-      case EventType.DeadTorrentStrike:
-      case EventType.CategoryChanged:
-        return 'info';
-      default:
-        return 'default';
-    }
-  }
+  readonly eventTypeSeverity = eventTypeSeverity;
 
-  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {
-    const s = severity.toLowerCase();
-    if (s === 'error') return 'error';
-    if (s === 'warning' || s === 'important') return 'warning';
-    if (s === 'information' || s === 'info') return 'info';
-    return 'default';
-  }
+  readonly eventSeverity = eventSeverity;
 
-  formatEventType(eventType: string): string {
-    return eventType.replace(/([A-Z])/g, ' $1').trim();
-  }
+  readonly formatEventType = formatEventType;
 
   getDownloadName(event: { itemTitle?: string }): string | null {
     return event.itemTitle || null;

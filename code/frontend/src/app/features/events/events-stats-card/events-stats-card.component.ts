@@ -15,6 +15,7 @@ import { EventsApi } from '@core/api/events.api';
 import { EventTypeTimelineBucket, EventTypeTimelineResponse } from '@core/models/event.models';
 import { WINDOWS, getChartDuration, formatBucketDate, chartYDomain } from '@shared/utils/chart-window.util';
 import { EventType } from '@shared/models/enums';
+import { formatEventType } from '@shared/utils/event-display.util';
 
 const TYPE_COLORS: Record<string, string> = {
   [EventType.QueueItemDeleted]: '#ef4444',
@@ -107,7 +108,7 @@ export class EventsStatsCardComponent {
 
   readonly legendItems = computed<BulletLegendItemInterface[]>(() =>
     this.allTypes().map((type) => ({
-      name: this.formatEventType(type),
+      name: formatEventType(type),
       color: TYPE_COLORS[type] ?? FALLBACK_COLOR,
       inactive: type !== this.current(),
     })),
@@ -142,7 +143,7 @@ export class EventsStatsCardComponent {
   readonly tooltip = (d: EventTypeTimelineBucket): string => {
     const type = this.current();
     const count = type ? d.counts[type] ?? 0 : 0;
-    const label = type ? this.formatEventType(type) : '';
+    const label = type ? formatEventType(type) : '';
     return (
       `<div style="display:flex;flex-direction:column;gap:2px;font-size:12px">` +
       `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date, this.window())}</span>` +
@@ -159,10 +160,6 @@ export class EventsStatsCardComponent {
       this.selected.set(type);
     }
   };
-
-  private formatEventType(eventType: string): string {
-    return eventType.replace(/([A-Z])/g, ' $1').trim();
-  }
 
   setWindow(hours: number): void {
     this.window.set(hours);

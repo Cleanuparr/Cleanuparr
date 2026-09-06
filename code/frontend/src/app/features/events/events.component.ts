@@ -16,7 +16,11 @@ import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
-import { EventType } from '@shared/models/enums';
+import {
+  eventSeverity,
+  eventTypeSeverity,
+  formatEventType,
+} from '@shared/utils/event-display.util';
 import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.component';
 
 @Component({
@@ -232,40 +236,11 @@ export class EventsComponent implements OnInit, OnDestroy {
   }
 
   // Helpers
-  eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    switch (eventType) {
-      case EventType.StrikeReset:
-      case EventType.DownloadCleaned:
-        return 'success';
-      case EventType.FailedImportStrike:
-      case EventType.QueueItemDeleted:
-        return 'error';
-      case EventType.StalledStrike:
-      case EventType.DownloadMarkedForDeletion:
-        return 'warning';
-      case EventType.DownloadStopped:
-      case EventType.DownloadingMetadataStrike:
-      case EventType.SlowSpeedStrike:
-      case EventType.SlowTimeStrike:
-      case EventType.DeadTorrentStrike:
-      case EventType.CategoryChanged:
-        return 'info';
-      default:
-        return 'default';
-    }
-  }
+  readonly eventTypeSeverity = eventTypeSeverity;
 
-  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {
-    const s = severity.toLowerCase();
-    if (s === 'error') return 'error';
-    if (s === 'warning' || s === 'important') return 'warning';
-    if (s === 'information' || s === 'info') return 'info';
-    return 'default';
-  }
+  readonly eventSeverity = eventSeverity;
 
-  formatEventType(eventType: string): string {
-    return eventType.replace(/([A-Z])/g, ' $1').trim();
-  }
+  readonly formatEventType = formatEventType;
 
   private readonly detailsCache = new WeakMap<AppEvent, { label: string; value: string }[]>();
 
