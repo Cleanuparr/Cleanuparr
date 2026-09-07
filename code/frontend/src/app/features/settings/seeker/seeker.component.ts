@@ -7,7 +7,7 @@ import {
   CardComponent, ButtonComponent, ToggleComponent,
   SelectComponent, ChipInputComponent, NumberInputComponent,
   EmptyStateComponent, LoadingStateComponent, BadgeComponent,
-  type SelectOption, type BadgeSeverity,
+  type SelectOption,
 } from '@ui';
 import { SeekerApi } from '@core/api/seeker.api';
 import { ToastService } from '@core/services/toast.service';
@@ -17,6 +17,7 @@ import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { SelectionStrategy } from '@shared/models/enums';
+import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
 const INTERVAL_OPTIONS: SelectOption[] = [
   { label: '2 minutes', value: 2 },
@@ -227,11 +228,7 @@ export class SeekerComponent implements HasPendingChanges {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
   }
 
-  getInstanceTypeSeverity(type: string): BadgeSeverity {
-    if (type === 'Radarr') return 'warning';
-    if (type === 'Sonarr') return 'info';
-    return 'default';
-  }
+  readonly getInstanceTypeSeverity = instanceTypeSeverity;
 
   save(): void {
     const m = this.model();

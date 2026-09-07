@@ -135,6 +135,16 @@ export enum CleanReason {
   MaxSeedTimeReached = 'MaxSeedTimeReached',
 }
 
+export enum InstanceType {
+  Sonarr = 'Sonarr',
+  Radarr = 'Radarr',
+  Lidarr = 'Lidarr',
+  Readarr = 'Readarr',
+  Whisparr = 'Whisparr',
+  Sportarr = 'Sportarr',
+  LazyLibrarian = 'LazyLibrarian',
+}
+
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
 
 export enum SeedingRuleAction {

@@ -19,6 +19,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
+import { instanceTypeHighlight } from '@shared/utils/instance-display.util';
 
 const DEFAULT_SORT_BY = CfScoresSortBy.Title;
 const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
@@ -316,7 +317,5 @@ export class QualityTabComponent {
     return isBelowCutoff ? 'Below Cutoff' : 'Met';
   }
 
-  itemTypeSeverity(itemType: string): 'info' | 'default' {
-    return itemType === 'Radarr' || itemType === 'Sonarr' ? 'info' : 'default';
-  }
+  readonly itemTypeSeverity = instanceTypeHighlight;
 }

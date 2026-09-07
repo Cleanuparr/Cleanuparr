@@ -28,6 +28,8 @@ import {
 } from '@shared/utils/event-display.util';
 import { logIcon, logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
 import { jobDisplayName, jobStatusSeverity } from '@shared/utils/job-display.util';
+import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-display.util';
+import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -339,21 +341,9 @@ export class DashboardComponent {
   }
 
   // Strike helpers
-  strikeTypeSeverity(type: string): 'error' | 'warning' | 'info' | 'default' {
-    const t = type.toLowerCase();
-    if (t === 'failedimport') return 'error';
-    if (t === 'stalled') return 'warning';
-    if (t === 'slowspeed' || t === 'slowtime') return 'info';
-    return 'default';
-  }
+  readonly strikeTypeSeverity = strikeTypeSeverity;
 
-  formatStrikeType(type: string): string {
-    return type.replace(/([A-Z])/g, ' $1').trim();
-  }
+  readonly formatStrikeType = formatStrikeType;
 
-  instanceTypeSeverity(type: string): 'info' | 'warning' | 'default' {
-    if (type === 'Radarr') return 'warning';
-    if (type === 'Sonarr') return 'info';
-    return 'default';
-  }
+  readonly instanceTypeSeverity = instanceTypeSeverity;
 }
