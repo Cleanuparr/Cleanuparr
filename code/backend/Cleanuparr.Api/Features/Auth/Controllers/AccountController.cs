@@ -89,21 +89,58 @@ public sealed class AccountController : ControllerBase
         user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
         user.UpdatedAt = now;
 
-        // Revoke all existing refresh tokens so old sessions can't be reused
-        var activeTokens = await _usersContext.RefreshTokens
-            .Where(r => r.UserId == user.Id && r.RevokedAt == null)
-            .ToListAsync();
-
-        foreach (var token in activeTokens)
-        {
-            token.RevokedAt = now;
-        }
-
+        await RevokeActiveRefreshTokens(user.Id, now);
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("Password changed for user {Username}", user.Username);
 
         return Ok(new { message = "Password changed" });
+    }
+
+    [HttpPut("username")]
+    public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
+    {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Username changes are disabled while OIDC exclusive mode is active.");
+        }
+
+        User? user = await GetCurrentUser();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!_passwordService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+        {
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Current password is incorrect");
+        }
+
+        // Login compares the stored value, so surrounding whitespace would lock the user out
+        string newUsername = request.NewUsername.Trim();
+
+        if (newUsername.Length < 3)
+        {
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Username must be at least 3 characters");
+        }
+
+        if (string.Equals(newUsername, user.Username, StringComparison.Ordinal))
+        {
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "New username must be different from the current username");
+        }
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        string previousUsername = user.Username;
+
+        user.Username = newUsername;
+        user.UpdatedAt = now;
+
+        await RevokeActiveRefreshTokens(user.Id, now);
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("Username changed from {PreviousUsername} to {Username}", previousUsername, newUsername);
+
+        return Ok(new { message = "Username changed" });
     }
 
     [HttpPost("2fa/regenerate")]
@@ -655,6 +692,21 @@ public sealed class AccountController : ControllerBase
             ? HttpContext.GetExternalBaseUrl()
             : redirectUrl.TrimEnd('/');
         return $"{baseUrl}/api/account/oidc/link/callback";
+    }
+
+    /// <summary>
+    /// Revokes every active refresh token so sessions opened before a credential change cannot be reused.
+    /// </summary>
+    private async Task RevokeActiveRefreshTokens(Guid userId, DateTimeOffset now)
+    {
+        List<RefreshToken> activeTokens = await _usersContext.RefreshTokens
+            .Where(r => r.UserId == userId && r.RevokedAt == null)
+            .ToListAsync();
+
+        foreach (RefreshToken token in activeTokens)
+        {
+            token.RevokedAt = now;
+        }
     }
 
     private async Task<bool> IsOidcExclusiveModeActive()
