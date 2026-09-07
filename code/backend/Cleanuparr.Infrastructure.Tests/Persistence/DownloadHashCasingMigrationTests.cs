@@ -54,11 +54,13 @@ public class DownloadHashCasingMigrationTests
     {
         using SqliteTestDatabase sqlite = SqliteTestDatabase.Create("hash-casing-migration");
 
-        await RunAsync(
+        int survivingItems = await RunAsync(
             sqlite.CreateContext<EventsContext>,
             sqlite.Provider,
             SqliteMigrationBeforeHashCasing,
             SqliteIndexProbe);
+
+        survivingItems.ShouldBe(2);
     }
 
     [SkippableFact]
@@ -84,11 +86,13 @@ public class DownloadHashCasingMigrationTests
             PostgresDatabaseProvider provider = new();
             string connectionString = postgresContainer.GetConnectionString();
 
-            await RunAsync(
+            int survivingItems = await RunAsync(
                 () => CreatePostgresContext(connectionString, provider),
                 provider,
                 PostgresMigrationBeforeHashCasing,
                 PostgresIndexProbe);
+
+            survivingItems.ShouldBe(2);
         }
         finally
         {
@@ -107,7 +111,8 @@ public class DownloadHashCasingMigrationTests
         return new EventsContext(builder.Options, provider);
     }
 
-    private static async Task RunAsync(
+    /// <returns>How many download items survived the merge.</returns>
+    private static async Task<int> RunAsync(
         Func<EventsContext> contextFactory,
         IDatabaseProvider provider,
         string previousMigration,
@@ -126,7 +131,7 @@ public class DownloadHashCasingMigrationTests
 
         await using (EventsContext assert = contextFactory())
         {
-            await AssertMergedAsync(assert, indexProbe);
+            return await AssertMergedAsync(assert, indexProbe);
         }
     }
 
@@ -207,7 +212,7 @@ public class DownloadHashCasingMigrationTests
     private static Task StoreHashAsync(EventsContext context, string table, Guid id, string hash) =>
         context.Database.ExecuteSqlRawAsync($"UPDATE {table} SET download_id = {{0}} WHERE id = {{1}}", hash, id);
 
-    private static async Task AssertMergedAsync(EventsContext context, string indexProbe)
+    private static async Task<int> AssertMergedAsync(EventsContext context, string indexProbe)
     {
         List<DownloadItem> items = await context.DownloadItems
             .AsNoTracking()
@@ -251,5 +256,7 @@ public class DownloadHashCasingMigrationTests
         // Any casing now lands on the surviving row, so a second insert collides.
         context.DownloadItems.Add(new DownloadItem { DownloadId = UpperHash, Title = "Torrent.Duplicate" });
         await Should.ThrowAsync<DbUpdateException>(() => context.SaveChangesAsync());
+
+        return items.Count;
     }
 }
