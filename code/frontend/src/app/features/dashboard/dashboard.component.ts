@@ -18,6 +18,18 @@ import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
 import { StatsCardComponent } from './stats-card/stats-card.component';
 import { mergeUnresolvedManualEvents } from './manual-events.util';
+import {
+  eventIcon,
+  eventMarkerClass,
+  eventSeverity,
+  eventTypeSeverity,
+  formatEventType,
+  manualEventSeverityClass,
+} from '@shared/utils/event-display.util';
+import { logIcon, logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
+import { jobDisplayName, jobStatusSeverity } from '@shared/utils/job-display.util';
+import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-display.util';
+import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -233,61 +245,18 @@ export class DashboardComponent {
   }
 
   // Log helpers
-  logSeverity(level: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    const l = level.toLowerCase();
-    if (l === 'error' || l === 'fatal' || l === 'critical') return 'error';
-    if (l === 'warning') return 'warning';
-    if (l === 'information' || l === 'info') return 'info';
-    if (l === 'debug' || l === 'trace' || l === 'verbose') return 'success';
-    return 'default';
-  }
+  readonly logSeverity = logSeverity;
 
-  logBadgeSeverity(level: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    return this.logSeverity(level);
-  }
-
-  logLevelLabel(level: string): string {
-    const l = level.toLowerCase();
-    if (l === 'information') return 'Info';
-    return level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
-  }
+  readonly logLevelLabel = logLevelLabel;
 
   // Event helpers
-  eventMarkerClass(eventType: string, severity: string): string {
-    const t = eventType.toLowerCase();
-    if (t === 'strikereset') {
-      return 'success';
-    }
-    if (t.includes('strike')) {
-      const s = severity.toLowerCase();
-      if (s === 'error') return 'error';
-      if (s === 'warning') return 'warning';
-      return 'warning'; // strikes default to yellow/amber
-    }
-    return this.eventSeverity(severity);
-  }
+  readonly eventMarkerClass = eventMarkerClass;
 
-  eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    const t = eventType.toLowerCase();
-    if (t === 'strikereset') return 'success';
-    if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
-    if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
-    if (t === 'downloadcleaned') return 'success';
-    if (t.includes('strike') || t === 'categorychanged') return 'info';
-    return 'default';
-  }
+  readonly eventTypeSeverity = eventTypeSeverity;
 
-  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {
-    const s = severity.toLowerCase();
-    if (s === 'error') return 'error';
-    if (s === 'warning' || s === 'important') return 'warning';
-    if (s === 'information' || s === 'info') return 'info';
-    return 'default';
-  }
+  readonly eventSeverity = eventSeverity;
 
-  formatEventType(eventType: string): string {
-    return eventType.replace(/([A-Z])/g, ' $1').trim();
-  }
+  readonly formatEventType = formatEventType;
 
   getDownloadName(event: { itemTitle?: string }): string | null {
     return event.itemTitle || null;
@@ -298,52 +267,16 @@ export class DashboardComponent {
   }
 
   // Timeline icon helpers
-  logIcon(level: string): string {
-    const l = level.toLowerCase();
-    if (l === 'error' || l === 'fatal' || l === 'critical') return 'tablerCircleX';
-    if (l === 'warning') return 'tablerAlertTriangle';
-    if (l === 'information' || l === 'info') return 'tablerInfoCircle';
-    if (l === 'debug' || l === 'trace' || l === 'verbose') return 'tablerCode';
-    return 'tablerCircle';
-  }
+  readonly logIcon = logIcon;
 
-  eventIcon(eventType: string): string {
-    const t = eventType.toLowerCase();
-    if (t === 'strikereset') return 'tablerHistory';
-    if (t.includes('strike')) return 'tablerBolt';
-    if (t === 'downloadcleaned') return 'tablerDownload';
-    if (t === 'queueitemdeleted') return 'tablerTrash';
-    if (t === 'categorychanged') return 'tablerTag';
-    return 'tablerCircle';
-  }
+  readonly eventIcon = eventIcon;
 
   // Job helpers
-  jobDisplayName(jobType: string): string {
-    switch (jobType) {
-      case 'QueueCleaner': return 'Queue Cleaner';
-      case 'MalwareBlocker': return 'Malware Blocker';
-      case 'DownloadCleaner': return 'Download Cleaner';
-      case 'BlacklistSynchronizer': return 'Blacklist Sync';
-      default: return jobType;
-    }
-  }
+  readonly jobDisplayName = jobDisplayName;
 
-  jobStatusSeverity(status: string): 'success' | 'warning' | 'error' | 'info' | 'default' {
-    const s = status.toLowerCase();
-    if (s === 'running') return 'info';
-    if (s === 'complete' || s === 'scheduled') return 'success';
-    if (s === 'error') return 'error';
-    if (s === 'paused') return 'warning';
-    return 'default';
-  }
+  readonly jobStatusSeverity = jobStatusSeverity;
 
-  manualEventSeverityClass(severity: string): string {
-    const s = severity.toLowerCase();
-    if (s === 'error') return 'manual-event--error';
-    if (s === 'warning') return 'manual-event--warning';
-    if (s === 'important') return 'manual-event--important';
-    return 'manual-event--info';
-  }
+  readonly manualEventSeverityClass = manualEventSeverityClass;
 
   processManualEventMessage(message: string): string {
     if (!message) return '';
@@ -408,21 +341,9 @@ export class DashboardComponent {
   }
 
   // Strike helpers
-  strikeTypeSeverity(type: string): 'error' | 'warning' | 'info' | 'default' {
-    const t = type.toLowerCase();
-    if (t === 'failedimport') return 'error';
-    if (t === 'stalled') return 'warning';
-    if (t === 'slowspeed' || t === 'slowtime') return 'info';
-    return 'default';
-  }
+  readonly strikeTypeSeverity = strikeTypeSeverity;
 
-  formatStrikeType(type: string): string {
-    return type.replace(/([A-Z])/g, ' $1').trim();
-  }
+  readonly formatStrikeType = formatStrikeType;
 
-  instanceTypeSeverity(type: string): 'info' | 'warning' | 'default' {
-    if (type === 'Radarr') return 'warning';
-    if (type === 'Sonarr') return 'info';
-    return 'default';
-  }
+  readonly instanceTypeSeverity = instanceTypeSeverity;
 }

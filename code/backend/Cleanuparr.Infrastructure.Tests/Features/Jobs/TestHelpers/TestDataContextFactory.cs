@@ -367,7 +367,8 @@ public static class TestDataContextFactory
         double minSeedTime = 1.0,
         double maxSeedTime = -1,
         TorrentPrivacyType privacyType = TorrentPrivacyType.Both,
-        List<string>? categories = null)
+        List<string>? categories = null,
+        SeedingRuleAction action = SeedingRuleAction.Delete)
     {
         var downloadClient = context.DownloadClients.First();
         var rule = new QBitSeedingRule
@@ -380,6 +381,7 @@ public static class TestDataContextFactory
             MaxSeedTime = maxSeedTime,
             PrivacyType = privacyType,
             DeleteSourceFiles = true,
+            Action = action,
             DownloadClientConfigId = downloadClient.Id
         };
 

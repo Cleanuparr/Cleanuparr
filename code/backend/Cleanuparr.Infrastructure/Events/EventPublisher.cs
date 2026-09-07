@@ -266,6 +266,31 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
+    /// Publishes a download stopped event with context data and notifications
+    /// </summary>
+    public async Task PublishDownloadStopped(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
+    {
+        string itemName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
+        string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
+
+        await PublishAsync(
+            EventType.DownloadStopped,
+            $"Stopped item in download client with reason: {reason}",
+            EventSeverity.Important,
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.CleanedCategory = categoryName;
+                e.SeedRatio = ratio;
+                e.SeedingTimeHours = seedingTime.TotalHours;
+                e.CleanReason = reason;
+            });
+
+        await _notificationPublisher.NotifyDownloadStopped(ratio, seedingTime, categoryName, reason);
+    }
+
+    /// <summary>
     /// Publishes a category changed event with context data and notifications
     /// </summary>
     public async Task PublishCategoryChanged(string oldCategory, string newCategory, bool isTag = false)

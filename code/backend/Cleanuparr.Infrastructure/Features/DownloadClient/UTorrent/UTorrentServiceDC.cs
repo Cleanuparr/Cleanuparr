@@ -67,6 +67,12 @@ public partial class UTorrentService
         await _client.RemoveTorrentsAsync([hash], deleteSourceFiles);
     }
 
+    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    {
+        string hash = torrent.Hash.ToLowerInvariant();
+        await _client.StopTorrentsAsync([hash]);
+    }
+
     public override async Task CreateCategoryAsync(string name)
     {
         await Task.CompletedTask;

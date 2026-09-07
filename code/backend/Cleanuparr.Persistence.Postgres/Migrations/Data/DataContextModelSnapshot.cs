@@ -169,6 +169,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
+
                     b.Property<string>("Categories")
                         .IsRequired()
                         .HasColumnType("text")
@@ -312,6 +317,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
+
                     b.Property<string>("Categories")
                         .IsRequired()
                         .HasColumnType("text")
@@ -390,6 +400,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
+
                     b.Property<string>("Categories")
                         .IsRequired()
                         .HasColumnType("text")
@@ -449,6 +464,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
 
                     b.Property<string>("Categories")
                         .IsRequired()
@@ -523,6 +543,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
 
                     b.Property<string>("Categories")
                         .IsRequired()
@@ -1164,6 +1189,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Property<bool>("OnDownloadCleaned")
                         .HasColumnType("boolean")
                         .HasColumnName("on_download_cleaned");
+
+                    b.Property<bool>("OnDownloadStopped")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_download_stopped");
 
                     b.Property<bool>("OnFailedImportStrike")
                         .HasColumnType("boolean")

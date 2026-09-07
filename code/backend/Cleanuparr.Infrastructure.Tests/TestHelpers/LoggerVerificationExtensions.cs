@@ -5,56 +5,38 @@ using NSubstitute.Core;
 namespace Cleanuparr.Infrastructure.Tests.TestHelpers;
 
 /// <summary>
-/// Extension methods for verifying ILogger calls with NSubstitute.
+/// Predicates for inspecting ILogger calls recorded by NSubstitute.
 /// </summary>
 public static class LoggerVerificationExtensions
 {
     /// <summary>
-    /// Asserts that the logger received exactly <paramref name="count"/> log calls
+    /// Whether the logger received exactly <paramref name="count"/> log calls
     /// at the given level whose message contains the specified text.
     /// </summary>
-    public static void ReceivedLogContaining<T>(
+    public static bool HasLogContaining<T>(
         this ILogger<T> logger, LogLevel level, string message, int count = 1)
     {
-        var matchingCalls = GetLogCalls(logger, level, message);
-        if (matchingCalls.Count != count)
-        {
-            throw new Exception(
-                $"Expected {count} log call(s) at {level} containing \"{message}\", " +
-                $"but found {matchingCalls.Count}.");
-        }
+        return GetLogCalls(logger, level, message).Count == count;
     }
 
     /// <summary>
-    /// Asserts that the logger received at least one log call
+    /// Whether the logger received at least one log call
     /// at the given level whose message contains the specified text.
     /// </summary>
-    public static void ReceivedLogContainingAtLeastOnce<T>(
+    public static bool HasLogContainingAtLeastOnce<T>(
         this ILogger<T> logger, LogLevel level, string message)
     {
-        var matchingCalls = GetLogCalls(logger, level, message);
-        if (matchingCalls.Count == 0)
-        {
-            throw new Exception(
-                $"Expected at least 1 log call at {level} containing \"{message}\", " +
-                $"but found none.");
-        }
+        return GetLogCalls(logger, level, message).Count > 0;
     }
 
     /// <summary>
-    /// Asserts that the logger did not receive any log calls
+    /// Whether the logger received no log calls
     /// at the given level whose message contains the specified text.
     /// </summary>
-    public static void DidNotReceiveLogContaining<T>(
+    public static bool HasNoLogContaining<T>(
         this ILogger<T> logger, LogLevel level, string message)
     {
-        var matchingCalls = GetLogCalls(logger, level, message);
-        if (matchingCalls.Count > 0)
-        {
-            throw new Exception(
-                $"Expected no log calls at {level} containing \"{message}\", " +
-                $"but found {matchingCalls.Count}.");
-        }
+        return GetLogCalls(logger, level, message).Count == 0;
     }
 
     private static List<ICall> GetLogCalls<T>(ILogger<T> logger, LogLevel level, string message)

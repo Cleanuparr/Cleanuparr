@@ -15,6 +15,7 @@ import { PaginationService } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 import { PaginatedResult } from '@core/models/pagination.model';
+import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-display.util';
 
 @Component({
   selector: 'app-strikes',
@@ -147,17 +148,9 @@ export class StrikesComponent implements OnInit, OnDestroy {
   }
 
   // Helpers
-  strikeTypeSeverity(type: string): 'error' | 'warning' | 'info' | 'default' {
-    const t = type.toLowerCase();
-    if (t === 'failedimport') return 'error';
-    if (t === 'stalled') return 'warning';
-    if (t === 'slowspeed' || t === 'slowtime') return 'info';
-    return 'default';
-  }
+  readonly strikeTypeSeverity = strikeTypeSeverity;
 
-  formatStrikeType(type: string): string {
-    return type.replace(/([A-Z])/g, ' $1').trim();
-  }
+  readonly formatStrikeType = formatStrikeType;
 
   formatBytes(bytes: number | null): string {
     if (bytes === null || bytes === undefined) return '-';

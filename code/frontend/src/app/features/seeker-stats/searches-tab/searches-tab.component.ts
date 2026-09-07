@@ -20,6 +20,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
+import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -301,18 +302,14 @@ export class SearchesTabComponent {
     return type === SeekerSearchType.Replacement ? 'warning' : 'info';
   }
 
-  instanceTypeSeverity(type: string): BadgeSeverity {
-    if (type === 'Radarr') return 'warning';
-    if (type === 'Sonarr') return 'info';
-    return 'default';
-  }
+  readonly instanceTypeSeverity = instanceTypeSeverity;
 
   searchStatusSeverity(status: string): BadgeSeverity {
     switch (status) {
-      case 'Completed': return 'success';
-      case 'Failed': return 'error';
-      case 'TimedOut': return 'warning';
-      case 'Started': return 'info';
+      case SearchCommandStatus.Completed: return 'success';
+      case SearchCommandStatus.Failed: return 'error';
+      case SearchCommandStatus.TimedOut: return 'warning';
+      case SearchCommandStatus.Started: return 'info';
       default: return 'default';
     }
   }

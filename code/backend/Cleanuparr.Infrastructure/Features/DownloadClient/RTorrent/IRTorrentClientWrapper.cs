@@ -10,6 +10,7 @@ public interface IRTorrentClientWrapper
     Task<List<RTorrentFile>> GetTorrentFilesAsync(string hash);
     Task<List<string>> GetTrackersAsync(string hash);
     Task DeleteTorrentAsync(string hash);
+    Task StopTorrentAsync(string hash);
     Task SetFilePriorityAsync(string hash, int fileIndex, int priority);
     Task<string?> GetLabelAsync(string hash);
     Task SetLabelAsync(string hash, string label);

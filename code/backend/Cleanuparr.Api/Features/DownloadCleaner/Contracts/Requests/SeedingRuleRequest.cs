@@ -70,4 +70,9 @@ public record SeedingRuleRequest
     /// Whether to delete the source files when cleaning the download.
     /// </summary>
     public bool DeleteSourceFiles { get; init; } = true;
+
+    /// <summary>
+    /// What happens to a download that matched this rule.
+    /// </summary>
+    public SeedingRuleAction Action { get; init; } = SeedingRuleAction.Delete;
 }

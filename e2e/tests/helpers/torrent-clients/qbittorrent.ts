@@ -6,6 +6,12 @@ import { TorrentClientDriver, pollUntilOk } from './types';
  * Requests come from 127.0.0.1 under `network_mode: host`, so login is skipped.
  * Setting `username` and `password` makes the driver log in anyway.
  */
+/**
+ * qBittorrent 5.x names the stopped states `stopped*`.
+ * 4.x and earlier name them `paused*`.
+ */
+const STOPPED_STATES = new Set(['stoppedUP', 'stoppedDL', 'pausedUP', 'pausedDL']);
+
 export class QBittorrentDriver implements TorrentClientDriver {
   readonly typeName = 'qBittorrent' as const;
   readonly cleanuparrHost: string;
@@ -159,6 +165,11 @@ export class QBittorrentDriver implements TorrentClientDriver {
     }
     const items: Array<{ hash: string; category?: string; tags?: string; state?: string }> = await res.json();
     return items.find((t) => t.hash.toLowerCase() === infoHash.toLowerCase());
+  }
+
+  async isStopped(infoHash: string): Promise<boolean> {
+    const t = await this.getTorrent(infoHash);
+    return STOPPED_STATES.has(t?.state ?? '');
   }
 
   async deleteTorrent(infoHash: string): Promise<void> {

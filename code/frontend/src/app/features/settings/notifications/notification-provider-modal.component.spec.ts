@@ -14,11 +14,12 @@ import {
 import { NotificationProviderModalComponent } from './notification-provider-modal.component';
 
 const DEFAULT_EVENTS = {
-  onFailedImportStrike: true,
-  onStalledStrike: true,
-  onSlowStrike: true,
-  onQueueItemDeleted: true,
-  onDownloadCleaned: true,
+  onFailedImportStrike: false,
+  onStalledStrike: false,
+  onSlowStrike: false,
+  onQueueItemDeleted: false,
+  onDownloadCleaned: false,
+  onDownloadStopped: false,
   onCategoryChanged: false,
   onSearchTriggered: false,
   onSearchItemGrabbed: false,
@@ -35,6 +36,7 @@ const NTFY_PROVIDER: NotificationProviderDto = {
     onSlowStrike: false,
     onQueueItemDeleted: true,
     onDownloadCleaned: false,
+    onDownloadStopped: false,
     onCategoryChanged: true,
     onSearchTriggered: false,
     onSearchItemGrabbed: true,

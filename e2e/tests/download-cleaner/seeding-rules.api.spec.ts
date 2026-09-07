@@ -341,3 +341,73 @@ test.describe.serial('DownloadCleaner: seeding rules for non-qBittorrent clients
     expect(rules[0].maxInactiveDays ?? null).toBeNull();
   });
 });
+
+/**
+ * The `action` field decides whether a matching download is removed or stopped.
+ * Rules created before the field existed carry no action.
+ * Those must keep reading back as Delete.
+ */
+test.describe.serial('DownloadCleaner: seeding rule action', () => {
+  let downloadClientId: string;
+
+  const rulePayload = (name: string, extra: Record<string, unknown> = {}) => ({
+    name,
+    categories: ['movies'],
+    privacyType: 'Both',
+    maxRatio: -1,
+    minSeedTime: 0,
+    maxSeedTime: 24,
+    deleteSourceFiles: true,
+    ...extra,
+  });
+
+  test.beforeAll(async ({ api }) => {
+    const res = await api.downloadClient.create(
+      buildDownloadClientPayload('qbittorrent', {
+        name: 'e2e-test-qbit-action',
+        host: 'http://127.0.0.1:9997',
+        enabled: false,
+      }),
+    );
+    expect(res.status).toBe(201);
+    downloadClientId = (await res.json()).id;
+  });
+
+  test.afterAll(async ({ api }) => {
+    if (downloadClientId) {
+      await api.downloadClient.delete(downloadClientId);
+    }
+  });
+
+  test('round-trips the stop action through create and GET', async ({ api }) => {
+    const res = await api.downloadCleaner.createSeedingRule(downloadClientId, rulePayload('Stop Rule', { action: 'Stop' }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).action).toBe('Stop');
+
+    const rules = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    expect(rules.find((r: { name: string }) => r.name === 'Stop Rule').action).toBe('Stop');
+  });
+
+  test('round-trips the action through update', async ({ api }) => {
+    const rules = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    const rule = rules.find((r: { name: string }) => r.name === 'Stop Rule');
+
+    const updateRes = await api.downloadCleaner.updateSeedingRule(rule.id, rulePayload(rule.name, { action: 'Delete' }));
+    expect(updateRes.status).toBe(200);
+    expect((await updateRes.json()).action).toBe('Delete');
+
+    const updated = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    expect(updated.find((r: { id: string }) => r.id === rule.id).action).toBe('Delete');
+  });
+
+  test('reads back as delete when the action is omitted', async ({ api }) => {
+    const res = await api.downloadCleaner.createSeedingRule(downloadClientId, rulePayload('No Action Rule'));
+    expect(res.status).toBe(201);
+    expect((await res.json()).action).toBe('Delete');
+  });
+
+  test('rejects an unrecognised action', async ({ api }) => {
+    const res = await api.downloadCleaner.createSeedingRule(downloadClientId, rulePayload('Bad Action Rule', { action: 'explode' }));
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+});

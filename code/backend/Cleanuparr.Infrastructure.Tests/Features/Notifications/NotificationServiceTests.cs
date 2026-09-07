@@ -155,7 +155,7 @@ public class NotificationServiceTests
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Warning, "Failed to send notification");
+        _logger.HasLogContaining(LogLevel.Warning, "Failed to send notification").ShouldBeTrue();
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class NotificationServiceTests
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to send notifications");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to send notifications").ShouldBeTrue();
     }
 
     #endregion
@@ -220,7 +220,7 @@ public class NotificationServiceTests
         await _service.SendTestNotificationAsync(providerConfig);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "Test notification sent successfully");
+        _logger.HasLogContaining(LogLevel.Information, "Test notification sent successfully").ShouldBeTrue();
     }
 
     [Fact]
@@ -264,7 +264,7 @@ public class NotificationServiceTests
         }
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to send test notification");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to send test notification").ShouldBeTrue();
     }
 
     [Fact]

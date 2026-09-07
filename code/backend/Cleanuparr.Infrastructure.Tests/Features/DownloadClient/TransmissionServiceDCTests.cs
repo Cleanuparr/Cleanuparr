@@ -504,6 +504,82 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
         }
     }
 
+    public class StopDownload_Tests : TransmissionServiceDCTests
+    {
+        public StopDownload_Tests(TransmissionServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task StopsById()
+        {
+            // Arrange
+            TransmissionService sut = _fixture.CreateSut();
+            TorrentInfo torrentInfo = new TorrentInfo { Id = 123, HashString = "test-hash" };
+            TransmissionItemWrapper torrentWrapper = new TransmissionItemWrapper(torrentInfo);
+
+            _fixture.ClientWrapper
+                .TorrentStopAsync(Arg.Is<long[]>(ids => ids.Contains(123)))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(torrentWrapper);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentStopAsync(Arg.Is<long[]>(ids => ids.Contains(123)));
+        }
+
+        [Fact]
+        public async Task DoesNotDeleteTheTorrent()
+        {
+            // Arrange
+            TransmissionService sut = _fixture.CreateSut();
+            TorrentInfo torrentInfo = new TorrentInfo { Id = 123, HashString = "test-hash" };
+            TransmissionItemWrapper torrentWrapper = new TransmissionItemWrapper(torrentInfo);
+
+            _fixture.ClientWrapper
+                .TorrentStopAsync(Arg.Any<long[]>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(torrentWrapper);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .TorrentRemoveAsync(Arg.Any<long[]>(), Arg.Any<bool>());
+        }
+    }
+
+    public class IsStopped_Tests : TransmissionServiceDCTests
+    {
+        public IsStopped_Tests(TransmissionServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public void ReturnsTrueWhenStatusIsStopped()
+        {
+            // Arrange
+            TransmissionItemWrapper wrapper = new TransmissionItemWrapper(
+                new TorrentInfo { Id = 1, HashString = "test-hash", Status = 0 });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ReturnsFalseWhenSeeding()
+        {
+            // Arrange
+            TransmissionItemWrapper wrapper = new TransmissionItemWrapper(
+                new TorrentInfo { Id = 1, HashString = "test-hash", Status = 6 });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeFalse();
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : TransmissionServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(TransmissionServiceFixture fixture) : base(fixture)

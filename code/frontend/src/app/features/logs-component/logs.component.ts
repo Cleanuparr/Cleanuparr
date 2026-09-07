@@ -10,14 +10,17 @@ import { ToastService } from '@core/services/toast.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { LogEntry } from '@core/models/signalr.models';
+import { LogEventLevel } from '@shared/models/enums';
+import { logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
+import { jobDisplayName } from '@shared/utils/job-display.util';
 
 const LOG_LEVELS: SelectOption[] = [
   { label: 'All Levels', value: '' },
-  { label: 'Error', value: 'error' },
-  { label: 'Warning', value: 'warning' },
-  { label: 'Information', value: 'information' },
-  { label: 'Debug', value: 'debug' },
-  { label: 'Trace', value: 'trace' },
+  { label: 'Error', value: LogEventLevel.Error },
+  { label: 'Warning', value: LogEventLevel.Warning },
+  { label: 'Information', value: LogEventLevel.Information },
+  { label: 'Debug', value: LogEventLevel.Debug },
+  { label: 'Trace', value: LogEventLevel.Verbose },
 ];
 
 @Component({
@@ -76,7 +79,7 @@ export class LogsComponent implements OnInit {
       logs = logs.filter((l) => l.jobRunId === runId);
     }
     if (level) {
-      logs = logs.filter((l) => l.level.toLowerCase() === level);
+      logs = logs.filter((l) => l.level.toLowerCase() === level.toLowerCase());
     }
     if (category) {
       logs = logs.filter((l) => l.category === category);
@@ -201,28 +204,9 @@ export class LogsComponent implements OnInit {
     this.selectedJobRunId.set(null);
   }
 
-  jobDisplayName(jobType: string): string {
-    switch (jobType) {
-      case 'QueueCleaner': return 'Queue Cleaner';
-      case 'MalwareBlocker': return 'Malware Blocker';
-      case 'DownloadCleaner': return 'Download Cleaner';
-      case 'BlacklistSynchronizer': return 'Blacklist Sync';
-      default: return jobType;
-    }
-  }
+  readonly jobDisplayName = jobDisplayName;
 
-  logSeverity(level: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    const l = level.toLowerCase();
-    if (l === 'error' || l === 'fatal' || l === 'critical') return 'error';
-    if (l === 'warning') return 'warning';
-    if (l === 'information' || l === 'info') return 'info';
-    if (l === 'debug' || l === 'trace' || l === 'verbose') return 'success';
-    return 'default';
-  }
+  readonly logSeverity = logSeverity;
 
-  logLevelLabel(level: string): string {
-    const l = level.toLowerCase();
-    if (l === 'information') return 'Info';
-    return level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
-  }
+  readonly logLevelLabel = logLevelLabel;
 }

@@ -115,7 +115,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Check that debug log was called (all healthy)
-        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Debug, "healthy");
+        _logger.HasLogContainingAtLeastOnce(LogLevel.Debug, "healthy").ShouldBeTrue();
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Check that warning log was called for unhealthy clients
-        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "unhealthy");
+        _logger.HasLogContainingAtLeastOnce(LogLevel.Warning, "unhealthy").ShouldBeTrue();
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Error should be logged
-        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Error, "Error performing periodic health check");
+        _logger.HasLogContainingAtLeastOnce(LogLevel.Error, "Error performing periodic health check").ShouldBeTrue();
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Should log stop message
-        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Information, "stopped");
+        _logger.HasLogContainingAtLeastOnce(LogLevel.Information, "stopped").ShouldBeTrue();
     }
 
     #endregion

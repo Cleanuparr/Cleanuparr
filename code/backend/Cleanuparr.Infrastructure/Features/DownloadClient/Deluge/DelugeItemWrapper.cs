@@ -69,6 +69,8 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     public IReadOnlyList<string> Tags => Array.Empty<string>();
 
+    public bool IsStopped => Info.State is DelugeState.Paused;
+
     public bool IsDownloading() => Info is { State: DelugeState.Downloading };
 
     /// <summary>

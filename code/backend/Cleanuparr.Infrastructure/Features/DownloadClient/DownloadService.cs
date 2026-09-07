@@ -181,11 +181,26 @@ public abstract class DownloadService : IDownloadService
 
             if (seedingRule is null)
             {
-                _logger.LogTrace("No seeding rules matched | {name}", torrent.Name);
+                _logger.LogTrace("No seeding rules matched | {Name}", torrent.Name);
                 continue;
             }
             
-            _logger.LogTrace("Seeding rule matched | {seedingRule} | {name}", seedingRule.Name, torrent.Name);
+            _logger.LogTrace("Seeding rule matched | {SeedingRule} | {Name}", seedingRule.Name, torrent.Name);
+
+            if (seedingRule.Action is SeedingRuleAction.Unknown)
+            {
+                _logger.LogWarning(
+                    "Skipping seeding rule with an action this version does not know | {SeedingRule} | {Name}",
+                    seedingRule.Name,
+                    torrent.Name
+                );
+                continue;
+            }
+
+            if (seedingRule.Action is SeedingRuleAction.Stop && torrent.IsStopped)
+            {
+                continue;
+            }
 
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
@@ -199,22 +214,36 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
+            bool stopping = seedingRule.Action is SeedingRuleAction.Stop;
+
             try
             {
-                await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
+                await _dryRunInterceptor.InterceptAsync(() => stopping
+                    ? StopDownload(torrent)
+                    : DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
             }
             catch (Exception exception)
             {
                 // The download stays in the client. The run continues with the next download.
-                _logger.LogError(exception, "failed to clean download | {name}", torrent.Name);
+                _logger.LogError(exception, "failed to clean download | {Name}", torrent.Name);
+                continue;
+            }
+
+            string reason = result.Reason is CleanReason.MaxRatioReached
+                ? "MAX_RATIO & MIN_SEED_TIME"
+                : "MAX_SEED_TIME";
+
+            if (stopping)
+            {
+                _logger.LogInformation("download stopped | {Reason} reached | {Name}", reason, torrent.Name);
+
+                await _eventPublisher.PublishDownloadStopped(torrent.Ratio, seedingTime, torrent.Category ?? string.Empty, result.Reason);
                 continue;
             }
 
             _logger.LogInformation(
-                "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",
-                result.Reason is CleanReason.MaxRatioReached
-                    ? "MAX_RATIO & MIN_SEED_TIME"
-                    : "MAX_SEED_TIME",
+                "download cleaned | {Reason} reached | delete files: {DeleteFiles} | {Name}",
+                reason,
                 seedingRule.DeleteSourceFiles,
                 torrent.Name
             );
@@ -242,6 +271,13 @@ public abstract class DownloadService : IDownloadService
     /// <param name="torrent">The torrent to delete</param>
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
+
+    /// <summary>
+    /// Stops the specified download in the download client, leaving it there.
+    /// Each client implementation handles the stop according to its API requirements.
+    /// </summary>
+    /// <param name="torrent">The torrent to stop</param>
+    public abstract Task StopDownload(ITorrentItemWrapper torrent);
     
     private SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, DateTime? lastActivity, ISeedingRule seedingRule)
     {

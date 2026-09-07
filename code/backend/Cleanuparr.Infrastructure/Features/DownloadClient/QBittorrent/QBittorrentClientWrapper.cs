@@ -41,6 +41,9 @@ public sealed class QBittorrentClientWrapper : IQBittorrentClientWrapper
     public Task DeleteAsync(IEnumerable<string> hashes, bool deleteDownloadedData)
         => _client.DeleteAsync(hashes, deleteDownloadedData);
 
+    public Task PauseAsync(IEnumerable<string> hashes)
+        => _client.PauseAsync(hashes);
+
     public Task AddTorrentTagAsync(IEnumerable<string> hashes, string tag)
         => _client.AddTorrentTagAsync(hashes, tag);
 

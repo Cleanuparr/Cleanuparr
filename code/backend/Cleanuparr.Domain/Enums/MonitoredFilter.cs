@@ -8,10 +8,18 @@ namespace Cleanuparr.Domain.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum MonitoredFilter
 {
-    /// <summary>Include both monitored and unmonitored items.</summary>
+    /// <summary>
+    /// Include both monitored and unmonitored items.
+    /// </summary>
     All,
-    /// <summary>Include only monitored items.</summary>
+
+    /// <summary>
+    /// Include only monitored items.
+    /// </summary>
     Monitored,
-    /// <summary>Include only unmonitored items.</summary>
+
+    /// <summary>
+    /// Include only unmonitored items.
+    /// </summary>
     Unmonitored,
 }

@@ -10,6 +10,9 @@ import { TorrentClientDriver, pollUntilOk } from './types';
  * The list endpoint returns a JSON object whose `torrents` field is an array
  * of arrays — each row is `[hash, status, name, size, ...]`.
  */
+const STATUS_STARTED = 1;
+const STATUS_PAUSED = 32;
+
 export class UTorrentDriver implements TorrentClientDriver {
   readonly typeName = 'uTorrent' as const;
   readonly cleanuparrHost: string;
@@ -102,8 +105,7 @@ export class UTorrentDriver implements TorrentClientDriver {
     }
   }
 
-  /** Returns the torrent's label (index 11 in the list row), or undefined. */
-  async getTorrentLabel(infoHash: string): Promise<string | undefined> {
+  private async getRow(infoHash: string): Promise<unknown[] | undefined> {
     const url = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&list=1`;
     const res = await fetch(url, { headers: this.requestHeaders() });
     if (!res.ok) {
@@ -111,9 +113,27 @@ export class UTorrentDriver implements TorrentClientDriver {
     }
     const body: { torrents?: unknown[][] } = await res.json();
     const want = infoHash.toLowerCase();
-    const row = (body.torrents ?? []).find((r) => String(r[0]).toLowerCase() === want);
+    return (body.torrents ?? []).find((r) => String(r[0]).toLowerCase() === want);
+  }
+
+  /** The label sits at index 11 of the list row. */
+  async getTorrentLabel(infoHash: string): Promise<string | undefined> {
+    const row = await this.getRow(infoHash);
     const label = row ? String(row[11]) : '';
     return label.length > 0 ? label : undefined;
+  }
+
+  /**
+   * The status bitfield sits at index 1 of the list row.
+   * Stopped means the Started bit is clear or the Paused bit is set.
+   */
+  async isStopped(infoHash: string): Promise<boolean> {
+    const row = await this.getRow(infoHash);
+    if (!row) {
+      return false;
+    }
+    const status = Number(row[1]);
+    return (status & STATUS_STARTED) === 0 || (status & STATUS_PAUSED) !== 0;
   }
 
   async deleteTorrent(infoHash: string): Promise<void> {

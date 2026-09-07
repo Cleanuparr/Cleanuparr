@@ -83,7 +83,7 @@ public class DownloadCleanerTests : IDisposable
 
         // Assert - verify configs were loaded (by checking the handler completed without errors)
         // The configs are loaded into ContextProvider which is AsyncLocal scoped
-        _logger.ReceivedLogContaining(LogLevel.Warning, "no download clients");
+        _logger.HasLogContaining(LogLevel.Warning, "no download clients").ShouldBeTrue();
     }
 
     #endregion
@@ -100,7 +100,7 @@ public class DownloadCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Warning, "no download clients are configured");
+        _logger.HasLogContaining(LogLevel.Warning, "no download clients are configured").ShouldBeTrue();
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class DownloadCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "No seeding downloads found");
+        _logger.HasLogContaining(LogLevel.Information, "No seeding downloads found").ShouldBeTrue();
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert - the download should be skipped
-        _logger.ReceivedLogContaining(LogLevel.Debug, "download is ignored");
+        _logger.HasLogContaining(LogLevel.Debug, "download is ignored").ShouldBeTrue();
     }
 
     [Fact]
@@ -242,7 +242,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert - the download should be skipped because it's used by an arr
-        _logger.ReceivedLogContaining(LogLevel.Debug, "download is used by an arr");
+        _logger.HasLogContaining(LogLevel.Debug, "download is used by an arr").ShouldBeTrue();
     }
 
     [Fact]
@@ -535,7 +535,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Information, "Evaluating");
+        _fixture.UnlinkedLogger.HasLogContaining(LogLevel.Information, "Evaluating").ShouldBeTrue();
     }
 
     #endregion
@@ -584,7 +584,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.SeedingRulesLogger.ReceivedLogContaining(LogLevel.Information, "Evaluating");
+        _fixture.SeedingRulesLogger.HasLogContaining(LogLevel.Information, "Evaluating").ShouldBeTrue();
     }
 
     #endregion
@@ -694,7 +694,7 @@ public class DownloadCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to get seeding downloads");
+        _logger.HasLogContaining(LogLevel.Error, "Failed to get seeding downloads").ShouldBeTrue();
     }
 
     [Fact]
@@ -733,7 +733,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Error, "Failed to process unlinked downloads for");
+        _fixture.UnlinkedLogger.HasLogContaining(LogLevel.Error, "Failed to process unlinked downloads for").ShouldBeTrue();
     }
 
     [Fact]
@@ -775,7 +775,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Error, "Failed to create category");
+        _fixture.UnlinkedLogger.HasLogContaining(LogLevel.Error, "Failed to create category").ShouldBeTrue();
     }
 
     [Fact]
@@ -820,7 +820,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Error, "Failed to process unlinked downloads for");
+        _fixture.UnlinkedLogger.HasLogContaining(LogLevel.Error, "Failed to process unlinked downloads for").ShouldBeTrue();
     }
 
     [Fact]
@@ -859,7 +859,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.SeedingRulesLogger.ReceivedLogContaining(LogLevel.Error, "Failed to clean downloads for");
+        _fixture.SeedingRulesLogger.HasLogContaining(LogLevel.Error, "Failed to clean downloads for").ShouldBeTrue();
     }
 
     [Fact]
@@ -904,7 +904,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _fixture.SeedingRulesLogger.ReceivedLogContaining(LogLevel.Error, "Failed to clean downloads for");
+        _fixture.SeedingRulesLogger.HasLogContaining(LogLevel.Error, "Failed to clean downloads for").ShouldBeTrue();
     }
 
     [Fact]
@@ -960,7 +960,7 @@ public class DownloadCleanerTests : IDisposable
         exception.Message.ShouldBe("Arr connection failed");
 
         // Verify error was logged
-        _logger.ReceivedLogContaining(LogLevel.Error, "failed to process");
+        _logger.HasLogContaining(LogLevel.Error, "failed to process").ShouldBeTrue();
     }
 
     #endregion
@@ -1069,7 +1069,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert - should log warning about no categories
-        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Warning, "no categories are configured");
+        _fixture.UnlinkedLogger.HasLogContaining(LogLevel.Warning, "no categories are configured").ShouldBeTrue();
     }
 
     #endregion

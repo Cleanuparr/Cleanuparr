@@ -79,6 +79,8 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
         ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding
+    public bool IsStopped => Info.Status == 0;
+
     public bool IsDownloading() => Info.Status == 4;
     public bool IsStalled() => Info is { Status: 4, RateDownload: <= 0, Eta: <= 0 };
 

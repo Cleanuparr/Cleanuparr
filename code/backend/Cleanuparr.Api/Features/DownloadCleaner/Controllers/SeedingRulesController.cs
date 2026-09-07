@@ -115,6 +115,7 @@ public class SeedingRulesController : ControllerBase
             existingRule.MinSeedTime = ruleDto.MinSeedTime;
             existingRule.MaxSeedTime = ruleDto.MaxSeedTime;
             existingRule.DeleteSourceFiles = ruleDto.DeleteSourceFiles;
+            existingRule.Action = ruleDto.Action;
             // Priority is intentionally NOT updated here — use the reorder endpoint
 
             if (existingRule is ITagFilterable tagFilterable)
@@ -253,6 +254,7 @@ public class SeedingRulesController : ControllerBase
                 MinSeeders = dto.MinSeeders,
                 MaxInactiveDays = dto.MaxInactiveDays,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
+                Action = dto.Action,
             },
             DownloadClientTypeName.Deluge => new DelugeSeedingRule
             {
@@ -267,6 +269,7 @@ public class SeedingRulesController : ControllerBase
                 MaxSeedTime = dto.MaxSeedTime,
                 MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
+                Action = dto.Action,
             },
             DownloadClientTypeName.Transmission => new TransmissionSeedingRule
             {
@@ -283,6 +286,7 @@ public class SeedingRulesController : ControllerBase
                 MaxSeedTime = dto.MaxSeedTime,
                 MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
+                Action = dto.Action,
             },
             DownloadClientTypeName.uTorrent => new UTorrentSeedingRule
             {
@@ -297,6 +301,7 @@ public class SeedingRulesController : ControllerBase
                 MaxSeedTime = dto.MaxSeedTime,
                 MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
+                Action = dto.Action,
             },
             DownloadClientTypeName.rTorrent => new RTorrentSeedingRule
             {
@@ -310,6 +315,7 @@ public class SeedingRulesController : ControllerBase
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
+                Action = dto.Action,
             },
             _ => throw new ArgumentOutOfRangeException(nameof(typeName), typeName, "Unsupported download client type")
         };

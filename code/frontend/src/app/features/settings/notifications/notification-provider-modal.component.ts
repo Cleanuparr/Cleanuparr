@@ -107,6 +107,7 @@ interface NotificationModalModel {
   onSlowStrike: boolean;
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
+  onDownloadStopped: boolean;
   onCategoryChanged: boolean;
   onSearchTriggered: boolean;
   onSearchItemGrabbed: boolean;
@@ -125,8 +126,8 @@ function createDefaultModalModel(): NotificationModalModel {
     gotifyServerUrl: '', gotifyApplicationToken: '', gotifyPriority: '5',
     pushoverApiToken: '', pushoverUserKey: '', pushoverDevices: [], pushoverPriority: PushoverPriority.Normal,
     pushoverRetry: 30, pushoverExpire: 3600, pushoverSound: '', pushoverCustomSound: '', pushoverTags: [],
-    onFailedImportStrike: true, onStalledStrike: true, onSlowStrike: true, onQueueItemDeleted: true,
-    onDownloadCleaned: true, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false,
+    onFailedImportStrike: false, onStalledStrike: false, onSlowStrike: false, onQueueItemDeleted: false,
+    onDownloadCleaned: false, onDownloadStopped: false, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false,
   };
 }
 
@@ -452,6 +453,7 @@ export class NotificationProviderModalComponent {
     model.onSlowStrike = provider.events.onSlowStrike;
     model.onQueueItemDeleted = provider.events.onQueueItemDeleted;
     model.onDownloadCleaned = provider.events.onDownloadCleaned;
+    model.onDownloadStopped = provider.events.onDownloadStopped;
     model.onCategoryChanged = provider.events.onCategoryChanged;
     model.onSearchTriggered = provider.events.onSearchTriggered;
     model.onSearchItemGrabbed = provider.events.onSearchItemGrabbed;
@@ -467,6 +469,7 @@ export class NotificationProviderModalComponent {
       onSlowStrike: m.onSlowStrike,
       onQueueItemDeleted: m.onQueueItemDeleted,
       onDownloadCleaned: m.onDownloadCleaned,
+      onDownloadStopped: m.onDownloadStopped,
       onCategoryChanged: m.onCategoryChanged,
       onSearchTriggered: m.onSearchTriggered,
       onSearchItemGrabbed: m.onSearchItemGrabbed,

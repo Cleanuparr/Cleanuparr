@@ -10,6 +10,8 @@ public enum NotificationProviderType
     Discord,
     Gotify,
 
-    /// <summary>Text this build does not know.</summary>
+    /// <summary>
+    /// Text this build does not know.
+    /// </summary>
     Unknown = EnumSentinel.UnknownValue,
 }

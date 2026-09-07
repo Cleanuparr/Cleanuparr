@@ -47,6 +47,11 @@ public sealed record RTorrentSeedingRule : ISeedingRule
     /// </summary>
     public bool DeleteSourceFiles { get; set; }
 
+    /// <summary>
+    /// What happens to a download that matched this rule.
+    /// </summary>
+    public SeedingRuleAction Action { get; set; } = SeedingRuleAction.Delete;
+
     public void Validate()
     {
         ((ISeedingRule)this).ValidateRule();

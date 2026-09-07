@@ -12,6 +12,7 @@ export interface NotificationEventFlags {
   onSlowStrike: boolean;
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
+  onDownloadStopped: boolean;
   onCategoryChanged: boolean;
   onSearchTriggered: boolean;
   onSearchItemGrabbed: boolean;

@@ -48,9 +48,14 @@
     @if (disabledError()) {
       <div class="category-error">{{ disabledError() }}</div>
     }
-    <app-toggle class="full-width" label="Delete Source Files" [formField]="form.deleteSourceFiles"
-      hint="When enabled, the source files will be deleted when the download is removed"
-      helpKey="download-cleaner:deleteSourceFiles" />
+    <app-select class="full-width" label="Action" [options]="actionOptions" [formField]="form.action" featureId="seeding-rule-action"
+      hint="What to do when the rule matches. Stop only stops the torrent in the download client and leaves it and its files in place."
+      helpKey="download-cleaner:action" />
+    @if (isDeleteAction()) {
+      <app-toggle class="full-width" label="Delete Source Files" [formField]="form.deleteSourceFiles"
+        hint="When enabled, the files on the disk will be deleted when the torrent is removed"
+        helpKey="download-cleaner:deleteSourceFiles" />
+    }
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="visible.set(false)">Cancel</app-button>

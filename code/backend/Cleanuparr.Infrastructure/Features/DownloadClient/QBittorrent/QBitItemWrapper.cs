@@ -66,6 +66,9 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
 
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
+    /// <inheritdoc/>
+    public bool IsStopped => Info.State is TorrentState.PausedUpload or TorrentState.PausedDownload;
+
     public bool IsDownloading() => Info.State is TorrentState.Downloading or TorrentState.ForcedDownload;
     
     public bool IsStalled() => Info.State is TorrentState.StalledDownload;

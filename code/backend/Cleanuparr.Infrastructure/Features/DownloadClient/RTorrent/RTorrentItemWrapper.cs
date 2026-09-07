@@ -71,6 +71,11 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     public IReadOnlyList<string> Tags => Array.Empty<string>();
 
     /// <summary>
+    /// Stopped when state is 0
+    /// </summary>
+    public bool IsStopped => Info.State == 0;
+
+    /// <summary>
     /// Downloading when state is 1 (started) and complete is 0 (not finished)
     /// </summary>
     public bool IsDownloading() => Info.State == 1 && Info.Complete == 0;

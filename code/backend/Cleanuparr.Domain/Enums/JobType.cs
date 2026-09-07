@@ -9,6 +9,8 @@ public enum JobType
     Seeker,
     CustomFormatScoreSyncer,
 
-    /// <summary>Text this build does not know.</summary>
+    /// <summary>
+    /// Text this build does not know.
+    /// </summary>
     Unknown = EnumSentinel.UnknownValue,
 }

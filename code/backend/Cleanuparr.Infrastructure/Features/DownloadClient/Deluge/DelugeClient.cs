@@ -188,6 +188,25 @@ public sealed class DelugeClient
         List<List<JsonElement>?>? failures =
             await SendRequest<List<List<JsonElement>?>?>("core.remove_torrents", hashes, removeData);
 
+        ThrowOnFailures(failures, "remove");
+    }
+
+    /// <summary>
+    /// Pauses the torrents in Deluge.
+    /// </summary>
+    /// <remarks>
+    /// Answers like <see cref="DeleteTorrents"/> does.
+    /// </remarks>
+    public async Task PauseTorrents(List<string> hashes)
+    {
+        List<List<JsonElement>?>? failures =
+            await SendRequest<List<List<JsonElement>?>?>("core.pause_torrents", hashes);
+
+        ThrowOnFailures(failures, "pause");
+    }
+
+    private static void ThrowOnFailures(List<List<JsonElement>?>? failures, string action)
+    {
         List<string> errors = [];
 
         foreach (List<JsonElement>? failure in failures ?? [])
@@ -206,7 +225,7 @@ public sealed class DelugeClient
         if (errors.Count > 0)
         {
             throw new DelugeClientException(
-                $"Deluge did not remove {errors.Count} torrent(s) | {string.Join(" | ", errors)}");
+                $"Deluge did not {action} {errors.Count} torrent(s) | {string.Join(" | ", errors)}");
         }
     }
 

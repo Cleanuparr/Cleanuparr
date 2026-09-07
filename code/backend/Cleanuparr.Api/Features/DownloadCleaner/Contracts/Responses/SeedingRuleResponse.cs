@@ -33,6 +33,8 @@ public sealed record SeedingRuleResponse
 
     public bool DeleteSourceFiles { get; init; }
 
+    public SeedingRuleAction Action { get; init; }
+
     public static SeedingRuleResponse From(ISeedingRule rule) => new()
     {
         Id = rule.Id,
@@ -49,5 +51,6 @@ public sealed record SeedingRuleResponse
         MinSeeders = (rule as ISeedersFilterable)?.MinSeeders,
         MaxInactiveDays = (rule as IInactivityFilterable)?.MaxInactiveDays,
         DeleteSourceFiles = rule.DeleteSourceFiles,
+        Action = rule.Action,
     };
 }

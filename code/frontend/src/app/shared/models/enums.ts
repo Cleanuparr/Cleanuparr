@@ -91,6 +91,7 @@ export enum JobType {
   DownloadCleaner = 'DownloadCleaner',
   BlacklistSynchronizer = 'BlacklistSynchronizer',
   Seeker = 'Seeker',
+  CustomFormatScoreSyncer = 'CustomFormatScoreSyncer',
 }
 
 export enum SelectionStrategy {
@@ -134,4 +135,64 @@ export enum CleanReason {
   MaxSeedTimeReached = 'MaxSeedTimeReached',
 }
 
+export enum InstanceType {
+  Sonarr = 'Sonarr',
+  Radarr = 'Radarr',
+  Lidarr = 'Lidarr',
+  Readarr = 'Readarr',
+  Whisparr = 'Whisparr',
+  Sportarr = 'Sportarr',
+  LazyLibrarian = 'LazyLibrarian',
+}
+
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
+
+export enum SeedingRuleAction {
+  Delete = 'Delete',
+  Stop = 'Stop',
+}
+
+export enum EventSeverity {
+  Test = 'Test',
+  Information = 'Information',
+  Warning = 'Warning',
+  Important = 'Important',
+  Error = 'Error',
+}
+
+export enum StrikeType {
+  Stalled = 'Stalled',
+  DownloadingMetadata = 'DownloadingMetadata',
+  FailedImport = 'FailedImport',
+  SlowSpeed = 'SlowSpeed',
+  SlowTime = 'SlowTime',
+  DeadTorrent = 'DeadTorrent',
+}
+
+// Quartz trigger states as JobManagementService spells them on the wire.
+export enum JobStatus {
+  Scheduled = 'Scheduled',
+  Paused = 'Paused',
+  Complete = 'Complete',
+  Error = 'Error',
+  Running = 'Running',
+  NotScheduled = 'Not Scheduled',
+  NotFound = 'Not Found',
+  Unknown = 'Unknown',
+}
+
+export enum EventType {
+  FailedImportStrike = 'FailedImportStrike',
+  StalledStrike = 'StalledStrike',
+  DownloadingMetadataStrike = 'DownloadingMetadataStrike',
+  SlowSpeedStrike = 'SlowSpeedStrike',
+  SlowTimeStrike = 'SlowTimeStrike',
+  DeadTorrentStrike = 'DeadTorrentStrike',
+  QueueItemDeleted = 'QueueItemDeleted',
+  DownloadCleaned = 'DownloadCleaned',
+  CategoryChanged = 'CategoryChanged',
+  DownloadMarkedForDeletion = 'DownloadMarkedForDeletion',
+  SearchTriggered = 'SearchTriggered',
+  StrikeReset = 'StrikeReset',
+  DownloadStopped = 'DownloadStopped',
+}

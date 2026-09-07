@@ -155,6 +155,10 @@ export class DelugeDriver implements TorrentClientDriver {
     return this.getTorrentField(infoHash, 'label');
   }
 
+  async isStopped(infoHash: string): Promise<boolean> {
+    return (await this.getTorrentState(infoHash)) === 'Paused';
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     // remove_torrent signature: (torrent_id, remove_data: bool)
     await this.call('core.remove_torrent', [infoHash, false]);

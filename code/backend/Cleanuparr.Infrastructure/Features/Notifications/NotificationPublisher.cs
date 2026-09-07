@@ -76,6 +76,19 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
+    public virtual async Task NotifyDownloadStopped(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
+    {
+        try
+        {
+            NotificationContext context = BuildDownloadStoppedContext(ratio, seedingTime, categoryName, reason);
+            await SendNotificationAsync(NotificationEventType.DownloadStopped, context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify download stopped");
+        }
+    }
+
     public virtual async Task NotifyCategoryChanged(string oldCategory, string newCategory, bool isTag = false)
     {
         try
@@ -223,6 +236,29 @@ public class NotificationPublisher : INotificationPublisher
             EventType = NotificationEventType.DownloadCleaned,
             Title = $"Cleaned item from download client with reason: {reason}",
             Description = downloadName,
+            Severity = EventSeverity.Important,
+            Data = new Dictionary<string, string>
+            {
+                ["Url"] = clientUrl.ToString(),
+                ["Hash"] = hash.ToLowerInvariant(),
+                ["Category"] = categoryName.ToLowerInvariant(),
+                ["Ratio"] = ratio.ToString(CultureInfo.InvariantCulture),
+                ["Seeding hours"] = Math.Round(seedingTime.TotalHours, 0).ToString(CultureInfo.InvariantCulture)
+            }
+        };
+    }
+
+    private static NotificationContext BuildDownloadStoppedContext(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
+    {
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
+        string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
+        Uri clientUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.DownloadClientUrl);
+
+        return new NotificationContext
+        {
+            EventType = NotificationEventType.DownloadStopped,
+            Title = $"Stopped item in download client with reason: {reason}",
+            Description = $"{downloadName} is no longer seeding. It stays in the download client and its files stay on disk.",
             Severity = EventSeverity.Important,
             Data = new Dictionary<string, string>
             {

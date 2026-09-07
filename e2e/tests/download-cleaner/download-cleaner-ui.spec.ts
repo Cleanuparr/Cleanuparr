@@ -138,6 +138,43 @@ test.describe.serial('Download Cleaner UI', () => {
     await expect(modal.locator('app-number-input').filter({ hasText: 'Max Inactive Days' })).toHaveCount(0);
   });
 
+  test('Delete Source Files is shown only for the delete action', async ({ page }) => {
+    await enableAndSelect(page);
+    await ensureAccordionExpanded(page, 'Seeding Rules', page.getByRole('button', { name: 'Add Seeding Rule' }));
+    await page.getByRole('button', { name: 'Add Seeding Rule' }).click();
+
+    const modal = page.getByRole('dialog', { name: 'Add Seeding Rule' });
+    await expect(modal).toBeVisible();
+    await expect(toggle(modal, 'Delete Source Files')).toBeVisible();
+
+    await selectOption(modal, 'Action', 'Stop');
+    await expect(toggle(modal, 'Delete Source Files')).toHaveCount(0);
+
+    await selectOption(modal, 'Action', 'Delete');
+    await expect(toggle(modal, 'Delete Source Files')).toBeVisible();
+  });
+
+  test('saves the stop action and shows it on the rule card', async ({ page }) => {
+    await enableAndSelect(page);
+    await ensureAccordionExpanded(page, 'Seeding Rules', page.getByRole('button', { name: 'Add Seeding Rule' }));
+    await page.getByRole('button', { name: 'Add Seeding Rule' }).click();
+
+    const modal = page.getByRole('dialog', { name: 'Add Seeding Rule' });
+    await expect(modal).toBeVisible();
+
+    await textInput(modal, 'Rule Name').fill('Stop Rule');
+    await addChip(modal, 'Categories', 'e2e-stop');
+    await numberInput(modal, 'Max Ratio').fill('2');
+    await selectOption(modal, 'Action', 'Stop');
+
+    await modal.getByRole('button', { name: 'Create', exact: true }).click();
+    await expect(modal).toBeHidden({ timeout: 10_000 });
+
+    const card = page.locator('.rule-card').filter({ hasText: 'Stop Rule' });
+    await expect(card.getByText('Action: Stop', { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(card.getByText(/^Delete Files:/)).toHaveCount(0);
+  });
+
   test('per-client Dead Torrents requires strikes >= 3', async ({ page }) => {
     await enableAndSelect(page);
     const accordion = page.locator('app-accordion').filter({ hasText: 'Dead Torrents' });

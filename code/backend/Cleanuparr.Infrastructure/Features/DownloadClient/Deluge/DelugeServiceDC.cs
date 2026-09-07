@@ -81,6 +81,13 @@ public partial class DelugeService
         await _client.DeleteTorrents([hash], deleteSourceFiles);
     }
 
+    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    {
+        string hash = torrent.Hash.ToLowerInvariant();
+
+        await _client.PauseTorrents([hash]);
+    }
+
     public override async Task CreateCategoryAsync(string name)
     {
         IReadOnlyList<string> existingLabels = await _client.GetLabels();

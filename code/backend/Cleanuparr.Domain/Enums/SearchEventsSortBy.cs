@@ -8,12 +8,23 @@ namespace Cleanuparr.Domain.Enums;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SearchEventsSortBy
 {
-    /// <summary>Sort by the event timestamp.</summary>
+    /// <summary>
+    /// Sort by the event timestamp.
+    /// </summary>
     Timestamp,
-    /// <summary>Sort by the item title associated with the search.</summary>
+
+    /// <summary>
+    /// Sort by the item title associated with the search.
+    /// </summary>
     Title,
-    /// <summary>Sort by the search command status.</summary>
+
+    /// <summary>
+    /// Sort by the search command status.
+    /// </summary>
     Status,
-    /// <summary>Sort by the search type (proactive, replacement, etc.).</summary>
+
+    /// <summary>
+    /// Sort by the search type (proactive, replacement, etc.).
+    /// </summary>
     Type,
 }

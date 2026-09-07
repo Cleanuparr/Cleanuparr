@@ -121,6 +121,15 @@ public sealed class RTorrentClient
     }
 
     /// <summary>
+    /// Stops a torrent in rTorrent
+    /// </summary>
+    /// <param name="hash">Torrent hash</param>
+    public async Task StopTorrentAsync(string hash)
+    {
+        await CallAsync("d.stop", hash);
+    }
+
+    /// <summary>
     /// Sets the priority for a file within a torrent
     /// </summary>
     /// <param name="hash">Torrent hash</param>

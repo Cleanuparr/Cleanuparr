@@ -509,6 +509,104 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
         }
     }
 
+    public class StopDownload_Tests : DelugeServiceDCTests
+    {
+        public StopDownload_Tests(DelugeServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task CallsClientPause()
+        {
+            // Arrange
+            DelugeService sut = _fixture.CreateSut();
+            const string hash = "TEST-HASH";
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
+
+            _fixture.ClientWrapper
+                .PauseTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .PauseTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")));
+        }
+
+        [Fact]
+        public async Task NormalizesHashToLowercase()
+        {
+            // Arrange
+            DelugeService sut = _fixture.CreateSut();
+            const string hash = "UPPERCASE-HASH";
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
+
+            _fixture.ClientWrapper
+                .PauseTorrents(Arg.Any<List<string>>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .PauseTorrents(Arg.Is<List<string>>(h => h.Contains("uppercase-hash")));
+        }
+
+        [Fact]
+        public async Task DoesNotDeleteTheTorrent()
+        {
+            // Arrange
+            DelugeService sut = _fixture.CreateSut();
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("TEST-HASH");
+
+            _fixture.ClientWrapper
+                .PauseTorrents(Arg.Any<List<string>>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.StopDownload(mockTorrent);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteTorrents(Arg.Any<List<string>>(), Arg.Any<bool>());
+        }
+    }
+
+    public class IsStopped_Tests : DelugeServiceDCTests
+    {
+        public IsStopped_Tests(DelugeServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public void ReturnsTrueWhenPaused()
+        {
+            // Arrange
+            DelugeItemWrapper wrapper = new DelugeItemWrapper(
+                new DownloadStatus { Hash = "hash1", State = DelugeState.Paused, Trackers = new List<Tracker>() });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ReturnsFalseWhenSeeding()
+        {
+            // Arrange
+            DelugeItemWrapper wrapper = new DelugeItemWrapper(
+                new DownloadStatus { Hash = "hash1", State = DelugeState.Seeding, Trackers = new List<Tracker>() });
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeFalse();
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : DelugeServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(DelugeServiceFixture fixture) : base(fixture)

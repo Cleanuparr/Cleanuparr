@@ -93,6 +93,12 @@ public partial class QBitService
         await _client.DeleteAsync([torrent.Hash], deleteSourceFiles);
     }
 
+    /// <inheritdoc/>
+    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    {
+        await _client.PauseAsync([torrent.Hash]);
+    }
+
     public override async Task CreateCategoryAsync(string name)
     {
         IReadOnlyDictionary<string, Category>? existingCategories = await _client.GetCategoriesAsync();

@@ -55,7 +55,7 @@ public class EventCleanupServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "started");
+        _logger.HasLogContaining(LogLevel.Information, "started").ShouldBeTrue();
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class EventCleanupServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "stopping");
+        _logger.HasLogContaining(LogLevel.Information, "stopping").ShouldBeTrue();
     }
 
     [Fact]
@@ -106,6 +106,6 @@ public class EventCleanupServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - should have logged stopped message
-        _logger.ReceivedLogContaining(LogLevel.Information, "stopped");
+        _logger.HasLogContaining(LogLevel.Information, "stopped").ShouldBeTrue();
     }
 }

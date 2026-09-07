@@ -120,6 +120,6 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - the service should handle the error and continue (log it but not crash)
-        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Error, "Failed to perform event cleanup");
+        _logger.HasLogContainingAtLeastOnce(LogLevel.Error, "Failed to perform event cleanup").ShouldBeTrue();
     }
 }

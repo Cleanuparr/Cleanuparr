@@ -14,20 +14,23 @@ import { CardComponent } from '@ui';
 import { EventsApi } from '@core/api/events.api';
 import { EventTypeTimelineBucket, EventTypeTimelineResponse } from '@core/models/event.models';
 import { WINDOWS, getChartDuration, formatBucketDate, chartYDomain } from '@shared/utils/chart-window.util';
+import { EventType } from '@shared/models/enums';
+import { formatEventType } from '@shared/utils/event-display.util';
 
 const TYPE_COLORS: Record<string, string> = {
-  QueueItemDeleted: '#ef4444',
-  FailedImportStrike: '#f97316',
-  StalledStrike: '#f59e0b',
-  SlowSpeedStrike: '#eab308',
-  SlowTimeStrike: '#84cc16',
-  DeadTorrentStrike: '#14b8a6',
-  DownloadingMetadataStrike: '#06b6d4',
-  CategoryChanged: '#3b82f6',
-  SearchTriggered: '#8b5cf6',
-  DownloadMarkedForDeletion: '#ec4899',
-  DownloadCleaned: '#22c55e',
-  StrikeReset: '#10b981',
+  [EventType.QueueItemDeleted]: '#ef4444',
+  [EventType.FailedImportStrike]: '#f97316',
+  [EventType.StalledStrike]: '#f59e0b',
+  [EventType.SlowSpeedStrike]: '#eab308',
+  [EventType.SlowTimeStrike]: '#84cc16',
+  [EventType.DeadTorrentStrike]: '#14b8a6',
+  [EventType.DownloadingMetadataStrike]: '#06b6d4',
+  [EventType.CategoryChanged]: '#3b82f6',
+  [EventType.SearchTriggered]: '#8b5cf6',
+  [EventType.DownloadMarkedForDeletion]: '#ec4899',
+  [EventType.DownloadCleaned]: '#22c55e',
+  [EventType.DownloadStopped]: '#6366f1',
+  [EventType.StrikeReset]: '#10b981',
 };
 
 const FALLBACK_COLOR = '#94a3b8';
@@ -105,7 +108,7 @@ export class EventsStatsCardComponent {
 
   readonly legendItems = computed<BulletLegendItemInterface[]>(() =>
     this.allTypes().map((type) => ({
-      name: this.formatEventType(type),
+      name: formatEventType(type),
       color: TYPE_COLORS[type] ?? FALLBACK_COLOR,
       inactive: type !== this.current(),
     })),
@@ -140,7 +143,7 @@ export class EventsStatsCardComponent {
   readonly tooltip = (d: EventTypeTimelineBucket): string => {
     const type = this.current();
     const count = type ? d.counts[type] ?? 0 : 0;
-    const label = type ? this.formatEventType(type) : '';
+    const label = type ? formatEventType(type) : '';
     return (
       `<div style="display:flex;flex-direction:column;gap:2px;font-size:12px">` +
       `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date, this.window())}</span>` +
@@ -157,10 +160,6 @@ export class EventsStatsCardComponent {
       this.selected.set(type);
     }
   };
-
-  private formatEventType(eventType: string): string {
-    return eventType.replace(/([A-Z])/g, ' $1').trim();
-  }
 
   setWindow(hours: number): void {
     this.window.set(hours);

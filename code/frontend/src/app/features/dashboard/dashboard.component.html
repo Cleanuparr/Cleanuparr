@@ -188,7 +188,7 @@
                       </div>
                       <div class="timeline__content">
                         <div class="timeline__row">
-                          <app-badge [severity]="logBadgeSeverity(log.level)" size="sm">
+                          <app-badge [severity]="logSeverity(log.level)" size="sm">
                             {{ logLevelLabel(log.level) }}
                           </app-badge>
                           @if (log.category && log.category !== 'SYSTEM') {

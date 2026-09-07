@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using System.Net;
 using Xunit;
+using Shouldly;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.BlacklistSync;
 
@@ -88,7 +89,7 @@ public class BlacklistSynchronizerTests : IDisposable
         // Assert
         _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _logger.ReceivedLogContaining(LogLevel.Debug, "disabled");
+        _logger.HasLogContaining(LogLevel.Debug, "disabled").ShouldBeTrue();
     }
 
     #endregion
@@ -107,7 +108,7 @@ public class BlacklistSynchronizerTests : IDisposable
         // Assert
         _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _logger.ReceivedLogContaining(LogLevel.Warning, "path is not configured");
+        _logger.HasLogContaining(LogLevel.Warning, "path is not configured").ShouldBeTrue();
     }
 
     [Fact]
@@ -122,7 +123,7 @@ public class BlacklistSynchronizerTests : IDisposable
         // Assert
         _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _logger.ReceivedLogContaining(LogLevel.Warning, "path is not configured");
+        _logger.HasLogContaining(LogLevel.Warning, "path is not configured").ShouldBeTrue();
     }
 
     #endregion
@@ -142,7 +143,7 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled qBittorrent clients");
+        _logger.HasLogContaining(LogLevel.Debug, "No enabled qBittorrent clients").ShouldBeTrue();
     }
 
     [Fact]
@@ -159,7 +160,7 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled qBittorrent clients");
+        _logger.HasLogContaining(LogLevel.Debug, "No enabled qBittorrent clients").ShouldBeTrue();
     }
 
     [Fact]
@@ -176,7 +177,7 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled qBittorrent clients");
+        _logger.HasLogContaining(LogLevel.Debug, "No enabled qBittorrent clients").ShouldBeTrue();
     }
 
     #endregion
@@ -212,7 +213,7 @@ public class BlacklistSynchronizerTests : IDisposable
         // Assert
         _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _logger.ReceivedLogContaining(LogLevel.Debug, "already synced");
+        _logger.HasLogContaining(LogLevel.Debug, "already synced").ShouldBeTrue();
     }
 
     #endregion

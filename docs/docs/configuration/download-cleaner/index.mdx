@@ -225,10 +225,22 @@ Supported by **qBittorrent** only.
 </ConfigSection>
 
 <ConfigSection
+  title="Action"
+>
+
+What happens to a torrent once it meets the rule's cleanup conditions:
+- **Delete**: the torrent is removed from the download client.
+- **Stop**: the torrent is stopped in the download client and remains there.
+
+**Delete Source Files** applies to **Delete** only.
+
+</ConfigSection>
+
+<ConfigSection
   title="Delete Source Files"
 >
 
-When enabled, the source files will be deleted from disk when the download is removed from the download client. When disabled, only the torrent entry is removed while preserving the underlying files.
+When enabled, the source files will be deleted from disk when the torrent is removed from the download client. When disabled, only the torrent entry is removed while preserving the underlying files.
 
 </ConfigSection>
 

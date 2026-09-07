@@ -569,6 +569,56 @@ public class EventPublisherTests : IDisposable
 
     #endregion
 
+    #region PublishDownloadStopped Tests
+
+    [Fact]
+    public async Task PublishDownloadStopped_SavesEventWithContextData()
+    {
+        // Arrange
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Stopped Download");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "ghi789");
+
+        // Act
+        await _publisher.PublishDownloadStopped(
+            ratio: 2.5,
+            seedingTime: TimeSpan.FromHours(48),
+            categoryName: "movies",
+            reason: CleanReason.MaxSeedTimeReached);
+
+        // Assert
+        AppEvent? savedEvent = await _context.Events.FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(EventType.DownloadStopped);
+        savedEvent.Severity.ShouldBe(EventSeverity.Important);
+        savedEvent.ItemTitle.ShouldBe("Stopped Download");
+        savedEvent.ItemHash.ShouldBe("ghi789");
+        savedEvent.CleanedCategory.ShouldBe("movies");
+        savedEvent.SeedRatio.ShouldBe(2.5);
+        savedEvent.SeedingTimeHours.ShouldBe(48.0);
+        savedEvent.CleanReason.ShouldBe(CleanReason.MaxSeedTimeReached);
+    }
+
+    [Fact]
+    public async Task PublishDownloadStopped_SendsNotification()
+    {
+        // Arrange
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Test");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "xyz");
+
+        double ratio = 1.5;
+        TimeSpan seedingTime = TimeSpan.FromHours(24);
+        string categoryName = "tv";
+        CleanReason reason = CleanReason.MaxRatioReached;
+
+        // Act
+        await _publisher.PublishDownloadStopped(ratio, seedingTime, categoryName, reason);
+
+        // Assert
+        await _notificationPublisher.Received(1).NotifyDownloadStopped(ratio, seedingTime, categoryName, reason);
+    }
+
+    #endregion
+
     #region PublishSearchNotTriggered Tests
 
     [Fact]

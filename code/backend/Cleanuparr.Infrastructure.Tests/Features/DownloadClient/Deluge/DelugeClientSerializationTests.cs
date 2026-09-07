@@ -235,6 +235,57 @@ public class DelugeClientSerializationTests
     }
 
     [Fact]
+    public async Task PauseTorrents_CallsPauseTorrentsWithTheHashes()
+    {
+        (DelugeClient client, FakeHttpMessageHandler handler) =
+            CreateClient("""{"result": [], "error": null, "id": 1}""");
+
+        await client.PauseTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"]);
+
+        JsonObject body = JsonNode.Parse(handler.CapturedRequestBodies[0]!)!.AsObject();
+        body["method"]!.GetValue<string>().ShouldBe("core.pause_torrents");
+        body["params"]![0]![0]!.GetValue<string>().ShouldBe("5a64675bf2d466929fc6a916e3a975fa6940975b");
+    }
+
+    [Fact]
+    public async Task PauseTorrents_WithEmptyFailureList_DoesNotThrow()
+    {
+        (DelugeClient client, _) = CreateClient("""{"result": [], "error": null, "id": 1}""");
+
+        await Should.NotThrowAsync(
+            () => client.PauseTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"]));
+    }
+
+    [Fact]
+    public async Task PauseTorrents_WithFailedHashes_DoesNotThrow()
+    {
+        const string response = """
+            {"result": [["0000000000000000000000000000000000000000", "torrent_id 0000000000000000000000000000000000000000 not in session."]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        await Should.NotThrowAsync(
+            () => client.PauseTorrents(["0000000000000000000000000000000000000000"]));
+    }
+
+    [Fact]
+    public async Task PauseTorrents_WithARealFailure_Throws()
+    {
+        // The torrent keeps seeding in Deluge. The caller must not report a success.
+        const string response = """
+            {"result": [["5a64675bf2d466929fc6a916e3a975fa6940975b", "[Errno 13] Permission denied"]], "error": null, "id": 1}
+            """;
+        (DelugeClient client, _) = CreateClient(response);
+
+        DelugeClientException ex = await Should.ThrowAsync<DelugeClientException>(
+            () => client.PauseTorrents(["5a64675bf2d466929fc6a916e3a975fa6940975b"]));
+
+        ex.Message.ShouldContain("did not pause");
+        ex.Message.ShouldContain("5a64675bf2d466929fc6a916e3a975fa6940975b");
+        ex.Message.ShouldContain("Permission denied");
+    }
+
+    [Fact]
     public async Task ChangeFilesPriority_WithNullResult_DoesNotThrow()
     {
         (DelugeClient client, _) = CreateClient("""{"result": null, "error": null, "id": 1}""");

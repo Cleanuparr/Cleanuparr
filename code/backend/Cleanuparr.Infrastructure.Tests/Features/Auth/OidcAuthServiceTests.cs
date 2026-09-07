@@ -764,7 +764,9 @@ public sealed class OidcAuthServiceTests : IDisposable
         return code;
     }
 
-    /// <summary>Replaces the stored OidcFlowState with one whose CreatedAt is backdated by the given age.</summary>
+    /// <summary>
+    /// Replaces the stored OidcFlowState with one whose CreatedAt is backdated by the given age.
+    /// </summary>
     private static void BackdateFlowState(string state, TimeSpan age)
     {
         var pendingFlowsField = typeof(OidcAuthService)
@@ -1024,7 +1026,9 @@ public sealed class OidcAuthServiceTests : IDisposable
             _key = new RsaSecurityKey(_rsa) { KeyId = "test-key-1" };
         }
 
-        /// <summary>Creates a signed JWT. Pass subject=null to produce a token with no 'sub' claim.</summary>
+        /// <summary>
+        /// Creates a signed JWT. Pass subject=null to produce a token with no 'sub' claim.
+        /// </summary>
         public string CreateIdToken(string issuer, string audience, string? subject, string nonce,
             DateTimeOffset? expiry = null, DateTimeOffset? notBefore = null)
         {

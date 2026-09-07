@@ -70,7 +70,7 @@ public class QueueRuleManagerTests
 
         // Assert
         result.ShouldBeNull();
-        logger.ReceivedLogContaining(LogLevel.Warning, "multiple");
+        logger.HasLogContaining(LogLevel.Warning, "multiple").ShouldBeTrue();
     }
 
     [Fact]
@@ -305,7 +305,7 @@ public class QueueRuleManagerTests
 
         // Assert
         result.ShouldBeNull();
-        logger.ReceivedLogContaining(LogLevel.Warning, "multiple");
+        logger.HasLogContaining(LogLevel.Warning, "multiple").ShouldBeTrue();
     }
 
     [Fact]
