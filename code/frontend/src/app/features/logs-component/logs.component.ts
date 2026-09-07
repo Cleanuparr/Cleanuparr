@@ -20,8 +20,7 @@ const LOG_LEVELS: SelectOption[] = [
   { label: 'Warning', value: LogEventLevel.Warning },
   { label: 'Information', value: LogEventLevel.Information },
   { label: 'Debug', value: LogEventLevel.Debug },
-  // Serilog emits Verbose, so this option matches nothing.
-  { label: 'Trace', value: 'Trace' },
+  { label: 'Trace', value: LogEventLevel.Verbose },
 ];
 
 @Component({
