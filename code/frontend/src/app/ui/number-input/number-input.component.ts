@@ -105,7 +105,7 @@ export class NumberInputComponent {
       clamped = Math.min(clamped, maxVal);
     }
     if (off != null && clamped > off && clamped < 0) {
-      clamped = off;
+      clamped = direction === 1 ? 0 : off;
     }
     this.value.set(clamped);
   }
