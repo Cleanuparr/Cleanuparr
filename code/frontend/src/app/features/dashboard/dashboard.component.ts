@@ -27,6 +27,7 @@ import {
   manualEventSeverityClass,
 } from '@shared/utils/event-display.util';
 import { logIcon, logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
+import { jobDisplayName, jobStatusSeverity } from '@shared/utils/job-display.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -269,24 +270,9 @@ export class DashboardComponent {
   readonly eventIcon = eventIcon;
 
   // Job helpers
-  jobDisplayName(jobType: string): string {
-    switch (jobType) {
-      case 'QueueCleaner': return 'Queue Cleaner';
-      case 'MalwareBlocker': return 'Malware Blocker';
-      case 'DownloadCleaner': return 'Download Cleaner';
-      case 'BlacklistSynchronizer': return 'Blacklist Sync';
-      default: return jobType;
-    }
-  }
+  readonly jobDisplayName = jobDisplayName;
 
-  jobStatusSeverity(status: string): 'success' | 'warning' | 'error' | 'info' | 'default' {
-    const s = status.toLowerCase();
-    if (s === 'running') return 'info';
-    if (s === 'complete' || s === 'scheduled') return 'success';
-    if (s === 'error') return 'error';
-    if (s === 'paused') return 'warning';
-    return 'default';
-  }
+  readonly jobStatusSeverity = jobStatusSeverity;
 
   readonly manualEventSeverityClass = manualEventSeverityClass;
 

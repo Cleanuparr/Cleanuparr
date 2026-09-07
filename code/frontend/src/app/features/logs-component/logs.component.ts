@@ -12,6 +12,7 @@ import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.
 import { LogEntry } from '@core/models/signalr.models';
 import { LogEventLevel } from '@shared/models/enums';
 import { logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
+import { jobDisplayName } from '@shared/utils/job-display.util';
 
 const LOG_LEVELS: SelectOption[] = [
   { label: 'All Levels', value: '' },
@@ -204,15 +205,7 @@ export class LogsComponent implements OnInit {
     this.selectedJobRunId.set(null);
   }
 
-  jobDisplayName(jobType: string): string {
-    switch (jobType) {
-      case 'QueueCleaner': return 'Queue Cleaner';
-      case 'MalwareBlocker': return 'Malware Blocker';
-      case 'DownloadCleaner': return 'Download Cleaner';
-      case 'BlacklistSynchronizer': return 'Blacklist Sync';
-      default: return jobType;
-    }
-  }
+  readonly jobDisplayName = jobDisplayName;
 
   readonly logSeverity = logSeverity;
 

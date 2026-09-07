@@ -91,6 +91,7 @@ export enum JobType {
   DownloadCleaner = 'DownloadCleaner',
   BlacklistSynchronizer = 'BlacklistSynchronizer',
   Seeker = 'Seeker',
+  CustomFormatScoreSyncer = 'CustomFormatScoreSyncer',
 }
 
 export enum SelectionStrategy {
