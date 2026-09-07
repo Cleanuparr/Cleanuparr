@@ -2,14 +2,14 @@ import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { EventSeverity, EventType } from '@shared/models/enums';
 import { formatEnumValue, matchEnum } from './enum.util';
 
-const STRIKE_EVENT_TYPES: EventType[] = [
+const STRIKE_EVENT_TYPES: ReadonlySet<EventType> = new Set([
   EventType.FailedImportStrike,
   EventType.StalledStrike,
   EventType.DownloadingMetadataStrike,
   EventType.SlowSpeedStrike,
   EventType.SlowTimeStrike,
   EventType.DeadTorrentStrike,
-];
+]);
 
 export function eventTypeSeverity(eventType: string): BadgeSeverity {
   switch (eventType) {
@@ -98,7 +98,7 @@ export function formatEventType(eventType: string): string {
 function isStrike(eventType: string): boolean {
   const type = matchEnum(EventType, eventType);
   if (type !== null) {
-    return STRIKE_EVENT_TYPES.includes(type);
+    return STRIKE_EVENT_TYPES.has(type);
   }
   // A type this build does not know still renders as a strike when it reads like one.
   return eventType.toLowerCase().includes('strike');
