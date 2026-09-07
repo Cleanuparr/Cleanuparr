@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DocumentationService } from '@core/services/documentation.service';
 import { NumberInputComponent } from './number-input.component';
 
 @Component({
@@ -9,6 +10,7 @@ import { NumberInputComponent } from './number-input.component';
     [min]="min()"
     [max]="max()"
     [step]="step()"
+    [offValue]="offValue()"
     (valueChange)="onChange($event)"
   />`,
 })
@@ -17,6 +19,7 @@ class HostComponent {
   readonly min = signal<number | undefined>(undefined);
   readonly max = signal<number | undefined>(undefined);
   readonly step = signal(1);
+  readonly offValue = signal<number | undefined>(undefined);
   readonly emissions: (number | null)[] = [];
 
   onChange(value: number | null): void {
@@ -95,7 +98,14 @@ describe('NumberInputComponent', () => {
     fixture.detectChanges();
 
     expect(host.value()).toBe(42);
-    expect(host.emissions).toEqual([null, 42]);
+
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(host.value()).toBeNull();
+    expect(host.emissions).toEqual([null, 42, null]);
   });
 
   it('increments by a fractional step without floating point drift', () => {
@@ -133,6 +143,107 @@ describe('NumberInputComponent', () => {
 
     expect(host.value()).toBe(0);
     expect(host.emissions).toEqual([]);
+  });
+
+  it('steps between the off value and zero without stopping in the gap', () => {
+    const fixture = setup();
+    const host = fixture.componentInstance;
+    host.min.set(-1);
+    host.step.set(0.1);
+    host.offValue.set(-1);
+    host.value.set(-1);
+    fixture.detectChanges();
+
+    button(fixture, 'Increase').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(0);
+
+    button(fixture, 'Decrease').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(-1);
+    expect(host.emissions).toEqual([0, -1]);
+  });
+
+  it('steps out of the gap toward the edge the direction points at', () => {
+    const fixture = setup();
+    const host = fixture.componentInstance;
+    host.min.set(-1);
+    host.step.set(0.1);
+    host.offValue.set(-1);
+    host.value.set(-0.4);
+    fixture.detectChanges();
+
+    button(fixture, 'Increase').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(0);
+
+    host.value.set(-0.4);
+    fixture.detectChanges();
+    button(fixture, 'Decrease').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(-1);
+  });
+
+  it('snaps a typed value from inside the gap to the nearer edge on blur', () => {
+    const fixture = setup();
+    const host = fixture.componentInstance;
+    host.min.set(-1);
+    host.offValue.set(-1);
+    host.value.set(-0.9);
+    fixture.detectChanges();
+
+    field(fixture).dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(-1);
+
+    host.value.set(-0.3);
+    fixture.detectChanges();
+    field(fixture).dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(0);
+    expect(host.emissions).toEqual([-1, 0]);
+  });
+
+  it('steps from zero when no value is set and leaves an unbounded value untouched on blur', () => {
+    const fixture = setup();
+    const host = fixture.componentInstance;
+
+    button(fixture, 'Increase').click();
+    fixture.detectChanges();
+
+    expect(host.value()).toBe(1);
+
+    field(fixture).dispatchEvent(new FocusEvent('blur'));
+    fixture.detectChanges();
+
+    expect(host.emissions).toEqual([1]);
+  });
+
+  it('opens the documentation for the configured help key', () => {
+    const docs = TestBed.inject(DocumentationService);
+    const open = vi.spyOn(docs, 'openFieldDocumentation').mockImplementation(() => undefined);
+
+    const fixture = TestBed.createComponent(NumberInputComponent);
+    fixture.componentRef.setInput('label', 'Max Ratio');
+    fixture.componentRef.setInput('helpKey', 'download-cleaner:maxRatio');
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('.field-help-btn').click();
+
+    expect(open).toHaveBeenCalledWith('download-cleaner', 'maxRatio');
+
+    open.mockClear();
+    fixture.componentRef.setInput('helpKey', undefined);
+    fixture.detectChanges();
+    fixture.componentInstance.onHelpClick(new Event('click'));
+
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('ignores increment while disabled', () => {

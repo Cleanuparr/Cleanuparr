@@ -67,6 +67,9 @@ export class SeedingRuleModalComponent {
 
   readonly isDeleteAction = computed(() => this.model().action === SeedingRuleAction.Delete);
 
+  /** Min seed time only delays a removal triggered by max ratio, so it is meaningless without one. */
+  readonly isMaxRatioEnabled = computed(() => (this.model().maxRatio ?? -1) >= 0);
+
   private readonly ruleChipInputs = viewChildren<ChipInputComponent>('ruleChipInput');
   readonly hasUncommittedInputs = computed(() =>
     this.ruleChipInputs().some(c => c.hasUncommittedInput())
