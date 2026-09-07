@@ -1,0 +1,36 @@
+<app-card header="Change Username" featureId="change-username">
+  <div class="form-stack">
+    @if (oidcExclusiveMode()) {
+      <div class="section-notice">
+        Username changes are disabled while OIDC exclusive mode is active.
+      </div>
+    }
+    <app-input
+      label="New Username"
+      placeholder="Enter new username (min 3 characters)"
+      [value]="newUsername()"
+      (valueChange)="newUsername.set($event)"
+    />
+    <app-input
+      label="Current Password"
+      type="password"
+      placeholder="Enter current password"
+      [value]="currentPassword()"
+      (valueChange)="currentPassword.set($event)"
+    />
+    <div class="form-actions">
+      <app-button
+        variant="primary"
+        [glowing]="!!newUsername() && !!currentPassword() && !oidcExclusiveMode()"
+        [disabled]="!newUsername() || !currentPassword() || changingUsername() || oidcExclusiveMode()"
+        (clicked)="changeUsername()"
+      >
+        @if (changingUsername()) {
+          <app-spinner size="sm" /> Changing...
+        } @else {
+          Change Username
+        }
+      </app-button>
+    </div>
+  </div>
+</app-card>

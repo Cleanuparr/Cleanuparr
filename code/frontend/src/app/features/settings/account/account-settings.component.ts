@@ -16,6 +16,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { ApiKeyCardComponent } from './api-key-card.component';
 import { ChangePasswordCardComponent } from './change-password-card.component';
+import { ChangeUsernameCardComponent } from './change-username-card.component';
 import { PlexIntegrationCardComponent } from './plex-integration-card.component';
 import { TwoFactorCardComponent } from './two-factor-card.component';
 
@@ -38,7 +39,8 @@ interface OidcFormModel {
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent,
     EmptyStateComponent, LoadingStateComponent, LabelComponent, FormField,
-    ApiKeyCardComponent, ChangePasswordCardComponent, PlexIntegrationCardComponent, TwoFactorCardComponent,
+    ApiKeyCardComponent, ChangePasswordCardComponent, ChangeUsernameCardComponent,
+    PlexIntegrationCardComponent, TwoFactorCardComponent,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -145,12 +147,7 @@ export class AccountSettingsComponent implements OnInit {
     this.accountResource.reload();
   }
 
-  onTwoFactorChanged(): void {
-    this.accountResource.reload();
-  }
-
-  // Plex
-  onPlexChanged(): void {
+  reloadAccount(): void {
     this.accountResource.reload();
   }
 

@@ -86,6 +86,7 @@ describe('AccountSettingsComponent', () => {
             getApiKey: () => of({ apiKey: 'live-key-1234' }),
             regenerateApiKey: () => of({ apiKey: 'fresh-key-9999' }),
             changePassword: () => of(undefined),
+            changeUsername: () => of(undefined),
             enable2fa: () => of({ secret: 's', qrCodeUri: 'otpauth://x', recoveryCodes: [] }),
             verifyEnable2fa: () => of(undefined),
             disable2fa: () => of(undefined),
@@ -97,7 +98,10 @@ describe('AccountSettingsComponent', () => {
         },
         {
           provide: AuthService,
-          useValue: { startOidcLink: () => throwError(() => new Error('boom')) },
+          useValue: {
+            startOidcLink: () => throwError(() => new Error('boom')),
+            logout: () => undefined,
+          },
         },
         {
           provide: ToastService,
@@ -165,6 +169,7 @@ describe('AccountSettingsComponent', () => {
     const { fixture, toasts } = setup();
 
     expect(cardTitles(fixture)).toEqual([
+      'Change Username',
       'Change Password',
       'Two-Factor Authentication',
       'API Key',

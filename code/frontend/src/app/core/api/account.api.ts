@@ -16,6 +16,11 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface ChangeUsernameRequest {
+  currentPassword: string;
+  newUsername: string;
+}
+
 export interface Regenerate2faRequest {
   password: string;
   totpCode: string;
@@ -47,6 +52,10 @@ export class AccountApi {
 
   changePassword(request: ChangePasswordRequest): Observable<void> {
     return this.http.put<void>('/api/account/password', request);
+  }
+
+  changeUsername(request: ChangeUsernameRequest): Observable<void> {
+    return this.http.put<void>('/api/account/username', request);
   }
 
   regenerate2fa(request: Regenerate2faRequest): Observable<TotpSetupResponse> {
