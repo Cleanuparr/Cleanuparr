@@ -2,15 +2,8 @@ import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { LogEventLevel } from '@shared/models/enums';
 import { matchEnum } from './enum.util';
 
-// Microsoft.Extensions.Logging names and abbreviations that reach the log stream.
-const LEVEL_ALIASES: Record<string, LogEventLevel> = {
-  critical: LogEventLevel.Fatal,
-  trace: LogEventLevel.Verbose,
-  info: LogEventLevel.Information,
-};
-
 export function logSeverity(level: string): BadgeSeverity {
-  switch (resolveLevel(level)) {
+  switch (matchEnum(LogEventLevel, level)) {
     case LogEventLevel.Error:
     case LogEventLevel.Fatal:
       return 'error';
@@ -27,7 +20,7 @@ export function logSeverity(level: string): BadgeSeverity {
 }
 
 export function logIcon(level: string): string {
-  switch (resolveLevel(level)) {
+  switch (matchEnum(LogEventLevel, level)) {
     case LogEventLevel.Error:
     case LogEventLevel.Fatal:
       return 'tablerCircleX';
@@ -48,8 +41,4 @@ export function logLevelLabel(level: string): string {
     return 'Info';
   }
   return level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
-}
-
-function resolveLevel(level: string): LogEventLevel | null {
-  return matchEnum(LogEventLevel, level) ?? LEVEL_ALIASES[level.toLowerCase()] ?? null;
 }

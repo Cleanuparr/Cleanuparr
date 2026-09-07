@@ -5,13 +5,10 @@ describe('logSeverity', () => {
   it.each([
     [LogEventLevel.Error, 'error'],
     [LogEventLevel.Fatal, 'error'],
-    ['critical', 'error'],
     [LogEventLevel.Warning, 'warning'],
     [LogEventLevel.Information, 'info'],
-    ['info', 'info'],
     [LogEventLevel.Debug, 'success'],
     [LogEventLevel.Verbose, 'success'],
-    ['trace', 'success'],
   ])('maps %s to %s', (level, expected) => {
     expect(logSeverity(level)).toBe(expected);
   });
