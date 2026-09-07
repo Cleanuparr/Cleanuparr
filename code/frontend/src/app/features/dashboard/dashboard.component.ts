@@ -26,6 +26,7 @@ import {
   formatEventType,
   manualEventSeverityClass,
 } from '@shared/utils/event-display.util';
+import { logIcon, logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -241,24 +242,9 @@ export class DashboardComponent {
   }
 
   // Log helpers
-  logSeverity(level: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    const l = level.toLowerCase();
-    if (l === 'error' || l === 'fatal' || l === 'critical') return 'error';
-    if (l === 'warning') return 'warning';
-    if (l === 'information' || l === 'info') return 'info';
-    if (l === 'debug' || l === 'trace' || l === 'verbose') return 'success';
-    return 'default';
-  }
+  readonly logSeverity = logSeverity;
 
-  logBadgeSeverity(level: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
-    return this.logSeverity(level);
-  }
-
-  logLevelLabel(level: string): string {
-    const l = level.toLowerCase();
-    if (l === 'information') return 'Info';
-    return level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
-  }
+  readonly logLevelLabel = logLevelLabel;
 
   // Event helpers
   readonly eventMarkerClass = eventMarkerClass;
@@ -278,14 +264,7 @@ export class DashboardComponent {
   }
 
   // Timeline icon helpers
-  logIcon(level: string): string {
-    const l = level.toLowerCase();
-    if (l === 'error' || l === 'fatal' || l === 'critical') return 'tablerCircleX';
-    if (l === 'warning') return 'tablerAlertTriangle';
-    if (l === 'information' || l === 'info') return 'tablerInfoCircle';
-    if (l === 'debug' || l === 'trace' || l === 'verbose') return 'tablerCode';
-    return 'tablerCircle';
-  }
+  readonly logIcon = logIcon;
 
   readonly eventIcon = eventIcon;
 
