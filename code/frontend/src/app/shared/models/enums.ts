@@ -141,6 +141,35 @@ export enum SeedingRuleAction {
   Stop = 'Stop',
 }
 
+export enum EventSeverity {
+  Test = 'Test',
+  Information = 'Information',
+  Warning = 'Warning',
+  Important = 'Important',
+  Error = 'Error',
+}
+
+export enum StrikeType {
+  Stalled = 'Stalled',
+  DownloadingMetadata = 'DownloadingMetadata',
+  FailedImport = 'FailedImport',
+  SlowSpeed = 'SlowSpeed',
+  SlowTime = 'SlowTime',
+  DeadTorrent = 'DeadTorrent',
+}
+
+// Quartz trigger states as JobManagementService spells them on the wire.
+export enum JobStatus {
+  Scheduled = 'Scheduled',
+  Paused = 'Paused',
+  Complete = 'Complete',
+  Error = 'Error',
+  Running = 'Running',
+  NotScheduled = 'Not Scheduled',
+  NotFound = 'Not Found',
+  Unknown = 'Unknown',
+}
+
 export enum EventType {
   FailedImportStrike = 'FailedImportStrike',
   StalledStrike = 'StalledStrike',
