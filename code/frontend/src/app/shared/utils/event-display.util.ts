@@ -1,6 +1,6 @@
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { EventSeverity, EventType } from '@shared/models/enums';
-import { matchEnum } from './enum-match.util';
+import { formatEnumValue, matchEnum } from './enum.util';
 
 const STRIKE_EVENT_TYPES: EventType[] = [
   EventType.FailedImportStrike,
@@ -92,7 +92,7 @@ export function manualEventSeverityClass(severity: string): string {
 }
 
 export function formatEventType(eventType: string): string {
-  return eventType.replace(/([A-Z])/g, ' $1').trim();
+  return formatEnumValue(eventType);
 }
 
 function isStrike(eventType: string): boolean {

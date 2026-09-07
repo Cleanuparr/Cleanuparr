@@ -1,6 +1,6 @@
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { JobStatus, JobType } from '@shared/models/enums';
-import { matchEnum } from './enum-match.util';
+import { matchEnum } from './enum.util';
 
 // Types left out here read well enough as-is.
 const JOB_NAMES: Partial<Record<JobType, string>> = {

@@ -13,3 +13,8 @@ export function matchEnum<T extends Record<string, string>>(
   const values = Object.values(members) as T[keyof T][];
   return values.find((member) => member.toLowerCase() === needle) ?? null;
 }
+
+/** Renders a PascalCase enum value as spaced words. */
+export function formatEnumValue(value: string): string {
+  return value.replace(/([A-Z])/g, ' $1').trim();
+}

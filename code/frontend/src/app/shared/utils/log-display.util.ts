@@ -1,6 +1,6 @@
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { LogEventLevel } from '@shared/models/enums';
-import { matchEnum } from './enum-match.util';
+import { matchEnum } from './enum.util';
 
 // Microsoft.Extensions.Logging names and abbreviations that reach the log stream.
 const LEVEL_ALIASES: Record<string, LogEventLevel> = {
