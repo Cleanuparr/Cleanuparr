@@ -19,10 +19,12 @@ import { JobType } from '@shared/models/enums';
 import { StatsCardComponent } from './stats-card/stats-card.component';
 import { mergeUnresolvedManualEvents } from './manual-events.util';
 import {
+  eventIcon,
   eventMarkerClass,
   eventSeverity,
   eventTypeSeverity,
   formatEventType,
+  manualEventSeverityClass,
 } from '@shared/utils/event-display.util';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
@@ -285,15 +287,7 @@ export class DashboardComponent {
     return 'tablerCircle';
   }
 
-  eventIcon(eventType: string): string {
-    const t = eventType.toLowerCase();
-    if (t === 'strikereset') return 'tablerHistory';
-    if (t.includes('strike')) return 'tablerBolt';
-    if (t === 'downloadcleaned') return 'tablerDownload';
-    if (t === 'queueitemdeleted') return 'tablerTrash';
-    if (t === 'categorychanged') return 'tablerTag';
-    return 'tablerCircle';
-  }
+  readonly eventIcon = eventIcon;
 
   // Job helpers
   jobDisplayName(jobType: string): string {
@@ -315,13 +309,7 @@ export class DashboardComponent {
     return 'default';
   }
 
-  manualEventSeverityClass(severity: string): string {
-    const s = severity.toLowerCase();
-    if (s === 'error') return 'manual-event--error';
-    if (s === 'warning') return 'manual-event--warning';
-    if (s === 'important') return 'manual-event--important';
-    return 'manual-event--info';
-  }
+  readonly manualEventSeverityClass = manualEventSeverityClass;
 
   processManualEventMessage(message: string): string {
     if (!message) return '';

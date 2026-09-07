@@ -1,10 +1,17 @@
-import { EventType } from '@shared/models/enums';
+import type { BadgeSeverity } from '@ui/badge/badge.component';
+import { EventSeverity, EventType } from '@shared/models/enums';
+import { matchEnum } from './enum-match.util';
 
-export type EventSeverityTone = 'error' | 'warning' | 'info' | 'default';
+const STRIKE_EVENT_TYPES: EventType[] = [
+  EventType.FailedImportStrike,
+  EventType.StalledStrike,
+  EventType.DownloadingMetadataStrike,
+  EventType.SlowSpeedStrike,
+  EventType.SlowTimeStrike,
+  EventType.DeadTorrentStrike,
+];
 
-export type EventTypeTone = EventSeverityTone | 'success';
-
-export function eventTypeSeverity(eventType: string): EventTypeTone {
+export function eventTypeSeverity(eventType: string): BadgeSeverity {
   switch (eventType) {
     case EventType.StrikeReset:
     case EventType.DownloadCleaned:
@@ -27,31 +34,77 @@ export function eventTypeSeverity(eventType: string): EventTypeTone {
   }
 }
 
-export function eventSeverity(severity: string): EventSeverityTone {
-  const s = severity.toLowerCase();
-  if (s === 'error') {
-    return 'error';
+export function eventSeverity(severity: string): BadgeSeverity {
+  switch (matchEnum(EventSeverity, severity) ?? aliasedSeverity(severity)) {
+    case EventSeverity.Error:
+      return 'error';
+    case EventSeverity.Warning:
+    case EventSeverity.Important:
+      return 'warning';
+    case EventSeverity.Information:
+      return 'info';
+    default:
+      return 'default';
   }
-  if (s === 'warning' || s === 'important') {
-    return 'warning';
-  }
-  if (s === 'information' || s === 'info') {
-    return 'info';
-  }
-  return 'default';
 }
 
 export function eventMarkerClass(eventType: string, severity: string): string {
-  const t = eventType.toLowerCase();
-  if (t === 'strikereset') {
+  if (matchEnum(EventType, eventType) === EventType.StrikeReset) {
     return 'success';
   }
-  if (t.includes('strike')) {
+  if (isStrike(eventType)) {
     return eventSeverity(severity) === 'error' ? 'error' : 'warning';
   }
   return eventSeverity(severity);
 }
 
+export function eventIcon(eventType: string): string {
+  const type = matchEnum(EventType, eventType);
+  if (type === EventType.StrikeReset) {
+    return 'tablerHistory';
+  }
+  if (isStrike(eventType)) {
+    return 'tablerBolt';
+  }
+  switch (type) {
+    case EventType.DownloadCleaned:
+      return 'tablerDownload';
+    case EventType.QueueItemDeleted:
+      return 'tablerTrash';
+    case EventType.CategoryChanged:
+      return 'tablerTag';
+    default:
+      return 'tablerCircle';
+  }
+}
+
+export function manualEventSeverityClass(severity: string): string {
+  switch (matchEnum(EventSeverity, severity)) {
+    case EventSeverity.Error:
+      return 'manual-event--error';
+    case EventSeverity.Warning:
+      return 'manual-event--warning';
+    case EventSeverity.Important:
+      return 'manual-event--important';
+    default:
+      return 'manual-event--info';
+  }
+}
+
 export function formatEventType(eventType: string): string {
   return eventType.replace(/([A-Z])/g, ' $1').trim();
+}
+
+function isStrike(eventType: string): boolean {
+  const type = matchEnum(EventType, eventType);
+  if (type !== null) {
+    return STRIKE_EVENT_TYPES.includes(type);
+  }
+  // A type this build does not know still renders as a strike when it reads like one.
+  return eventType.toLowerCase().includes('strike');
+}
+
+// The API spells it "Information"; "info" is accepted as well.
+function aliasedSeverity(severity: string): EventSeverity | null {
+  return severity.toLowerCase() === 'info' ? EventSeverity.Information : null;
 }

@@ -1,9 +1,11 @@
 import { EventType } from '@shared/models/enums';
 import {
+  eventIcon,
   eventMarkerClass,
   eventSeverity,
   eventTypeSeverity,
   formatEventType,
+  manualEventSeverityClass,
 } from './event-display.util';
 
 describe('eventTypeSeverity', () => {
@@ -52,6 +54,10 @@ describe('eventMarkerClass', () => {
     expect(eventMarkerClass(EventType.StrikeReset, 'Information')).toBe('success');
   });
 
+  it('treats an unknown strike-looking type as a strike', () => {
+    expect(eventMarkerClass('SomeFutureStrike', 'Information')).toBe('warning');
+  });
+
   it('keeps strikes amber unless the severity is an error', () => {
     expect(eventMarkerClass(EventType.StalledStrike, 'Information')).toBe('warning');
     expect(eventMarkerClass(EventType.StalledStrike, 'Important')).toBe('warning');
@@ -61,6 +67,40 @@ describe('eventMarkerClass', () => {
   it('falls back to the severity for non-strike events', () => {
     expect(eventMarkerClass(EventType.DownloadStopped, 'Information')).toBe('info');
     expect(eventMarkerClass(EventType.DownloadStopped, 'Error')).toBe('error');
+  });
+});
+
+describe('eventIcon', () => {
+  it.each([
+    [EventType.StrikeReset, 'tablerHistory'],
+    [EventType.StalledStrike, 'tablerBolt'],
+    [EventType.DeadTorrentStrike, 'tablerBolt'],
+    [EventType.DownloadCleaned, 'tablerDownload'],
+    [EventType.QueueItemDeleted, 'tablerTrash'],
+    [EventType.CategoryChanged, 'tablerTag'],
+    [EventType.DownloadStopped, 'tablerCircle'],
+  ])('maps %s to %s', (eventType, expected) => {
+    expect(eventIcon(eventType)).toBe(expected);
+  });
+
+  it('treats an unknown strike-looking type as a strike', () => {
+    expect(eventIcon('SomeFutureStrike')).toBe('tablerBolt');
+  });
+
+  it('falls back for an unknown type', () => {
+    expect(eventIcon('SomethingElse')).toBe('tablerCircle');
+  });
+});
+
+describe('manualEventSeverityClass', () => {
+  it.each([
+    ['Error', 'manual-event--error'],
+    ['Warning', 'manual-event--warning'],
+    ['Important', 'manual-event--important'],
+    ['Information', 'manual-event--info'],
+    ['Anything', 'manual-event--info'],
+  ])('maps %s to %s', (severity, expected) => {
+    expect(manualEventSeverityClass(severity)).toBe(expected);
   });
 });
 
