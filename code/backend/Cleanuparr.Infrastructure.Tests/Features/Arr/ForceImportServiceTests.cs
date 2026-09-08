@@ -147,6 +147,26 @@ public class ForceImportServiceTests
     }
 
     [Fact]
+    public async Task TryImportAsync_AStatusMessageWithoutReasons_DoesNothing()
+    {
+        // Arrange: the arr states a block on the whole download as a bare title
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        record.StatusMessages!.Add(new TrackedDownloadStatusMessage
+        {
+            Title = "One or more episodes expected in this release were not imported or missing",
+            Messages = [],
+        });
+        StubCandidates(BuildCandidate(SafeReason));
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert
+        outcome.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
     public async Task TryImportAsync_TransitionalState_WaitsForASecondSighting()
     {
         // Arrange: the arr's own importer may still pick up an importPending download

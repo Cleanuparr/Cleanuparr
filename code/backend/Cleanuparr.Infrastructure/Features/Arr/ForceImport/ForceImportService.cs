@@ -216,18 +216,24 @@ public sealed class ForceImportService : IForceImportService
     /// </summary>
     private bool EveryReasonIsSafe(QueueRecord record)
     {
-        List<string> messages = record.StatusMessages
-            ?.SelectMany(status => status.Messages ?? [])
-            .Where(message => !string.IsNullOrWhiteSpace(message))
-            .ToList() ?? [];
+        List<TrackedDownloadStatusMessage> statuses = record.StatusMessages ?? [];
 
-        if (messages.Count is 0)
+        if (statuses.Count is 0)
         {
             _logger.LogDebug("skip force import | no status message found | {title}", record.Title);
             return false;
         }
 
-        List<string> unsafeMessages = messages
+        // The arr states a block on the whole download as a title with nothing under it.
+        if (statuses.Any(status => status.Messages?.Any(message => !string.IsNullOrWhiteSpace(message)) is not true))
+        {
+            _logger.LogDebug("skip force import | a status message carries no reason | {title}", record.Title);
+            return false;
+        }
+
+        List<string> unsafeMessages = statuses
+            .SelectMany(status => status.Messages ?? [])
+            .Where(message => !string.IsNullOrWhiteSpace(message))
             .Where(message => !IsSafeReason(message))
             .ToList();
 
