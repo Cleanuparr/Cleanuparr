@@ -17,6 +17,10 @@ const EPISODE_ID = 9;
 
 const createdInstances: string[] = [];
 
+function emptyQueueBody(): string {
+  return JSON.stringify({ page: 1, pageSize: 50, totalRecords: 0, records: [] });
+}
+
 function queueBody(downloadId: string): string {
   return JSON.stringify({
     page: 1,
@@ -60,12 +64,19 @@ function candidate(overrides: Record<string, unknown> = {}): Record<string, unkn
   };
 }
 
+interface ArrangeOptions {
+  /** Striking stays off by default, so only force import can act on the record. */
+  maxStrikes?: number;
+  forceImportMaxTries?: number;
+}
+
 async function arrange(
   api: CleanuparrApi,
   mocks: MockServers,
   name: string,
   downloadId: string,
   candidates: Array<Record<string, unknown>>,
+  options: ArrangeOptions = {},
 ): Promise<void> {
   await ArrStubs.applyArrDefaults(mocks.arr);
   await mocks.arr.stub(ArrStubs.arrRawQueueStub(queueBody(downloadId)));
@@ -79,9 +90,12 @@ async function arrange(
     ...current,
     failedImport: {
       ...current.failedImport,
-      // Striking stays off, so only force import can act on the record.
-      maxStrikes: 0,
+      maxStrikes: options.maxStrikes ?? 0,
+      // Exclude with no pattern strikes everything, which Include would refuse to do.
+      patternMode: 'Exclude',
+      patterns: [],
       forceImport: true,
+      forceImportMaxTries: options.forceImportMaxTries ?? 3,
     },
   });
   expect(updated.ok, `queue cleaner updateConfig: ${updated.status} ${await updated.text()}`).toBe(true);
@@ -120,6 +134,15 @@ async function runUntilImport(api: CleanuparrApi, mocks: MockServers): Promise<A
   return manualImportCommands(mocks);
 }
 
+async function forceImportedEvents(api: CleanuparrApi, downloadId: string): Promise<number> {
+  const res = await api.events.list({ eventType: 'ForceImported', page: 1, pageSize: 500 });
+  expect(res.status, 'events query failed').toBe(200);
+
+  const body: { items?: Array<{ itemHash?: string }> } = await res.json();
+
+  return (body.items ?? []).filter((e) => (e.itemHash ?? '').toLowerCase() === downloadId.toLowerCase()).length;
+}
+
 /** Three runs are more than the two a rescue needs, so a refusal is a real one. */
 async function runThreeTimes(api: CleanuparrApi): Promise<void> {
   for (let run = 0; run < 3; run++) {
@@ -151,6 +174,58 @@ test.describe.serial('QueueCleaner force import', () => {
 
     // A rescued download is never removed.
     expect(await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).toHaveLength(0);
+  });
+
+  test('stops asking after the try limit and lets the strikes run', async ({ api, mocks }) => {
+    test.setTimeout(300_000);
+
+    await arrange(api, mocks, 'sonarr-force-import-limit', 'HASH-FORCE-IMPORT-LIMIT', [candidate()], {
+      maxStrikes: 3,
+      forceImportMaxTries: 2,
+    });
+
+    // The arr never drops the download, so every try fails.
+    await expect
+      .poll(
+        async () => {
+          await api.jobs.trigger('QueueCleaner');
+          return (await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).length;
+        },
+        { timeout: 240_000, intervals: [2_000] },
+      )
+      .toBeGreaterThan(0);
+
+    expect(await manualImportCommands(mocks)).toHaveLength(2);
+  });
+
+  test('reports the import once the arr drops the download', async ({ api, mocks }) => {
+    test.setTimeout(300_000);
+
+    const downloadId = 'HASH-FORCE-IMPORT-REPORTED';
+    await arrange(api, mocks, 'sonarr-force-import-reported', downloadId, [candidate({ downloadId })]);
+
+    await runUntilImport(api, mocks);
+
+    // Nothing is announced until the arr proves the import by dropping it.
+    expect(await forceImportedEvents(api, downloadId)).toBe(0);
+
+    await mocks.arr.stub(ArrStubs.arrRawQueueStub(emptyQueueBody()));
+
+    await expect
+      .poll(
+        async () => {
+          await api.jobs.trigger('QueueCleaner');
+          return forceImportedEvents(api, downloadId);
+        },
+        { timeout: 120_000, intervals: [2_000] },
+      )
+      .toBe(1);
+
+    // Later runs must not announce it again.
+    await api.jobs.trigger('QueueCleaner');
+    await new Promise((r) => setTimeout(r, 3_000));
+
+    expect(await forceImportedEvents(api, downloadId)).toBe(1);
   });
 
   test('refuses a file that maps to another series', async ({ api, mocks }) => {
