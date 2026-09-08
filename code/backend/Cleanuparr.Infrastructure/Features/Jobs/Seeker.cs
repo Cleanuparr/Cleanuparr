@@ -179,7 +179,10 @@ public sealed class Seeker : IHandler
 
             if (!isDryRun)
             {
-                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, arrInstance.ArrConfig.Type, item.ItemId, item.Title);
+                (long externalItemId, long episodeId, int seasonNumber) = ResolveTrackedIds(searchItem);
+
+                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, arrInstance.ArrConfig.Type,
+                    externalItemId, item.Title, seasonNumber, episodeId);
             }
 
             _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
@@ -214,6 +217,18 @@ public sealed class Seeker : IHandler
 
         return new SearchItem { Id = item.ItemId };
     }
+
+    /// <summary>
+    /// Splits a search item into the ids the SeekerCommandMonitor matches queue records against.
+    /// An episode search targets the episode, every other search targets its library item.
+    /// </summary>
+    private static (long ExternalItemId, long EpisodeId, int SeasonNumber) ResolveTrackedIds(SearchItem searchItem) =>
+        searchItem switch
+        {
+            SeriesSearchItem { SearchType: SeriesSearchType.Episode } series => (series.SeriesId, series.Id, 0),
+            SeriesSearchItem { SearchType: SeriesSearchType.Season } series => (series.SeriesId, 0, (int)series.Id),
+            _ => (searchItem.Id, 0, 0),
+        };
 
     private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun, CancellationToken cancellationToken)
     {
@@ -992,7 +1007,8 @@ public sealed class Seeker : IHandler
         InstanceType instanceType,
         long externalItemId,
         string itemTitle,
-        int seasonNumber = 0)
+        int seasonNumber = 0,
+        long episodeId = 0)
     {
         _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
@@ -1000,6 +1016,7 @@ public sealed class Seeker : IHandler
             CommandId = commandId,
             EventId = eventId,
             ExternalItemId = externalItemId,
+            EpisodeId = episodeId,
             ItemTitle = itemTitle,
             SeasonNumber = seasonNumber,
             CreatedAt = _timeProvider.GetUtcNow(),
