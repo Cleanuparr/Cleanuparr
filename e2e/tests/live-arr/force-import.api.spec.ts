@@ -1,0 +1,260 @@
+import { resolve } from 'node:path';
+import { test, expect } from '../fixtures/base';
+import { indexerMock } from '../helpers/live-arr';
+import { RADARR, RUN_TAG, SONARR, resetLiveArrState, teardownInstances } from '../helpers/seeker-live';
+import type { SeededArr } from '../helpers/seeker-live';
+import { buildSingleFileTorrent } from '../helpers/torrent-fixtures';
+import { torznabSearchStub, torznabTorrentStub } from '../helpers/mocks/torznab-stubs';
+import type { CleanuparrApi } from '../helpers/api';
+
+/**
+ * Force import against real Sonarr and Radarr, from the block to the imported file.
+ *
+ * Both arrs park a download they cannot read a runtime from in importPending,
+ * with "Unable to determine if file is a sample". The file itself is fine.
+ */
+
+/** qBittorrent's save path, mounted into both arrs at the same path so the import resolves. */
+const QBIT_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads', 'qbittorrent');
+
+/** One of the reasons Cleanuparr treats as safe to force past. */
+const SAMPLE_PATTERN = 'Unable to determine if file is a sample';
+
+interface ForceImportTarget {
+  arr: SeededArr;
+  /** Search command that makes the arr grab the release the indexer offers. */
+  searchCommand: Record<string, unknown>;
+  /** Endpoint listing the files the arr imported for the seeded item. */
+  filesPath: string;
+  /** Endpoint that deletes one of those files. */
+  filePath: (id: number) => string;
+  /** An inner file name the arr blocks for a reason Cleanuparr does not recognise. */
+  unconfiguredReason: { innerName: string; message: string };
+  /** A release whose title does not parse to the seeded item, but whose id attribute does. */
+  byId: { releaseTitle: string; attr: string; idField: string; message: string };
+}
+
+const TARGETS: ForceImportTarget[] = [
+  {
+    arr: SONARR,
+    searchCommand: { name: 'EpisodeSearch', episodeIds: [1] },
+    filesPath: '/api/v3/episodefile?seriesId=1',
+    filePath: (id) => `/api/v3/episodefile/${id}`,
+    // Sonarr parses this as another episode of the grabbed release.
+    unconfiguredReason: { innerName: 'E2E.Mismatch', message: 'was not found in the grabbed release' },
+    byId: {
+      releaseTitle: `Unknown.Show.Name.S01E01.1080p.WEB-DL-E2E${RUN_TAG}`,
+      attr: 'tvdbid',
+      idField: 'tvdbId',
+      message: 'matched to series by ID',
+    },
+  },
+  {
+    arr: RADARR,
+    searchCommand: { name: 'MoviesSearch', movieIds: [1] },
+    filesPath: '/api/v3/moviefile?movieId=1',
+    filePath: (id) => `/api/v3/moviefile/${id}`,
+    // Radarr cannot parse a movie out of this at all.
+    unconfiguredReason: { innerName: 'E2E.Unparsable', message: 'Unable to parse file' },
+    byId: {
+      releaseTitle: `Unknown.Movie.Name.2025.1080p.WEB-DL-E2E${RUN_TAG}`,
+      attr: 'tmdbid',
+      idField: 'tmdbId',
+      message: 'matched to movie by ID',
+    },
+  },
+];
+
+/**
+ * Grabs a release whose payload already sits in the client's save path.
+ *
+ * qBittorrent completes it on its hash check, so the arr reaches its import.
+ */
+async function grabCompletedRelease(
+  target: ForceImportTarget,
+  releaseTitle: string,
+  innerFileName: string,
+  attrs?: Record<string, string | number>,
+): Promise<string> {
+  const torrent = buildSingleFileTorrent(QBIT_DOWNLOADS, innerFileName, 32_768, 'http://127.0.0.1:6969/announce');
+  const file = `${releaseTitle}.torrent`;
+
+  await indexerMock.stubMany([
+    torznabSearchStub(target.arr.searchMode, [{ title: releaseTitle, category: target.arr.category, file, attrs }]),
+    torznabTorrentStub(file, torrent.metainfo),
+  ]);
+
+  await target.arr.arr.post('/api/v3/command', target.searchCommand);
+
+  return torrent.infoHash.toUpperCase();
+}
+
+/** Waits for the arr to park the grab on its import, and returns the reasons it gave. */
+async function waitForImportBlock(
+  target: ForceImportTarget,
+  downloadId: string,
+  timeoutMs = 180_000,
+): Promise<string[]> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    await target.arr.arr.refreshMonitoredDownloads();
+    await new Promise((r) => setTimeout(r, 2_000));
+
+    const records = await target.arr.arr.queue();
+    const record = records.find((r) => r.downloadId?.toUpperCase() === downloadId) as
+      | (Record<string, unknown> & { statusMessages?: Array<{ messages?: string[] }> })
+      | undefined;
+
+    if (!record || record.trackedDownloadState === 'downloading') {
+      continue;
+    }
+
+    const messages = (record.statusMessages ?? []).flatMap((m) => m.messages ?? []);
+
+    if (messages.length > 0) {
+      return messages;
+    }
+  }
+
+  throw new Error(`${target.arr.type} never blocked the import of ${downloadId}`);
+}
+
+async function importedFiles(target: ForceImportTarget): Promise<Array<{ id: number; relativePath: string }>> {
+  return target.arr.arr.get(target.filesPath);
+}
+
+/** Force import writes into the library, which the next run must not inherit. */
+async function clearImportedFiles(): Promise<void> {
+  for (const target of TARGETS) {
+    for (const file of await importedFiles(target)) {
+      await target.arr.arr.delete(target.filePath(file.id));
+    }
+  }
+}
+
+async function arrangeForceImport(api: CleanuparrApi, target: ForceImportTarget): Promise<void> {
+  const current = await (await api.queueCleaner.getConfig()).json();
+  const updated = await api.queueCleaner.updateConfig({
+    ...current,
+    failedImport: {
+      ...current.failedImport,
+      // Striking stays off, so only force import can clear the queue.
+      maxStrikes: 0,
+      forceImport: true,
+    },
+  });
+
+  expect(updated.ok, `queue cleaner updateConfig: ${updated.status} ${await updated.text()}`).toBe(true);
+
+  const created = await api.arr.createInstance(target.arr.type, {
+    name: `E2E force import ${target.arr.type} ${RUN_TAG}`,
+    url: target.arr.url,
+    apiKey: target.arr.apiKey,
+    version: target.arr.version,
+    enabled: true,
+  });
+
+  expect(created.ok, `createInstance: ${created.status}`).toBe(true);
+}
+
+for (const target of TARGETS) {
+  test.describe.serial(`Force import against a live ${target.arr.type}`, () => {
+    test.beforeEach(async () => {
+      await resetLiveArrState();
+      await clearImportedFiles();
+    });
+
+    test.afterEach(async ({ api }) => {
+      await teardownInstances(api);
+      await resetLiveArrState();
+      await clearImportedFiles();
+    });
+
+    test('imports a download the arr blocked on sample detection', async ({ api }) => {
+      test.setTimeout(600_000);
+
+      const release = `${target.arr.release}-FI`;
+      const downloadId = await grabCompletedRelease(target, release, `${release}.mkv`);
+
+      // The block Cleanuparr is meant to rescue, straight from the arr.
+      // A 32 KB payload reads as a definite sample now and then, which blocks it for a
+      // reason force import does not recognise. Playwright's retry covers that.
+      const messages = await waitForImportBlock(target, downloadId);
+      expect(messages).toContain(SAMPLE_PATTERN);
+
+      await arrangeForceImport(api, target);
+
+      // Two runs: importPending is transitional, so the first only records the sighting.
+      await expect
+        .poll(
+          async () => {
+            await api.jobs.trigger('QueueCleaner');
+            return (await importedFiles(target)).length;
+          },
+          { timeout: 240_000, intervals: [5_000] },
+        )
+        .toBe(1);
+
+      expect((await importedFiles(target))[0].relativePath).toContain(release);
+      await expect.poll(async () => (await target.arr.arr.queue()).length, { timeout: 60_000 }).toBe(0);
+    });
+
+    test('imports a download the arr blocked on matching the item by ID', async ({ api }) => {
+      test.setTimeout(600_000);
+
+      // Read the seeded item's id at run time, so a reseed cannot silently break this.
+      const item = await target.arr.arr.get<Record<string, unknown>>(
+        `/api/v3/${target.arr.itemPath}/${target.arr.itemId}`,
+      );
+      const id = item[target.byId.idField];
+
+      const release = target.byId.releaseTitle;
+      const downloadId = await grabCompletedRelease(target, release, `${release}.mkv`, {
+        [target.byId.attr]: id as number,
+      });
+
+      const messages = await waitForImportBlock(target, downloadId);
+      expect(messages.some((m) => m.includes(target.byId.message))).toBe(true);
+
+      await arrangeForceImport(api, target);
+
+      // importBlocked is already settled, so one run is enough to force the import.
+      await api.jobs.trigger('QueueCleaner');
+      await expect
+        .poll(async () => (await importedFiles(target)).length, { timeout: 120_000, intervals: [5_000] })
+        .toBe(1);
+
+      expect((await importedFiles(target))[0].relativePath).toContain(release);
+      await expect.poll(async () => (await target.arr.arr.queue()).length, { timeout: 60_000 }).toBe(0);
+    });
+
+    // A live arr repeats the same reasons on the queue item.
+    // Only the mock spec can reach the candidate-level triage.
+    test('leaves a download blocked for an unrecognised reason alone', async ({ api }) => {
+      test.setTimeout(600_000);
+
+      const release = `${target.arr.release}-FX`;
+      const downloadId = await grabCompletedRelease(
+        target,
+        release,
+        `${target.unconfiguredReason.innerName}.${RUN_TAG}.mkv`,
+      );
+
+      const messages = await waitForImportBlock(target, downloadId);
+      expect(messages.some((m) => m.includes(target.unconfiguredReason.message))).toBe(true);
+
+      await arrangeForceImport(api, target);
+
+      for (let run = 0; run < 3; run++) {
+        await api.jobs.trigger('QueueCleaner');
+        await new Promise((r) => setTimeout(r, 5_000));
+      }
+
+      expect(await importedFiles(target)).toHaveLength(0);
+      expect(
+        (await target.arr.arr.queue()).some((r) => r.downloadId?.toUpperCase() === downloadId),
+      ).toBe(true);
+    });
+  });
+}

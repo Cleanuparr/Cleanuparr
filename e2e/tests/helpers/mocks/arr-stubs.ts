@@ -174,6 +174,14 @@ export function arrCustomFormatsStub(): Mapping {
   };
 }
 
+/** Serves the files an arr found for a download, with the reasons it refuses to import them. */
+export function arrManualImportStub(candidates: Array<Record<string, unknown>>): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api/v3/manualimport' },
+    response: { status: 200, jsonBody: candidates },
+  };
+}
+
 export async function applyArrDefaults(arr: WireMockClient): Promise<void> {
   await arr.stubMany([
     arrHealthStub(),
