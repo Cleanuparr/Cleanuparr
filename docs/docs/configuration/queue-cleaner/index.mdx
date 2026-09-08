@@ -312,6 +312,40 @@ Failures that a new release will not fix, because they are temporary or caused b
 
 </ConfigSection>
 
+<ConfigSection
+  title="Force Import"
+>
+
+An *arr sometimes refuses a completed download over a minor issue, and they could be imported just fine by hand.
+Cleanuparr recognises three such reasons:
+
+- `matched to series by ID`
+- `matched to movie by ID`
+- `Unable to determine if file is a sample`
+
+Turn this on if you want Cleanuparr to try importing a download blocked for those reasons instead of striking it.
+For a download to be imported it has to meet the following conditions:
+
+- every reason the *arr gave is one of the three above
+- the *arr runs no import or scan right now, so we don't affect files while they are being moved
+- every file the *arr found belongs to the series or movie the download was grabbed for
+- a series file maps to at least one episode
+- no file carries a rejection outside those three reasons
+
+A check that can pass later, after the *arr stops being busy, makes the download wait and does not collect strikes.
+
+<Important>
+This feature is supported only for:
+- Sonarr
+- Radarr
+- Whisparr
+- Sportarr
+</Important>
+
+[Max Strikes](#failed-import-max-strikes) does not gate this, so you can rescue imports with striking switched off.
+
+</ConfigSection>
+
 </div>
 </PrefixedSection>
 
