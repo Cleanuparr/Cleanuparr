@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cleanuparr.Persistence.Postgres.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20260908133430_AddForceImport")]
+    partial class AddForceImport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -733,6 +736,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Property<bool>("DryRun")
                         .HasColumnType("boolean")
                         .HasColumnName("dry_run");
+
+                    b.Property<string>("EncryptionKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("encryption_key");
 
                     b.Property<int>("HistoryRetentionDays")
                         .HasColumnType("integer")

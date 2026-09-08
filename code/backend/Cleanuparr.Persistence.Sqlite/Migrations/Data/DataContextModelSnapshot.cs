@@ -1188,6 +1188,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_failed_import_strike");
 
+                    b.Property<bool>("OnForceImported")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("on_force_imported");
+
                     b.Property<bool>("OnQueueItemDeleted")
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_queue_item_deleted");
@@ -1437,6 +1441,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                             b1.Property<bool>("DeletePrivate")
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_delete_private");
+
+                            b1.Property<bool>("ForceImport")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("failed_import_force_import");
 
                             b1.Property<bool>("IgnorePrivate")
                                 .HasColumnType("INTEGER")
