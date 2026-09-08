@@ -1,6 +1,7 @@
 ﻿using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -26,6 +27,7 @@ public sealed class QueueCleaner : GenericHandler
 {
     private readonly IConnectivityChecker _connectivityChecker;
     private readonly ILazyLibrarianEvaluator _lazyLibrarianService;
+    private readonly IForceImportService _forceImportService;
 
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
@@ -38,6 +40,7 @@ public sealed class QueueCleaner : GenericHandler
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
         IConnectivityChecker connectivityChecker,
+        IForceImportService forceImportService,
         [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
@@ -45,6 +48,7 @@ public sealed class QueueCleaner : GenericHandler
     )
     {
         _connectivityChecker = connectivityChecker;
+        _forceImportService = forceImportService;
         _lazyLibrarianService = lazyLibrarianService;
     }
 
@@ -239,6 +243,15 @@ public sealed class QueueCleaner : GenericHandler
                         changeCategory: changeCategory
                     );
 
+                    continue;
+                }
+
+                // Runs before the client check below: a usenet download is never in a torrent client.
+                ForceImportOutcome forceImport = await _forceImportService.TryImportAsync(arrClient, instance, record);
+
+                // A deferred import must not collect strikes while the arr works.
+                if (forceImport is not ForceImportOutcome.NotApplicable)
+                {
                     continue;
                 }
 

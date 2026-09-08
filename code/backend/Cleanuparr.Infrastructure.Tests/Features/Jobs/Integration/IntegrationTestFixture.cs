@@ -29,6 +29,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs.Integration;
 
@@ -58,6 +59,8 @@ public class IntegrationTestFixture : IDisposable
     public INotificationPublisher NotificationPublisher { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public ILazyLibrarianService LazyLibrarianService { get; private set; }
+    public IForceImportService ForceImportService { get; private set; }
+
     public ILazyLibrarianEvaluator LazyLibrarianServiceQC { get; private set; }
     public ILazyLibrarianEvaluator LazyLibrarianServiceCB { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
@@ -90,6 +93,7 @@ public class IntegrationTestFixture : IDisposable
         NotificationPublisher = Substitute.For<INotificationPublisher>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
+        ForceImportService = Substitute.For<IForceImportService>();
         LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianEvaluator>();
         LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianEvaluator>();
         EventNotifier = Substitute.For<IEventNotifier>();
@@ -262,6 +266,7 @@ public class IntegrationTestFixture : IDisposable
         ArrQueueIterator = Substitute.For<IArrQueueIterator>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
+        ForceImportService = Substitute.For<IForceImportService>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         NotificationPublisher = Substitute.For<INotificationPublisher>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();

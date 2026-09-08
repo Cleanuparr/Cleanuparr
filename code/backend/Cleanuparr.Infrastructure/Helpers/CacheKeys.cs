@@ -11,6 +11,10 @@ public static class CacheKeys
     public static string IgnoredDownloads(string name) => $"{name}_ignored";
     
     public static string DownloadMarkedForRemoval(string hash, Uri url) => $"remove_{hash.ToLowerInvariant()}_{url}";
+
+    public static string ForceImportAttempted(string hash, Uri url) => $"force_import_{hash.ToLowerInvariant()}_{url}";
+
+    public static string ForceImportFirstSeen(string hash, Uri url) => $"force_import_seen_{hash.ToLowerInvariant()}_{url}";
     
     public static class UTorrent
     {

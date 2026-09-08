@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
@@ -74,6 +75,7 @@ public static class ServicesDI
             .AddScoped<IArrQueueIterator, ArrQueueIterator>()
             .AddScoped<IDownloadServiceFactory, DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
+            .AddScoped<IForceImportService, ForceImportService>()
             .AddScoped<IConnectivityChecker, ConnectivityChecker>()
             .AddScoped<FileReader>()
             .AddScoped<IQueueRuleManager, QueueRuleManager>()
