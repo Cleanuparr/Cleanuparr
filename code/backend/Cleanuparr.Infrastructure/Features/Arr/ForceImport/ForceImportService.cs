@@ -50,7 +50,7 @@ public sealed class ForceImportService : IForceImportService
     /// <summary>
     /// The commands an arr runs while it moves files.
     /// </summary>
-    private static readonly HashSet<string> ImportCommands = new(StringComparer.InvariantCultureIgnoreCase)
+    private static readonly HashSet<string> FileMovingCommands = new(StringComparer.InvariantCultureIgnoreCase)
     {
         "RefreshMonitoredDownloads",
         "ProcessMonitoredDownloads",
@@ -59,6 +59,9 @@ public sealed class ForceImportService : IForceImportService
         "ManualImport",
         "RescanSeries",
         "RescanMovie",
+        "RenameFiles",
+        "RenameSeries",
+        "RenameMovie",
     };
 
     private static readonly HashSet<string> BlockedStates = new(StringComparer.InvariantCultureIgnoreCase)
@@ -288,7 +291,7 @@ public sealed class ForceImportService : IForceImportService
 
             ArrCommandStatus? running = commands.FirstOrDefault(command =>
                 command.Status is ArrCommandState.Queued or ArrCommandState.Started &&
-                ImportCommands.Contains(command.Name ?? string.Empty));
+                FileMovingCommands.Contains(command.Name ?? string.Empty));
 
             if (running is null)
             {

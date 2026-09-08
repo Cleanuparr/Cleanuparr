@@ -183,12 +183,18 @@ public class ForceImportServiceTests
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
     }
 
-    [Fact]
-    public async Task TryImportAsync_ImportCommandInFlight_Defers()
+    [Theory]
+    [InlineData("RefreshMonitoredDownloads")]
+    [InlineData("ManualImport")]
+    [InlineData("RescanSeries")]
+    [InlineData("RenameFiles")]
+    [InlineData("RenameSeries")]
+    [InlineData("RenameMovie")]
+    public async Task TryImportAsync_AFileMovingCommandInFlight_Defers(string command)
     {
         // Arrange: a manual import call during a move reads the files mid-move
         _arrClient.GetCommandsAsync(_instance).Returns([
-            new ArrCommandStatus(1, ArrCommandState.Started, null, "RefreshMonitoredDownloads"),
+            new ArrCommandStatus(1, ArrCommandState.Started, null, command),
         ]);
         StubCandidates(BuildCandidate(SafeReason));
 
