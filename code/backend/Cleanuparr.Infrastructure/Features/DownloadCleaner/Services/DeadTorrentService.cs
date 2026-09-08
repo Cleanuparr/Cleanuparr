@@ -45,7 +45,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
 
         if (config.Categories.Count is 0)
         {
-            _logger.LogWarning("Dead torrent config is enabled but no categories are configured for {name}", downloadService.ClientConfig.Name);
+            _logger.LogWarning("Dead torrent config is enabled but no categories are configured for {Name}", downloadService.ClientConfig.Name);
             return;
         }
 
@@ -58,7 +58,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
             .ToList();
 
         _logger.LogDebug(
-            "dead torrent scan | {candidates}/{total} candidates | categories: {categories}",
+            "dead torrent scan | {Candidates}/{Total} candidates | categories: {Categories}",
             candidates.Count,
             clientDownloads.Count,
             string.Join(", ", config.Categories));
@@ -74,7 +74,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create category {category}", config.TargetCategory);
+            _logger.LogError(ex, "Failed to create category {Category}", config.TargetCategory);
         }
 
         foreach (ITorrentItemWrapper torrent in candidates)
@@ -95,7 +95,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
             string reason = unregistered ? "tracker reports unregistered" : "no seeders";
 
             _logger.LogDebug(
-                "dead torrent candidate | {reason} | seeders: {seeders} | tracker: {health} | {name}",
+                "dead torrent candidate | {Reason} | seeders: {Seeders} | tracker: {Health} | {Name}",
                 reason,
                 torrent.SeederCount,
                 torrent.TrackerHealth,
@@ -115,7 +115,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
             await downloadService.ChangeTorrentCategoryAsync(torrent, config.TargetCategory, config.UseTag);
 
             _logger.LogInformation(
-                "dead torrent moved to {target} | {reason} | tag: {useTag} | {name}",
+                "dead torrent moved to {Target} | {Reason} | tag: {UseTag} | {Name}",
                 config.TargetCategory,
                 reason,
                 config.UseTag,
