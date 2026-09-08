@@ -355,8 +355,7 @@ test.describe.serial('A ManualImport command covers the arr\'s whole import', ()
     const firstRunning = samples.findIndex((s) => s.running);
     expect(firstRunning, 'the arr never reported the ManualImport as running').toBeGreaterThanOrEqual(0);
 
-    // A command that closed before the copy did leaves a gap: no running import
-    // and no file yet, which is when Cleanuparr would spend another try.
+    // A command that closed early leaves a gap: nothing running, no file yet.
     // Two samples wide, so one unlucky read between the two calls does not count.
     const tail = samples.slice(firstRunning);
     const gap = tail.findIndex(
