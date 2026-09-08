@@ -334,6 +334,13 @@ For a download to be imported it has to meet the following conditions:
 
 A check that can pass later, after the *arr stops being busy, makes the download wait and does not collect strikes.
 
+Cleanuparr waits until it has seen the download twice before acting, so the first run after you turn this on changes nothing.
+
+Cleanuparr asks the *arr to import, then waits for the answer.
+Each run spends at most one try, up to [Force Import Max Tries](#failed-import-force-import-max-tries).
+Waiting on a busy *arr costs you nothing, since a try means a request that reached the *arr.
+You get the notification after the download leaves the *arr queue, so it marks a real import.
+
 <Important>
 This feature is supported only for:
 - Sonarr
@@ -342,7 +349,17 @@ This feature is supported only for:
 - Sportarr
 </Important>
 
-[Max Strikes](#failed-import-max-strikes) does not gate this, so you can rescue imports with striking switched off.
+[Max Strikes](#failed-import-max-strikes) does not gate this, so you can rescue imports with striking switched off. Once the tries run out Cleanuparr hands the download back to the normal failed import path: it collects strikes if you have striking on, and sits there if you do not.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Force Import Max Tries"
+>
+
+The number of times Cleanuparr asks the *arr to import one download before giving up. Default 3.
+
+Each try costs one Queue Cleaner run, so a short run interval spends them faster. Cleanuparr gives the download another set of tries 6 hours later.
 
 </ConfigSection>
 
