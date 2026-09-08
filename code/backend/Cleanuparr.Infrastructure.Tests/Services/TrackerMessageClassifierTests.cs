@@ -67,4 +67,35 @@ public class TrackerMessageClassifierTests
     {
         TrackerMessageClassifier.Classify(message).ShouldBe(TrackerHealth.Inconclusive);
     }
+
+    [Theory]
+    [InlineData("Dead")]
+    [InlineData("Nuked: bad encode")]
+    [InlineData("Uploaded")]
+    [InlineData("Upgraded")]
+    [InlineData("Trumped: Internal: https://tracker.example/x")]
+    [InlineData("Dupe: https://tracker.example/the-dead-zone-1983")]
+    [InlineData("Season pack: https://tracker.example/show-s01")]
+    public void Classify_BareReasonCode_ReturnsUnregistered(string message)
+    {
+        TrackerMessageClassifier.Classify(message).ShouldBe(TrackerHealth.Unregistered);
+    }
+
+    [Theory]
+    [InlineData("Please use the other tracker")]
+    [InlineData("You have not uploaded enough")]
+    [InlineData("tracker is dead")]
+    [InlineData("Torrent uploaded by another user, see the other tracker")]
+    [InlineData("Please seed: uploaded ratio too low")]
+    public void Classify_ReasonWordOutsideLeadingSegment_ReturnsInconclusive(string message)
+    {
+        TrackerMessageClassifier.Classify(message).ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Fact]
+    public void Classify_SpecificPhraseAfterLeadingSegment_ReturnsUnregistered()
+    {
+        TrackerMessageClassifier.Classify("Announce failed: torrent not found")
+            .ShouldBe(TrackerHealth.Unregistered);
+    }
 }

@@ -62,17 +62,35 @@ public static partial class TrackerMessageClassifier
 
     private static readonly string[] UnregisteredReasons =
     [
-        "complete season uploaded",
-        "dead",
-        "dupe",
-        "grab internal",
         "i'm sorry dave, i can't do that",
         "infohash not found",
-        "internal available",
         "nem található",
         "não registrado",
         "not exist",
         "not registered",
+        "torrent banned",
+        "torrent deleted",
+        "torrent does not exist",
+        "torrent existiert nicht",
+        "torrent has been deleted",
+        "torrent has been nuked",
+        "torrent has been rejected",
+        "torrent introuvable",
+        "torrent is not authorized for use on this tracker",
+        "torrent is not found",
+        "torrent nicht gefunden",
+        "torrent not found",
+        "unknown torrent",
+        "unregistered",
+    ];
+
+    private static readonly string[] UnregisteredReasonCodes =
+    [
+        "complete season uploaded",
+        "dead",
+        "dupe",
+        "grab internal",
+        "internal available",
         "nuked",
         "other",
         "pack is available",
@@ -86,22 +104,8 @@ public static partial class TrackerMessageClassifier
         "season pack out",
         "season pack uploaded",
         "specifically banned",
-        "torrent banned",
-        "torrent deleted",
-        "torrent does not exist",
-        "torrent existiert nicht",
-        "torrent has been deleted",
-        "torrent has been nuked",
-        "torrent has been rejected",
-        "torrent introuvable",
-        "torrent is not authorized for use on this tracker",
-        "torrent is not found",
-        "torrent nicht gefunden",
-        "torrent not found",
         "trump",
         "trumped",
-        "unknown torrent",
-        "unregistered",
         "upgraded",
         "uploaded",
     ];
@@ -132,7 +136,20 @@ public static partial class TrackerMessageClassifier
             return TrackerHealth.Unregistered;
         }
 
+        // a reason code is the whole message or its first ":" segment, so prose like "tracker is dead" is not one
+        if (UnregisteredReasonCodes.Contains(LeadingSegment(normalized), StringComparer.Ordinal))
+        {
+            return TrackerHealth.Unregistered;
+        }
+
         return TrackerHealth.Inconclusive;
+    }
+
+    private static string LeadingSegment(string normalized)
+    {
+        int separator = normalized.IndexOf(':', StringComparison.Ordinal);
+
+        return separator < 0 ? normalized : normalized[..separator].Trim();
     }
 
     private static bool Matches(string[] patterns, string normalized, HashSet<string> tokens)
