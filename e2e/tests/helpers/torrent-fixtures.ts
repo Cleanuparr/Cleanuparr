@@ -207,6 +207,56 @@ export function buildSingleFileTorrent(savePath: string, fileName: string, sizeB
 }
 
 /**
+ * Build a single-file torrent whose payload is sparse zeros.
+ *
+ * Use it when a spec needs the arr to spend real time copying a file.
+ * The source reads as holes, so only the write costs anything.
+ */
+export function buildSparseSingleFileTorrent(
+  savePath: string,
+  fileName: string,
+  sizeBytes: number,
+  announce = 'http://tracker.invalid/announce',
+): GeneratedTorrent {
+  if (sizeBytes <= 0) {
+    throw new Error('buildSparseSingleFileTorrent: sizeBytes must be positive');
+  }
+
+  mkdirShared(savePath);
+
+  const filePath = join(savePath, fileName);
+  writeFileShared(filePath, Buffer.alloc(0));
+  truncateSync(filePath, sizeBytes);
+
+  const pieceLength = 4 * 1024 * 1024;
+  const fullPieceHash = computePieces(Buffer.alloc(pieceLength), pieceLength);
+  const wholePieces = Math.floor(sizeBytes / pieceLength);
+  const remainder = sizeBytes % pieceLength;
+  const pieceHashes: Buffer[] = Array.from({ length: wholePieces }, () => fullPieceHash);
+
+  if (remainder > 0) {
+    pieceHashes.push(computePieces(Buffer.alloc(remainder), pieceLength));
+  }
+
+  const info = {
+    name: fileName,
+    'piece length': pieceLength,
+    pieces: Buffer.concat(pieceHashes),
+    length: sizeBytes,
+    private: 1,
+  };
+  const metainfo = bencode({
+    announce,
+    'created by': 'cleanuparr-e2e',
+    'creation date': 0,
+    info,
+  });
+  const infoHash = createHash('sha1').update(bencode(info)).digest('hex');
+
+  return { metainfo, infoHash, name: fileName, contentPath: filePath };
+}
+
+/**
  * Makes a torrent that contains one file larger than 2 GiB.
  *
  * The data file is sparse. It reads as zeros and uses no disk space. The piece

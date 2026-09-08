@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import { RADARR, RUN_TAG, SONARR, resetLiveArrState, teardownInstances } from '../helpers/seeker-live';
 import type { SeededArr } from '../helpers/seeker-live';
-import { buildSingleFileTorrent } from '../helpers/torrent-fixtures';
+import { buildSingleFileTorrent, buildSparseSingleFileTorrent } from '../helpers/torrent-fixtures';
 import { torznabSearchStub, torznabTorrentStub } from '../helpers/mocks/torznab-stubs';
 import type { CleanuparrApi } from '../helpers/api';
 
@@ -19,6 +19,8 @@ const QBIT_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads', 
 
 /** One of the reasons Cleanuparr treats as safe to force past. */
 const SAMPLE_PATTERN = 'Unable to determine if file is a sample';
+
+const ANNOUNCE = 'http://127.0.0.1:6969/announce';
 
 interface ForceImportTarget {
   arr: SeededArr;
@@ -75,8 +77,11 @@ async function grabCompletedRelease(
   releaseTitle: string,
   innerFileName: string,
   attrs?: Record<string, string | number>,
+  sparseBytes?: number,
 ): Promise<string> {
-  const torrent = buildSingleFileTorrent(QBIT_DOWNLOADS, innerFileName, 32_768, 'http://127.0.0.1:6969/announce');
+  const torrent = sparseBytes
+    ? buildSparseSingleFileTorrent(QBIT_DOWNLOADS, innerFileName, sparseBytes, ANNOUNCE)
+    : buildSingleFileTorrent(QBIT_DOWNLOADS, innerFileName, 32_768, ANNOUNCE);
   const file = `${releaseTitle}.torrent`;
 
   await indexerMock.stubMany([
@@ -258,3 +263,106 @@ for (const target of TARGETS) {
     });
   });
 }
+
+/**
+ * Big enough that the arr spends seconds copying it from /downloads to /tv.
+ *
+ * The two paths are separate bind mounts, so the arr cannot rename across them.
+ * The payload is sparse, so the source costs no disk.
+ */
+const SLOW_IMPORT_BYTES = 512 * 1024 * 1024;
+
+const SONARR_TARGET = TARGETS.find((t) => t.arr.type === 'sonarr')!;
+
+/**
+ * Force import counts a try per import it asks for, and leans on the arr's own
+ * command list to know when to keep quiet.
+ *
+ * That only holds if a ManualImport command stays open for as long as the arr
+ * spends importing. If the arr closed the command and imported afterwards,
+ * every slow import would burn tries while the arr was still working.
+ */
+test.describe.serial('A ManualImport command covers the arr\'s whole import', () => {
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    await clearImportedFiles();
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await resetLiveArrState();
+    await clearImportedFiles();
+  });
+
+  test('reports the command as running until the imported file exists', async ({ api }) => {
+    test.setTimeout(900_000);
+
+    const series = await SONARR_TARGET.arr.arr.get<Record<string, unknown>>(
+      `/api/v3/${SONARR_TARGET.arr.itemPath}/${SONARR_TARGET.arr.itemId}`,
+    );
+
+    const release = `${SONARR_TARGET.byId.releaseTitle}-SLOW`;
+    const downloadId = await grabCompletedRelease(
+      SONARR_TARGET,
+      release,
+      `${release}.mkv`,
+      { [SONARR_TARGET.byId.attr]: series[SONARR_TARGET.byId.idField] as number },
+      SLOW_IMPORT_BYTES,
+    );
+
+    const messages = await waitForImportBlock(SONARR_TARGET, downloadId);
+    expect(messages.some((m) => m.includes(SONARR_TARGET.byId.message))).toBe(true);
+
+    // /downloads and /tv sit on one filesystem, so the arr would hardlink and
+    // the import would cost no time at all.
+    const mediaManagement = await SONARR_TARGET.arr.arr.get<Record<string, unknown>>(
+      '/api/v3/config/mediamanagement',
+    );
+    await SONARR_TARGET.arr.arr.put('/api/v3/config/mediamanagement', {
+      ...mediaManagement,
+      copyUsingHardlinks: false,
+    });
+
+    await arrangeForceImport(api, SONARR_TARGET);
+    await api.jobs.trigger('QueueCleaner');
+
+    // Sampled while the arr works, so a closed-early command shows up as a
+    // sample that reports no running import while no file has landed either.
+    const samples: Array<{ running: boolean; files: number }> = [];
+    const deadline = Date.now() + 300_000;
+
+    while (Date.now() < deadline) {
+      const [commands, files] = await Promise.all([
+        SONARR_TARGET.arr.arr.commands(),
+        importedFiles(SONARR_TARGET),
+      ]);
+
+      const running = commands.some(
+        (c) => c.name === 'ManualImport' && (c.status === 'queued' || c.status === 'started'),
+      );
+
+      samples.push({ running, files: files.length });
+
+      if (files.length > 0) {
+        break;
+      }
+
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    expect(samples.at(-1)?.files, 'the arr never imported the file').toBe(1);
+
+    const firstRunning = samples.findIndex((s) => s.running);
+    expect(firstRunning, 'the arr never reported the ManualImport as running').toBeGreaterThanOrEqual(0);
+
+    // A command that closed before the copy did leaves a gap: no running import
+    // and no file yet, which is when Cleanuparr would spend another try.
+    // Two samples wide, so one unlucky read between the two calls does not count.
+    const tail = samples.slice(firstRunning);
+    const gap = tail.findIndex(
+      (s, i) => !s.running && s.files === 0 && tail[i + 1] && !tail[i + 1].running && tail[i + 1].files === 0,
+    );
+
+    expect(gap, 'the arr closed the ManualImport before the import landed').toBe(-1);
+  });
+});
