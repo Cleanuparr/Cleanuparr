@@ -38,4 +38,10 @@ public class LogSanitizerTests
     {
         "admin\r\nsecond line".SanitizeForLog().ShouldBe("adminsecond line");
     }
+
+    [Fact]
+    public void SanitizeForLog_StripsEscapeSequencesAndOtherControlCharacters()
+    {
+        "adm\u001b[31min\tuser\0".SanitizeForLog().ShouldBe("adm[31minuser");
+    }
 }

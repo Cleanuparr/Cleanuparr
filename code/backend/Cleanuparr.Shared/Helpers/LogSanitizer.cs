@@ -6,13 +6,21 @@ namespace Cleanuparr.Shared.Helpers;
 public static class LogSanitizer
 {
     /// <summary>
-    /// Strips line breaks from a user-controlled value before it reaches the logs.
-    /// Sinks render the message verbatim, so a line break in the value would let a caller forge log entries.
+    /// Strips control characters from a user-controlled value before it reaches the logs.
+    /// Sinks render the message verbatim, so a line break would let a caller forge whole entries
+    /// and an escape sequence would let one repaint a terminal tailing the log.
     /// </summary>
     public static string SanitizeForLog(this string? value)
     {
-        return value is null
-            ? string.Empty
-            : value.Replace("\r", string.Empty).Replace("\n", string.Empty);
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        string stripped = new string(value
+            .Where(character => !char.IsControl(character) || character is '\r' or '\n')
+            .ToArray());
+
+        return stripped.Replace("\r", string.Empty).Replace("\n", string.Empty);
     }
 }
