@@ -22,6 +22,11 @@ public sealed record FailedImportConfig
 
     public bool ChangeCategory { get; init; }
 
+    /// <summary>
+    /// Whether to import a blocked download instead of striking it, when every reason the arr gave is safe to force past.
+    /// </summary>
+    public bool ForceImport { get; init; }
+
     public void Validate()
     {
         if (MaxStrikes is > 0 and < 3)

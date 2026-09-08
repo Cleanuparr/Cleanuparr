@@ -14,6 +14,7 @@ public enum EventType
     DownloadMarkedForDeletion,
     SearchTriggered,
     StrikeReset,
+    ForceImported,
     DownloadStopped,
 
     /// <summary>

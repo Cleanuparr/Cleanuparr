@@ -63,6 +63,19 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
+    public virtual async Task NotifyForceImported(int fileCount)
+    {
+        try
+        {
+            NotificationContext context = BuildForceImportedContext(fileCount);
+            await SendNotificationAsync(NotificationEventType.ForceImported, context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify force imported");
+        }
+    }
+
     public virtual async Task NotifyDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
     {
         try
@@ -218,6 +231,33 @@ public class NotificationPublisher : INotificationPublisher
             {
                 ["Reason"] = reason.ToString(),
                 ["Removed from client?"] = removeFromClient.ToString(),
+                ["Hash"] = itemHash,
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl.ToString(),
+            }
+        };
+    }
+
+    private NotificationContext BuildForceImportedContext(int fileCount)
+    {
+        QueueRecord? record = ContextProvider.Get(nameof(QueueRecord)) as QueueRecord;
+        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
+        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
+        Uri? imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
+        string itemTitle = ResolveItemTitle(record);
+        string itemHash = ResolveItemHash(record);
+
+        return new NotificationContext
+        {
+            EventType = NotificationEventType.ForceImported,
+            Title = "Imported a download the arr had blocked",
+            Description = itemTitle,
+            Severity = EventSeverity.Important,
+            Image = imageUrl,
+            Data = new Dictionary<string, string>
+            {
+                ["Files"] = fileCount.ToString(CultureInfo.InvariantCulture),
                 ["Hash"] = itemHash,
                 ["Instance type"] = instanceType.ToString(),
                 ["Url"] = instanceUrl.ToString(),

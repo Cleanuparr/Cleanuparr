@@ -19,4 +19,6 @@ public sealed record NotificationEventFlags
     public bool OnSearchTriggered { get; init; }
 
     public bool OnSearchItemGrabbed { get; init; }
+
+    public bool OnForceImported { get; init; }
 }
