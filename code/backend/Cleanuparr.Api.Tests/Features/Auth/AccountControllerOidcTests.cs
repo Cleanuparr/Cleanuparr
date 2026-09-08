@@ -288,6 +288,26 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Fact, TestPriority(18)]
+    public async Task ChangePassword_WithWrongPassword_ReturnsBadRequestAndKeepsThePassword()
+    {
+        var response = await _client.PutAsJsonAsync("/api/account/password", new
+        {
+            currentPassword = "NotThePassword123!",
+            newPassword = "RejectedPassword000!"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        var login = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "linkadmin",
+            password = "NewPassword789!"
+        });
+
+        login.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
     #endregion
 
     #region Test Infrastructure
