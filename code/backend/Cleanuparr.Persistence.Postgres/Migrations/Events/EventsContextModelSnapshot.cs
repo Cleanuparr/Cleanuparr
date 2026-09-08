@@ -556,6 +556,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<long>("EpisodeId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("episode_id");
+
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid")
                         .HasColumnName("event_id");

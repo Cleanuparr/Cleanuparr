@@ -4108,6 +4108,127 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_SonarrEpisodeReplacement_TracksSeriesAndEpisode()
+    {
+        // Arrange — an episode replacement carries the episode id in ItemId
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ItemId = 9001,
+            SeriesId = 42,
+            SearchType = "Episode",
+            Title = "Example Show - S03E04",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — the tracker holds the series for the queue lookup and the episode for the match
+        SeekerCommandTracker? tracker = await _fixture.EventsContext.SeekerCommandTrackers
+            .FirstOrDefaultAsync(t => t.ArrInstanceId == sonarrInstance.Id);
+        tracker.ShouldNotBeNull();
+        tracker.ExternalItemId.ShouldBe(42);
+        tracker.EpisodeId.ShouldBe(9001);
+        tracker.SeasonNumber.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SonarrSeasonReplacement_TracksSeriesAndSeason()
+    {
+        // Arrange — a season replacement carries the season number in ItemId
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ItemId = 3,
+            SeriesId = 42,
+            SearchType = "Season",
+            Title = "Example Show S03",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        SeekerCommandTracker? tracker = await _fixture.EventsContext.SeekerCommandTrackers
+            .FirstOrDefaultAsync(t => t.ArrInstanceId == sonarrInstance.Id);
+        tracker.ShouldNotBeNull();
+        tracker.ExternalItemId.ShouldBe(42);
+        tracker.EpisodeId.ShouldBe(0);
+        tracker.SeasonNumber.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RadarrReplacement_TracksTheMovie()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ItemId = 55,
+            Title = "Example Movie",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        SeekerCommandTracker? tracker = await _fixture.EventsContext.SeekerCommandTrackers
+            .FirstOrDefaultAsync(t => t.ArrInstanceId == radarrInstance.Id);
+        tracker.ShouldNotBeNull();
+        tracker.ExternalItemId.ShouldBe(55);
+        tracker.EpisodeId.ShouldBe(0);
+        tracker.SeasonNumber.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ReplacementSearchFails_StillDequesItem()
     {
         // Arrange — SearchItemAsync throws, but the item should still be removed from the queue

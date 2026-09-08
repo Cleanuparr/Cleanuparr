@@ -402,10 +402,7 @@ public class SeekerCommandMonitor : BackgroundService
         IReadOnlyList<QueueRecord> queue)
     {
         List<string> grabbedTitles = queue
-            .Where(r => arrInstance.ArrConfig.Type == InstanceType.Radarr
-                ? r.MovieId == tracker.ExternalItemId
-                : r.SeriesId == tracker.ExternalItemId
-                    && (tracker.SeasonNumber == 0 || r.SeasonNumber == tracker.SeasonNumber))
+            .Where(r => MatchesTracker(r, tracker, arrInstance))
             .Where(r => !string.IsNullOrEmpty(r.DownloadId))
             .GroupBy(r => r.DownloadId)
             .Select(g => g.First())
@@ -421,4 +418,20 @@ public class SeekerCommandMonitor : BackgroundService
 
         return grabbedTitles.Count > 0 ? grabbedTitles : null;
     }
+
+    /// <summary>
+    /// Tells whether a queue record holds what the search asked for.
+    /// Each arr fills its own id on the record, so match the tracker against that id.
+    /// </summary>
+    private static bool MatchesTracker(QueueRecord record, SeekerCommandTracker tracker, ArrInstance arrInstance) =>
+        arrInstance.ArrConfig.Type switch
+        {
+            InstanceType.Radarr => record.MovieId == tracker.ExternalItemId,
+            InstanceType.Whisparr when arrInstance.Version is 3 => record.MovieId == tracker.ExternalItemId,
+            InstanceType.Lidarr => record.AlbumId == tracker.ExternalItemId,
+            InstanceType.Readarr => record.BookId == tracker.ExternalItemId,
+            _ => tracker.EpisodeId > 0
+                ? record.EpisodeId == tracker.EpisodeId
+                : record.SeriesId == tracker.ExternalItemId && record.SeasonNumber == tracker.SeasonNumber,
+        };
 }

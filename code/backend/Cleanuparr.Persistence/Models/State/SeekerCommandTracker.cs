@@ -31,9 +31,15 @@ public sealed record SeekerCommandTracker
     public Guid EventId { get; set; }
 
     /// <summary>
-    /// The external item ID that was searched (movieId or seriesId)
+    /// The library-level item that was searched (seriesId, movieId, albumId or bookId)
     /// </summary>
     public long ExternalItemId { get; set; }
+
+    /// <summary>
+    /// For Sonarr episode-level searches, the episode that was searched.
+    /// 0 when the search targeted a whole season, movie, album or book.
+    /// </summary>
+    public long EpisodeId { get; set; }
 
     /// <summary>
     /// Display name of the item that was searched
