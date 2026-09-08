@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Sonarr;
 using Cleanuparr.Domain.Enums;
@@ -98,6 +99,32 @@ public class SonarrClient : ArrClient, ISonarrClient
     }
 
     public override bool HasContentId(QueueRecord record) => record.EpisodeId is not 0 && record.SeriesId is not 0;
+
+    /// <inheritdoc/>
+    public override bool SupportsForceImport => true;
+
+    /// <inheritdoc/>
+    public override ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate)
+    {
+        if (candidate.Series?.Id != record.SeriesId || candidate.Episodes?.Count is null or 0)
+        {
+            return null;
+        }
+
+        return new ManualImportFile
+        {
+            Path = candidate.Path,
+            FolderName = candidate.FolderName,
+            DownloadId = candidate.DownloadId,
+            ReleaseGroup = candidate.ReleaseGroup,
+            IndexerFlags = candidate.IndexerFlags,
+            Quality = candidate.Quality,
+            Languages = candidate.Languages,
+            SeriesId = candidate.Series.Id,
+            EpisodeIds = candidate.Episodes.Select(episode => episode.Id).ToList(),
+            ReleaseType = candidate.ReleaseType ?? "singleEpisode",
+        };
+    }
 
     private static string GetSearchLog(
         SeriesSearchType searchType,

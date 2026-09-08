@@ -1,5 +1,6 @@
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Radarr;
 using Cleanuparr.Domain.Entities.Whisparr;
@@ -89,6 +90,32 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     }
 
     public override bool HasContentId(QueueRecord record) => record.MovieId is not 0;
+
+    /// <inheritdoc/>
+    public override bool SupportsForceImport => true;
+
+    /// <inheritdoc/>
+    public override ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate)
+    {
+        long? movieId = candidate.ResolvedMovieId;
+
+        if (movieId != record.MovieId)
+        {
+            return null;
+        }
+
+        return new ManualImportFile
+        {
+            Path = candidate.Path,
+            FolderName = candidate.FolderName,
+            DownloadId = candidate.DownloadId,
+            ReleaseGroup = candidate.ReleaseGroup,
+            IndexerFlags = candidate.IndexerFlags,
+            Quality = candidate.Quality,
+            Languages = candidate.Languages,
+            MovieId = movieId,
+        };
+    }
 
     private static string GetSearchLog(Uri instanceUrl, WhisparrV3Command command, bool success, string? logContext)
     {

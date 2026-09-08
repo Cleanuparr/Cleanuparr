@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -10,6 +11,29 @@ public interface IArrClient
     Task<QueueListResponse> GetQueueItemsAsync(ArrInstance arrInstance, int page);
 
     Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes);
+
+    /// <summary>
+    /// Whether this arr exposes the manual import endpoints that force import needs.
+    /// </summary>
+    bool SupportsForceImport { get; }
+
+    /// <summary>
+    /// Reads the files an arr found for a download, each with the reasons the arr refuses to import it.
+    /// </summary>
+    /// <param name="arrInstance">The instance holding the download.</param>
+    /// <param name="downloadId">The download id as the arr reports it, which the arr matches exactly.</param>
+    Task<List<ManualImportCandidate>> GetManualImportCandidatesAsync(ArrInstance arrInstance, string downloadId);
+
+    /// <summary>
+    /// Makes the arr import files it refused to import on its own.
+    /// </summary>
+    Task ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files);
+
+    /// <summary>
+    /// Builds the import payload for a candidate.
+    /// </summary>
+    /// <returns>The payload, or null when the candidate maps to other content than the queue record.</returns>
+    ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate);
 
     /// <summary>
     /// Removes a queue item from the *arr instance.

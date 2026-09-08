@@ -1,5 +1,7 @@
 using System.Net;
+using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -162,6 +164,66 @@ public abstract class ArrClient : IArrClient
         return false;
     }
     
+    /// <inheritdoc/>
+    public virtual bool SupportsForceImport => false;
+
+    /// <inheritdoc/>
+    public async Task<List<ManualImportCandidate>> GetManualImportCandidatesAsync(ArrInstance arrInstance, string downloadId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/manualimport";
+        // The arr matches the download id exactly, so the record's own casing goes back unchanged.
+        uriBuilder.Query = $"downloadId={Uri.EscapeDataString(downloadId)}&filterExistingFiles=true";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            _logger.LogError("manual import candidates failed | {uri}", uriBuilder.Uri);
+            throw;
+        }
+
+        return await DeserializeStreamAsync<List<ManualImportCandidate>>(response) ?? [];
+    }
+
+    /// <inheritdoc/>
+    public async Task ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+
+        ManualImportCommand command = new() { Files = files };
+
+        using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
+            Encoding.UTF8,
+            "application/json"
+        );
+        SetApiKey(request, arrInstance.ApiKey);
+
+        try
+        {
+            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
+            response?.Dispose();
+        }
+        catch
+        {
+            _logger.LogError("force import failed | {uri}", uriBuilder.Uri);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) => null;
+
     public virtual async Task DeleteQueueItemAsync(
         ArrInstance arrInstance,
         QueueRecord record,
