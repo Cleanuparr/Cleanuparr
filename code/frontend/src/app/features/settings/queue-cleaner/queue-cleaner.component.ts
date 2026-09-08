@@ -48,6 +48,7 @@ interface QueueCleanerFormModel {
   failedPatterns: string[];
   failedPatternMode: PatternMode;
   failedChangeCategory: boolean;
+  failedForceImport: boolean;
   metadataMaxStrikes: number | null;
 }
 
@@ -108,6 +109,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
     failedPatterns: [],
     failedPatternMode: PatternMode.Exclude,
     failedChangeCategory: false,
+    failedForceImport: false,
     metadataMaxStrikes: 3,
   });
 
@@ -232,6 +234,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
           failedPatterns: config.failedImport.patterns ?? [],
           failedPatternMode: config.failedImport.patternMode ?? PatternMode.Exclude,
           failedChangeCategory: config.failedImport.changeCategory ?? false,
+          failedForceImport: config.failedImport.forceImport ?? false,
           metadataMaxStrikes: config.downloadingMetadataMaxStrikes,
         });
         this.savedSnapshot.set(this.buildSnapshot());
@@ -368,6 +371,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         patterns: m.failedPatterns,
         patternMode: m.failedPatternMode,
         changeCategory: m.failedChangeCategory,
+        forceImport: m.failedForceImport,
       },
       downloadingMetadataMaxStrikes: m.metadataMaxStrikes ?? 3,
     };

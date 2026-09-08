@@ -111,6 +111,7 @@ interface NotificationModalModel {
   onCategoryChanged: boolean;
   onSearchTriggered: boolean;
   onSearchItemGrabbed: boolean;
+  onForceImported: boolean;
 }
 
 function createDefaultModalModel(): NotificationModalModel {
@@ -127,7 +128,7 @@ function createDefaultModalModel(): NotificationModalModel {
     pushoverApiToken: '', pushoverUserKey: '', pushoverDevices: [], pushoverPriority: PushoverPriority.Normal,
     pushoverRetry: 30, pushoverExpire: 3600, pushoverSound: '', pushoverCustomSound: '', pushoverTags: [],
     onFailedImportStrike: false, onStalledStrike: false, onSlowStrike: false, onQueueItemDeleted: false,
-    onDownloadCleaned: false, onDownloadStopped: false, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false,
+    onDownloadCleaned: false, onDownloadStopped: false, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false, onForceImported: false,
   };
 }
 
@@ -457,6 +458,7 @@ export class NotificationProviderModalComponent {
     model.onCategoryChanged = provider.events.onCategoryChanged;
     model.onSearchTriggered = provider.events.onSearchTriggered;
     model.onSearchItemGrabbed = provider.events.onSearchItemGrabbed;
+    model.onForceImported = provider.events.onForceImported;
 
     return model;
   }
@@ -473,6 +475,7 @@ export class NotificationProviderModalComponent {
       onCategoryChanged: m.onCategoryChanged,
       onSearchTriggered: m.onSearchTriggered,
       onSearchItemGrabbed: m.onSearchItemGrabbed,
+      onForceImported: m.onForceImported,
     };
   }
 

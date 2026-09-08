@@ -48,4 +48,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-ignore-struck-downloads' },
   { id: 'seeding-rule-action' },
   { id: 'change-username' },
+  { id: 'force-import' },
 ];

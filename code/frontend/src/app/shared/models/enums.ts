@@ -194,5 +194,6 @@ export enum EventType {
   DownloadMarkedForDeletion = 'DownloadMarkedForDeletion',
   SearchTriggered = 'SearchTriggered',
   StrikeReset = 'StrikeReset',
+  ForceImported = 'ForceImported',
   DownloadStopped = 'DownloadStopped',
 }

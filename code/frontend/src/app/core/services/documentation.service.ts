@@ -21,6 +21,7 @@ export class DocumentationService {
       'failedImport.skipIfNotFoundInClient': 'failed-import-skip-if-not-found-in-client',
       'failedImport.pattern-mode': 'failed-import-pattern-mode',
       'failedImport.patterns': 'failed-import-patterns',
+      'failedImport.forceImport': 'failed-import-force-import',
       'downloadingMetadataMaxStrikes': 'stalled-downloading-metadata-max-strikes',
       'stallRule.name': 'stalled-rule-name',
       'stallRule.enabled': 'stalled-enabled',
@@ -147,6 +148,7 @@ export class DocumentationService {
       'onCategoryChanged': 'event-configuration',
       'onSearchTriggered': 'event-configuration',
       'onSearchItemGrabbed': 'event-configuration',
+      'onForceImported': 'event-configuration',
     },
     'notifications/notifiarr': {
       'apiKey': 'api-key',

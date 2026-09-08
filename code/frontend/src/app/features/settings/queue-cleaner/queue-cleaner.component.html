@@ -97,6 +97,13 @@
           [forceDisabled]="qcForm.failedPatterns().disabled()"
           helpKey="queue-cleaner:failedImport.patterns"
         />
+
+        <div class="form-divider"></div>
+
+        <app-toggle label="Force Import" [formField]="qcForm.failedForceImport"
+          hint="Imports a blocked download instead of striking it, when every reason the arr gave is safe to force past and every file it found belongs to the queue item"
+          helpKey="queue-cleaner:failedImport.forceImport"
+          featureId="force-import" />
       </div>
     </app-accordion>
 

@@ -21,6 +21,7 @@ const CONFIG: QueueCleanerConfig = {
     skipIfNotFoundInClient: true,
     patterns: ['unpack'],
     changeCategory: false,
+    forceImport: false,
   },
   downloadingMetadataMaxStrikes: 6,
 };
@@ -316,11 +317,37 @@ describe('QueueCleanerComponent', () => {
         patterns: ['unpack'],
         patternMode: PatternMode.Exclude,
         changeCategory: false,
+        forceImport: false,
       },
       downloadingMetadataMaxStrikes: 9,
     });
     expect(component.dirty()).toBe(false);
     expect(component.saved()).toBe(true);
+  });
+
+  it('sends the force import toggle', () => {
+    const { fixture, component, api } = setup();
+
+    component.qcForm.failedForceImport().value.set(true);
+    fixture.detectChanges();
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(api.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        failedImport: expect.objectContaining({ forceImport: true }),
+      }),
+    );
+  });
+
+  it('leaves force import available when striking is off', () => {
+    const { fixture, component } = setup();
+
+    component.qcForm.failedMaxStrikes().value.set(0);
+    fixture.detectChanges();
+
+    expect(component.qcForm.failedForceImport().disabled()).toBe(false);
   });
 
   it('falls back to three strikes on empty inputs and never deletes private when changing category', () => {

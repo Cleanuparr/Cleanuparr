@@ -213,6 +213,10 @@
         <app-toggle label="Search Item Grabbed" [formField]="modalForm.onSearchItemGrabbed"
           hint="Notify when a search results in downloads being grabbed"
           helpKey="notifications:onSearchItemGrabbed" />
+        <app-toggle label="Force Imported" [formField]="modalForm.onForceImported"
+          hint="Notify when a blocked download is imported instead of struck"
+          helpKey="notifications:onForceImported"
+          featureId="force-import" />
       </div>
     </div>
   </div>

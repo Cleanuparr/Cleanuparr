@@ -23,6 +23,7 @@ const DEFAULT_EVENTS = {
   onCategoryChanged: false,
   onSearchTriggered: false,
   onSearchItemGrabbed: false,
+  onForceImported: false,
 };
 
 const NTFY_PROVIDER: NotificationProviderDto = {
@@ -40,6 +41,7 @@ const NTFY_PROVIDER: NotificationProviderDto = {
     onCategoryChanged: true,
     onSearchTriggered: false,
     onSearchItemGrabbed: true,
+    onForceImported: false,
   },
   configuration: {
     serverUrl: 'https://ntfy.example.com',
@@ -218,6 +220,7 @@ describe('NotificationProviderModalComponent', () => {
       onStalledStrike: true,
       onCategoryChanged: true,
       onSearchItemGrabbed: true,
+      onForceImported: false,
     });
     expect(component.hasPendingChanges()).toBe(false);
     expect(component.modalForm().invalid()).toBe(false);
