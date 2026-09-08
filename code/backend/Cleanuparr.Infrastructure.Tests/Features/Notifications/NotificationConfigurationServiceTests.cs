@@ -178,6 +178,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     [InlineData(NotificationEventType.CategoryChanged)]
     [InlineData(NotificationEventType.SearchTriggered)]
     [InlineData(NotificationEventType.SearchItemGrabbed)]
+    [InlineData(NotificationEventType.ForceImported)]
     public async Task GetProvidersForEventAsync_ReturnsProviderForCorrectEvents(NotificationEventType eventType)
     {
         // Arrange
@@ -190,6 +191,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         bool onCategory = eventType == NotificationEventType.CategoryChanged;
         bool onSearchTriggered = eventType == NotificationEventType.SearchTriggered;
         bool onSearchItemGrabbed = eventType == NotificationEventType.SearchItemGrabbed;
+        bool onForceImported = eventType == NotificationEventType.ForceImported;
 
         var config = new NotificationConfig
         {
@@ -206,6 +208,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             OnCategoryChanged = onCategory,
             OnSearchTriggered = onSearchTriggered,
             OnSearchItemGrabbed = onSearchItemGrabbed,
+            OnForceImported = onForceImported,
             NotifiarrConfiguration = new NotifiarrConfig
             {
                 Id = Guid.NewGuid(),

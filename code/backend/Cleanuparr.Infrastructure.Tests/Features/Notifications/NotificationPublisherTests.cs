@@ -736,6 +736,65 @@ public class NotificationPublisherTests
 
     #endregion
 
+    #region NotifyForceImported Tests
+
+    [Fact]
+    public async Task NotifyForceImported_SendsNotificationWithCorrectContext()
+    {
+        // Arrange
+        SetupContext();
+        var providerDto = CreateProviderDto();
+        var provider = Substitute.For<INotificationProvider>();
+
+        _configService.GetProvidersForEventAsync(NotificationEventType.ForceImported)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
+
+        // Act
+        await _publisher.NotifyForceImported(2);
+
+        // Assert
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.EventType == NotificationEventType.ForceImported &&
+                 c.Title == "Imported a download the arr had blocked" &&
+                 c.Description == "Test Show" &&
+                 c.Severity == EventSeverity.Important &&
+                 c.Data["Files"] == "2" &&
+                 c.Data["Hash"] == "abcd1234" &&
+                 c.Data["Instance type"] == "Sonarr" &&
+                 c.Data["Url"] == "http://sonarr.local/"));
+    }
+
+    [Fact]
+    public async Task NotifyForceImported_WhenNoProviders_DoesNotThrow()
+    {
+        // Arrange
+        SetupContext();
+        _configService.GetProvidersForEventAsync(NotificationEventType.ForceImported)
+            .Returns(new List<NotificationProviderDto>());
+
+        // Act & Assert - Should not throw
+        await _publisher.NotifyForceImported(1);
+    }
+
+    [Fact]
+    public async Task NotifyForceImported_WhenExceptionOccurs_LogsError()
+    {
+        // Arrange
+        SetupContext();
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ThrowsAsync(new Exception("Error"));
+
+        // Act
+        await _publisher.NotifyForceImported(1);
+
+        // Assert
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify force imported").ShouldBeTrue();
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static NotificationProviderDto CreateProviderDto(string name = "TestProvider")
@@ -756,7 +815,8 @@ public class NotificationPublisherTests
                 OnDownloadStopped = true,
                 OnCategoryChanged = true,
                 OnSearchTriggered = true,
-                OnSearchItemGrabbed = true
+                OnSearchItemGrabbed = true,
+                OnForceImported = true
             },
             Configuration = new { ApiKey = "test", ChannelId = "123" }
         };
