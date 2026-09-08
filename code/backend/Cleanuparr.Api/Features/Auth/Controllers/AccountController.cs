@@ -69,15 +69,15 @@ public sealed class AccountController : ControllerBase
     [HttpPut("password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        if (await IsOidcExclusiveModeActive())
-        {
-            return this.ProblemResult(StatusCodes.Status403Forbidden, "Password changes are disabled while OIDC exclusive mode is active.");
-        }
-
         await UsersContext.Lock.WaitAsync();
 
         try
         {
+            if (await IsOidcExclusiveModeActive())
+            {
+                return this.ProblemResult(StatusCodes.Status403Forbidden, "Password changes are disabled while OIDC exclusive mode is active.");
+            }
+
             User? user = await GetCurrentUser();
             if (user is null)
             {
@@ -110,15 +110,15 @@ public sealed class AccountController : ControllerBase
     [HttpPut("username")]
     public async Task<IActionResult> ChangeUsername([FromBody] ChangeUsernameRequest request)
     {
-        if (await IsOidcExclusiveModeActive())
-        {
-            return this.ProblemResult(StatusCodes.Status403Forbidden, "Username changes are disabled while OIDC exclusive mode is active.");
-        }
-
         await UsersContext.Lock.WaitAsync();
 
         try
         {
+            if (await IsOidcExclusiveModeActive())
+            {
+                return this.ProblemResult(StatusCodes.Status403Forbidden, "Username changes are disabled while OIDC exclusive mode is active.");
+            }
+
             User? user = await GetCurrentUser();
             if (user is null)
             {
@@ -506,18 +506,27 @@ public sealed class AccountController : ControllerBase
     [HttpPut("oidc")]
     public async Task<IActionResult> UpdateOidcConfig([FromBody] UpdateOidcConfigRequest request)
     {
-        var user = await GetCurrentUser();
-        if (user is null)
+        await UsersContext.Lock.WaitAsync();
+
+        try
         {
-            return Unauthorized();
+            User? user = await GetCurrentUser();
+            if (user is null)
+            {
+                return Unauthorized();
+            }
+
+            request.ApplyTo(user.Oidc);
+            user.Oidc.Validate();
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+            await _usersContext.SaveChangesAsync();
+
+            return Ok(new { message = "OIDC configuration updated" });
         }
-
-        request.ApplyTo(user.Oidc);
-        user.Oidc.Validate();
-        user.UpdatedAt = DateTimeOffset.UtcNow;
-        await _usersContext.SaveChangesAsync();
-
-        return Ok(new { message = "OIDC configuration updated" });
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
     }
 
     [HttpPost("oidc/link")]
