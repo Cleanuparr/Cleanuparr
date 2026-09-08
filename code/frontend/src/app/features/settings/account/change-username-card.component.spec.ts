@@ -5,6 +5,24 @@ import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ChangeUsernameCardComponent } from './change-username-card.component';
 
+const REJECTED_USERNAMES = [
+  {
+    reason: 'a trimmed username shorter than three characters',
+    username: '  ab  ',
+    error: 'Username must be at least 3 characters',
+  },
+  {
+    reason: 'an empty username',
+    username: '',
+    error: 'Username is required',
+  },
+  {
+    reason: 'an unchanged username',
+    username: 'admin',
+    error: 'New username must be different from the current username',
+  },
+];
+
 describe('ChangeUsernameCardComponent', () => {
   function setup(options: { fails?: boolean; pending?: boolean; oidcExclusiveMode?: boolean } = {}) {
     const toasts: string[] = [];
@@ -93,32 +111,12 @@ describe('ChangeUsernameCardComponent', () => {
     expect(submitButton(fixture).disabled).toBe(false);
   });
 
-  it('reports a trimmed username shorter than three characters', () => {
+  it.each(REJECTED_USERNAMES)('reports $reason', ({ username, error }) => {
     const { fixture, requests } = setup();
 
-    fill(fixture, { username: '  ab  ', password: 'old-secret' });
+    fill(fixture, { username, password: 'old-secret' });
 
-    expect(errors(fixture)).toContain('Username must be at least 3 characters');
-    expect(submitButton(fixture).disabled).toBe(true);
-    expect(requests).toEqual([]);
-  });
-
-  it('reports an empty username as required', () => {
-    const { fixture, requests } = setup();
-
-    fill(fixture, { username: '', password: 'old-secret' });
-
-    expect(errors(fixture)).toContain('Username is required');
-    expect(submitButton(fixture).disabled).toBe(true);
-    expect(requests).toEqual([]);
-  });
-
-  it('reports an unchanged username', () => {
-    const { fixture, requests } = setup();
-
-    fill(fixture, { username: 'admin', password: 'old-secret' });
-
-    expect(errors(fixture)).toContain('New username must be different from the current username');
+    expect(errors(fixture)).toContain(error);
     expect(submitButton(fixture).disabled).toBe(true);
     expect(requests).toEqual([]);
   });
