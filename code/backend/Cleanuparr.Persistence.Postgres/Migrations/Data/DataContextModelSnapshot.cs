@@ -1450,6 +1450,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                                 .HasColumnType("boolean")
                                 .HasColumnName("failed_import_force_import");
 
+                            b1.Property<int>("ForceImportMaxTries")
+                                .HasColumnType("integer")
+                                .HasColumnName("failed_import_force_import_max_tries");
+
                             b1.Property<bool>("IgnorePrivate")
                                 .HasColumnType("boolean")
                                 .HasColumnName("failed_import_ignore_private");

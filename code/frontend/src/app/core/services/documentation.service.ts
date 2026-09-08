@@ -22,6 +22,7 @@ export class DocumentationService {
       'failedImport.pattern-mode': 'failed-import-pattern-mode',
       'failedImport.patterns': 'failed-import-patterns',
       'failedImport.forceImport': 'failed-import-force-import',
+      'failedImport.forceImportMaxTries': 'failed-import-force-import-max-tries',
       'downloadingMetadataMaxStrikes': 'stalled-downloading-metadata-max-strikes',
       'stallRule.name': 'stalled-rule-name',
       'stallRule.enabled': 'stalled-enabled',

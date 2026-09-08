@@ -22,6 +22,7 @@ const CONFIG: QueueCleanerConfig = {
     patterns: ['unpack'],
     changeCategory: false,
     forceImport: false,
+    forceImportMaxTries: 3,
   },
   downloadingMetadataMaxStrikes: 6,
 };
@@ -318,6 +319,7 @@ describe('QueueCleanerComponent', () => {
         patternMode: PatternMode.Exclude,
         changeCategory: false,
         forceImport: false,
+        forceImportMaxTries: 3,
       },
       downloadingMetadataMaxStrikes: 9,
     });
@@ -339,6 +341,44 @@ describe('QueueCleanerComponent', () => {
         failedImport: expect.objectContaining({ forceImport: true }),
       }),
     );
+  });
+
+  it('sends the force import try limit', () => {
+    const { fixture, component, api } = setup();
+
+    component.qcForm.failedForceImport().value.set(true);
+    component.qcForm.failedForceImportMaxTries().value.set(5);
+    fixture.detectChanges();
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(api.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        failedImport: expect.objectContaining({ forceImportMaxTries: 5 }),
+      }),
+    );
+  });
+
+  it('rejects a force import try limit of zero', () => {
+    const { fixture, component } = setup();
+
+    component.qcForm.failedForceImport().value.set(true);
+    component.qcForm.failedForceImportMaxTries().value.set(0);
+    fixture.detectChanges();
+
+    expect(component.qcForm.failedForceImportMaxTries().errors().length).toBeGreaterThan(0);
+  });
+
+  it('locks the try limit while force import is off', () => {
+    const { fixture, component } = setup();
+
+    expect(component.qcForm.failedForceImportMaxTries().disabled()).toBe(true);
+
+    component.qcForm.failedForceImport().value.set(true);
+    fixture.detectChanges();
+
+    expect(component.qcForm.failedForceImportMaxTries().disabled()).toBe(false);
   });
 
   it('leaves force import available when striking is off', () => {

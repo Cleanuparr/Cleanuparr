@@ -104,6 +104,9 @@
           hint="Imports a blocked download instead of striking it, when every reason the arr gave is safe to force past and every file it found belongs to the queue item"
           helpKey="queue-cleaner:failedImport.forceImport"
           featureId="force-import" />
+        <app-number-input label="Force Import Max Tries" [formField]="qcForm.failedForceImportMaxTries"
+          hint="Number of times to ask the arr to import one download before giving up on it"
+          helpKey="queue-cleaner:failedImport.forceImportMaxTries" />
       </div>
     </app-accordion>
 

@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Cleanuparr.Persistence.Migrations.Data
+namespace Cleanuparr.Persistence.Postgres.Migrations.Data
 {
     /// <inheritdoc />
     public partial class AddForceImport : Migration
@@ -12,15 +12,25 @@ namespace Cleanuparr.Persistence.Migrations.Data
         {
             migrationBuilder.AddColumn<bool>(
                 name: "failed_import_force_import",
+                schema: "data",
                 table: "queue_cleaner_configs",
-                type: "INTEGER",
+                type: "boolean",
                 nullable: false,
                 defaultValue: false);
 
+            migrationBuilder.AddColumn<int>(
+                name: "failed_import_force_import_max_tries",
+                schema: "data",
+                table: "queue_cleaner_configs",
+                type: "integer",
+                nullable: false,
+                defaultValue: 3);
+
             migrationBuilder.AddColumn<bool>(
                 name: "on_force_imported",
+                schema: "data",
                 table: "notification_configs",
-                type: "INTEGER",
+                type: "boolean",
                 nullable: false,
                 defaultValue: false);
         }
@@ -30,10 +40,17 @@ namespace Cleanuparr.Persistence.Migrations.Data
         {
             migrationBuilder.DropColumn(
                 name: "failed_import_force_import",
+                schema: "data",
+                table: "queue_cleaner_configs");
+
+            migrationBuilder.DropColumn(
+                name: "failed_import_force_import_max_tries",
+                schema: "data",
                 table: "queue_cleaner_configs");
 
             migrationBuilder.DropColumn(
                 name: "on_force_imported",
+                schema: "data",
                 table: "notification_configs");
         }
     }

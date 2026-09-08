@@ -49,6 +49,7 @@ interface QueueCleanerFormModel {
   failedPatternMode: PatternMode;
   failedChangeCategory: boolean;
   failedForceImport: boolean;
+  failedForceImportMaxTries: number | null;
   metadataMaxStrikes: number | null;
 }
 
@@ -110,6 +111,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
     failedPatternMode: PatternMode.Exclude,
     failedChangeCategory: false,
     failedForceImport: false,
+    failedForceImportMaxTries: 3,
     metadataMaxStrikes: 3,
   });
 
@@ -123,6 +125,10 @@ export class QueueCleanerComponent implements HasPendingChanges {
     required(p.failedMaxStrikes, { message: 'This field is required' });
     min(p.failedMaxStrikes, 0, { message: 'Value cannot be negative' });
     max(p.failedMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
+
+    required(p.failedForceImportMaxTries, { message: 'This field is required' });
+    min(p.failedForceImportMaxTries, 1, { message: 'Value must be at least 1' });
+    max(p.failedForceImportMaxTries, 5000, { message: 'Value cannot exceed 5000' });
 
     required(p.metadataMaxStrikes, { message: 'This field is required' });
     min(p.metadataMaxStrikes, 0, { message: 'Value cannot be negative' });
@@ -157,6 +163,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
     disabled(p.failedSkipNotFound, () => this.model().failedMaxStrikes === 0);
     disabled(p.failedPatternMode, () => this.model().failedMaxStrikes === 0);
     disabled(p.failedPatterns, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedForceImportMaxTries, () => !this.model().failedForceImport);
   });
 
   readonly scheduleIntervalOptions = computed(() => {
@@ -235,6 +242,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
           failedPatternMode: config.failedImport.patternMode ?? PatternMode.Exclude,
           failedChangeCategory: config.failedImport.changeCategory ?? false,
           failedForceImport: config.failedImport.forceImport ?? false,
+          failedForceImportMaxTries: config.failedImport.forceImportMaxTries ?? 3,
           metadataMaxStrikes: config.downloadingMetadataMaxStrikes,
         });
         this.savedSnapshot.set(this.buildSnapshot());
@@ -372,6 +380,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         patternMode: m.failedPatternMode,
         changeCategory: m.failedChangeCategory,
         forceImport: m.failedForceImport,
+        forceImportMaxTries: m.failedForceImportMaxTries ?? 3,
       },
       downloadingMetadataMaxStrikes: m.metadataMaxStrikes ?? 3,
     };

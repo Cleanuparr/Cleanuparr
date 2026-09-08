@@ -1446,6 +1446,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_force_import");
 
+                            b1.Property<ushort>("ForceImportMaxTries")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("failed_import_force_import_max_tries");
+
                             b1.Property<bool>("IgnorePrivate")
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_ignore_private");
