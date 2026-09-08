@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.UTorrent.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 using Shouldly;
 using Xunit;
@@ -291,5 +292,47 @@ public class UTorrentItemWrapperTests
 
         // Assert
         result.ShouldBe(15);
+    }
+
+    [Fact]
+    public void TrackerHealth_ReturnsUnsupported()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem();
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+
+        // Act
+        var result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void AddedOn_ReturnsCorrectValue()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { DateAdded = 1700000000 };
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+
+        // Act
+        var result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBe(DateTimeOffset.FromUnixTimeSeconds(1700000000));
+    }
+
+    [Fact]
+    public void AddedOn_WhenZero_ReturnsNull()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { DateAdded = 0 };
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+
+        // Act
+        var result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBeNull();
     }
 }

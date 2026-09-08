@@ -913,4 +913,26 @@ public class QBitItemWrapperTests
         // Assert
         result.ShouldBeNull();
     }
+
+    [Fact]
+    public void TrackerHealth_WithNotContactedTracker_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new();
+        List<TorrentTracker> trackers =
+        [
+            new()
+            {
+                Url = null,
+                TrackerStatus = TorrentTrackerStatus.NotContacted,
+            },
+        ];
+        QBitItemWrapper wrapper = new(torrentInfo, trackers, false);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
 }

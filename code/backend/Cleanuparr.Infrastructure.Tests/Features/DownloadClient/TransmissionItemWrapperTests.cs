@@ -695,4 +695,64 @@ public class TransmissionItemWrapperTests
         // Assert
         result.ShouldBe(DateTimeOffset.FromUnixTimeSeconds(1700000000L));
     }
+
+    [Fact]
+    public void TrackerHealth_WhenAnnouncedWithoutADefiniteResult_ReturnsUnsupported()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new()
+                {
+                    IsBackup = false,
+                    AnnounceState = 1,
+                    HasAnnounced = true,
+                    LastAnnounceSucceeded = null,
+                },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void TrackerHealth_WithUnknownAnnounceHistory_ReturnsInconclusive()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new()
+        {
+            TrackerStats =
+            [
+                new() { HasAnnounced = null, LastAnnounceSucceeded = null },
+            ],
+        };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        TrackerHealth result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Inconclusive);
+    }
+
+    [Fact]
+    public void AddedOn_WhenNull_ReturnsNull()
+    {
+        // Arrange
+        TorrentInfo torrentInfo = new() { AddedDate = null };
+        TransmissionItemWrapper wrapper = new(torrentInfo);
+
+        // Act
+        DateTimeOffset? result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBeNull();
+    }
 }
