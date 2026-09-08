@@ -97,7 +97,7 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
             }
 
             List<TransmissionTorrentTrackerStats> failing = active
-                .Where(stats => stats.HasAnnounced is true && stats.LastAnnounceSucceeded is false)
+                .Where(stats => stats.LastAnnounceSucceeded is false)
                 .ToList();
 
             if (failing.Count == 0)
