@@ -8,11 +8,6 @@ public enum ForceImportOutcome
     NotApplicable,
 
     /// <summary>
-    /// The arr was told to import the download.
-    /// </summary>
-    Imported,
-
-    /// <summary>
     /// Force import can still work on a later run, so the download waits without a strike.
     /// </summary>
     Deferred,

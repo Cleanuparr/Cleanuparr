@@ -7,7 +7,13 @@ namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 public interface IForceImportService
 {
     /// <summary>
-    /// Imports a download an arr blocked for a reason that is safe to force past.
+    /// Asks an arr to import a download it blocked for a reason that is safe to force past.
     /// </summary>
     Task<ForceImportOutcome> TryImportAsync(IArrClient arrClient, ArrInstance instance, QueueRecord record);
+
+    /// <summary>
+    /// Reports the imports that landed, which are the ones the arr dropped from its queue.
+    /// </summary>
+    /// <param name="queuedDownloadIds">Every download the arr still holds, across every page.</param>
+    Task ReconcileAsync(ArrInstance instance, IReadOnlySet<string> queuedDownloadIds);
 }

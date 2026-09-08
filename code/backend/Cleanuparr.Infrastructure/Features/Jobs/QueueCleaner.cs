@@ -139,6 +139,8 @@ public sealed class QueueCleaner : GenericHandler
             .Where(x => x.Type == DownloadClientType.Torrent)
             .Any(x => x.Enabled);
 
+        HashSet<string> queuedDownloadIds = new(StringComparer.InvariantCultureIgnoreCase);
+
         await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
         {
             var groups = items
@@ -148,6 +150,7 @@ public sealed class QueueCleaner : GenericHandler
             foreach (var group in groups)
             {
                 QueueRecord record = group.First();
+                queuedDownloadIds.Add(record.DownloadId);
 
                 if (!arrClient.IsRecordValid(record))
                 {
@@ -288,5 +291,8 @@ public sealed class QueueCleaner : GenericHandler
                 _logger.LogDebug("skip | {title}", record.Title);
             }
         });
+
+        // A download the arr dropped from its queue is one it finished importing.
+        await _forceImportService.ReconcileAsync(instance, queuedDownloadIds);
     }
 }

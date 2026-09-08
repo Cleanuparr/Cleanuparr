@@ -17,14 +17,22 @@ namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 public sealed class ForceImportService : IForceImportService
 {
     /// <summary>
-    /// Keeps a download out of a second attempt while the arr works through the import.
-    /// </summary>
-    private static readonly TimeSpan AttemptWindow = TimeSpan.FromMinutes(5);
-
-    /// <summary>
     /// How long a first sighting of a transitional block is remembered.
     /// </summary>
     private static readonly TimeSpan SightingWindow = TimeSpan.FromHours(6);
+
+    /// <summary>
+    /// How long an instance keeps its pending imports once it stops being polled.
+    /// </summary>
+    private static readonly TimeSpan PendingWindow = TimeSpan.FromHours(6);
+
+    /// <summary>
+    /// How long a download that ran out of tries is left to the strike path.
+    /// </summary>
+    /// <remarks>
+    /// Whatever stopped the arr, a full disk or a bad permission, can be fixed by then.
+    /// </remarks>
+    private static readonly TimeSpan GaveUpWindow = TimeSpan.FromHours(6);
 
     /// <summary>
     /// The reasons an arr gives that are safe to force past.
@@ -80,7 +88,9 @@ public sealed class ForceImportService : IForceImportService
 
     public async Task<ForceImportOutcome> TryImportAsync(IArrClient arrClient, ArrInstance instance, QueueRecord record)
     {
-        if (!ContextProvider.Get<QueueCleanerConfig>().FailedImport.ForceImport)
+        FailedImportConfig config = ContextProvider.Get<QueueCleanerConfig>().FailedImport;
+
+        if (!config.ForceImport)
         {
             return ForceImportOutcome.NotApplicable;
         }
@@ -96,13 +106,27 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.NotApplicable;
         }
 
-        string attemptKey = CacheKeys.ForceImportAttempted(record.DownloadId, instance.Url);
+        string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
 
-        if (_cache.TryGetValue(attemptKey, out bool _))
+        if (_cache.TryGetValue(gaveUpKey, out bool _))
         {
-            // The arr is working through the import it was already given.
-            _logger.LogDebug("wait for force import | already attempted | {title}", record.Title);
-            return ForceImportOutcome.Deferred;
+            _logger.LogDebug("skip force import | out of tries | {title}", record.Title);
+            return ForceImportOutcome.NotApplicable;
+        }
+
+        Dictionary<string, PendingForceImport> pending = GetPending(instance);
+        pending.TryGetValue(record.DownloadId, out PendingForceImport? attempt);
+        int tries = attempt?.Tries ?? 0;
+
+        if (tries >= config.ForceImportMaxTries)
+        {
+            // The arr kept the download blocked, so the strike path takes over.
+            _cache.Set(gaveUpKey, true, GaveUpWindow);
+            pending.Remove(record.DownloadId);
+
+            _logger.LogInformation("give up force import | {tries} tries spent | {title}", tries, record.Title);
+
+            return ForceImportOutcome.NotApplicable;
         }
 
         if (!WasSeenInAnEarlierRun(instance, record))
@@ -115,11 +139,11 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.Deferred;
         }
 
-        (List<ManualImportFile>? files, ForceImportOutcome outcome) = await BuildFilesAsync(arrClient, instance, record);
+        (List<ManualImportFile>? files, ForceImportOutcome? failure) = await BuildFilesAsync(arrClient, instance, record);
 
         if (files is null)
         {
-            return outcome;
+            return failure!.Value;
         }
 
         try
@@ -133,15 +157,55 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.Deferred;
         }
 
-        _cache.Set(attemptKey, true, AttemptWindow);
+        pending[record.DownloadId] = new PendingForceImport(record, files.Count, tries + 1);
 
-        _logger.LogInformation("force imported {count} file(s) | {title}", files.Count, record.Title);
+        _logger.LogInformation(
+            "asked the arr to import {count} file(s) | try {try} | {title}",
+            files.Count, tries + 1, record.Title
+        );
 
-        await _striker.ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
-        await _eventPublisher.PublishForceImported(record.Title, record.DownloadId, files.Count);
-
-        return ForceImportOutcome.Imported;
+        return ForceImportOutcome.Deferred;
     }
+
+    public async Task ReconcileAsync(ArrInstance instance, IReadOnlySet<string> queuedDownloadIds)
+    {
+        if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out Dictionary<string, PendingForceImport>? pending) ||
+            pending is null)
+        {
+            return;
+        }
+
+        List<string> gone = pending.Keys
+            .Where(downloadId => !queuedDownloadIds.Contains(downloadId))
+            .ToList();
+
+        foreach (string downloadId in gone)
+        {
+            PendingForceImport attempt = pending[downloadId];
+            pending.Remove(downloadId);
+
+            if (_cache.TryGetValue(CacheKeys.DownloadMarkedForRemoval(downloadId, instance.Url), out bool _))
+            {
+                // Cleanuparr took the download out of the queue, so nothing was imported.
+                continue;
+            }
+
+            _logger.LogInformation("force imported {count} file(s) | {title}", attempt.FileCount, attempt.Record.Title);
+
+            // The notification reads the record for its title and its poster.
+            ContextProvider.Set(nameof(QueueRecord), attempt.Record);
+
+            await _striker.ResetStrikeAsync(downloadId, attempt.Record.Title, StrikeType.FailedImport);
+            await _eventPublisher.PublishForceImported(attempt.Record.Title, downloadId, attempt.FileCount);
+        }
+    }
+
+    private Dictionary<string, PendingForceImport> GetPending(ArrInstance instance) =>
+        _cache.GetOrCreate(CacheKeys.ForceImportPending(instance.Url), entry =>
+        {
+            entry.SlidingExpiration = PendingWindow;
+            return new Dictionary<string, PendingForceImport>(StringComparer.InvariantCultureIgnoreCase);
+        })!;
 
     private static bool IsBlockedImport(QueueRecord record) =>
         record.TrackedDownloadStatus.Equals("warning", StringComparison.InvariantCultureIgnoreCase) &&
@@ -238,7 +302,7 @@ public sealed class ForceImportService : IForceImportService
     }
 
     /// <returns>The files to import, or null and the outcome that leaves the download alone.</returns>
-    private async Task<(List<ManualImportFile>? Files, ForceImportOutcome Outcome)> BuildFilesAsync(
+    private async Task<(List<ManualImportFile>? Files, ForceImportOutcome? Failure)> BuildFilesAsync(
         IArrClient arrClient,
         ArrInstance instance,
         QueueRecord record
@@ -299,6 +363,6 @@ public sealed class ForceImportService : IForceImportService
             files.Add(file);
         }
 
-        return (files, ForceImportOutcome.Imported);
+        return (files, null);
     }
 }

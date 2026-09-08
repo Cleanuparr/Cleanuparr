@@ -12,7 +12,9 @@ public static class CacheKeys
     
     public static string DownloadMarkedForRemoval(string hash, Uri url) => $"remove_{hash.ToLowerInvariant()}_{url}";
 
-    public static string ForceImportAttempted(string hash, Uri url) => $"force_import_{hash.ToLowerInvariant()}_{url}";
+    public static string ForceImportPending(Uri url) => $"force_import_pending_{url}";
+
+    public static string ForceImportGaveUp(string hash, Uri url) => $"force_import_gave_up_{hash.ToLowerInvariant()}_{url}";
 
     public static string ForceImportFirstSeen(string hash, Uri url) => $"force_import_seen_{hash.ToLowerInvariant()}_{url}";
     

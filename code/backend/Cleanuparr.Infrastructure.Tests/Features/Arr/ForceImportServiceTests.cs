@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
@@ -54,7 +55,7 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_ImportsAndResetsTheStrikes()
+    public async Task TryImportAsync_AsksTheArrAndSaysNothingYet()
     {
         // Arrange: importBlocked is a settled state, so one run is enough
         QueueRecord record = BuildRecord(state: "importBlocked");
@@ -63,11 +64,11 @@ public class ForceImportServiceTests
         // Act
         ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
 
-        // Assert
-        outcome.ShouldBe(ForceImportOutcome.Imported);
+        // Assert: an accepted request is not an import, so nothing is announced yet
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Is<List<ManualImportFile>>(files => files.Count == 1));
-        await _striker.Received(1).ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
-        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
     }
 
     [Fact]
@@ -158,7 +159,7 @@ public class ForceImportServiceTests
 
         // Assert
         firstRun.ShouldBe(ForceImportOutcome.Deferred);
-        secondRun.ShouldBe(ForceImportOutcome.Imported);
+        secondRun.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
     }
 
@@ -180,7 +181,7 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_UnrelatedCommandInFlight_Imports()
+    public async Task TryImportAsync_UnrelatedCommandInFlight_AsksTheArr()
     {
         // Arrange
         _arrClient.GetCommandsAsync(_instance).Returns([
@@ -192,7 +193,8 @@ public class ForceImportServiceTests
         ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, BuildRecord(state: "importBlocked"));
 
         // Assert
-        outcome.ShouldBe(ForceImportOutcome.Imported);
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
     }
 
     [Fact]
@@ -287,20 +289,139 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_AlreadyAttempted_DoesNotAskTwice()
+    public async Task TryImportAsync_TheDownloadStaysBlocked_AsksAgainUpToTheLimit()
     {
-        // Arrange: the arr needs time to work through the import it was given
+        // Arrange
+        SetConfig(maxTries: 2);
         QueueRecord record = BuildRecord(state: "importBlocked");
         StubCandidates(BuildCandidate(SafeReason));
 
         // Act
-        ForceImportOutcome firstRun = await _sut.TryImportAsync(_arrClient, _instance, record);
-        ForceImportOutcome secondRun = await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome first = await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome second = await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome third = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: the strike path takes over once the tries run out
+        first.ShouldBe(ForceImportOutcome.Deferred);
+        second.ShouldBe(ForceImportOutcome.Deferred);
+        third.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _arrClient.Received(2).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_OutOfTries_StaysOutOfTheWay()
+    {
+        // Arrange
+        SetConfig(maxTries: 1);
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
 
         // Assert
-        firstRun.ShouldBe(ForceImportOutcome.Imported);
-        secondRun.ShouldBe(ForceImportOutcome.Deferred);
+        outcome.ShouldBe(ForceImportOutcome.NotApplicable);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_ADeferredRunCostsNoTry()
+    {
+        // Arrange: the arr is busy, so nothing is asked of it
+        SetConfig(maxTries: 1);
+        _arrClient.GetCommandsAsync(_instance).Returns([
+            new ArrCommandStatus(1, ArrCommandState.Started, null, "ManualImport"),
+        ]);
+        StubCandidates(BuildCandidate(SafeReason));
+        QueueRecord record = BuildRecord(state: "importBlocked");
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _arrClient.GetCommandsAsync(_instance).Returns([]);
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_TheDownloadLeftTheQueue_ReportsTheImport()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+
+        // Assert
+        await _striker.Received(1).ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_TheDownloadIsStillQueued_ReportsNothing()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act
+        await _sut.ReconcileAsync(_instance, new HashSet<string> { record.DownloadId });
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_ReportsAnImportOnlyOnce()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+
+        // Assert
+        await _eventPublisher.Received(1).PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_CleanuparrRemovedTheDownload_ReportsNothing()
+    {
+        // Arrange: the download left the queue because Cleanuparr took it out
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        _cache.Set(CacheKeys.DownloadMarkedForRemoval(record.DownloadId, _instance.Url), true);
+
+        // Act
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_NothingPending_ReportsNothing()
+    {
+        // Act
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
     }
 
     [Fact]
@@ -318,11 +439,11 @@ public class ForceImportServiceTests
         await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 
-    private static void SetConfig(bool forceImport = true)
+    private static void SetConfig(bool forceImport = true, ushort maxTries = 3)
     {
         ContextProvider.Set(new QueueCleanerConfig
         {
-            FailedImport = new FailedImportConfig { ForceImport = forceImport },
+            FailedImport = new FailedImportConfig { ForceImport = forceImport, ForceImportMaxTries = maxTries },
         });
     }
 
