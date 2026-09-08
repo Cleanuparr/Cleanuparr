@@ -112,6 +112,8 @@ describe('ChangePasswordCardComponent', () => {
   it('grades the new password and shows the strength label', () => {
     const { fixture } = setup();
 
+    expect(fixture.componentInstance.newPasswordStrength()).toBeNull();
+
     fill(fixture, { next: 'short' });
 
     expect(fixture.componentInstance.newPasswordStrength()).toBe('weak');
@@ -126,6 +128,10 @@ describe('ChangePasswordCardComponent', () => {
     fill(fixture, { next: 'L0ngPassword!' });
 
     expect(fixture.componentInstance.newPasswordStrength()).toBe('strong');
+
+    fill(fixture, { next: 'aaaaaaaaaaaaaaa' });
+
+    expect(fixture.componentInstance.newPasswordStrength()).toBe('weak');
   });
 
   it('shows the spinner and blocks a second submit while the request is in flight', () => {
