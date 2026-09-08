@@ -2,6 +2,8 @@ import { test, expect, TEST_CONFIG, CleanuparrApi } from '../fixtures/base';
 
 const RENAMED = 'renamed-admin';
 
+let usernameChanged = false;
+
 /** Logs in past the short lockout a rejected attempt leaves behind. */
 async function loginWhenUnlocked(username: string): Promise<string | null> {
   let accessToken: string | null = null;
@@ -24,17 +26,19 @@ async function loginWhenUnlocked(username: string): Promise<string | null> {
 // retry starts from the same state.
 test.describe.serial('Account — change username', () => {
   test.afterAll(async () => {
-    const res = await new CleanuparrApi().auth.login(RENAMED, TEST_CONFIG.adminPassword);
-    if (!res.ok) {
+    if (!usernameChanged) {
       return;
     }
 
-    const accessToken = (await res.json()).tokens.accessToken;
-    const restored = await new CleanuparrApi({ token: accessToken }).account.changeUsername(
+    const accessToken = await loginWhenUnlocked(RENAMED);
+    expect(accessToken, 'failed to log in as the renamed admin to restore the username').toBeTruthy();
+
+    const restored = await new CleanuparrApi({ token: accessToken! }).account.changeUsername(
       TEST_CONFIG.adminPassword,
       TEST_CONFIG.adminUsername,
     );
     expect(restored.ok, 'failed to restore the admin username').toBe(true);
+    usernameChanged = false;
   });
 
   test('requires auth', async ({ anonymousApi }) => {
@@ -65,6 +69,7 @@ test.describe.serial('Account — change username', () => {
 
     const res = await api.account.changeUsername(TEST_CONFIG.adminPassword, `  ${RENAMED}  `);
     expect(res.status).toBe(200);
+    usernameChanged = true;
 
     const body = await (await api.account.get()).json();
     expect(body.username).toBe(RENAMED);

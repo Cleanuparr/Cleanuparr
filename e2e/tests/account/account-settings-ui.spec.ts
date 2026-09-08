@@ -13,7 +13,7 @@ test.describe('Account Settings UI', () => {
     }
   });
 
-  test('username change prefills the current name and is gated on a password', async ({ page }) => {
+  test('username change prefills the current name and reports an unchanged name', async ({ page }) => {
     await loginAndGotoSettings(page, 'account');
     const card = page.locator('app-card').filter({ hasText: 'Change Username' });
 
@@ -22,8 +22,33 @@ test.describe('Account Settings UI', () => {
     const submit = card.getByRole('button', { name: 'Change Username' });
     await expect(submit).toBeDisabled();
 
+    await textInput(card, 'New Username').click();
     await textInput(card, 'Current Password').fill(TEST_CONFIG.adminPassword);
+
+    await expect(card.getByText('New username must be different from the current username')).toBeVisible();
+    await expect(submit).toBeDisabled();
+  });
+
+  test('username change enables submit once both fields are valid', async ({ page }) => {
+    await loginAndGotoSettings(page, 'account');
+    const card = page.locator('app-card').filter({ hasText: 'Change Username' });
+    const submit = card.getByRole('button', { name: 'Change Username' });
+
+    await textInput(card, 'New Username').fill('someone-else');
+    await textInput(card, 'Current Password').fill(TEST_CONFIG.adminPassword);
+
     await expect(submit).toBeEnabled();
+  });
+
+  test('username change reports a name shorter than three characters', async ({ page }) => {
+    await loginAndGotoSettings(page, 'account');
+    const card = page.locator('app-card').filter({ hasText: 'Change Username' });
+
+    await textInput(card, 'New Username').fill('ab');
+    await textInput(card, 'Current Password').click();
+
+    await expect(card.getByText('Username must be at least 3 characters')).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Change Username' })).toBeDisabled();
   });
 
   test('API key reveal toggles between masked and revealed', async ({ page }) => {
