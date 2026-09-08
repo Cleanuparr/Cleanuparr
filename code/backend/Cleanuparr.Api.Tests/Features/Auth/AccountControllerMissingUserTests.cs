@@ -70,6 +70,19 @@ public class AccountControllerMissingUserTests : IClassFixture<CustomWebApplicat
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    [Fact, TestPriority(3)]
+    public async Task UpdateOidcConfig_ForAnUnknownUserId_ReturnsUnauthorized()
+    {
+        _client.DefaultRequestHeaders.Authorization = TokenForAnUnknownUser();
+
+        var response = await _client.PutAsJsonAsync("/api/account/oidc", new
+        {
+            enabled = true
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
     private AuthenticationHeaderValue TokenForAnUnknownUser()
     {
         using var scope = _factory.Services.CreateScope();
