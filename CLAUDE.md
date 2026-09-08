@@ -119,7 +119,8 @@ Cleanuparr/
 - **Frontend**: Vitest via the `@angular/build:unit-test` builder in jsdom (`cd code/frontend && npm test`). Specs live next to the source as `{feature}.component.spec.ts`
 - Vitest globals are enabled in `tsconfig.spec.json`, so do NOT import `describe`/`it`/`expect`/`vi`
 - `angular.json` sets `skipTests: true` for all schematics, so `ng generate` never creates a spec. Write them by hand
-- Test components through `TestBed.createComponent` and the rendered DOM. For inputs/outputs, declare a standalone host component in the spec. Stub API classes with a plain object of methods returning `of(...)`, never mock `HttpClient` or use `provideHttpClientTesting`
+- Test components through `TestBed.createComponent` and the rendered DOM. For inputs/outputs, declare a standalone host component in the spec. In a **component** spec, stub the API class with a plain object of methods returning `of(...)`, never `HttpClient`
+- A spec for an **api class itself** (`{feature}.api.spec.ts`) is the one exception: override the `HttpClient` token with `vi.fn()` stubs and assert the URL and body, as `events.api.spec.ts` and `account.api.spec.ts` do. `provideHttpClientTesting` is banned everywhere
 - Keep stub observables synchronous: an `rxResource` fed by `of(...)` resolves inside one `fixture.detectChanges()`, an async source needs `await fixture.whenStable()`
 - Call `fixture.detectChanges()` after every interaction (zoneless + OnPush). For a bare `effect()`, use `TestBed.runInInjectionContext()` then `TestBed.tick()`
 
