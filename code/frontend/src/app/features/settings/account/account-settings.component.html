@@ -17,11 +17,17 @@
   <app-loading-state message="Loading account settings..." />
 } @else if (!loader.loading() && account()) {
 <div class="settings-form">
+  <!-- Change Username -->
+  <app-change-username-card
+    [currentUsername]="account()!.username"
+    [oidcExclusiveMode]="oidcExclusiveMode()"
+  />
+
   <!-- Change Password -->
   <app-change-password-card [oidcExclusiveMode]="oidcExclusiveMode()" />
 
   <!-- Two-Factor Authentication -->
-  <app-two-factor-card [enabled]="account()!.twoFactorEnabled" (changed)="onTwoFactorChanged()" />
+  <app-two-factor-card [enabled]="account()!.twoFactorEnabled" (changed)="reloadAccount()" />
 
   <!-- API Key -->
   <app-api-key-card [apiKeyPreview]="account()!.apiKeyPreview" />
@@ -31,7 +37,7 @@
     [linked]="account()!.plexLinked"
     [username]="account()!.plexUsername ?? ''"
     [oidcExclusiveMode]="oidcExclusiveMode()"
-    (changed)="onPlexChanged()"
+    (changed)="reloadAccount()"
   />
 
   <!-- OIDC / SSO -->

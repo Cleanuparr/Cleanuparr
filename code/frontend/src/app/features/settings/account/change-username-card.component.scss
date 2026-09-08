@@ -1,0 +1,6 @@
+@use 'settings-layout' as *;
+
+.form-stack { @include form-stack; }
+.form-actions { @include form-actions; }
+
+.section-notice { @include section-notice; }

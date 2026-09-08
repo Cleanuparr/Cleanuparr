@@ -47,4 +47,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'http-user-agent' },
   { id: 'seeker-ignore-struck-downloads' },
   { id: 'seeding-rule-action' },
+  { id: 'change-username' },
 ];

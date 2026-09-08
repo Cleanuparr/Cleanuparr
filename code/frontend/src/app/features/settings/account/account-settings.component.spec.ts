@@ -1,13 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { AccountApi, AccountInfo } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ConfirmOptions, ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
 import { OidcConfig } from '@shared/models/oidc-config.model';
 import { AccountSettingsComponent } from './account-settings.component';
+import { PlexIntegrationCardComponent } from './plex-integration-card.component';
 import { TwoFactorCardComponent } from './two-factor-card.component';
 
 const ACCOUNT: AccountInfo = {
@@ -50,6 +51,8 @@ describe('AccountSettingsComponent', () => {
   function setup(options: {
     oidc?: OidcConfig;
     loadFails?: boolean;
+    pendingLoad?: boolean;
+    account?: AccountInfo;
     saveFails?: boolean;
     unlinkFails?: boolean;
     confirmAnswer?: boolean;
@@ -57,6 +60,7 @@ describe('AccountSettingsComponent', () => {
   } = {}) {
     const toasts: string[] = [];
     const confirmations: ConfirmOptions[] = [];
+    const pendingInfo = new Subject<AccountInfo>();
     const savedConfigs: Partial<OidcConfig>[] = [];
     let infoCalls = 0;
     let unlinkCalls = 0;
@@ -72,7 +76,10 @@ describe('AccountSettingsComponent', () => {
           useValue: {
             getInfo: (): Observable<AccountInfo> => {
               infoCalls++;
-              return options.loadFails ? throwError(() => new Error('boom')) : of(ACCOUNT);
+              if (options.loadFails) {
+                return throwError(() => new Error('boom'));
+              }
+              return options.pendingLoad ? pendingInfo : of(options.account ?? ACCOUNT);
             },
             getOidcConfig: () => of(options.oidc ?? OIDC),
             updateOidcConfig: (config: Partial<OidcConfig>) => {
@@ -86,6 +93,7 @@ describe('AccountSettingsComponent', () => {
             getApiKey: () => of({ apiKey: 'live-key-1234' }),
             regenerateApiKey: () => of({ apiKey: 'fresh-key-9999' }),
             changePassword: () => of(undefined),
+            changeUsername: () => of(undefined),
             enable2fa: () => of({ secret: 's', qrCodeUri: 'otpauth://x', recoveryCodes: [] }),
             verifyEnable2fa: () => of(undefined),
             disable2fa: () => of(undefined),
@@ -97,7 +105,10 @@ describe('AccountSettingsComponent', () => {
         },
         {
           provide: AuthService,
-          useValue: { startOidcLink: () => throwError(() => new Error('boom')) },
+          useValue: {
+            startOidcLink: () => throwError(() => new Error('boom')),
+            logout: () => undefined,
+          },
         },
         {
           provide: ToastService,
@@ -127,6 +138,7 @@ describe('AccountSettingsComponent', () => {
       savedConfigs,
       infoCalls: () => infoCalls,
       unlinkCalls: () => unlinkCalls,
+      pendingInfo,
     };
   }
 
@@ -165,6 +177,7 @@ describe('AccountSettingsComponent', () => {
     const { fixture, toasts } = setup();
 
     expect(cardTitles(fixture)).toEqual([
+      'Change Username',
       'Change Password',
       'Two-Factor Authentication',
       'API Key',
@@ -190,6 +203,49 @@ describe('AccountSettingsComponent', () => {
     expect(infoCalls()).toBe(1);
 
     button(fixture, 'Retry').click();
+    fixture.detectChanges();
+
+    expect(infoCalls()).toBe(2);
+  });
+
+  it('shows the deferred spinner while the account is still loading', async () => {
+    vi.useFakeTimers();
+    const { fixture, pendingInfo } = setup({ pendingLoad: true });
+
+    expect(fixture.componentInstance.loader.loading()).toBe(true);
+    expect(cardTitles(fixture)).toEqual([]);
+
+    vi.advanceTimersByTime(200);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-loading-state')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.settings-form')).toBeNull();
+
+    pendingInfo.next(ACCOUNT);
+    pendingInfo.complete();
+    vi.useRealTimers();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-loading-state')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.settings-form')).not.toBeNull();
+  });
+
+  it('passes an empty Plex username through when the account has none', () => {
+    const { fixture } = setup({ account: { ...ACCOUNT, plexLinked: false, plexUsername: null } });
+
+    const card = fixture.debugElement.query(By.directive(PlexIntegrationCardComponent));
+
+    expect((card.componentInstance as PlexIntegrationCardComponent).username()).toBe('');
+  });
+
+  it('reloads the account when the Plex card reports a change', () => {
+    const { fixture, infoCalls } = setup();
+
+    expect(infoCalls()).toBe(1);
+
+    const card = fixture.debugElement.query(By.directive(PlexIntegrationCardComponent));
+    (card.componentInstance as PlexIntegrationCardComponent).changed.emit();
     fixture.detectChanges();
 
     expect(infoCalls()).toBe(2);

@@ -11,6 +11,10 @@ export class AccountApi {
     return this.client.put('/api/account/password', { currentPassword, newPassword });
   }
 
+  changeUsername(currentPassword: string, newUsername: string): Promise<Response> {
+    return this.client.put('/api/account/username', { currentPassword, newUsername });
+  }
+
   regenerate2fa(password: string, totpCode: string): Promise<Response> {
     return this.client.post('/api/account/2fa/regenerate', { password, totpCode });
   }

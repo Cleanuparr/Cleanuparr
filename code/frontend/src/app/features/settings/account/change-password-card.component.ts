@@ -1,12 +1,19 @@
 import { Component, ChangeDetectionStrategy, inject, input, signal, computed } from '@angular/core';
+import { form, required, minLength, validate, FormField } from '@angular/forms/signals';
 import { CardComponent, InputComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { AccountApi } from '@core/api/account.api';
 import { ToastService } from '@core/services/toast.service';
 
+interface ChangePasswordFormModel {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 @Component({
   selector: 'app-change-password-card',
   standalone: true,
-  imports: [CardComponent, InputComponent, ButtonComponent, SpinnerComponent],
+  imports: [CardComponent, InputComponent, ButtonComponent, SpinnerComponent, FormField],
   templateUrl: './change-password-card.component.html',
   styleUrl: './change-password-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,13 +24,31 @@ export class ChangePasswordCardComponent {
 
   readonly oidcExclusiveMode = input(false);
 
-  readonly currentPassword = signal('');
-  readonly newPassword = signal('');
-  readonly confirmPassword = signal('');
+  private readonly model = signal<ChangePasswordFormModel>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  readonly passwordForm = form(this.model, (p) => {
+    required(p.currentPassword, { message: 'Current password is required' });
+
+    required(p.newPassword, { message: 'New password is required' });
+    minLength(p.newPassword, 8, { message: 'Password must be at least 8 characters' });
+
+    required(p.confirmPassword, { message: 'Please confirm the new password' });
+    validate(p.confirmPassword, () => {
+      const m = this.model();
+      return m.confirmPassword && m.newPassword !== m.confirmPassword
+        ? { kind: 'mismatch', message: 'Passwords do not match' }
+        : undefined;
+    });
+  });
+
   readonly changingPassword = signal(false);
 
   readonly newPasswordStrength = computed(() => {
-    const pw = this.newPassword();
+    const pw = this.model().newPassword;
     if (!pw) return null;
     if (pw.length < 8) return 'weak';
     const hasUpper = /[A-Z]/.test(pw);
@@ -37,25 +62,14 @@ export class ChangePasswordCardComponent {
   });
 
   changePassword(): void {
-    if (this.newPassword() !== this.confirmPassword()) {
-      this.toast.error('Passwords do not match');
-      return;
-    }
-    if (this.newPassword().length < 8) {
-      this.toast.error('Password must be at least 8 characters');
-      return;
-    }
-
     this.changingPassword.set(true);
     this.api.changePassword({
-      currentPassword: this.currentPassword(),
-      newPassword: this.newPassword(),
+      currentPassword: this.model().currentPassword,
+      newPassword: this.model().newPassword,
     }).subscribe({
       next: () => {
         this.toast.success('Password changed successfully');
-        this.currentPassword.set('');
-        this.newPassword.set('');
-        this.confirmPassword.set('');
+        this.model.set({ currentPassword: '', newPassword: '', confirmPassword: '' });
         this.changingPassword.set(false);
       },
       error: () => {

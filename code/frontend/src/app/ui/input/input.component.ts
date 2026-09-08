@@ -33,6 +33,8 @@ export class InputComponent {
   inputRef = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
   blurred = output<FocusEvent>();
+  /** Signal Forms listens to this to flip the field's touched state. */
+  touch = output<void>();
   entered = output<void>();
 
   readonly showSecret = signal(false);
@@ -41,6 +43,11 @@ export class InputComponent {
     if (this.hasEye() && this.showSecret()) return 'text';
     return this.type();
   });
+
+  onBlur(event: FocusEvent): void {
+    this.blurred.emit(event);
+    this.touch.emit();
+  }
 
   focus(): void {
     this.inputRef()?.nativeElement.focus();

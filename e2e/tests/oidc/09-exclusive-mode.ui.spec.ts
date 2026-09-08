@@ -60,6 +60,11 @@ test.describe.serial('OIDC — exclusive mode', () => {
     expect(res.status).toBe(403);
   });
 
+  test('username change API returns 403 in exclusive mode', async () => {
+    const res = await adminApi().account.changeUsername(TEST_CONFIG.adminPassword, 'renamed-admin');
+    expect(res.status).toBe(403);
+  });
+
   test('auth status API reflects exclusive mode', async ({ anonymousApi }) => {
     const res = await anonymousApi.auth.status();
     expect(res.ok).toBe(true);
@@ -84,6 +89,9 @@ test.describe.serial('OIDC — exclusive mode', () => {
     ).toBeVisible({ timeout: 5_000 });
     await expect(
       page.getByText('Plex login is disabled while OIDC exclusive mode is active.'),
+    ).toBeVisible({ timeout: 5_000 });
+    await expect(
+      page.getByText('Username changes are disabled while OIDC exclusive mode is active.'),
     ).toBeVisible({ timeout: 5_000 });
 
     await page.getByText('OIDC / SSO').click();

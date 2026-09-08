@@ -23,7 +23,7 @@
     [disabled]="disabled()"
     [readOnly]="readonly()"
     [(ngModel)]="value"
-    (blur)="blurred.emit($event)"
+    (blur)="onBlur($event)"
     (keydown.enter)="entered.emit()"
     (search)="onSearchCleared($event)"
   />

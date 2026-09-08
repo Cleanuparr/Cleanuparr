@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Exceptions;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -35,7 +36,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             _ => (StatusCodes.Status500InternalServerError, "An error occurred", "An unexpected error occurred"),
         };
 
-        string path = Sanitize(context.Request.Path);
+        string path = context.Request.Path.Value.SanitizeForLog();
 
         if (status >= StatusCodes.Status500InternalServerError)
         {
@@ -44,7 +45,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         else
         {
             _logger.LogWarning(exception, "Handled {Status} during request to {Path}: {Message}",
-                status, path, Sanitize(exception.Message));
+                status, path, exception.Message.SanitizeForLog());
         }
 
         context.Response.StatusCode = status;
@@ -64,13 +65,5 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             ProblemDetails = problemDetails,
             Exception = exception,
         });
-    }
-
-    /// <summary>
-    /// Strips line breaks from user-controlled values before they reach the logs to prevent log forging.
-    /// </summary>
-    private static string Sanitize(string? value)
-    {
-        return value is null ? string.Empty : value.Replace("\r", string.Empty).Replace("\n", string.Empty);
     }
 }
