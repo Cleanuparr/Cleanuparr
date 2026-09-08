@@ -471,4 +471,40 @@ public class DelugeItemWrapperTests
         // Assert
         result.ShouldBe(42);
     }
+
+    [Fact]
+    public void TrackerHealth_ReturnsUnsupported()
+    {
+        // Arrange
+        var downloadStatus = new DownloadStatus
+        {
+            Trackers = new List<Tracker>(),
+            DownloadLocation = "/test/path"
+        };
+        var wrapper = new DelugeItemWrapper(downloadStatus);
+
+        // Act
+        var result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void AddedOn_ReturnsNull()
+    {
+        // Arrange
+        var downloadStatus = new DownloadStatus
+        {
+            Trackers = new List<Tracker>(),
+            DownloadLocation = "/test/path"
+        };
+        var wrapper = new DelugeItemWrapper(downloadStatus);
+
+        // Act
+        var result = wrapper.AddedOn;
+
+        // Assert
+        result.ShouldBeNull();
+    }
 }

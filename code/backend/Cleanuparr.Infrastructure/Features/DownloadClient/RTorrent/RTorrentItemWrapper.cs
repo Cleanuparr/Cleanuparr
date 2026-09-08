@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
@@ -51,6 +52,14 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     /// <inheritdoc/>
     /// <remarks>rTorrent does not expose seeder counts; always returns <see langword="null"/>.</remarks>
     public int? SeederCount => null;
+
+    /// <inheritdoc/>
+    /// <remarks>Cleanuparr fetches no rTorrent tracker state, and the API rejects this feature for rTorrent; always returns <see cref="TrackerHealth.Unsupported"/>.</remarks>
+    public TrackerHealth TrackerHealth => TrackerHealth.Unsupported;
+
+    /// <inheritdoc/>
+    /// <remarks>rTorrent does not expose the time a torrent was added; always returns <see langword="null"/>.</remarks>
+    public DateTimeOffset? AddedOn => null;
 
     public long Eta => CalculateEta();
 

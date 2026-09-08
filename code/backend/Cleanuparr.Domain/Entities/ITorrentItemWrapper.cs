@@ -1,3 +1,5 @@
+using Cleanuparr.Domain.Enums;
+
 namespace Cleanuparr.Domain.Entities;
 
 /// <summary>
@@ -26,6 +28,18 @@ public interface ITorrentItemWrapper
     /// Total seeders reported by the download client when available.
     /// </summary>
     int? SeederCount { get; }
+
+    /// <summary>
+    /// Whether a tracker vouches for the torrent right now.
+    /// Qualifies <see cref="SeederCount"/>, which clients keep reporting from the last tracker answer they saw.
+    /// </summary>
+    TrackerHealth TrackerHealth { get; }
+
+    /// <summary>
+    /// When the download client added the torrent.
+    /// Null when the client reports no added time.
+    /// </summary>
+    DateTimeOffset? AddedOn { get; }
 
     long Eta { get; }
 

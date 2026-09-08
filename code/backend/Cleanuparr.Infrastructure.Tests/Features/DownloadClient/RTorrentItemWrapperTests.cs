@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.RTorrent.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 using Shouldly;
 using Xunit;
@@ -590,6 +591,34 @@ public class RTorrentItemWrapperTests
 
         // Act
         var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void TrackerHealth_ReturnsUnsupported()
+    {
+        // Arrange
+        var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test" };
+        var wrapper = new RTorrentItemWrapper(torrent);
+
+        // Act
+        var result = wrapper.TrackerHealth;
+
+        // Assert
+        result.ShouldBe(TrackerHealth.Unsupported);
+    }
+
+    [Fact]
+    public void AddedOn_ReturnsNull()
+    {
+        // Arrange
+        var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test" };
+        var wrapper = new RTorrentItemWrapper(torrent);
+
+        // Act
+        var result = wrapper.AddedOn;
 
         // Assert
         result.ShouldBeNull();

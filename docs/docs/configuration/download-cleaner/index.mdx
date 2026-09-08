@@ -431,18 +431,31 @@ Categories to check for unlinked downloads. Only downloads in these categories w
 <SectionTitle>Dead Torrents</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  A dead torrent is one whose tracker reports no seeders for a prolonged period — typically because it was removed from the tracker, or the tracker host itself is gone — so it can never reach a ratio or seed-time threshold. Instead of deleting such torrents, this feature moves them to a target category (or adds a tag/label) so you can decide what to do next via a seeding rule for that category/tag. It runs as part of the Download Cleaner job. Configured per download client in the <strong>Dead Torrents</strong> accordion.
+  A dead torrent has nobody left to seed it, so it can never reach a ratio or seed-time threshold. Cleanuparr moves such a torrent to a target category (or adds a tag/label) instead of deleting it, and a seeding rule on that category/tag decides what happens next. It runs as part of the Download Cleaner job. Configured per download client in the <strong>Dead Torrents</strong> accordion.
 </p>
 
 <Note>
-A torrent is considered dead on a run when the client reports **no seeders** — a count of `0`, an unknown count (e.g. qBittorrent's `-1`), or no count at all because the tracker is unreachable. It is only moved after it has been dead for the configured number of consecutive runs (the strike count), and **strikes reset to zero as soon as the client reports seeders again**. Supported for **qBittorrent**, **Transmission**, **Deluge**, and **µTorrent** — not **rTorrent**, which does not report a seeder count.
+Cleanuparr strikes a torrent on a run for either of two reasons:
+
+1. **The client reports no seeders**: a count of `0`, or no count at all. Supported on **qBittorrent**, **Transmission**, **Deluge** and **µTorrent**. Not **rTorrent**, which reports no seeder count.
+2. **A tracker reports the torrent as no longer registered**, while the client still shows seeders. Supported on **qBittorrent** and **Transmission** only, the two clients that expose per-tracker state and messages. **Deluge** and **µTorrent** expose no usable per-tracker signal, so they rely on the first reason alone.
+
+A torrent is moved once it has been struck on the configured number of consecutive runs, and **strikes reset to zero as soon as a run finds it alive again**.
 </Note>
 
 <ConfigSection
   title="Enable Dead Torrent Handling"
 >
 
-When enabled, torrents in the configured categories that report no seeders for the configured number of consecutive runs are moved to the target category (or tagged). Create a seeding rule for that category/tag to control whether and when they are removed.
+When enabled, Cleanuparr scans the configured categories on every run and strikes torrents that look dead. After the configured number of consecutive strikes, the torrent is moved to the target category (or tagged). Create a seeding rule for that category/tag to control whether and when it is removed.
+
+A client's seeder count comes from memory. qBittorrent keeps the last figure a tracker gave it, then falls back to counting peers it once met and still remembers, so a torrent pulled from a private tracker can report seeders for as long as the client stays running. This is why Cleanuparr asks the tracker for its own verdict before it trusts a positive count.
+
+<Important>
+A tracker outage does not count. Cleanuparr separates "the tracker says this torrent is gone" from "the tracker is down, timing out, or rejecting the passkey", and strikes on the first case only. Wording that Cleanuparr does not recognize leaves the torrent untouched, which is the cautious direction. A **Transmission** running in a non-English locale writes its own connection errors in that locale, so those messages also read as unrecognized.
+</Important>
+
+A newly added torrent gets one hour of grace before the tracker check applies, because a tracker can report a fresh grab as unregistered before it acknowledges it.
 
 </ConfigSection>
 
@@ -451,6 +464,10 @@ When enabled, torrents in the configured categories that report no seeders for t
 >
 
 The category a dead torrent is moved to (or the tag/label added when **Use Tag** is enabled). Create a seeding rule for this category/tag to manage the moved torrents.
+
+<Note>
+The move goes one way. Cleanuparr stops scanning a torrent once it carries the target category or tag, so seeders that return later will not move it back. The seeding rule on the target category decides its fate from there.
+</Note>
 
 </ConfigSection>
 
@@ -466,9 +483,9 @@ When enabled, adds a tag/label instead of changing the category, preserving the 
   title="Dead Torrent Strikes"
 >
 
-The number of consecutive runs a torrent must report no seeders before it is moved. Minimum is `3`. Strikes reset to zero as soon as seeders are found again.
+The number of consecutive runs a torrent must look dead before it is moved. Minimum is `3`. Strikes reset to zero as soon as a run finds seeders and no tracker calling the torrent gone.
 
-Set this **high enough to ride out tracker downtime** so a temporarily-unreachable tracker isn't mistaken for a dead one. Choose it together with the Download Cleaner schedule — with an hourly schedule, `24` ≈ one day and `168` ≈ one week of being continuously dead.
+Set this **high enough to ride out tracker downtime**, so a tracker under maintenance does not read as a dead one. Strikes protect you for an outage shorter than the strike count, and the move is one way, so pick a number that spans your tracker's worst maintenance window. Choose it together with the Download Cleaner schedule: on an hourly schedule, `24` is about a day and `168` about a week.
 
 </ConfigSection>
 

@@ -8,6 +8,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -20,6 +21,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
     private readonly IStriker _striker;
     private readonly IDownloadService _downloadService;
     private readonly DownloadClientConfig _clientConfig;
+    private readonly FakeTimeProvider _timeProvider;
     private readonly DeadTorrentService _sut;
 
     public DeadTorrentServiceTests()
@@ -27,6 +29,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
         _dataContext = TestDataContextFactory.Create(seedData: false);
         _striker = Substitute.For<IStriker>();
         _downloadService = Substitute.For<IDownloadService>();
+        _timeProvider = new FakeTimeProvider();
 
         _clientConfig = new DownloadClientConfig
         {
@@ -42,7 +45,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
         _dataContext.DownloadClients.Add(_clientConfig);
         _dataContext.SaveChanges();
 
-        _sut = new DeadTorrentService(Substitute.For<ILogger<DeadTorrentService>>(), _dataContext, _striker);
+        _sut = new DeadTorrentService(Substitute.For<ILogger<DeadTorrentService>>(), _dataContext, _timeProvider, _striker);
     }
 
     public void Dispose()
@@ -65,7 +68,13 @@ public sealed class DeadTorrentServiceTests : IDisposable
         _dataContext.SaveChanges();
     }
 
-    private static ITorrentItemWrapper CreateTorrent(string hash, string category, int? seederCount, string[]? tags = null)
+    private static ITorrentItemWrapper CreateTorrent(
+        string hash,
+        string category,
+        int? seederCount,
+        string[]? tags = null,
+        TrackerHealth health = TrackerHealth.Unsupported,
+        DateTimeOffset? addedOn = null)
     {
         var torrent = Substitute.For<ITorrentItemWrapper>();
         torrent.Hash.Returns(hash);
@@ -73,6 +82,8 @@ public sealed class DeadTorrentServiceTests : IDisposable
         torrent.Category.Returns(category);
         torrent.SeederCount.Returns(seederCount);
         torrent.Tags.Returns(tags ?? Array.Empty<string>());
+        torrent.TrackerHealth.Returns(health);
+        torrent.AddedOn.Returns(addedOn);
         return torrent;
     }
 
@@ -199,5 +210,132 @@ public sealed class DeadTorrentServiceTests : IDisposable
 
         await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
         await _downloadService.DidNotReceiveWithAnyArgs().ChangeTorrentCategoryAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Unregistered_WithPositiveSeederCount_Strikes()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Unregistered, addedOn: _timeProvider.GetUtcNow().AddDays(-30)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Unregistered_AtThreshold_MovesToCategory()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(true);
+        ITorrentItemWrapper torrent = CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Unregistered, addedOn: _timeProvider.GetUtcNow().AddDays(-30));
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper> { torrent };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _downloadService.Received(1).ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", false);
+    }
+
+    [Fact]
+    public async Task Unregistered_WithinGracePeriod_ResetsStrikes()
+    {
+        AddConfig();
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Unregistered, addedOn: _timeProvider.GetUtcNow().AddMinutes(-10)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).ResetStrikeAsync("hash1", Arg.Any<string>(), StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Unregistered_WithFutureAddedOn_Strikes()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Unregistered, addedOn: _timeProvider.GetUtcNow().AddHours(5)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Unregistered_WithNullAddedOn_Strikes()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Unregistered),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task Inconclusive_WithSeeders_ResetsStrikes()
+    {
+        AddConfig();
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Inconclusive, addedOn: _timeProvider.GetUtcNow().AddDays(-30)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).ResetStrikeAsync("hash1", Arg.Any<string>(), StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Working_WithSeeders_ResetsStrikes()
+    {
+        AddConfig();
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Working, addedOn: _timeProvider.GetUtcNow().AddDays(-30)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).ResetStrikeAsync("hash1", Arg.Any<string>(), StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task Unregistered_WithZeroSeeders_Strikes()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 0, health: TrackerHealth.Unregistered, addedOn: _timeProvider.GetUtcNow().AddMinutes(-10)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
     }
 }

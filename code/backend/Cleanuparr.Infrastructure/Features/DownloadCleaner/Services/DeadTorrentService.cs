@@ -13,17 +13,22 @@ namespace Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 /// <inheritdoc cref="IDeadTorrentService" />
 public sealed class DeadTorrentService : IDeadTorrentService
 {
+    private static readonly TimeSpan UnregisteredGracePeriod = TimeSpan.FromHours(1);
+
     private readonly ILogger<DeadTorrentService> _logger;
     private readonly DataContext _dataContext;
+    private readonly TimeProvider _timeProvider;
     private readonly IStriker _striker;
 
     public DeadTorrentService(
         ILogger<DeadTorrentService> logger,
         DataContext dataContext,
+        TimeProvider timeProvider,
         IStriker striker)
     {
         _logger = logger;
         _dataContext = dataContext;
+        _timeProvider = timeProvider;
         _striker = striker;
     }
 
@@ -40,7 +45,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
 
         if (config.Categories.Count is 0)
         {
-            _logger.LogWarning("Dead torrent config is enabled but no categories are configured for {name}", downloadService.ClientConfig.Name);
+            _logger.LogWarning("Dead torrent config is enabled but no categories are configured for {Name}", downloadService.ClientConfig.Name);
             return;
         }
 
@@ -51,6 +56,12 @@ public sealed class DeadTorrentService : IDeadTorrentService
                 ? !t.Tags.Contains(config.TargetCategory, StringComparer.OrdinalIgnoreCase)
                 : !config.TargetCategory.Equals(t.Category, StringComparison.OrdinalIgnoreCase))
             .ToList();
+
+        _logger.LogDebug(
+            "dead torrent scan | {Candidates}/{Total} candidates | categories: {Categories}",
+            candidates.Count,
+            clientDownloads.Count,
+            string.Join(", ", config.Categories));
 
         if (candidates.Count is 0)
         {
@@ -63,7 +74,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create category {category}", config.TargetCategory);
+            _logger.LogError(ex, "Failed to create category {Category}", config.TargetCategory);
         }
 
         foreach (ITorrentItemWrapper torrent in candidates)
@@ -72,11 +83,23 @@ public sealed class DeadTorrentService : IDeadTorrentService
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
 
-            if (torrent.SeederCount > 0)
+            bool unregistered = torrent.TrackerHealth is TrackerHealth.Unregistered
+                                && !WithinGracePeriod(torrent);
+
+            if (torrent.SeederCount > 0 && !unregistered)
             {
                 await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, StrikeType.DeadTorrent);
                 continue;
             }
+
+            string reason = unregistered ? "tracker reports unregistered" : "no seeders";
+
+            _logger.LogDebug(
+                "dead torrent candidate | {Reason} | seeders: {Seeders} | tracker: {Health} | {Name}",
+                reason,
+                torrent.SeederCount,
+                torrent.TrackerHealth,
+                torrent.Name);
 
             bool shouldMove = await _striker.StrikeAndCheckLimit(
                 torrent.Hash,
@@ -92,10 +115,24 @@ public sealed class DeadTorrentService : IDeadTorrentService
             await downloadService.ChangeTorrentCategoryAsync(torrent, config.TargetCategory, config.UseTag);
 
             _logger.LogInformation(
-                "dead torrent moved to {target} | tag: {useTag} | {name}",
+                "dead torrent moved to {Target} | {Reason} | tag: {UseTag} | {Name}",
                 config.TargetCategory,
+                reason,
                 config.UseTag,
                 torrent.Name);
         }
+    }
+
+    private bool WithinGracePeriod(ITorrentItemWrapper torrent)
+    {
+        if (torrent.AddedOn is null)
+        {
+            return false;
+        }
+
+        TimeSpan age = _timeProvider.GetUtcNow() - torrent.AddedOn.Value;
+
+        // A client clock ahead of ours yields a negative age, which is not newly added.
+        return age >= TimeSpan.Zero && age < UnregisteredGracePeriod;
     }
 }

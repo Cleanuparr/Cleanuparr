@@ -46,6 +46,14 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
     /// <inheritdoc/>
     public int? SeederCount => Info.TotalSeeds;
 
+    /// <inheritdoc/>
+    /// <remarks>Deluge exposes no per-tracker announce result: <c>tracker_status</c> is one free-form string for the whole torrent, and the status key on <c>trackers</c> is a snapshot frozen when the torrent was added.</remarks>
+    public TrackerHealth TrackerHealth => TrackerHealth.Unsupported;
+
+    /// <inheritdoc/>
+    /// <remarks>The requested Deluge status fields carry no added time; always returns <see langword="null"/>.</remarks>
+    public DateTimeOffset? AddedOn => null;
+
     /// <summary>
     /// The number of seconds that the download needs to finish.
     /// A negative value from Deluge shows an unknown time.
