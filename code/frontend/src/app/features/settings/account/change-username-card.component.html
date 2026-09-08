@@ -8,21 +8,21 @@
     <app-input
       label="New Username"
       placeholder="Enter new username (min 3 characters)"
-      [value]="newUsername()"
-      (valueChange)="newUsername.set($event)"
+      [formField]="usernameForm.newUsername"
+      [error]="usernameForm.newUsername().touched() ? usernameForm.newUsername().errors()[0]?.message : undefined"
     />
     <app-input
       label="Current Password"
       type="password"
       placeholder="Enter current password"
-      [value]="currentPassword()"
-      (valueChange)="currentPassword.set($event)"
+      [formField]="usernameForm.currentPassword"
+      [error]="usernameForm.currentPassword().touched() ? usernameForm.currentPassword().errors()[0]?.message : undefined"
     />
     <div class="form-actions">
       <app-button
         variant="primary"
-        [glowing]="!!newUsername() && !!currentPassword() && !oidcExclusiveMode()"
-        [disabled]="!newUsername() || !currentPassword() || changingUsername() || oidcExclusiveMode()"
+        [glowing]="!usernameForm().invalid() && !oidcExclusiveMode()"
+        [disabled]="usernameForm().invalid() || changingUsername() || oidcExclusiveMode()"
         (clicked)="changeUsername()"
       >
         @if (changingUsername()) {

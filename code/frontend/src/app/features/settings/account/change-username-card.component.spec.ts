@@ -1,14 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AccountApi, ChangeUsernameRequest } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ChangeUsernameCardComponent } from './change-username-card.component';
 
 describe('ChangeUsernameCardComponent', () => {
-  function setup(options: { fails?: boolean; oidcExclusiveMode?: boolean } = {}) {
+  function setup(options: { fails?: boolean; pending?: boolean; oidcExclusiveMode?: boolean } = {}) {
     const toasts: string[] = [];
     const requests: ChangeUsernameRequest[] = [];
+    const pending = new Subject<void>();
     let logouts = 0;
 
     TestBed.configureTestingModule({
@@ -18,7 +19,10 @@ describe('ChangeUsernameCardComponent', () => {
           useValue: {
             changeUsername: (request: ChangeUsernameRequest) => {
               requests.push(request);
-              return options.fails ? throwError(() => new Error('boom')) : of(undefined);
+              if (options.fails) {
+                return throwError(() => new Error('boom'));
+              }
+              return options.pending ? pending : of(undefined);
             },
           },
         },
@@ -40,7 +44,7 @@ describe('ChangeUsernameCardComponent', () => {
     fixture.componentRef.setInput('currentUsername', 'admin');
     fixture.componentRef.setInput('oidcExclusiveMode', options.oidcExclusiveMode ?? false);
     fixture.detectChanges();
-    return { fixture, toasts, requests, logoutCount: () => logouts };
+    return { fixture, toasts, requests, pending, logoutCount: () => logouts };
   }
 
   function fill(
@@ -56,6 +60,7 @@ describe('ChangeUsernameCardComponent', () => {
       if (value !== undefined) {
         element.value = value;
         element.dispatchEvent(new Event('input'));
+        element.dispatchEvent(new Event('blur'));
       }
     }
     fixture.detectChanges();
@@ -65,11 +70,16 @@ describe('ChangeUsernameCardComponent', () => {
     return Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button.btn')).at(-1)!;
   }
 
+  function errors(fixture: ComponentFixture<ChangeUsernameCardComponent>): string[] {
+    return Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.input-error'))
+      .map(element => element.textContent!.trim());
+  }
+
   it('prefills the field with the current username', async () => {
     const { fixture } = setup();
     await fixture.whenStable();
 
-    expect(fixture.componentInstance.newUsername()).toBe('admin');
+    expect(fixture.componentInstance.usernameForm.newUsername().value()).toBe('admin');
     expect(Array.from<HTMLInputElement>(fixture.nativeElement.querySelectorAll('input'))[0].value).toBe('admin');
   });
 
@@ -78,31 +88,60 @@ describe('ChangeUsernameCardComponent', () => {
 
     expect(submitButton(fixture).disabled).toBe(true);
 
-    fill(fixture, { password: 'old-secret' });
+    fill(fixture, { username: 'renamed', password: 'old-secret' });
 
     expect(submitButton(fixture).disabled).toBe(false);
   });
 
-  it('blocks the request when the trimmed username is shorter than three characters', () => {
-    const { fixture, toasts, requests } = setup();
+  it('reports a trimmed username shorter than three characters', () => {
+    const { fixture, requests } = setup();
 
     fill(fixture, { username: '  ab  ', password: 'old-secret' });
-    submitButton(fixture).click();
-    fixture.detectChanges();
 
+    expect(errors(fixture)).toContain('Username must be at least 3 characters');
+    expect(submitButton(fixture).disabled).toBe(true);
     expect(requests).toEqual([]);
-    expect(toasts).toEqual(['error:Username must be at least 3 characters']);
   });
 
-  it('blocks the request when the username is unchanged', () => {
-    const { fixture, toasts, requests } = setup();
+  it('reports an empty username as required', () => {
+    const { fixture, requests } = setup();
 
-    fill(fixture, { password: 'old-secret' });
+    fill(fixture, { username: '', password: 'old-secret' });
+
+    expect(errors(fixture)).toContain('Username is required');
+    expect(submitButton(fixture).disabled).toBe(true);
+    expect(requests).toEqual([]);
+  });
+
+  it('reports an unchanged username', () => {
+    const { fixture, requests } = setup();
+
+    fill(fixture, { username: 'admin', password: 'old-secret' });
+
+    expect(errors(fixture)).toContain('New username must be different from the current username');
+    expect(submitButton(fixture).disabled).toBe(true);
+    expect(requests).toEqual([]);
+  });
+
+  it('shows the spinner and blocks a second submit while the request is in flight', () => {
+    const { fixture, pending, logoutCount } = setup({ pending: true });
+
+    fill(fixture, { username: 'renamed', password: 'old-secret' });
     submitButton(fixture).click();
     fixture.detectChanges();
 
-    expect(requests).toEqual([]);
-    expect(toasts).toEqual(['error:New username must be different from the current username']);
+    expect(fixture.componentInstance.changingUsername()).toBe(true);
+    expect(fixture.nativeElement.querySelector('app-spinner')).not.toBeNull();
+    expect(submitButton(fixture).textContent).toContain('Changing...');
+    expect(submitButton(fixture).disabled).toBe(true);
+    expect(logoutCount()).toBe(0);
+
+    pending.next();
+    pending.complete();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.changingUsername()).toBe(false);
+    expect(logoutCount()).toBe(1);
   });
 
   it('trims the username, signs the user out and asks them to sign in again', () => {
@@ -126,7 +165,7 @@ describe('ChangeUsernameCardComponent', () => {
 
     expect(requests).toEqual([{ currentPassword: 'wrong-one', newUsername: 'renamed' }]);
     expect(toasts).toEqual(['error:Failed to change username']);
-    expect(fixture.componentInstance.newUsername()).toBe('renamed');
+    expect(fixture.componentInstance.usernameForm.newUsername().value()).toBe('renamed');
     expect(fixture.componentInstance.changingUsername()).toBe(false);
     expect(logoutCount()).toBe(0);
   });
