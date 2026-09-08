@@ -130,6 +130,9 @@ public sealed class DeadTorrentService : IDeadTorrentService
             return false;
         }
 
-        return _timeProvider.GetUtcNow() - torrent.AddedOn.Value < UnregisteredGracePeriod;
+        TimeSpan age = _timeProvider.GetUtcNow() - torrent.AddedOn.Value;
+
+        // A client clock ahead of ours yields a negative age, which is not newly added.
+        return age >= TimeSpan.Zero && age < UnregisteredGracePeriod;
     }
 }

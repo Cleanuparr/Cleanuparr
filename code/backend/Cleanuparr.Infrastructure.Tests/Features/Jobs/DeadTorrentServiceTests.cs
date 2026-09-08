@@ -259,6 +259,23 @@ public sealed class DeadTorrentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Unregistered_WithFutureAddedOn_Strikes()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
+        List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper>
+        {
+            CreateTorrent("hash1", "movies", 2, health: TrackerHealth.Unregistered, addedOn: _timeProvider.GetUtcNow().AddHours(5)),
+        };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+    }
+
+    [Fact]
     public async Task Unregistered_WithNullAddedOn_Strikes()
     {
         AddConfig();
