@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { loginAndGotoSettings, textInput } from '../helpers/ui';
+import { TEST_CONFIG } from '../helpers/test-config';
 
 // Behavior-parity spec for the non-OIDC Account settings sections.
 // (OIDC is covered separately in oidc-settings-ui.spec.ts.)
@@ -7,9 +8,22 @@ import { loginAndGotoSettings, textInput } from '../helpers/ui';
 test.describe('Account Settings UI', () => {
   test('renders the account section cards', async ({ page }) => {
     await loginAndGotoSettings(page, 'account');
-    for (const title of ['Change Password', 'Two-Factor Authentication', 'API Key', 'Plex Integration']) {
+    for (const title of ['Change Username', 'Change Password', 'Two-Factor Authentication', 'API Key', 'Plex Integration']) {
       await expect(page.locator('app-card').filter({ hasText: title })).toBeVisible();
     }
+  });
+
+  test('username change prefills the current name and is gated on a password', async ({ page }) => {
+    await loginAndGotoSettings(page, 'account');
+    const card = page.locator('app-card').filter({ hasText: 'Change Username' });
+
+    await expect(textInput(card, 'New Username')).toHaveValue(TEST_CONFIG.adminUsername);
+
+    const submit = card.getByRole('button', { name: 'Change Username' });
+    await expect(submit).toBeDisabled();
+
+    await textInput(card, 'Current Password').fill(TEST_CONFIG.adminPassword);
+    await expect(submit).toBeEnabled();
   });
 
   test('API key reveal toggles between masked and revealed', async ({ page }) => {
