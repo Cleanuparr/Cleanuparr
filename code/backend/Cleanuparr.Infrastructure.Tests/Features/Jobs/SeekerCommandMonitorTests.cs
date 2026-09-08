@@ -808,6 +808,147 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             _timeProvider.GetUtcNow() - TimeSpan.FromMinutes(60));
     }
 
+    [Fact]
+    public async Task Reports_the_grab_of_a_sonarr_episode_search()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(sonarrInstance.Id, externalItemId: 42, episodeId: 9001, itemTitle: "Example Show - S03E04"),
+            new QueueRecord { Id = 1, SeriesId = 42, EpisodeId = 9001, SeasonNumber = 3, Title = "Example.Show.S03E04.1080p", DownloadId = "EP9001", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Show.S03E04.1080p"]);
+    }
+
+    [Fact]
+    public async Task Ignores_another_episode_of_the_same_series()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(sonarrInstance.Id, externalItemId: 42, episodeId: 9001, itemTitle: "Example Show - S03E04"),
+            new QueueRecord { Id = 1, SeriesId = 42, EpisodeId = 9001, SeasonNumber = 3, Title = "Example.Show.S03E04.1080p", DownloadId = "EP9001", Protocol = "torrent", Status = "downloading" },
+            new QueueRecord { Id = 2, SeriesId = 42, EpisodeId = 9002, SeasonNumber = 3, Title = "Example.Show.S03E05.1080p", DownloadId = "EP9002", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Show.S03E04.1080p"]);
+    }
+
+    [Fact]
+    public async Task Ignores_another_season_of_a_specials_search()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(sonarrInstance.Id, externalItemId: 42, seasonNumber: 0, itemTitle: "Example Show S00"),
+            new QueueRecord { Id = 1, SeriesId = 42, EpisodeId = 9001, SeasonNumber = 3, Title = "Example.Show.S03E04.1080p", DownloadId = "EP9001", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Reports_the_grab_of_a_whisparr_v3_search()
+    {
+        // Arrange
+        ArrInstance whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 3);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(whisparrInstance.Id, externalItemId: 55, itemTitle: "Example Scene"),
+            new QueueRecord { Id = 1, MovieId = 55, Title = "Example.Scene.1080p", DownloadId = "MV55", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Scene.1080p"]);
+    }
+
+    [Fact]
+    public async Task Reports_the_grab_of_a_lidarr_search()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = TestDataContextFactory.AddLidarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(lidarrInstance.Id, externalItemId: 77, itemTitle: "Example Album"),
+            new QueueRecord { Id = 1, AlbumId = 77, Title = "Example.Album.FLAC", DownloadId = "AL77", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Album.FLAC"]);
+    }
+
+    [Fact]
+    public async Task Reports_the_grab_of_a_readarr_search()
+    {
+        // Arrange
+        ArrInstance readarrInstance = TestDataContextFactory.AddReadarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(readarrInstance.Id, externalItemId: 88, itemTitle: "Example Book"),
+            new QueueRecord { Id = 1, BookId = 88, Title = "Example.Book.EPUB", DownloadId = "BK88", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Book.EPUB"]);
+    }
+
+    private SeekerCommandTracker Tracker(
+        Guid arrInstanceId,
+        long externalItemId,
+        long episodeId = 0,
+        int seasonNumber = 0,
+        string itemTitle = "Test Item") =>
+        new()
+        {
+            ArrInstanceId = arrInstanceId,
+            CommandId = 1,
+            EventId = Guid.NewGuid(),
+            ExternalItemId = externalItemId,
+            EpisodeId = episodeId,
+            ItemTitle = itemTitle,
+            SeasonNumber = seasonNumber,
+            Status = SearchCommandStatus.Pending,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+        };
+
+    /// <summary>
+    /// Runs one monitor cycle over a completed command and returns the titles it attributed.
+    /// </summary>
+    private async Task<List<string>?> CaptureGrabbedItemsAsync(SeekerCommandTracker tracker, params QueueRecord[] records)
+    {
+        _eventsContext.SeekerCommandTrackers.Add(tracker);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed, tracker.CommandId);
+
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse { TotalRecords = records.Length, Records = [.. records] });
+
+        TaskCompletionSource<List<string>?> publishTcs = new();
+        _eventPublisher.PublishSearchCompleted(
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(4)));
+
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+
+        return await publishTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
     private void StubCommandState(ArrCommandState state, long commandId = 1)
     {
         _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>())
