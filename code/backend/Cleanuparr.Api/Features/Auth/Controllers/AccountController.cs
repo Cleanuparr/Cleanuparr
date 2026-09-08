@@ -8,6 +8,7 @@ using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -138,7 +139,8 @@ public sealed class AccountController : ControllerBase
         await RevokeActiveRefreshTokens(user.Id, now);
         await _usersContext.SaveChangesAsync();
 
-        _logger.LogInformation("Username changed from {PreviousUsername} to {Username}", previousUsername, newUsername);
+        _logger.LogInformation("Username changed from {PreviousUsername} to {Username}",
+            previousUsername.SanitizeForLog(), newUsername.SanitizeForLog());
 
         return Ok(new { message = "Username changed" });
     }

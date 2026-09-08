@@ -8,6 +8,7 @@ using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -118,7 +119,7 @@ public sealed class AuthController : ControllerBase
             _usersContext.Users.Add(user);
             await _usersContext.SaveChangesAsync();
 
-            _logger.LogInformation("Admin account created for user {Username}", request.Username);
+            _logger.LogInformation("Admin account created for user {Username}", request.Username.SanitizeForLog());
 
             return Created("", new { userId = user.Id });
         }
