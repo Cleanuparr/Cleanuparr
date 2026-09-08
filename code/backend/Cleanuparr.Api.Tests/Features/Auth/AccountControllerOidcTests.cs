@@ -214,6 +214,18 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
     }
 
     [Fact, TestPriority(12)]
+    public async Task ChangeUsername_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PutAsJsonAsync("/api/account/username", new
+        {
+            currentPassword = "LinkPassword123!",
+            newUsername = "renamedadmin"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(13)]
     public async Task PlexLink_Blocked_WhenExclusiveModeActive()
     {
         var response = await _client.PostAsync("/api/account/plex/link", null);
@@ -221,7 +233,7 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
-    [Fact, TestPriority(13)]
+    [Fact, TestPriority(14)]
     public async Task PlexUnlink_Blocked_WhenExclusiveModeActive()
     {
         var response = await _client.DeleteAsync("/api/account/plex/link");
@@ -229,7 +241,7 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
-    [Fact, TestPriority(14)]
+    [Fact, TestPriority(15)]
     public async Task OidcConfigUpdate_StillWorks_WhenExclusiveModeActive()
     {
         var response = await _client.PutAsJsonAsync("/api/account/oidc", new
@@ -248,7 +260,7 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
-    [Fact, TestPriority(15)]
+    [Fact, TestPriority(16)]
     public async Task OidcUnlink_ResetsExclusiveMode()
     {
         var response = await _client.DeleteAsync("/api/account/oidc/link");
@@ -260,7 +272,7 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         exclusiveMode.ShouldBeFalse();
     }
 
-    [Fact, TestPriority(16)]
+    [Fact, TestPriority(17)]
     public async Task DisableExclusiveMode_PasswordChangeWorks_Again()
     {
         // Re-enable OIDC with a linked subject but without exclusive mode
