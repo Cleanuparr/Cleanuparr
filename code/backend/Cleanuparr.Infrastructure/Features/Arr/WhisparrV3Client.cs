@@ -95,27 +95,10 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     public override bool SupportsForceImport => true;
 
     /// <inheritdoc/>
-    public override ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate)
-    {
-        long? movieId = candidate.ResolvedMovieId;
-
-        if (movieId != record.MovieId)
-        {
-            return null;
-        }
-
-        return new ManualImportFile
-        {
-            Path = candidate.Path,
-            FolderName = candidate.FolderName,
-            DownloadId = candidate.DownloadId,
-            ReleaseGroup = candidate.ReleaseGroup,
-            IndexerFlags = candidate.IndexerFlags,
-            Quality = candidate.Quality,
-            Languages = candidate.Languages,
-            MovieId = movieId,
-        };
-    }
+    public override ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) =>
+        candidate.ResolvedMovieId is { } movieId && movieId == record.MovieId
+            ? ManualImportFile.FromMovieCandidate(candidate, movieId)
+            : null;
 
     private static string GetSearchLog(Uri instanceUrl, WhisparrV3Command command, bool success, string? logContext)
     {

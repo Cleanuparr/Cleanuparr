@@ -33,4 +33,19 @@ public sealed record ManualImportFile
 
     // Radarr and Whisparr v3
     public long? MovieId { get; init; }
+
+    /// <summary>
+    /// Builds the payload every movie arr sends, since Radarr and Whisparr v3 read the same ids.
+    /// </summary>
+    public static ManualImportFile FromMovieCandidate(ManualImportCandidate candidate, long movieId) => new()
+    {
+        Path = candidate.Path,
+        FolderName = candidate.FolderName,
+        DownloadId = candidate.DownloadId,
+        ReleaseGroup = candidate.ReleaseGroup,
+        IndexerFlags = candidate.IndexerFlags,
+        Quality = candidate.Quality,
+        Languages = candidate.Languages,
+        MovieId = movieId,
+    };
 }
