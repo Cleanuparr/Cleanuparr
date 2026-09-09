@@ -31,12 +31,12 @@ public sealed record ManualImportCandidate
     public List<ManualImportRejection>? Rejections { get; init; }
 
     // Sonarr, Sportarr and Whisparr v2
-    public ManualImportSeries? Series { get; init; }
+    public ManualImportRef? Series { get; init; }
 
-    public List<ManualImportEpisode>? Episodes { get; init; }
+    public List<ManualImportRef>? Episodes { get; init; }
 
     // Radarr and Whisparr v3
-    public ManualImportMovie? Movie { get; init; }
+    public ManualImportRef? Movie { get; init; }
 
     /// <summary>
     /// Radarr 6 sends the movie id flat, older builds nest it under <see cref="Movie"/>.

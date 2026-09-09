@@ -622,8 +622,8 @@ public class SonarrClientTests
             Path = "/downloads/show.mkv",
             DownloadId = "HASH",
             IndexerFlags = 2,
-            Series = new ManualImportSeries { Id = 7 },
-            Episodes = [new ManualImportEpisode { Id = 9 }, new ManualImportEpisode { Id = 10 }],
+            Series = new ManualImportRef { Id = 7 },
+            Episodes = [new ManualImportRef { Id = 9 }, new ManualImportRef { Id = 10 }],
         };
 
         // Act
@@ -645,8 +645,8 @@ public class SonarrClientTests
         QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
         ManualImportCandidate candidate = new()
         {
-            Series = new ManualImportSeries { Id = 8 },
-            Episodes = [new ManualImportEpisode { Id = 9 }],
+            Series = new ManualImportRef { Id = 8 },
+            Episodes = [new ManualImportRef { Id = 9 }],
         };
 
         // Act, Assert
@@ -658,7 +658,7 @@ public class SonarrClientTests
     {
         // Arrange
         QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
-        ManualImportCandidate candidate = new() { Series = new ManualImportSeries { Id = 7 }, Episodes = [] };
+        ManualImportCandidate candidate = new() { Series = new ManualImportRef { Id = 7 }, Episodes = [] };
 
         // Act, Assert
         _client.MapCandidate(record, candidate).ShouldBeNull();

@@ -470,7 +470,7 @@ public class RadarrClientTests
     {
         // Arrange: an older build nests the movie
         QueueRecord record = new() { MovieId = 1, DownloadId = "HASH", Title = "movie" };
-        ManualImportCandidate candidate = new() { Movie = new ManualImportMovie { Id = 1 } };
+        ManualImportCandidate candidate = new() { Movie = new ManualImportRef { Id = 1 } };
 
         // Act, Assert
         _client.MapCandidate(record, candidate)!.MovieId.ShouldBe(1);
