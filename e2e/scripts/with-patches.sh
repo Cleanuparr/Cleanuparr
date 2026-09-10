@@ -2,9 +2,12 @@
 #
 # Applies e2e/patches to the working tree, runs a command, then reverts.
 #
-# The shipped build refuses to trigger the Seeker on demand, so the live-arr-fast
-# suite builds an image without that guard.
-# The unpatched live-arr suite keeps the real scheduled path covered.
+# With no command it applies them and leaves them applied, for CI, whose
+# checkout is thrown away.
+#
+# The shipped build refuses to trigger the Seeker on demand, so the seeker-fast and
+# live-arr-fast suites build an image without that guard.
+# The unpatched core and live-arr suites keep the real scheduled path covered.
 #
 # The revert runs from a trap, so an aborted build cannot leave the tree dirty.
 #
@@ -38,11 +41,19 @@ for patch in "${PATCHES[@]}"; do
   fi
 done
 
+apply() {
+  local patch
+  for patch in "${PATCHES[@]}"; do
+    git -C "$REPO" apply "$patch"
+    echo "[with-patches] applied $(basename "$patch")"
+  done
+}
+
+if [[ $# -eq 0 ]]; then
+  apply
+  exit 0
+fi
+
 trap revert EXIT
-
-for patch in "${PATCHES[@]}"; do
-  git -C "$REPO" apply "$patch"
-  echo "[with-patches] applied $(basename "$patch")"
-done
-
+apply
 "$@"

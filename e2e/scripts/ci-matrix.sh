@@ -2,10 +2,12 @@
 #
 # Prints the e2e suite matrix as JSON for the CI workflow to consume.
 #
-# It lives here rather than inline in .github/workflows/e2e.yml so that adding or
-# retiming a leg is a change to a checked-out file. A workflow triggered by an
-# issue comment runs the default branch's workflow file, so an inline matrix can
-# only change by merging.
+# A workflow triggered by an issue comment runs the default branch's copy, so a
+# matrix written inline in e2e.yml can only change by merging. Here it is a
+# checked-out file, and a PR can add or retime a leg.
+#
+# stack-target raises everything except the app, so a leg can do that while the
+# app image is still building. image-variant picks which image it then runs.
 #
 set -euo pipefail
 
@@ -14,7 +16,8 @@ suites=()
 # These folders need only the app, Keycloak, nginx and the wiremocks.
 suites+=('{
   "name": "core",
-  "make-target": "up-core",
+  "stack-target": "up-stack-core",
+  "image-variant": "plain",
   "projects": "--project=account --project=arr --project=auth --project=blacklist-sync --project=core --project=general --project=notifications --project=oidc --project=queue-cleaner --project=regression --project=seeker --project=signalr"
 }')
 
@@ -22,35 +25,40 @@ suites+=('{
 # triggered instead of waited for. See e2e/patches.
 suites+=('{
   "name": "seeker-fast",
-  "make-target": "up-core-fast",
+  "stack-target": "up-stack-core",
+  "image-variant": "patched",
   "projects": "--project=seeker-fast"
 }')
 
 # These folders need the torrent clients and the tracker.
 suites+=('{
   "name": "clients",
-  "make-target": "up-clients",
+  "stack-target": "up-stack-clients",
+  "image-variant": "plain",
   "projects": "--project=download-cleaner --project=download-client --project=malware-blocker"
 }')
 
 # This folder needs the real arrs, the fake indexer and qBittorrent.
 suites+=('{
   "name": "live-arr",
-  "make-target": "up-arr",
+  "stack-target": "up-stack-arr",
+  "image-variant": "plain",
   "projects": "--project=live-arr"
 }')
 
 # Same stack as live-arr, patched like seeker-fast.
 suites+=('{
   "name": "live-arr-fast",
-  "make-target": "up-arr-fast",
+  "stack-target": "up-stack-arr",
+  "image-variant": "patched",
   "projects": "--project=live-arr-fast"
 }')
 
 # This folder needs the real LazyLibrarian, the fake indexer and qBittorrent.
 suites+=('{
   "name": "live-lazylibrarian",
-  "make-target": "up-lazylibrarian",
+  "stack-target": "up-stack-lazylibrarian",
+  "image-variant": "plain",
   "projects": "--project=live-lazylibrarian"
 }')
 

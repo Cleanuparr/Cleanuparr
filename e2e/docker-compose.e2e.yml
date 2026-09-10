@@ -81,6 +81,8 @@ services:
       start_period: 10s
 
   app:
+    # CI loads a prebuilt image under this name so no leg has to build one.
+    image: ${APP_IMAGE:-cleanuparr-e2e-app}
     build:
       context: ../code
       args:

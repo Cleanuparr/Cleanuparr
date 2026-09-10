@@ -16,6 +16,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   suites:
@@ -37,6 +38,71 @@ jobs:
         working-directory: e2e
         run: echo "list=$(bash ./scripts/ci-matrix.sh)" >> "$GITHUB_OUTPUT"
 
+  build-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [plain, patched]
+
+    name: build-app (${{ matrix.variant }})
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        timeout-minutes: 1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+
+      - name: Get vault secrets
+        uses: hashicorp/vault-action@v4
+        with:
+          url: ${{ secrets.VAULT_HOST }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets:
+            secrets/data/github packages_pat | PACKAGES_PAT
+
+      # Nothing reverts these. The runner throws the checkout away.
+      - name: Apply the e2e patches
+        if: matrix.variant == 'patched'
+        run: bash e2e/scripts/with-patches.sh
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        timeout-minutes: 5
+
+      - name: Build the app image
+        uses: docker/build-push-action@v7
+        timeout-minutes: 25
+        with:
+          context: ${{ github.workspace }}/code
+          file: ${{ github.workspace }}/code/Dockerfile
+          provenance: false
+          build-args: |
+            PACKAGES_USERNAME=${{ github.repository_owner }}
+            PACKAGES_PAT=${{ env.PACKAGES_PAT }}
+          tags: cleanuparr-e2e-app:${{ matrix.variant }}
+          outputs: type=docker,dest=/tmp/app-image.tar
+          cache-from: type=gha,scope=e2e-${{ matrix.variant }}
+          cache-to: type=gha,scope=e2e-${{ matrix.variant }},mode=max
+
+      # gzip -1 beats letting upload-artifact deflate a layer tar this size.
+      - name: Compress the image
+        run: gzip -1 /tmp/app-image.tar
+
+      - name: Upload the image
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-app-image-${{ matrix.variant }}
+          path: /tmp/app-image.tar.gz
+          retention-days: 1
+          compression-level: 0
+
   e2e:
     needs: suites
     runs-on: ubuntu-latest
@@ -57,22 +123,9 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
 
-      - name: Get vault secrets
-        uses: hashicorp/vault-action@v4
-        with:
-          url: ${{ secrets.VAULT_HOST }}
-          method: approle
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          secrets:
-            secrets/data/github packages_pat | PACKAGES_PAT
-
-      - name: Start services
+      - name: Start the stack
         working-directory: e2e
-        run: make ${{ matrix.suite.make-target }}
-        env:
-          PACKAGES_USERNAME: ${{ github.repository_owner }}
-          PACKAGES_PAT: ${{ env.PACKAGES_PAT }}
+        run: make ${{ matrix.suite.stack-target }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -105,6 +158,64 @@ jobs:
         env:
           DEBUG: pw:install
         run: npx playwright install --with-deps chromium
+
+      - name: Wait for the app image
+        timeout-minutes: 30
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VARIANT: ${{ matrix.suite.image-variant }}
+          RUN_JOBS: /repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs
+          RUN_ARTIFACTS: /repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts
+        run: |
+          set -euo pipefail
+          artifact="e2e-app-image-$VARIANT"
+          job="build-app ($VARIANT)"
+          grace=12
+
+          # The artifact appears only once build-app uploads it. Watch that job too,
+          # so a build failure ends this leg instead of stalling it until the timeout.
+          while :; do
+            if gh api "$RUN_ARTIFACTS" --paginate \
+              --jq ".artifacts[] | select(.name == \"$artifact\") | .id" | grep -q .; then
+              break
+            fi
+
+            # A transient API error must not end the leg, so keep polling.
+            conclusion=$(gh api "$RUN_JOBS" --paginate \
+              --jq ".jobs[] | select(.name == \"$job\") | .conclusion" || true)
+
+            case "$conclusion" in
+              ''|null) ;;
+              success)
+                grace=$((grace - 1))
+                if [ "$grace" -le 0 ]; then
+                  echo "::error::$job succeeded but $artifact never appeared"
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "::error::$job concluded $conclusion, no image to run"
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+      - name: Download the app image
+        uses: actions/download-artifact@v7
+        with:
+          name: e2e-app-image-${{ matrix.suite.image-variant }}
+          path: /tmp
+
+      - name: Load the app image
+        run: gunzip -c /tmp/app-image.tar.gz | docker load
+
+      - name: Start the app
+        working-directory: e2e
+        env:
+          APP_IMAGE: cleanuparr-e2e-app:${{ matrix.suite.image-variant }}
+        run: make up-app
 
       - name: Run E2E tests
         working-directory: e2e
