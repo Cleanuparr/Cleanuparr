@@ -28,7 +28,7 @@ public partial class QBitService
 
             if (trackers is null || properties is null)
             {
-                _logger.LogDebug("skip | torrent no longer exists in the download client | {name}", torrent.Name);
+                _logger.LogDebug("skip | torrent no longer exists in the download client | {Name}", torrent.Name);
                 continue;
             }
 
@@ -116,7 +116,7 @@ public partial class QBitService
             return;
         }
 
-        _logger.LogDebug("Creating category {name}", name);
+        _logger.LogDebug("Creating category {Name}", name);
 
         await _dryRunInterceptor.InterceptAsync(() => CreateCategory(name));
     }
@@ -139,7 +139,7 @@ public partial class QBitService
 
             if (files is null)
             {
-                _logger.LogDebug("failed to find files for {name}", torrent.Name);
+                _logger.LogDebug("failed to find files for {Name}", torrent.Name);
                 continue;
             }
 
@@ -153,7 +153,7 @@ public partial class QBitService
             {
                 if (!file.Index.HasValue)
                 {
-                    _logger.LogDebug("skip | file index is null for {name}", torrent.Name);
+                    _logger.LogDebug("skip | file index is null for {Name}", torrent.Name);
                     hasHardlinks = true;
                     break;
                 }
@@ -165,7 +165,7 @@ public partial class QBitService
 
                 if (file.Priority is TorrentContentPriority.Skip)
                 {
-                    _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
+                    _logger.LogDebug("skip | file is not downloaded | {File}", filePath);
                     continue;
                 }
 
@@ -173,7 +173,7 @@ public partial class QBitService
 
                 if (hardlinkCount < 0)
                 {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
+                    _logger.LogError("skip | file does not exist or insufficient permissions | {File}", filePath);
                     hasErrors = true;
                     break;
                 }
@@ -192,7 +192,7 @@ public partial class QBitService
 
             if (hasHardlinks)
             {
-                _logger.LogDebug("skip | download has hardlinks | {name}", torrent.Name);
+                _logger.LogDebug("skip | download has hardlinks | {Name}", torrent.Name);
                 continue;
             }
 
@@ -202,11 +202,11 @@ public partial class QBitService
 
             if (unlinkedConfig.UseTag)
             {
-                _logger.LogInformation("tag added for {name}", torrent.Name);
+                _logger.LogInformation("tag added for {Name}", torrent.Name);
             }
             else
             {
-                _logger.LogInformation("category changed for {name}", torrent.Name);
+                _logger.LogInformation("category changed for {Name}", torrent.Name);
                 torrent.Category = unlinkedConfig.TargetCategory;
             }
         }

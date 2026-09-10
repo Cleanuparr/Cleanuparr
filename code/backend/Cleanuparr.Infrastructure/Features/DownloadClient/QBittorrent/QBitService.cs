@@ -69,18 +69,18 @@ public partial class QBitService : DownloadService, IQBitService
     {
         if (string.IsNullOrEmpty(_downloadClientConfig.Username) && string.IsNullOrEmpty(_downloadClientConfig.Password))
         {
-            _logger.LogDebug("No credentials configured for client {clientId}, skipping login", _downloadClientConfig.Id);
+            _logger.LogDebug("No credentials configured for client {ClientId}, skipping login", _downloadClientConfig.Id);
             return;
         }
 
         try
         {
             await _client.LoginAsync(_downloadClientConfig.Username, _downloadClientConfig.Password);
-            _logger.LogDebug("Successfully logged in to qBittorrent client {clientId}", _downloadClientConfig.Id);
+            _logger.LogDebug("Successfully logged in to qBittorrent client {ClientId}", _downloadClientConfig.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to login to qBittorrent client {clientId}", _downloadClientConfig.Id);
+            _logger.LogError(ex, "Failed to login to qBittorrent client {ClientId}", _downloadClientConfig.Id);
             throw;
         }
     }
@@ -98,13 +98,13 @@ public partial class QBitService : DownloadService, IQBitService
             {
                 // If credentials are provided, we must be able to log in for the service to be healthy
                 await _client.LoginAsync(_downloadClientConfig.Username, _downloadClientConfig.Password);
-                _logger.LogDebug("Health check: Successfully logged in to qBittorrent client {clientId}", _downloadClientConfig.Id);
+                _logger.LogDebug("Health check: Successfully logged in to qBittorrent client {ClientId}", _downloadClientConfig.Id);
             }
             else
             {
                 // If no credentials, test connectivity using version endpoint
                 await _client.GetApiVersionAsync();
-                _logger.LogDebug("Health check: Successfully connected to qBittorrent client {clientId}", _downloadClientConfig.Id);
+                _logger.LogDebug("Health check: Successfully connected to qBittorrent client {ClientId}", _downloadClientConfig.Id);
             }
 
             stopwatch.Stop();
@@ -119,7 +119,7 @@ public partial class QBitService : DownloadService, IQBitService
         {
             stopwatch.Stop();
             
-            _logger.LogWarning(ex, "Health check failed for qBittorrent client {clientId}", _downloadClientConfig.Id);
+            _logger.LogWarning(ex, "Health check failed for qBittorrent client {ClientId}", _downloadClientConfig.Id);
             
             return new HealthCheckResult
             {
@@ -175,7 +175,7 @@ public partial class QBitService : DownloadService, IQBitService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read alternate speed limits state from qBittorrent client {name}", _downloadClientConfig.Name);
+            _logger.LogWarning(ex, "Failed to read alternate speed limits state from qBittorrent client {Name}", _downloadClientConfig.Name);
             throw;
         }
 
