@@ -101,6 +101,19 @@ export function arrCommandTriggerStub(commandId = 1): Mapping {
   };
 }
 
+/** Refuses a ManualImport the way an arr does when it will not accept the payload. */
+export function arrManualImportRefusedStub(status = 400): Mapping {
+  return {
+    request: {
+      method: 'POST',
+      urlPath: '/api/v3/command',
+      bodyPatterns: [{ matchesJsonPath: "$[?(@.Name == 'ManualImport')]" }],
+    },
+    response: { status, jsonBody: { message: 'Invalid request' } },
+    priority: 1,
+  };
+}
+
 export function arrCommandCompletedStub(commandId: number, status = 'completed'): Mapping {
   return {
     request: { method: 'GET', urlPath: `/api/v3/command/${commandId}` },

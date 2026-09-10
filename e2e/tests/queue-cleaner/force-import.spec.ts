@@ -111,12 +111,30 @@ async function arrange(
   createdInstances.push((await created.json()).id);
 }
 
-async function manualImportCommands(mocks: MockServers): Promise<Array<Record<string, any>>> {
+async function manualImportCommands(
+  mocks: MockServers,
+  downloadId?: string,
+): Promise<Array<Record<string, any>>> {
   const requests = await mocks.arr.findRequests({ method: 'POST', urlPath: '/api/v3/command' });
 
   return requests
     .map((request) => (request.body ? JSON.parse(request.body) : {}))
-    .filter((body) => body.Name === 'ManualImport');
+    .filter((body) => body.Name === 'ManualImport')
+    .filter(
+      (body) =>
+        downloadId === undefined ||
+        (body.Files ?? []).some((file: Record<string, any>) => file.DownloadId === downloadId),
+    );
+}
+
+/** A leftover run from an earlier case can remove its own download, so strikes are read per download. */
+async function failedImportStrikes(api: CleanuparrApi, downloadId: string): Promise<number> {
+  const res = await api.events.list({ eventType: 'FailedImportStrike', page: 1, pageSize: 500 });
+  expect(res.status, 'events query failed').toBe(200);
+
+  const body: { items?: Array<{ itemHash?: string }> } = await res.json();
+
+  return (body.items ?? []).filter((e) => (e.itemHash ?? '').toLowerCase() === downloadId.toLowerCase()).length;
 }
 
 /** Runs the job until it acts, since importPending needs a second sighting first. */
@@ -179,7 +197,8 @@ test.describe.serial('QueueCleaner force import', () => {
   test('stops asking after the try limit and lets the strikes run', async ({ api, mocks }) => {
     test.setTimeout(300_000);
 
-    await arrange(api, mocks, 'sonarr-force-import-limit', 'HASH-FORCE-IMPORT-LIMIT', [candidate()], {
+    const downloadId = 'HASH-FORCE-IMPORT-LIMIT';
+    await arrange(api, mocks, 'sonarr-force-import-limit', downloadId, [candidate({ downloadId })], {
       maxStrikes: 3,
       forceImportMaxTries: 2,
     });
@@ -189,13 +208,39 @@ test.describe.serial('QueueCleaner force import', () => {
       .poll(
         async () => {
           await api.jobs.trigger('QueueCleaner');
-          return (await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).length;
+          return failedImportStrikes(api, downloadId);
         },
         { timeout: 240_000, intervals: [2_000] },
       )
       .toBeGreaterThan(0);
 
-    expect(await manualImportCommands(mocks)).toHaveLength(2);
+    expect(await manualImportCommands(mocks, downloadId)).toHaveLength(2);
+  });
+
+  test('spends a try on a refused import and lets the strikes run', async ({ api, mocks }) => {
+    test.setTimeout(300_000);
+
+    const downloadId = 'HASH-FORCE-IMPORT-REFUSED';
+    await arrange(api, mocks, 'sonarr-force-import-refused', downloadId, [candidate({ downloadId })], {
+      maxStrikes: 3,
+      forceImportMaxTries: 2,
+    });
+
+    // An arr that refuses every request must not hold the download out of the strike path.
+    await mocks.arr.stub(ArrStubs.arrManualImportRefusedStub());
+
+    await expect
+      .poll(
+        async () => {
+          await api.jobs.trigger('QueueCleaner');
+          return failedImportStrikes(api, downloadId);
+        },
+        { timeout: 240_000, intervals: [2_000] },
+      )
+      .toBeGreaterThan(0);
+
+    // The refused tries were spent, so the arr was asked exactly twice.
+    expect(await manualImportCommands(mocks, downloadId)).toHaveLength(2);
   });
 
   test('reports the import once the arr drops the download', async ({ api, mocks }) => {
