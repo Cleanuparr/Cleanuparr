@@ -18,40 +18,34 @@ permissions:
   contents: read
 
 jobs:
+  suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      list: ${{ steps.suites.outputs.list }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        timeout-minutes: 1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+
+      - name: Build the suite matrix
+        id: suites
+        working-directory: e2e
+        run: echo "list=$(bash ./scripts/ci-matrix.sh)" >> "$GITHUB_OUTPUT"
+
   e2e:
+    needs: suites
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
       matrix:
-        suite:
-          # These folders need only the app, Keycloak, nginx and the wiremocks.
-          - name: core
-            make-target: up-core
-            projects: >-
-              --project=account --project=arr --project=auth
-              --project=blacklist-sync --project=core
-              --project=general --project=notifications --project=oidc
-              --project=queue-cleaner --project=regression --project=seeker
-              --project=signalr
-          # These folders need the torrent clients and the tracker.
-          - name: clients
-            make-target: up-clients
-            projects: '--project=download-cleaner --project=download-client --project=malware-blocker'
-          # This folder needs the real arrs, the fake indexer and qBittorrent.
-          - name: live-arr
-            make-target: up-arr
-            projects: '--project=live-arr'
-          # Same stack, but the app is built from patched sources.
-          # See e2e/patches: the Seeker can be triggered instead of waited for.
-          - name: live-arr-fast
-            make-target: up-arr-fast
-            projects: '--project=live-arr-fast'
-          # This folder needs the real LazyLibrarian, the fake indexer and qBittorrent.
-          - name: live-lazylibrarian
-            make-target: up-lazylibrarian
-            projects: '--project=live-lazylibrarian'
+        suite: ${{ fromJSON(needs.suites.outputs.list) }}
 
     name: e2e (${{ matrix.suite.name }})
 
