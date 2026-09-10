@@ -105,6 +105,38 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             result.ShouldHaveSingleItem();
             result[0].Hash.ShouldBe("hash1");
         }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenPropertiesAreNull()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+
+            List<UTorrentItem> torrents =
+            [
+                new UTorrentItem { Hash = "hash1", Name = "Deleted Torrent", Status = 9, DateCompleted = 1000 },
+                new UTorrentItem { Hash = "hash2", Name = "Live Torrent", Status = 9, DateCompleted = 2000 }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentsAsync()
+                .Returns(torrents);
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns((UTorrentProperties?)null);
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync("hash2")
+                .Returns(new UTorrentProperties { Hash = "hash2", Pex = 1, Trackers = "" });
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash2");
+        }
     }
 
     public class FilterDownloadsToBeCleanedAsync_Tests : UTorrentServiceDCTests

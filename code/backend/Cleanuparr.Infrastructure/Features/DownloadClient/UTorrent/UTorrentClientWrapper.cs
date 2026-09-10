@@ -26,7 +26,7 @@ public sealed class UTorrentClientWrapper : IUTorrentClientWrapper
     public Task<List<UTorrentFile>?> GetTorrentFilesAsync(string hash)
         => _client.GetTorrentFilesAsync(hash);
 
-    public Task<UTorrentProperties> GetTorrentPropertiesAsync(string hash)
+    public Task<UTorrentProperties?> GetTorrentPropertiesAsync(string hash)
         => _client.GetTorrentPropertiesAsync(hash);
 
     public Task<List<string>> GetLabelsAsync()

@@ -9,7 +9,7 @@ public interface IUTorrentClientWrapper
     Task<List<UTorrentItem>> GetTorrentsAsync();
     Task<UTorrentItem?> GetTorrentAsync(string hash);
     Task<List<UTorrentFile>?> GetTorrentFilesAsync(string hash);
-    Task<UTorrentProperties> GetTorrentPropertiesAsync(string hash);
+    Task<UTorrentProperties?> GetTorrentPropertiesAsync(string hash);
     Task<List<string>> GetLabelsAsync();
     Task SetTorrentLabelAsync(string hash, string label);
     Task SetFilesPriorityAsync(string hash, List<int> fileIndexes, int priority);

@@ -131,7 +131,7 @@ public sealed class UTorrentClient
     /// </summary>
     /// <param name="hash">Torrent hash</param>
     /// <returns>UTorrentProperties object or null if not found</returns>
-    public async Task<UTorrentProperties> GetTorrentPropertiesAsync(string hash)
+    public async Task<UTorrentProperties?> GetTorrentPropertiesAsync(string hash)
     {
         try
         {

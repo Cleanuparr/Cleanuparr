@@ -18,7 +18,14 @@ public partial class UTorrentService
 
         foreach (UTorrentItem torrent in torrents.Where(x => !string.IsNullOrEmpty(x.Hash) && x.IsSeeding()))
         {
-            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash);
+            UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(torrent.Hash);
+
+            if (properties is null)
+            {
+                _logger.LogDebug("skip | torrent no longer exists in the download client | {name}", torrent.Name);
+                continue;
+            }
+
             result.Add(new UTorrentItemWrapper(torrent, properties));
         }
 

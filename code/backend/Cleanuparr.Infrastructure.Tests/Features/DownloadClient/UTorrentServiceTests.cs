@@ -47,6 +47,27 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
         }
 
         [Fact]
+        public async Task TorrentPropertiesNotFound_ReturnsEmptyResult()
+        {
+            const string hash = "deleted-hash";
+            UTorrentService sut = _fixture.CreateSut();
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(new UTorrentItem { Hash = hash, Name = "Deleted Torrent", Status = 9 });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns((UTorrentProperties?)null);
+
+            DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
         public async Task TorrentFound_SetsIsPrivateCorrectly_WhenPrivate()
         {
             const string hash = "test-hash";
@@ -888,6 +909,28 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
+        public async Task PropertiesNotFound_ReturnsNotFound()
+        {
+            const string hash = "deleted-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(new UTorrentItem { Hash = hash, Name = "Deleted Torrent", Status = 9 });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns((UTorrentProperties?)null);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            await _fixture.ClientWrapper.DidNotReceive().GetTorrentFilesAsync(hash);
         }
     }
 }

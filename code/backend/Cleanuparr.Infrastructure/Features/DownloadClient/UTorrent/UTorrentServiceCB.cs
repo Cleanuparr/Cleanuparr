@@ -26,7 +26,14 @@ public partial class UTorrentService
             return result;
         }
         
-        var properties = await _client.GetTorrentPropertiesAsync(hash);
+        UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(hash);
+
+        if (properties is null)
+        {
+            _logger.LogDebug("Failed to find torrent {hash} in the download client", hash);
+            return result;
+        }
+
         result.IsPrivate = properties.IsPrivate;
         result.Found = true;
         result.Torrent = new UTorrentItemWrapper(download, properties);
