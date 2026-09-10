@@ -80,18 +80,21 @@ public sealed class ForceImportService : IForceImportService
     private readonly IMemoryCache _cache;
     private readonly IStriker _striker;
     private readonly IEventPublisher _eventPublisher;
+    private readonly TimeProvider _timeProvider;
 
     public ForceImportService(
         ILogger<ForceImportService> logger,
         IMemoryCache cache,
         IStriker striker,
-        IEventPublisher eventPublisher
+        IEventPublisher eventPublisher,
+        TimeProvider timeProvider
     )
     {
         _logger = logger;
         _cache = cache;
         _striker = striker;
         _eventPublisher = eventPublisher;
+        _timeProvider = timeProvider;
     }
 
     public async Task<ForceImportOutcome> TryImportAsync(IArrClient arrClient, ArrInstance instance, QueueRecord record)
@@ -123,7 +126,7 @@ public sealed class ForceImportService : IForceImportService
 
         string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
 
-        if (_cache.TryGetValue(gaveUpKey, out bool _))
+        if (_cache.TryGetValue(gaveUpKey, out DateTimeOffset gaveUpAt) && _timeProvider.GetUtcNow() - gaveUpAt < GaveUpWindow)
         {
             _logger.LogDebug("skip force import | out of tries | {title}", record.Title);
             return ForceImportOutcome.NotApplicable;
@@ -136,7 +139,7 @@ public sealed class ForceImportService : IForceImportService
         if (tries >= config.ForceImportMaxTries)
         {
             // The arr kept the download blocked, so the strike path takes over.
-            _cache.Set(gaveUpKey, true, GaveUpWindow);
+            _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
             _cache.Remove(triesKey);
             pending.Remove(record.DownloadId);
 
@@ -293,12 +296,12 @@ public sealed class ForceImportService : IForceImportService
 
         string sightingKey = CacheKeys.ForceImportFirstSeen(record.DownloadId, instance.Url);
 
-        if (_cache.TryGetValue(sightingKey, out bool _))
+        if (_cache.TryGetValue(sightingKey, out DateTimeOffset firstSeen) && _timeProvider.GetUtcNow() - firstSeen < SightingWindow)
         {
             return true;
         }
 
-        _cache.Set(sightingKey, true, SightingWindow);
+        _cache.Set(sightingKey, _timeProvider.GetUtcNow(), SightingWindow);
         _logger.LogDebug("skip force import | first sighting | {title}", record.Title);
 
         return false;

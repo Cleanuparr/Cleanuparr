@@ -12,6 +12,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -27,6 +28,7 @@ public class ForceImportServiceTests
     private readonly IStriker _striker;
     private readonly IEventPublisher _eventPublisher;
     private readonly IMemoryCache _cache;
+    private readonly FakeTimeProvider _timeProvider;
     private readonly ForceImportService _sut;
     private readonly ArrInstance _instance;
 
@@ -36,7 +38,9 @@ public class ForceImportServiceTests
         _striker = Substitute.For<IStriker>();
         _eventPublisher = Substitute.For<IEventPublisher>();
         _cache = new MemoryCache(new MemoryCacheOptions());
-        _sut = new ForceImportService(Substitute.For<ILogger<ForceImportService>>(), _cache, _striker, _eventPublisher);
+        _timeProvider = new FakeTimeProvider();
+        _sut = new ForceImportService(
+            Substitute.For<ILogger<ForceImportService>>(), _cache, _striker, _eventPublisher, _timeProvider);
 
         _instance = new ArrInstance
         {
@@ -454,6 +458,46 @@ public class ForceImportServiceTests
         // Assert
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_TheGaveUpWindowPassed_TriesAgain()
+    {
+        // Arrange: whatever stopped the arr may be fixed by now
+        SetConfig(maxTries: 1);
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        (await _sut.TryImportAsync(_arrClient, _instance, record)).ShouldBe(ForceImportOutcome.NotApplicable);
+
+        _timeProvider.Advance(TimeSpan.FromHours(6));
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.Received(2).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_TheSightingWindowPassed_WaitsForASecondSightingAgain()
+    {
+        // Arrange: a sighting that old says nothing about the block in front of us
+        QueueRecord record = BuildRecord(state: "importPending");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _timeProvider.Advance(TimeSpan.FromHours(6));
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 
     [Fact]
