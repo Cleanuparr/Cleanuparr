@@ -17,6 +17,8 @@ public static class CacheKeys
     public static string ForceImportGaveUp(string hash, Uri url) => $"force_import_gave_up_{hash.ToLowerInvariant()}_{url}";
 
     public static string ForceImportFirstSeen(string hash, Uri url) => $"force_import_seen_{hash.ToLowerInvariant()}_{url}";
+
+    public static string ForceImportTries(string hash, Uri url) => $"force_import_tries_{hash.ToLowerInvariant()}_{url}";
     
     public static class UTorrent
     {

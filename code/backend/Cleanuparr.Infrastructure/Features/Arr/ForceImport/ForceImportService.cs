@@ -27,6 +27,11 @@ public sealed class ForceImportService : IForceImportService
     private static readonly TimeSpan PendingWindow = TimeSpan.FromHours(6);
 
     /// <summary>
+    /// How long the tries spent on a download are remembered.
+    /// </summary>
+    private static readonly TimeSpan TriesWindow = TimeSpan.FromHours(6);
+
+    /// <summary>
     /// How long a download that ran out of tries is left to the strike path.
     /// </summary>
     /// <remarks>
@@ -125,13 +130,14 @@ public sealed class ForceImportService : IForceImportService
         }
 
         Dictionary<string, PendingForceImport> pending = GetPending(instance);
-        pending.TryGetValue(record.DownloadId, out PendingForceImport? attempt);
-        int tries = attempt?.Tries ?? 0;
+        string triesKey = CacheKeys.ForceImportTries(record.DownloadId, instance.Url);
+        int tries = _cache.TryGetValue(triesKey, out int spent) ? spent : 0;
 
         if (tries >= config.ForceImportMaxTries)
         {
             // The arr kept the download blocked, so the strike path takes over.
             _cache.Set(gaveUpKey, true, GaveUpWindow);
+            _cache.Remove(triesKey);
             pending.Remove(record.DownloadId);
 
             _logger.LogInformation("give up force import | {tries} tries spent | {title}", tries, record.Title);
@@ -149,30 +155,37 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.Deferred;
         }
 
-        (List<ManualImportFile>? files, ForceImportOutcome? failure) = await BuildFilesAsync(arrClient, instance, record);
-
-        if (files is null)
-        {
-            return failure!.Value;
-        }
+        void SpendTry() => _cache.Set(triesKey, tries + 1, TriesWindow);
 
         try
         {
+            (List<ManualImportFile>? files, ForceImportOutcome? failure) = await BuildFilesAsync(arrClient, instance, record);
+
+            if (files is null)
+            {
+                return failure!.Value;
+            }
+
             await arrClient.ForceImportAsync(instance, files);
+
+            SpendTry();
+            pending[record.DownloadId] = new PendingForceImport(record, files.Count);
+
+            _logger.LogInformation(
+                "asked the arr to import {count} file(s) | try {try} | {title}",
+                files.Count, tries + 1, record.Title
+            );
+        }
+        catch (Exception exception) when (exception is not HttpRequestException { StatusCode: null } and not TaskCanceledException)
+        {
+            // The arr answered, so the try is spent and the strike path stays reachable.
+            SpendTry();
+            _logger.LogError(exception, "force import failed | try {try} | {title}", tries + 1, record.Title);
         }
         catch (Exception exception)
         {
-            // One failure must not stop the rest of the queue.
-            _logger.LogError(exception, "force import failed | {title}", record.Title);
-            return ForceImportOutcome.Deferred;
+            _logger.LogWarning(exception, "wait for force import | the arr was not reached | {title}", record.Title);
         }
-
-        pending[record.DownloadId] = new PendingForceImport(record, files.Count, tries + 1);
-
-        _logger.LogInformation(
-            "asked the arr to import {count} file(s) | try {try} | {title}",
-            files.Count, tries + 1, record.Title
-        );
 
         return ForceImportOutcome.Deferred;
     }
@@ -324,17 +337,7 @@ public sealed class ForceImportService : IForceImportService
         QueueRecord record
     )
     {
-        List<ManualImportCandidate> candidates;
-
-        try
-        {
-            candidates = await arrClient.GetManualImportCandidatesAsync(instance, record.DownloadId);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogWarning(exception, "wait for force import | candidates unavailable | {title}", record.Title);
-            return (null, ForceImportOutcome.Deferred);
-        }
+        List<ManualImportCandidate> candidates = await arrClient.GetManualImportCandidatesAsync(instance, record.DownloadId);
 
         if (candidates.Count is 0)
         {

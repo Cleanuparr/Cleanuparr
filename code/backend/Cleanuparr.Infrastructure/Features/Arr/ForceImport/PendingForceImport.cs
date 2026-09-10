@@ -7,5 +7,4 @@ namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 /// </summary>
 /// <param name="Record">The queue item, kept so the notification can name and picture it.</param>
 /// <param name="FileCount">How many files the arr was asked to import.</param>
-/// <param name="Tries">How many times the arr has been asked.</param>
-public sealed record PendingForceImport(QueueRecord Record, int FileCount, int Tries);
+public sealed record PendingForceImport(QueueRecord Record, int FileCount);

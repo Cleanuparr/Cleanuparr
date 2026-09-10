@@ -12,6 +12,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -315,9 +316,9 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_TheImportCallFails_Defers()
+    public async Task TryImportAsync_TheArrWasNotReached_Defers()
     {
-        // Arrange: a failed call is transient, so the download waits instead of collecting a strike
+        // Arrange: an unreachable arr is transient, so the download waits instead of collecting a strike
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
             .Returns(Task.FromException(new HttpRequestException("boom")));
         StubCandidates(BuildCandidate(SafeReason));
@@ -329,6 +330,68 @@ public class ForceImportServiceTests
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
         await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_TheArrWasNotReached_CostsNoTry()
+    {
+        // Arrange
+        SetConfig(maxTries: 1);
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
+            .Returns(Task.FromException(new HttpRequestException("down")));
+        StubCandidates(BuildCandidate(SafeReason));
+        QueueRecord record = BuildRecord(state: "importBlocked");
+
+        // Act
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: a request that never landed keeps the tries intact
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.Received(3).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_TheArrRefusedTheImport_SpendsTheTry()
+    {
+        // Arrange: an arr that keeps refusing must not hold the download out of the strike path forever
+        SetConfig(maxTries: 1);
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
+            .Returns(Task.FromException(new HttpRequestException("bad request", null, HttpStatusCode.BadRequest)));
+        StubCandidates(BuildCandidate(SafeReason));
+        QueueRecord record = BuildRecord(state: "importBlocked");
+
+        // Act
+        ForceImportOutcome first = await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome second = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert
+        first.ShouldBe(ForceImportOutcome.Deferred);
+        second.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_TheArrRefusedALaterTry_StillReportsTheAcceptedOne()
+    {
+        // Arrange: try 1 lands, try 2 is refused
+        SetConfig(maxTries: 2);
+        StubCandidates(BuildCandidate(SafeReason));
+        QueueRecord record = BuildRecord(state: "importBlocked");
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
+            .Returns(Task.FromException(new HttpRequestException("bad request", null, HttpStatusCode.BadRequest)));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+
+        // Assert: the refused try leaves try 1's file count untouched
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
     }
 
     [Fact]
@@ -468,7 +531,7 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_CandidatesUnavailable_Defers()
+    public async Task TryImportAsync_CandidatesUnreachable_Defers()
     {
         // Arrange: the arr may answer on the next run
         _arrClient.GetManualImportCandidatesAsync(Arg.Any<ArrInstance>(), Arg.Any<string>())
