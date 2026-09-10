@@ -174,15 +174,28 @@ public class NotificationPublisher : INotificationPublisher
         await Task.WhenAll(tasks);
     }
 
-    private NotificationContext BuildStrikeNotificationContext(StrikeType strikeType, int strikeCount, NotificationEventType eventType)
+    /// <summary>
+    /// The queue item every arr notification names, pictures and links.
+    /// </summary>
+    private (InstanceType InstanceType, Uri InstanceUrl, Uri? ImageUrl, string ItemTitle, string ItemHash) ReadQueueItemContext()
     {
         QueueRecord? record = ContextProvider.Get(nameof(QueueRecord)) as QueueRecord;
-        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
-        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
-        var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
-        string itemTitle = ResolveItemTitle(record);
-        string itemHash = ResolveItemHash(record);
+        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        float instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
+        Uri instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
+
+        return (
+            instanceType,
+            instanceUrl,
+            GetImageFromContext(record, instanceType, instanceVersion),
+            ResolveItemTitle(record),
+            ResolveItemHash(record)
+        );
+    }
+
+    private NotificationContext BuildStrikeNotificationContext(StrikeType strikeType, int strikeCount, NotificationEventType eventType)
+    {
+        (InstanceType instanceType, Uri instanceUrl, Uri? imageUrl, string itemTitle, string itemHash) = ReadQueueItemContext();
 
         NotificationContext context = new()
         {
@@ -212,13 +225,7 @@ public class NotificationPublisher : INotificationPublisher
 
     private NotificationContext BuildQueueItemDeletedContext(bool removeFromClient, DeleteReason reason)
     {
-        QueueRecord? record = ContextProvider.Get(nameof(QueueRecord)) as QueueRecord;
-        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
-        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
-        var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
-        string itemTitle = ResolveItemTitle(record);
-        string itemHash = ResolveItemHash(record);
+        (InstanceType instanceType, Uri instanceUrl, Uri? imageUrl, string itemTitle, string itemHash) = ReadQueueItemContext();
 
         return new NotificationContext
         {
@@ -240,13 +247,7 @@ public class NotificationPublisher : INotificationPublisher
 
     private NotificationContext BuildForceImportedContext(int fileCount)
     {
-        QueueRecord? record = ContextProvider.Get(nameof(QueueRecord)) as QueueRecord;
-        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
-        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
-        Uri? imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
-        string itemTitle = ResolveItemTitle(record);
-        string itemHash = ResolveItemHash(record);
+        (InstanceType instanceType, Uri instanceUrl, Uri? imageUrl, string itemTitle, string itemHash) = ReadQueueItemContext();
 
         return new NotificationContext
         {
