@@ -47,6 +47,7 @@ public class ForceImportServiceTests
         };
 
         _arrClient.SupportsForceImport.Returns(true);
+        _arrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
         _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _arrClient.MapCandidate(Arg.Any<QueueRecord>(), Arg.Any<ManualImportCandidate>())
             .Returns(new ManualImportFile { Path = "/downloads/show.mkv", SeriesId = 7, EpisodeIds = [9] });
@@ -129,6 +130,22 @@ public class ForceImportServiceTests
 
         // Assert
         outcome.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_NoContentId_DoesNothing()
+    {
+        // Arrange: a zero content id would match a candidate carrying a zero id
+        _arrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(false);
+        StubCandidates(BuildCandidate(SafeReason));
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, BuildRecord(state: "importBlocked"));
+
+        // Assert
+        outcome.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _arrClient.DidNotReceive().GetManualImportCandidatesAsync(Arg.Any<ArrInstance>(), Arg.Any<string>());
         await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 

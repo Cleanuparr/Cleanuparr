@@ -109,6 +109,13 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.NotApplicable;
         }
 
+        if (!arrClient.HasContentId(record))
+        {
+            // Without a content id there is nothing to match a candidate against.
+            _logger.LogDebug("skip force import | item is missing the content id | {title}", record.Title);
+            return ForceImportOutcome.NotApplicable;
+        }
+
         string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
 
         if (_cache.TryGetValue(gaveUpKey, out bool _))
