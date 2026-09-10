@@ -31,12 +31,10 @@ suites+=('{
 }')
 
 # These folders need the torrent clients and the tracker.
-# Patched too: the Download Cleaner's 10s wait for the arr queue is pointless
-# against wiremock arrs, which answer at once.
 suites+=('{
   "name": "clients",
   "stack-target": "up-stack-clients",
-  "image-variant": "patched",
+  "image-variant": "plain",
   "projects": "--project=download-cleaner --project=download-client --project=malware-blocker"
 }')
 
