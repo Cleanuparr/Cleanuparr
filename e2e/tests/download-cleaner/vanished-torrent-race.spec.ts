@@ -25,10 +25,23 @@ const CATEGORY = 'vanish-race';
  * Enough torrents that the enumeration loop stays busy while the deleter runs.
  * The loop issues two requests per torrent, the deleter one.
  */
-const TORRENT_COUNT = 120;
+const TORRENT_COUNT = 200;
 
-/** Deleting from the tail leaves the head of the list for the loop to finish. */
-const DELETE_INTERVAL_MS = 10;
+/**
+ * Head of the list, never deleted.
+ * Survivors keep an empty seeding pass from reading as the crash.
+ */
+const SURVIVOR_COUNT = 40;
+
+/**
+ * Spreads the deletions over seconds.
+ * Enumeration lasts under 100ms and starts whenever Quartz gets to it, so the
+ * deleter has to still be working wherever in that span the pass lands.
+ */
+const DELETE_INTERVAL_MS = 30;
+
+/** Logged once per run, after every client has been enumerated. */
+const ENUMERATION_FINISHED = /Found (\d+) seeding downloads across \d+ clients/;
 
 const qbit = new QBittorrentDriver();
 
@@ -74,11 +87,11 @@ test.describe.serial('Download Cleaner with torrents deleted mid-pass', () => {
       ignoredDownloads: [],
     });
 
-    // The skip decision is only observable at debug level.
+    // The skip decision needs debug, the enumeration markers need verbose.
     const general = await getGeneralConfig(token);
     const log = general.log as Record<string, unknown>;
     originalLogLevel = log.level;
-    await updateGeneralConfig(token, { ...general, log: { ...log, level: 'Debug' } });
+    await updateGeneralConfig(token, { ...general, log: { ...log, level: 'Verbose' } });
 
     mkdirShared(HOST_DOWNLOADS);
   });
@@ -145,29 +158,33 @@ test.describe.serial('Download Cleaner with torrents deleted mid-pass', () => {
     const trig = await triggerJob(token, 'DownloadCleaner');
     expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
 
-    // Deleting from the tail while the loop reads from the head is what opens
-    // the window between the bulk list call and the per-hash calls.
-    for (const hash of [...hashes].reverse()) {
+    // The cleaner reads the list head to tail, the deleter walks it tail to head.
+    // Where the two meet, a listed torrent is gone before its per-hash call.
+    for (const hash of [...hashes].slice(SURVIVOR_COUNT).reverse()) {
       await qbit.deleteTorrent(hash).catch(() => {});
       await sleep(DELETE_INTERVAL_MS);
     }
 
     await expect
-      .poll(() => appLogsSince(since).includes('torrent no longer exists in the download client'), {
-        message: 'the race never landed: no torrent vanished between the list call and its per-hash calls',
+      .poll(() => ENUMERATION_FINISHED.test(appLogsSince(since)), {
+        message: 'the cleaner never finished enumerating',
         timeout: 60_000,
         intervals: [1_000],
       })
       .toBe(true);
 
     const logs = appLogsSince(since);
+    expect(logs, 'the race never landed: no torrent vanished mid-pass').toContain(
+      'torrent no longer exists in the download client',
+    );
     expect(logs, 'the vanished torrent crashed the pass').not.toContain('ArgumentNullException');
     expect(logs, 'the cleanup pass aborted for the client').not.toContain(
       'Failed to get seeding downloads from download client',
     );
-    // The crash discarded every torrent enriched before it, leaving the pass with nothing.
-    expect(logs, 'the surviving torrents were discarded along with the vanished one').not.toContain(
-      'No seeding downloads found',
-    );
+
+    // The crash discarded every torrent enriched before the vanished one.
+    const seeding = Number(logs.match(ENUMERATION_FINISHED)![1]);
+    expect(seeding, 'the surviving torrents were discarded along with the vanished ones')
+      .toBeGreaterThanOrEqual(SURVIVOR_COUNT);
   });
 });
