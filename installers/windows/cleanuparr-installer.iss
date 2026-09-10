@@ -72,8 +72,11 @@ begin
     Exit;
   end;
 
-  SaveStringToFile(ExpandConstant('{app}\cleanuparr-installer.log'), PendingLog, True);
-  PendingLog := '';
+  // a failed write keeps the buffer, so the next logged line retries it
+  if SaveStringToFile(ExpandConstant('{app}\cleanuparr-installer.log'), PendingLog, True) then
+  begin
+    PendingLog := '';
+  end;
 end;
 
 procedure LogInstaller(const Msg: string);
@@ -245,9 +248,13 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-  if CurStep = ssPostInstall then
+  // {app} is resolved by ssInstall, so an upgrade gets its early lines on disk before file copy
+  if CurStep = ssInstall then
   begin
     EnableInstallerLog();
+  end
+  else if CurStep = ssPostInstall then
+  begin
     CreateOrUpdateService();
   end;
 end;
