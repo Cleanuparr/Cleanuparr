@@ -379,7 +379,7 @@ public sealed class ForceImportService : IForceImportService
             if (file is null)
             {
                 _logger.LogWarning(
-                    "skip force import | file maps to other content than the queue item | {name}",
+                    "skip force import | file belongs to other content or maps to no episode | {name}",
                     name
                 );
 

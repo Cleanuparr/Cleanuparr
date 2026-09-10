@@ -248,7 +248,7 @@ public sealed class QueueCleaner : GenericHandler
                     continue;
                 }
 
-                // Runs before the client check below: a usenet download is never in a torrent client.
+                // Runs before the client check below: a torrent missing from the client can still be imported.
                 ForceImportOutcome forceImport = await _forceImportService.TryImportAsync(arrClient, instance, record);
 
                 // A deferred import must not collect strikes while the arr works.
