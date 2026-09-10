@@ -283,15 +283,21 @@ const SONARR_TARGET = TARGETS.find((t) => t.arr.type === 'sonarr')!;
  * every slow import would burn tries while the arr was still working.
  */
 test.describe.serial('A ManualImport command covers the arr\'s whole import', () => {
+  let mediaManagement: Record<string, unknown> = {};
+
   test.beforeEach(async () => {
     await resetLiveArrState();
     await clearImportedFiles();
+    mediaManagement = await SONARR_TARGET.arr.arr.get<Record<string, unknown>>(
+      '/api/v3/config/mediamanagement',
+    );
   });
 
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
-    await resetLiveArrState();
     await clearImportedFiles();
+    await SONARR_TARGET.arr.arr.put('/api/v3/config/mediamanagement', mediaManagement);
+    await resetLiveArrState();
   });
 
   test('reports the command as running until the imported file exists', async ({ api }) => {
@@ -315,9 +321,6 @@ test.describe.serial('A ManualImport command covers the arr\'s whole import', ()
 
     // /downloads and /tv sit on one filesystem, so the arr would hardlink and
     // the import would cost no time at all.
-    const mediaManagement = await SONARR_TARGET.arr.arr.get<Record<string, unknown>>(
-      '/api/v3/config/mediamanagement',
-    );
     await SONARR_TARGET.arr.arr.put('/api/v3/config/mediamanagement', {
       ...mediaManagement,
       copyUsingHardlinks: false,
