@@ -8,7 +8,10 @@ WAIT = --remove-orphans --wait --wait-timeout 150
 # The app reaches these through depends_on, so a stack started without it must name them.
 WIREMOCKS = wiremock-arr wiremock-dlc wiremock-notify wiremock-blocklist
 
-CORE_STACK = keycloak nginx $(WIREMOCKS)
+# nginx depends_on app, so naming it would drag the app into the stack half.
+APP_SERVICES = app nginx
+
+CORE_STACK = keycloak $(WIREMOCKS)
 CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent
 ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr
 LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent lazylibrarian
@@ -20,26 +23,26 @@ up: down setup
 	$(COMPOSE) up -d --build $(WAIT)
 
 up-core: down setup
-	$(COMPOSE) up -d --build $(WAIT) app $(CORE_STACK)
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(CORE_STACK)
 
 # Same stack as up-core, built from patched sources so the Seeker can be triggered on demand.
 up-core-fast: down setup
 	bash ./scripts/with-patches.sh $(COMPOSE) build app
-	$(COMPOSE) up -d $(WAIT) app $(CORE_STACK)
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES) $(CORE_STACK)
 
 up-clients: down setup
-	$(COMPOSE) up -d --build $(WAIT) app $(CLIENTS_STACK)
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(CLIENTS_STACK)
 
 up-arr: down setup
-	$(COMPOSE) up -d --build $(WAIT) app $(ARR_STACK)
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(ARR_STACK)
 
 # Same stack as up-arr, patched like up-core-fast.
 up-arr-fast: down setup
 	bash ./scripts/with-patches.sh $(COMPOSE) build app
-	$(COMPOSE) up -d $(WAIT) app $(ARR_STACK)
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES) $(ARR_STACK)
 
 up-lazylibrarian: down setup
-	$(COMPOSE) up -d --build $(WAIT) app $(LAZYLIBRARIAN_STACK)
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(LAZYLIBRARIAN_STACK)
 
 # CI raises the stack while a separate job is still building the app image.
 up-stack-core: down setup
@@ -55,7 +58,7 @@ up-stack-lazylibrarian: down setup
 	$(COMPOSE) up -d $(WAIT) $(LAZYLIBRARIAN_STACK)
 
 up-app:
-	$(COMPOSE) up -d $(WAIT) app
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES)
 
 # Rebuilds e2e/arr-seed from scratch.
 # Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.
