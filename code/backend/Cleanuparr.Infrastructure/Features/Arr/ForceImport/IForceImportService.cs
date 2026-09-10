@@ -16,4 +16,9 @@ public interface IForceImportService
     /// </summary>
     /// <param name="queuedDownloadIds">Every download the arr still holds, across every page.</param>
     Task ReconcileAsync(ArrInstance instance, IReadOnlySet<string> queuedDownloadIds);
+
+    /// <summary>
+    /// Drops a pending import, so the download leaving the queue is never read as an import.
+    /// </summary>
+    void Forget(ArrInstance instance, string downloadId);
 }

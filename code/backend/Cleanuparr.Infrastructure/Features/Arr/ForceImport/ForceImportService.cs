@@ -207,12 +207,6 @@ public sealed class ForceImportService : IForceImportService
             PendingForceImport attempt = pending[downloadId];
             pending.Remove(downloadId);
 
-            if (_cache.TryGetValue(CacheKeys.DownloadMarkedForRemoval(downloadId, instance.Url), out bool _))
-            {
-                // Cleanuparr took the download out of the queue, so nothing was imported.
-                continue;
-            }
-
             _logger.LogInformation("force imported {count} file(s) | {title}", attempt.FileCount, attempt.Record.Title);
 
             // The notification reads the record for its title and its poster.
@@ -221,6 +215,16 @@ public sealed class ForceImportService : IForceImportService
             await _striker.ResetStrikeAsync(downloadId, attempt.Record.Title, StrikeType.FailedImport);
             await _eventPublisher.PublishForceImported(attempt.Record.Title, downloadId, attempt.FileCount);
         }
+    }
+
+    public void Forget(ArrInstance instance, string downloadId)
+    {
+        if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out Dictionary<string, PendingForceImport>? pending))
+        {
+            return;
+        }
+
+        pending?.Remove(downloadId);
     }
 
     private Dictionary<string, PendingForceImport> GetPending(ArrInstance instance) =>

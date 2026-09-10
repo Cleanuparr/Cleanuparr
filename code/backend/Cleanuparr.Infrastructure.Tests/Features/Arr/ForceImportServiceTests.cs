@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
@@ -7,12 +8,10 @@ using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
-using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -511,7 +510,7 @@ public class ForceImportServiceTests
         QueueRecord record = BuildRecord(state: "importBlocked");
         StubCandidates(BuildCandidate(SafeReason));
         await _sut.TryImportAsync(_arrClient, _instance, record);
-        _cache.Set(CacheKeys.DownloadMarkedForRemoval(record.DownloadId, _instance.Url), true);
+        _sut.Forget(_instance, record.DownloadId);
 
         // Act
         await _sut.ReconcileAsync(_instance, new HashSet<string>());

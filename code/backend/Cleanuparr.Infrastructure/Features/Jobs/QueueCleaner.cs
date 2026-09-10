@@ -27,7 +27,6 @@ public sealed class QueueCleaner : GenericHandler
 {
     private readonly IConnectivityChecker _connectivityChecker;
     private readonly ILazyLibrarianEvaluator _lazyLibrarianService;
-    private readonly IForceImportService _forceImportService;
 
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
@@ -44,11 +43,11 @@ public sealed class QueueCleaner : GenericHandler
         [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
+        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
+        forceImportService
     )
     {
         _connectivityChecker = connectivityChecker;
-        _forceImportService = forceImportService;
         _lazyLibrarianService = lazyLibrarianService;
     }
 
