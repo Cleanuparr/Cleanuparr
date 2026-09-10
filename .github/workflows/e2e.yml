@@ -203,7 +203,7 @@ jobs:
           done
 
       - name: Download the app image
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: e2e-app-image-${{ matrix.suite.image-variant }}
           path: /tmp
