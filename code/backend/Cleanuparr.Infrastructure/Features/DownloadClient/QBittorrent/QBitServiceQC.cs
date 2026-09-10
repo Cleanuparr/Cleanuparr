@@ -23,7 +23,13 @@ public partial class QBitService
             return result;
         }
 
-        IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(hash);
+        IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(hash);
+
+        if (trackers is null)
+        {
+            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            return result;
+        }
 
         TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(hash);
 

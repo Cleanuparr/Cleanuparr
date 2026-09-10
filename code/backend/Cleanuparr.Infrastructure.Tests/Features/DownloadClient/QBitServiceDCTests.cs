@@ -195,6 +195,152 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             result.ShouldHaveSingleItem();
             result[0].Hash.ShouldBe("hash1");
         }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenTrackersAreNull()
+        {
+            // Arrange
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo[] torrentList =
+            [
+                new TorrentInfo { Hash = "hash1", Name = "Deleted Torrent", State = TorrentState.Uploading },
+                new TorrentInfo { Hash = "hash2", Name = "Live Torrent", State = TorrentState.Uploading }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync("hash1")
+                .Returns((IReadOnlyList<TorrentTracker>?)null);
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync("hash2")
+                .Returns(Array.Empty<TorrentTracker>());
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(Arg.Any<string>())
+                .Returns(PublicProperties());
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash2");
+        }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenPropertiesAreNull()
+        {
+            // Arrange
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo[] torrentList =
+            [
+                new TorrentInfo { Hash = "hash1", Name = "Deleted Torrent", State = TorrentState.Uploading }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(Array.Empty<TorrentTracker>());
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns((TorrentProperties?)null);
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task KeepsTorrent_WhenOnlyPseudoTrackersArePresent()
+        {
+            // Arrange
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo[] torrentList =
+            [
+                new TorrentInfo { Hash = "hash1", Name = "Trackerless Torrent", State = TorrentState.Uploading }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(new TorrentTracker[]
+                {
+                    new() { Url = "** [DHT] **", TrackerStatus = TorrentTrackerStatus.Working },
+                    new() { Url = "** [PeX] **", TrackerStatus = TorrentTrackerStatus.Working },
+                    new() { Url = "** [LSD] **", TrackerStatus = TorrentTrackerStatus.Working }
+                });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(PublicProperties());
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].TrackerDomains.ShouldBeEmpty();
+            result[0].TrackerHealth.ShouldBe(TrackerHealth.Unsupported);
+        }
+
+        [Fact]
+        public async Task KeepsTorrent_WhenATrackerUrlIsNull()
+        {
+            // Arrange
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo[] torrentList =
+            [
+                new TorrentInfo { Hash = "hash1", Name = "Torrent 1", State = TorrentState.Uploading }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(new TorrentTracker[]
+                {
+                    new() { Url = null!, TrackerStatus = TorrentTrackerStatus.Working },
+                    new() { Url = "http://tracker.example.com/announce", TrackerStatus = TorrentTrackerStatus.Working }
+                });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(PublicProperties());
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].TrackerDomains.ShouldHaveSingleItem();
+        }
+
+        private static TorrentProperties PublicProperties() => new()
+        {
+            AdditionalData = new Dictionary<string, Newtonsoft.Json.Linq.JToken>
+            {
+                { "is_private", Newtonsoft.Json.Linq.JToken.FromObject(false) }
+            }
+        };
     }
 
     public class FilterDownloadsToBeCleanedAsync_Tests : QBitServiceDCTests

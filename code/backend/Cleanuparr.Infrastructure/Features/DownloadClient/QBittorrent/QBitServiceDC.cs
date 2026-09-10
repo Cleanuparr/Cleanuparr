@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using QBittorrent.Client;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
@@ -22,9 +23,18 @@ public partial class QBitService
         var result = new List<ITorrentItemWrapper>();
         foreach (var torrent in torrentList.Where(x => !string.IsNullOrEmpty(x.Hash)))
         {
-            var trackers = await GetTrackersAsync(torrent.Hash!);
-            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash!);
-            bool isPrivate = properties?.AdditionalData.TryGetValue("is_private", out var dictValue) == true &&
+            IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(torrent.Hash!);
+            TorrentProperties? properties = await _client.GetTorrentPropertiesAsync(torrent.Hash!);
+
+            // Both calls 404 once the torrent is deleted, and a missing privacy flag would
+            // otherwise read as public and match the wrong seeding rule.
+            if (trackers is null || properties is null)
+            {
+                _logger.LogDebug("skip | torrent no longer exists in the download client | {name}", torrent.Name);
+                continue;
+            }
+
+            bool isPrivate = properties.AdditionalData.TryGetValue("is_private", out JToken? dictValue) &&
                            bool.TryParse(dictValue?.ToString(), out bool boolValue) && boolValue;
 
             result.Add(new QBitItemWrapper(torrent, trackers, isPrivate));

@@ -147,10 +147,18 @@ public partial class QBitService : DownloadService, IQBitService
         await _client.SetPreferencesAsync(preferences);
     }
     
-    private async Task<IReadOnlyList<TorrentTracker>> GetTrackersAsync(string hash)
+    /// <summary>
+    /// Reads the real trackers of a torrent, dropping the "** [DHT] **" style pseudo-rows.
+    /// </summary>
+    /// <returns>
+    /// An empty list for a trackerless torrent, or null when qBittorrent no longer knows the hash.
+    /// </returns>
+    private async Task<IReadOnlyList<TorrentTracker>?> GetTrackersAsync(string hash)
     {
-        return (await _client.GetTorrentTrackersAsync(hash))
-            .Where(x => !x.Url.Contains("**"))
+        IReadOnlyList<TorrentTracker>? trackers = await _client.GetTorrentTrackersAsync(hash);
+
+        return trackers
+            ?.Where(x => x.Url?.Contains("**") is not true)
             .ToList();
     }
     
