@@ -61,14 +61,31 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Run {#MyAppName} Application"; 
 [Code]
 var
   DeleteUserData: Boolean;
+  LogFileReady: Boolean;
+  PendingLog: string;
+
+// {app} only resolves once Setup knows the destination, so earlier lines wait in PendingLog
+procedure FlushLog();
+begin
+  if (not LogFileReady) or (PendingLog = '') then
+  begin
+    Exit;
+  end;
+
+  SaveStringToFile(ExpandConstant('{app}\cleanuparr-installer.log'), PendingLog, True);
+  PendingLog := '';
+end;
 
 procedure LogInstaller(const Msg: string);
-var
-  LogFile, Line: string;
 begin
-  LogFile := ExpandConstant('{app}\cleanuparr-installer.log');
-  Line := '[' + GetDateTimeString('yyyy/mm/dd hh:nn:ss', '-', ':') + '] ' + Msg + #13#10;
-  SaveStringToFile(LogFile, Line, True);
+  PendingLog := PendingLog + '[' + GetDateTimeString('yyyy/mm/dd hh:nn:ss', '-', ':') + '] ' + Msg + #13#10;
+  FlushLog();
+end;
+
+procedure EnableInstallerLog();
+begin
+  LogFileReady := True;
+  FlushLog();
 end;
 
 function ServiceExists(ServiceName: string): Boolean;
@@ -212,6 +229,8 @@ function InitializeUninstall(): Boolean;
 begin
   Result := True;
   DeleteUserData := False;
+  // {app} is known from the start of an uninstall
+  EnableInstallerLog();
 
   if not UninstallSilent() then
   begin
@@ -227,7 +246,10 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
+  begin
+    EnableInstallerLog();
     CreateOrUpdateService();
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
