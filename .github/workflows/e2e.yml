@@ -226,6 +226,9 @@ jobs:
         working-directory: e2e
         run: |
           docker compose -f docker-compose.e2e.yml ps
+          # A container can serve fine and still fail its check, so record what the check saw.
+          docker compose -f docker-compose.e2e.yml ps -q | xargs -r docker inspect \
+            --format '{{.Name}} {{with .State.Health}}{{.Status}}{{range .Log}} [exit {{.ExitCode}}] {{.Output}}{{end}}{{end}}'
           docker compose -f docker-compose.e2e.yml logs --no-color --tail 500
 
       - name: Upload test results
