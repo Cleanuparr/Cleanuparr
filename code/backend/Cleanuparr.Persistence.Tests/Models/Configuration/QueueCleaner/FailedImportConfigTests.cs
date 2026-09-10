@@ -185,6 +185,20 @@ public sealed class FailedImportConfigTests
     }
 
     [Fact]
+    public void Validate_WithForceImportAndTooManyMaxTries_ThrowsValidationException()
+    {
+        FailedImportConfig config = new()
+        {
+            MaxStrikes = 0,
+            ForceImport = true,
+            ForceImportMaxTries = 5001,
+        };
+
+        ValidationException exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Force import max tries must be at most 5000");
+    }
+
+    [Fact]
     public void Validate_WithForceImportOffAndZeroMaxTries_DoesNotThrow()
     {
         FailedImportConfig config = new()

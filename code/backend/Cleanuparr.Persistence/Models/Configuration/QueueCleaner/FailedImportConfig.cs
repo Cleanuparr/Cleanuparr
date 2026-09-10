@@ -49,6 +49,11 @@ public sealed record FailedImportConfig
             throw new ValidationException("Force import max tries must be at least 1");
         }
 
+        if (ForceImport && ForceImportMaxTries > 5000)
+        {
+            throw new ValidationException("Force import max tries must be at most 5000");
+        }
+
         if (ChangeCategory && DeletePrivate)
         {
             throw new ValidationException("Cannot enable both deletion and category changing");
