@@ -516,6 +516,36 @@ public class EventPublisherTests : IDisposable
 
     #endregion
 
+    #region PublishForceImported Tests
+
+    [Fact]
+    public async Task PublishForceImported_SavesEventWithTheImportedFileCount()
+    {
+        // Act
+        await _publisher.PublishForceImported("Show.S01E01", "abc123", fileCount: 2);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(EventType.ForceImported);
+        savedEvent.Severity.ShouldBe(EventSeverity.Important);
+        savedEvent.ItemTitle.ShouldBe("Show.S01E01");
+        savedEvent.ItemHash.ShouldBe("abc123");
+        savedEvent.Message.ShouldBe("Imported 2 file(s) the arr had blocked");
+    }
+
+    [Fact]
+    public async Task PublishForceImported_SendsNotification()
+    {
+        // Act
+        await _publisher.PublishForceImported("Show.S01E01", "abc123", fileCount: 2);
+
+        // Assert
+        await _notificationPublisher.Received(1).NotifyForceImported(2);
+    }
+
+    #endregion
+
     #region PublishDownloadCleaned Tests
 
     [Fact]
