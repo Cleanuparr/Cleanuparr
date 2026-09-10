@@ -80,7 +80,7 @@ async function arrange(
 ): Promise<void> {
   await ArrStubs.applyArrDefaults(mocks.arr);
   await mocks.arr.stub(ArrStubs.arrRawQueueStub(queueBody(downloadId)));
-  await mocks.arr.stub(ArrStubs.arrManualImportStub(candidates));
+  await mocks.arr.stub(ArrStubs.arrManualImportStub(downloadId, candidates));
   await mocks.arr.stub(ArrStubs.arrCommandTriggerStub());
   // Force import will not act while the arr reports import work in flight.
   await mocks.arr.stub(ArrStubs.arrCommandListStub([]));

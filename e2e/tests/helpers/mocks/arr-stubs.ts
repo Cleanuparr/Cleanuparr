@@ -175,9 +175,13 @@ export function arrCustomFormatsStub(): Mapping {
 }
 
 /** Serves the files an arr found for a download, with the reasons it refuses to import them. */
-export function arrManualImportStub(candidates: Array<Record<string, unknown>>): Mapping {
+export function arrManualImportStub(downloadId: string, candidates: Array<Record<string, unknown>>): Mapping {
   return {
-    request: { method: 'GET', urlPath: '/api/v3/manualimport' },
+    request: {
+      method: 'GET',
+      urlPath: '/api/v3/manualimport',
+      queryParameters: { downloadId: { equalTo: downloadId } },
+    },
     response: { status: 200, jsonBody: candidates },
   };
 }
