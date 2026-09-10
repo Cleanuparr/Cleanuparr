@@ -23,11 +23,9 @@ public partial class QBitService
         var result = new List<ITorrentItemWrapper>();
         foreach (var torrent in torrentList.Where(x => !string.IsNullOrEmpty(x.Hash)))
         {
-            IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(torrent.Hash!);
-            TorrentProperties? properties = await _client.GetTorrentPropertiesAsync(torrent.Hash!);
+            IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(torrent.Hash);
+            TorrentProperties? properties = await _client.GetTorrentPropertiesAsync(torrent.Hash);
 
-            // Both calls 404 once the torrent is deleted, and a missing privacy flag would
-            // otherwise read as public and match the wrong seeding rule.
             if (trackers is null || properties is null)
             {
                 _logger.LogDebug("skip | torrent no longer exists in the download client | {name}", torrent.Name);
