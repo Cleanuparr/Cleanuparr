@@ -20,6 +20,9 @@ const QBIT_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads', 
 /** One of the reasons Cleanuparr treats as safe to force past. */
 const SAMPLE_PATTERN = 'Unable to determine if file is a sample';
 
+/** Every reason Cleanuparr forces past, as ForceImportService reads them. */
+const SAFE_REASONS = ['matched to series by ID', 'matched to movie by ID', SAMPLE_PATTERN];
+
 const ANNOUNCE = 'http://127.0.0.1:6969/announce';
 
 interface ForceImportTarget {
@@ -129,6 +132,32 @@ async function importedFiles(target: ForceImportTarget): Promise<Array<{ id: num
   return target.arr.arr.get(target.filesPath);
 }
 
+/**
+ * The rejections the arr itself puts on the files it offers.
+ *
+ * Force import refuses a candidate carrying anything outside the safe list, and these
+ * strings are not the queue's status messages, so a reworded rejection would stop every
+ * rescue while the queue message this spec reads stayed the same.
+ *
+ * Both arrs answer with "Unable to determine if file is a sample" for these payloads.
+ * Sonarr reads a 32 KB file as a definite sample now and then, and answers
+ * "No audio tracks detected" and "Sample" instead, which force import refuses by design.
+ * Playwright's retry covers that.
+ */
+async function unsafeCandidateRejections(target: ForceImportTarget, downloadId: string): Promise<string[]> {
+  const candidates = await target.arr.arr.get<Array<{ rejections?: Array<{ reason?: string }> }>>(
+    `/api/v3/manualimport?downloadId=${downloadId}&filterExistingFiles=true`,
+  );
+
+  expect(candidates.length, 'the arr offered no file to import').toBeGreaterThan(0);
+
+  return candidates
+    .flatMap((candidate) => candidate.rejections ?? [])
+    .map((rejection) => rejection.reason ?? '')
+    .filter((reason) => reason.length > 0)
+    .filter((reason) => !SAFE_REASONS.some((safe) => reason.toLowerCase().includes(safe.toLowerCase())));
+}
+
 /** Force import writes into the library, which the next run must not inherit. */
 async function clearImportedFiles(): Promise<void> {
   for (const target of TARGETS) {
@@ -187,6 +216,7 @@ for (const target of TARGETS) {
       // reason force import does not recognise. Playwright's retry covers that.
       const messages = await waitForImportBlock(target, downloadId);
       expect(messages).toContain(SAMPLE_PATTERN);
+      expect(await unsafeCandidateRejections(target, downloadId)).toEqual([]);
 
       await arrangeForceImport(api, target);
 
@@ -221,6 +251,7 @@ for (const target of TARGETS) {
 
       const messages = await waitForImportBlock(target, downloadId);
       expect(messages.some((m) => m.includes(target.byId.message))).toBe(true);
+      expect(await unsafeCandidateRejections(target, downloadId)).toEqual([]);
 
       await arrangeForceImport(api, target);
 
