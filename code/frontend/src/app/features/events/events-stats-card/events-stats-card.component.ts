@@ -20,7 +20,7 @@ import { formatEventType } from '@shared/utils/event-display.util';
 const TYPE_COLORS: Record<string, string> = {
   [EventType.QueueItemDeleted]: '#ef4444',
   [EventType.FailedImportStrike]: '#f97316',
-  [EventType.ForceImported]: '#4ade80',
+  [EventType.ForceImported]: '#d946ef',
   [EventType.StalledStrike]: '#f59e0b',
   [EventType.SlowSpeedStrike]: '#eab308',
   [EventType.SlowTimeStrike]: '#84cc16',

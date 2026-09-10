@@ -534,6 +534,7 @@ describe('NotificationProviderModalComponent', () => {
       webhookUrl: 'https://discord.com/hook',
       avatarUrl: 'https://example.com/a.png',
       onCategoryChanged: true,
+      onForceImported: true,
     }));
     fixture.detectChanges();
 
@@ -548,6 +549,7 @@ describe('NotificationProviderModalComponent', () => {
       isEnabled: true,
       ...DEFAULT_EVENTS,
       onCategoryChanged: true,
+      onForceImported: true,
     });
     expect(api.updateDiscord).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith('Provider added');
