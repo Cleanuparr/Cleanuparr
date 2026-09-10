@@ -113,7 +113,9 @@ jobs:
       - name: Dump service logs
         if: failure()
         working-directory: e2e
-        run: docker compose -f docker-compose.e2e.yml logs --no-color --tail 500
+        run: |
+          docker compose -f docker-compose.e2e.yml ps
+          docker compose -f docker-compose.e2e.yml logs --no-color --tail 500
 
       - name: Upload test results
         uses: actions/upload-artifact@v7
