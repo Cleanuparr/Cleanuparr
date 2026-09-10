@@ -21,7 +21,7 @@ public partial class UTorrentService
 
         if (download?.Hash is null)
         {
-            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
 
@@ -29,7 +29,7 @@ public partial class UTorrentService
 
         if (properties is null)
         {
-            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
 
@@ -43,7 +43,7 @@ public partial class UTorrentService
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", torrent.Name);
+            _logger.LogInformation("skip | download is ignored | {Name}", torrent.Name);
             return result;
         }
 
@@ -53,7 +53,7 @@ public partial class UTorrentService
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "Failed to get files for torrent {hash} in the download client", hash);
+            _logger.LogWarning(exception, "Failed to get files for torrent {Hash} in the download client", hash);
         }
 
         bool shouldRemove = files?.Count > 0;
@@ -70,7 +70,7 @@ public partial class UTorrentService
         if (shouldRemove)
         {
             // remove if all files are unwanted
-            _logger.LogDebug("all files are unwanted | removing download | {name}", torrent.Name);
+            _logger.LogDebug("all files are unwanted | removing download | {Name}", torrent.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesSkipped;
             result.DeleteFromClient = true;
@@ -100,13 +100,13 @@ public partial class UTorrentService
     {
         if (!wrapper.IsDownloading())
         {
-            _logger.LogTrace("skip slow check | download is not in downloading state | {name}", wrapper.Name);
+            _logger.LogTrace("skip slow check | download is not in downloading state | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
         if (wrapper.DownloadSpeed <= 0)
         {
-            _logger.LogTrace("skip slow check | download speed is 0 | {name}", wrapper.Name);
+            _logger.LogTrace("skip slow check | download speed is 0 | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
@@ -117,7 +117,7 @@ public partial class UTorrentService
     {
         if (!wrapper.IsStalled())
         {
-            _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", wrapper.Name);
+            _logger.LogTrace("skip stalled check | download is not in stalled state | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
