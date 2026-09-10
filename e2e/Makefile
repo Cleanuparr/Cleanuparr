@@ -1,4 +1,4 @@
-.PHONY: up up-core up-clients up-arr up-arr-fast up-lazylibrarian down test install setup seed-arr seed-lazylibrarian
+.PHONY: up up-core up-core-fast up-clients up-arr up-arr-fast up-lazylibrarian down test install setup seed-arr seed-lazylibrarian
 
 ARR_SERVICES = app keycloak nginx wiremock-indexer tracker qbittorrent sonarr radarr
 
@@ -12,6 +12,11 @@ up: down setup
 
 up-core: down setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx
+
+# Same stack as up-core, built from patched sources so the Seeker can be triggered on demand.
+up-core-fast: down setup
+	bash ./scripts/with-patches.sh docker compose -f docker-compose.e2e.yml build app
+	docker compose -f docker-compose.e2e.yml up -d --remove-orphans --wait --wait-timeout 300 app keycloak nginx
 
 up-clients: down setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx tracker qbittorrent transmission deluge utorrent rutorrent

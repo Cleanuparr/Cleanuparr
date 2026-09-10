@@ -1,6 +1,7 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import type { MockServers } from '../helpers/mocks/wiremock-client';
+import { MANUAL_SEARCH_INTERVAL_MINUTES, triggerSeeker } from '../helpers/seeker-live';
 import {
   applyArrDefaults,
   arrCommandCompletedStub,
@@ -14,12 +15,12 @@ import {
 const COMMAND_ID = 4242;
 
 /**
- * The Seeker cannot be triggered on demand, so every run here waits for the cron.
+ * These specs run against a patched image, so each triggers its own Seeker run.
  *
- * A status is at worst the 2 minute interval, plus 30s of jitter, plus the monitor's
- * one minute poll away.
+ * The patched monitor polls every 5s, so a status arrives within seconds.
+ * See e2e/patches and `make up-core-fast`.
  */
-const TRANSITION_TIMEOUT = 270_000;
+const TRANSITION_TIMEOUT = 30_000;
 
 const createdInstanceIds: string[] = [];
 let savedSearchSettings: Record<string, unknown> | undefined;
@@ -89,7 +90,7 @@ async function arrangeSearchableInstance(
     instances,
     searchEnabled: true,
     proactiveSearchEnabled: true,
-    searchInterval: 2,
+    searchInterval: MANUAL_SEARCH_INTERVAL_MINUTES,
   });
 
   return instance.id;
@@ -125,13 +126,12 @@ test.describe('Seeker: search command status flow', () => {
   });
 
   test('reaches completed when the arr reports the command completed', async ({ api, mocks }) => {
-    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
-
     const title = 'Command Completes';
     const instanceId = await arrangeSearchableInstance(api, mocks, title, [
       arrCommandListStub([{ id: COMMAND_ID, status: 'completed' }]),
     ]);
 
+    await triggerSeeker(api);
 
     const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
     expect(event?.searchStatus).toBe('Completed');
@@ -142,14 +142,13 @@ test.describe('Seeker: search command status flow', () => {
    * Both endpoints answer here, so only the request log tells the two paths apart.
    */
   test('reads the command list instead of each command', async ({ api, mocks }) => {
-    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
-
     const title = 'Command List Only';
     const instanceId = await arrangeSearchableInstance(api, mocks, title, [
       arrCommandListStub([{ id: COMMAND_ID, status: 'completed' }]),
       arrCommandCompletedStub(COMMAND_ID),
     ]);
 
+    await triggerSeeker(api);
     await waitForSearchStatus(api, instanceId, title, 'Completed');
 
     const listed = await mocks.arr.findRequests({ method: 'GET', urlPath: '/api/v3/command' });
@@ -160,27 +159,25 @@ test.describe('Seeker: search command status flow', () => {
   });
 
   test('reaches failed when the arr aborts the command', async ({ api, mocks }) => {
-    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
-
     const title = 'Command Aborts';
     const instanceId = await arrangeSearchableInstance(api, mocks, title, [
       arrCommandListStub([{ id: COMMAND_ID, status: 'aborted' }]),
     ]);
 
+    await triggerSeeker(api);
 
     const event = await waitForSearchStatus(api, instanceId, title, 'Failed');
     expect(event?.searchStatus).toBe('Failed');
   });
 
   test('reaches completed when the arr has forgotten the command', async ({ api, mocks }) => {
-    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
-
     const title = 'Command Forgotten';
     const instanceId = await arrangeSearchableInstance(api, mocks, title, [
       arrCommandListStub([]),
       arrCommandNotFoundStub(COMMAND_ID),
     ]);
 
+    await triggerSeeker(api);
 
     const event = await waitForSearchStatus(api, instanceId, title, 'Completed');
     expect(event?.searchStatus).toBe('Completed');
@@ -194,6 +191,8 @@ test.describe('Seeker: search command status flow', () => {
       arrCommandListStub([{ id: COMMAND_ID, status: 'started' }]),
     ]);
 
+    await triggerSeeker(api);
+
     await expect
       .poll(async () => (await findSearchEvent(api, instanceId, title))?.searchStatus, { timeout: TRANSITION_TIMEOUT })
       .not.toBe(undefined);
@@ -205,8 +204,6 @@ test.describe('Seeker: search command status flow', () => {
   });
 
   test('leaves dry run search events without a status', async ({ api, mocks }) => {
-    test.setTimeout(TRANSITION_TIMEOUT + 60_000);
-
     const title = 'Dry Run Search';
     const instanceId = await arrangeSearchableInstance(api, mocks, title, [
       arrCommandListStub([{ id: COMMAND_ID, status: 'completed' }]),
@@ -216,6 +213,7 @@ test.describe('Seeker: search command status flow', () => {
     await api.general.updateConfig({ ...general, dryRun: true });
 
     try {
+      await triggerSeeker(api);
 
       await expect
         .poll(async () => (await findSearchEvent(api, instanceId, title))?.isDryRun, { timeout: TRANSITION_TIMEOUT })

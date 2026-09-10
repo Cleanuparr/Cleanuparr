@@ -20,6 +20,7 @@ const FOLDERS = [
   'queue-cleaner',
   'regression',
   'seeker',
+  'seeker-fast',
   'signalr',
 ] as const;
 
