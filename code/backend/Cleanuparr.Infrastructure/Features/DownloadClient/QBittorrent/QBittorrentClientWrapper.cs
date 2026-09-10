@@ -26,7 +26,7 @@ public sealed class QBittorrentClientWrapper : IQBittorrentClientWrapper
     public Task<TorrentProperties?> GetTorrentPropertiesAsync(string hash)
         => _client.GetTorrentPropertiesAsync(hash);
 
-    public Task<IReadOnlyList<TorrentContent>> GetTorrentContentsAsync(string hash)
+    public Task<IReadOnlyList<TorrentContent>?> GetTorrentContentsAsync(string hash)
         => _client.GetTorrentContentsAsync(hash);
 
     public Task<IReadOnlyList<TorrentTracker>?> GetTorrentTrackersAsync(string hash)

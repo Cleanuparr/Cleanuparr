@@ -11,7 +11,7 @@ public interface IQBittorrentClientWrapper : IDisposable
     Task<ApiVersion> GetApiVersionAsync();
     Task<IReadOnlyList<TorrentInfo>> GetTorrentListAsync(TorrentListQuery query);
     Task<TorrentProperties?> GetTorrentPropertiesAsync(string hash);
-    Task<IReadOnlyList<TorrentContent>> GetTorrentContentsAsync(string hash);
+    Task<IReadOnlyList<TorrentContent>?> GetTorrentContentsAsync(string hash);
     Task<IReadOnlyList<TorrentTracker>?> GetTorrentTrackersAsync(string hash);
     Task<IReadOnlyDictionary<string, Category>> GetCategoriesAsync();
     Task AddCategoryAsync(string category);
