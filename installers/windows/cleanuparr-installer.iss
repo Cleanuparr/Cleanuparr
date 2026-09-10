@@ -61,14 +61,34 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Run {#MyAppName} Application"; 
 [Code]
 var
   DeleteUserData: Boolean;
+  LogFileReady: Boolean;
+  PendingLog: string;
+
+// {app} only resolves once Setup knows the destination, so earlier lines wait in PendingLog
+procedure FlushLog();
+begin
+  if (not LogFileReady) or (PendingLog = '') then
+  begin
+    Exit;
+  end;
+
+  // a failed write keeps the buffer, so the next logged line retries it
+  if SaveStringToFile(ExpandConstant('{app}\cleanuparr-installer.log'), PendingLog, True) then
+  begin
+    PendingLog := '';
+  end;
+end;
 
 procedure LogInstaller(const Msg: string);
-var
-  LogFile, Line: string;
 begin
-  LogFile := ExpandConstant('{app}\cleanuparr-installer.log');
-  Line := '[' + GetDateTimeString('yyyy/mm/dd hh:nn:ss', '-', ':') + '] ' + Msg + #13#10;
-  SaveStringToFile(LogFile, Line, True);
+  PendingLog := PendingLog + '[' + GetDateTimeString('yyyy/mm/dd hh:nn:ss', '-', ':') + '] ' + Msg + #13#10;
+  FlushLog();
+end;
+
+procedure EnableInstallerLog();
+begin
+  LogFileReady := True;
+  FlushLog();
 end;
 
 function ServiceExists(ServiceName: string): Boolean;
@@ -212,6 +232,8 @@ function InitializeUninstall(): Boolean;
 begin
   Result := True;
   DeleteUserData := False;
+  // {app} is known from the start of an uninstall
+  EnableInstallerLog();
 
   if not UninstallSilent() then
   begin
@@ -226,8 +248,15 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-  if CurStep = ssPostInstall then
+  // {app} is resolved by ssInstall, so an upgrade gets its early lines on disk before file copy
+  if CurStep = ssInstall then
+  begin
+    EnableInstallerLog();
+  end
+  else if CurStep = ssPostInstall then
+  begin
     CreateOrUpdateService();
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
