@@ -156,8 +156,8 @@ public class ForceImportServiceTests
     [Fact]
     public async Task TryImportAsync_NoStatusMessage_DoesNothing()
     {
-        // Arrange
-        QueueRecord record = BuildRecord(state: "importBlocked", messages: []);
+        // Arrange: the arr reports a warning record with nothing under it
+        QueueRecord record = BuildRecord(state: "importBlocked", withStatusMessage: false);
         StubCandidates(BuildCandidate(SafeReason));
 
         // Act
@@ -165,6 +165,7 @@ public class ForceImportServiceTests
 
         // Assert
         outcome.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 
     [Fact]
@@ -187,11 +188,13 @@ public class ForceImportServiceTests
         await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 
-    [Fact]
-    public async Task TryImportAsync_TransitionalState_WaitsForASecondSighting()
+    [Theory]
+    [InlineData("importPending")]
+    [InlineData("importFailed")]
+    public async Task TryImportAsync_TransitionalState_WaitsForASecondSighting(string state)
     {
-        // Arrange: the arr's own importer may still pick up an importPending download
-        QueueRecord record = BuildRecord(state: "importPending");
+        // Arrange: the arr's own importer may still pick up a transitional download
+        QueueRecord record = BuildRecord(state: state);
         StubCandidates(BuildCandidate(SafeReason));
 
         // Act
@@ -613,7 +616,8 @@ public class ForceImportServiceTests
     private static QueueRecord BuildRecord(
         string state,
         string status = "warning",
-        List<string>? messages = null
+        List<string>? messages = null,
+        bool withStatusMessage = true
     ) => new()
     {
         Id = 1,
@@ -625,9 +629,11 @@ public class ForceImportServiceTests
         Status = "completed",
         TrackedDownloadStatus = status,
         TrackedDownloadState = state,
-        StatusMessages =
-        [
-            new TrackedDownloadStatusMessage { Title = "show.mkv", Messages = messages ?? [SafeReason] },
-        ],
+        StatusMessages = withStatusMessage
+            ?
+            [
+                new TrackedDownloadStatusMessage { Title = "show.mkv", Messages = messages ?? [SafeReason] },
+            ]
+            : [],
     };
 }
