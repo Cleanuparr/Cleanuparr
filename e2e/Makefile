@@ -1,4 +1,4 @@
-.PHONY: up up-core up-core-fast up-clients up-arr up-arr-fast up-lazylibrarian \
+.PHONY: up up-core up-core-fast up-clients up-clients-fast up-arr up-arr-fast up-lazylibrarian \
 	up-stack-core up-stack-clients up-stack-arr up-stack-lazylibrarian up-app \
 	down test install setup seed-arr seed-lazylibrarian
 
@@ -32,6 +32,11 @@ up-core-fast: down setup
 
 up-clients: down setup
 	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(CLIENTS_STACK)
+
+# Same stack as up-clients, patched so the Download Cleaner skips its 10s arr wait.
+up-clients-fast: down setup
+	bash ./scripts/with-patches.sh $(COMPOSE) build app
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES) $(CLIENTS_STACK)
 
 up-arr: down setup
 	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(ARR_STACK)
