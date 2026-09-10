@@ -15,7 +15,7 @@ public partial class QBitService
     public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads)
     {
         TorrentInfo? download = (await _client.GetTorrentListAsync(new TorrentListQuery { Hashes = [hash] }))
-            .FirstOrDefault();
+            ?.FirstOrDefault();
         BlockFilesResult result = new();
 
         if (download is null)

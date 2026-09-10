@@ -9,7 +9,7 @@ public interface IQBittorrentClientWrapper : IDisposable
 {
     Task LoginAsync(string username, string password);
     Task<ApiVersion> GetApiVersionAsync();
-    Task<IReadOnlyList<TorrentInfo>> GetTorrentListAsync(TorrentListQuery query);
+    Task<IReadOnlyList<TorrentInfo>?> GetTorrentListAsync(TorrentListQuery query);
     Task<TorrentProperties?> GetTorrentPropertiesAsync(string hash);
     Task<IReadOnlyList<TorrentContent>?> GetTorrentContentsAsync(string hash);
     Task<IReadOnlyList<TorrentTracker>?> GetTorrentTrackersAsync(string hash);
