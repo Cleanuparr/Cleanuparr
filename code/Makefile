@@ -84,9 +84,9 @@ endif
 ifndef pat
 	$(error pat is required. Usage: make docker-build tag=latest version=1.0.0 user=... pat=...)
 endif
-	DOCKER_BUILDKIT=1 docker build \
+	PACKAGES_PAT=$(pat) DOCKER_BUILDKIT=1 docker build \
 		--build-arg VERSION=$(version) \
 		--build-arg PACKAGES_USERNAME=$(user) \
-		--build-arg PACKAGES_PAT=$(pat) \
+		--secret id=packages_pat,env=PACKAGES_PAT \
 		-t cleanuparr:$(tag) \
 		.

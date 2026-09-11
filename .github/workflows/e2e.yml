@@ -85,7 +85,8 @@ jobs:
           provenance: false
           build-args: |
             PACKAGES_USERNAME=${{ github.repository_owner }}
-            PACKAGES_PAT=${{ env.PACKAGES_PAT }}
+          secrets: |
+            packages_pat=${{ env.PACKAGES_PAT }}
           tags: cleanuparr-e2e-app:${{ matrix.variant }}
           outputs: type=docker,dest=/tmp/app-image.tar
           cache-from: type=gha,scope=e2e-${{ matrix.variant }}

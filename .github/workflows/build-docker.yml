@@ -206,7 +206,8 @@ jobs:
           build-args: |
             VERSION=${{ needs.prepare.outputs.version }}
             PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}
-            PACKAGES_PAT=${{ env.PACKAGES_PAT }}
+          secrets: |
+            packages_pat=${{ env.PACKAGES_PAT }}
           platforms: ${{ matrix.platform }}
           outputs: type=image,"name=${{ env.REGISTRY_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
@@ -226,7 +227,8 @@ jobs:
           build-args: |
             VERSION=${{ needs.prepare.outputs.version }}
             PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}
-            PACKAGES_PAT=${{ env.PACKAGES_PAT }}
+          secrets: |
+            packages_pat=${{ env.PACKAGES_PAT }}
           platforms: ${{ matrix.platform }}
           push: false
           cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
