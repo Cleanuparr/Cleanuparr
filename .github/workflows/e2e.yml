@@ -31,14 +31,14 @@ jobs:
             make-target: up-core
             projects: >-
               --project=account --project=arr --project=auth
-              --project=blacklist-sync --project=core --project=download-client
+              --project=blacklist-sync --project=core
               --project=general --project=notifications --project=oidc
               --project=queue-cleaner --project=regression --project=seeker
               --project=signalr
           # These folders need the torrent clients and the tracker.
           - name: clients
             make-target: up-clients
-            projects: '--project=download-cleaner --project=malware-blocker'
+            projects: '--project=download-cleaner --project=download-client --project=malware-blocker'
           # This folder needs the real arrs, the fake indexer and qBittorrent.
           - name: live-arr
             make-target: up-arr
