@@ -175,8 +175,12 @@ jobs:
           # The artifact appears only once build-app uploads it. Watch that job too,
           # so a build failure ends this leg instead of stalling it until the timeout.
           while :; do
-            if gh api "$RUN_ARTIFACTS" --paginate \
-              --jq ".artifacts[] | select(.name == \"$artifact\") | .id" | grep -q .; then
+            # Assigned, not piped into grep: under pipefail a grep that exits on the
+            # first match can SIGPIPE gh, making a found artifact read as not found.
+            id=$(gh api "$RUN_ARTIFACTS" --paginate \
+              --jq ".artifacts[] | select(.name == \"$artifact\") | .id" || true)
+
+            if [ -n "$id" ]; then
               break
             fi
 
