@@ -246,6 +246,85 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             result.DeleteReason.ShouldBe(DeleteReason.None);
             result.DeleteFromClient.ShouldBeFalse();
         }
+
+        [Fact]
+        public async Task TorrentTrackersNotFound_ReturnsEmptyResult()
+        {
+            // Arrange
+            const string hash = "test-hash";
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo torrentInfo = new()
+            {
+                Hash = hash,
+                Name = "Deleted Torrent",
+                State = TorrentState.Downloading
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns((IReadOnlyList<TorrentTracker>?)null);
+
+            // Act
+            DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+            await _fixture.ClientWrapper.DidNotReceive().GetTorrentPropertiesAsync(hash);
+        }
+
+        [Fact]
+        public async Task TorrentWithOnlyPseudoTrackers_IsFound()
+        {
+            // Arrange
+            const string hash = "test-hash";
+            QBitService sut = _fixture.CreateSut();
+
+            TorrentInfo torrentInfo = new()
+            {
+                Hash = hash,
+                Name = "Trackerless Torrent",
+                State = TorrentState.Downloading
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns(new TorrentTracker[]
+                {
+                    new() { Url = "** [DHT] **", TrackerStatus = TorrentTrackerStatus.Working }
+                });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(new TorrentProperties
+                {
+                    AdditionalData = new Dictionary<string, Newtonsoft.Json.Linq.JToken>
+                    {
+                        { "is_private", Newtonsoft.Json.Linq.JToken.FromObject(false) }
+                    }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false, false));
+
+            // Act
+            DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            result.Found.ShouldBeTrue();
+            result.Torrent!.TrackerDomains.ShouldBeEmpty();
+        }
     }
 
     public class ShouldRemoveFromArrQueueAsync_AllFilesSkippedScenarios : QBitServiceTests
@@ -1406,6 +1485,58 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
+        public async Task TrackersNotFound_ReturnsNotFound()
+        {
+            const string hash = "deleted-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { MakeTorrentInfo(hash) });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns((IReadOnlyList<TorrentTracker>?)null);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<TorrentContentPriority>());
+        }
+
+        [Fact]
+        public async Task OnlyPseudoTrackers_StillChecksFiles()
+        {
+            const string hash = "trackerless-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "installer.exe", Index = 0, Priority = TorrentContentPriority.Normal },
+            ]);
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns(new TorrentTracker[]
+                {
+                    new() { Url = "** [DHT] **", TrackerStatus = TorrentTrackerStatus.Working }
+                });
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
         }
     }
 }

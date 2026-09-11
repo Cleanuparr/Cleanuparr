@@ -20,16 +20,22 @@ public partial class QBitService
 
         if (download is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
-        IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(hash);
-        
+        IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(hash);
+
+        if (trackers is null)
+        {
+            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            return result;
+        }
+
         if (ignoredDownloads.Count > 0 &&
             (download.ShouldIgnore(ignoredDownloads) || trackers.Any(x => x.ShouldIgnore(ignoredDownloads)) is true))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            _logger.LogInformation("skip | download is ignored | {Name}", download.Name);
             return result;
         }
         
@@ -37,7 +43,7 @@ public partial class QBitService
 
         if (torrentProperties is null)
         {
-            _logger.LogError("Failed to find torrent properties {name}", download.Name);
+            _logger.LogError("Failed to find torrent properties {Name}", download.Name);
             return result;
         }
 
@@ -55,7 +61,7 @@ public partial class QBitService
         if (malwareBlockerConfig.IgnorePrivate && isPrivate)
         {
             // ignore private trackers
-            _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            _logger.LogDebug("skip files check | download is private | {Name}", download.Name);
             return result;
         }
         
@@ -63,7 +69,7 @@ public partial class QBitService
 
         if (files?.Count is null or 0)
         {
-            _logger.LogDebug("skip files check | no files found | {name}", download.Name);
+            _logger.LogDebug("skip files check | no files found | {Name}", download.Name);
             return result;
         }
 
@@ -80,7 +86,7 @@ public partial class QBitService
         {
             if (!file.Index.HasValue)
             {
-                _logger.LogTrace("Skipping file with no index | {file}", file.Name);
+                _logger.LogTrace("Skipping file with no index | {File}", file.Name);
                 continue;
             }
 
@@ -88,22 +94,22 @@ public partial class QBitService
 
             if (file.Priority is TorrentContentPriority.Skip)
             {
-                _logger.LogTrace("File is already skipped | {file}", file.Name);
+                _logger.LogTrace("File is already skipped | {File}", file.Name);
                 totalUnwantedFiles++;
                 continue;
             }
 
             if (_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))
             {
-                _logger.LogTrace("File is valid | {file}", file.Name);
+                _logger.LogTrace("File is valid | {File}", file.Name);
                 continue;
             }
             
-            _logger.LogInformation("unwanted file found | {file}", file.Name);
+            _logger.LogInformation("unwanted file found | {File}", file.Name);
 
             if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
             {
-                _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+                _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
                 result.ShouldRemove = true;
                 result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
                 return result;
@@ -115,18 +121,18 @@ public partial class QBitService
 
         if (unwantedFiles.Count is 0)
         {
-            _logger.LogDebug("No unwanted files found for {name}", download.Name);
+            _logger.LogDebug("No unwanted files found for {Name}", download.Name);
             return result;
         }
         
         if (totalUnwantedFiles == totalFiles)
         {
-            _logger.LogDebug("All files are blocked for {name}", download.Name);
+            _logger.LogDebug("All files are blocked for {Name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
         
-        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
+        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", totalUnwantedFiles, download.Name);
 
         foreach (int fileIndex in unwantedFiles)
         {

@@ -19,17 +19,23 @@ public partial class QBitService
 
         if (download is null)
         {
-            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
 
-        IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(hash);
+        IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(hash);
+
+        if (trackers is null)
+        {
+            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            return result;
+        }
 
         TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(hash);
 
         if (torrentProperties is null)
         {
-            _logger.LogError("Failed to find torrent properties for {name}", download.Name);
+            _logger.LogError("Failed to find torrent properties for {Name}", download.Name);
             return result;
         }
 
@@ -46,7 +52,7 @@ public partial class QBitService
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", torrent.Name);
+            _logger.LogInformation("skip | download is ignored | {Name}", torrent.Name);
             return result;
         }
 
@@ -59,14 +65,14 @@ public partial class QBitService
             // if all files were blocked by qBittorrent
             if (download is { CompletionOn: not null, Downloaded: null or 0 })
             {
-                _logger.LogDebug("all files are unwanted by qBit | removing download | {name}", torrent.Name);
+                _logger.LogDebug("all files are unwanted by qBit | removing download | {Name}", torrent.Name);
                 result.DeleteReason = DeleteReason.AllFilesSkippedByQBit;
                 result.DeleteFromClient = true;
                 return result;
             }
 
             // remove if all files are unwanted
-            _logger.LogDebug("all files are unwanted | removing download | {name}", torrent.Name);
+            _logger.LogDebug("all files are unwanted | removing download | {Name}", torrent.Name);
             result.DeleteReason = DeleteReason.AllFilesSkipped;
             result.DeleteFromClient = true;
             return result;
@@ -93,13 +99,13 @@ public partial class QBitService
     {
         if (!wrapper.IsDownloading())
         {
-            _logger.LogTrace("skip slow check | download is not in downloading state | {name}", wrapper.Name);
+            _logger.LogTrace("skip slow check | download is not in downloading state | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
         if (wrapper.DownloadSpeed <= 0)
         {
-            _logger.LogTrace("skip slow check | download speed is 0 | {name}", wrapper.Name);
+            _logger.LogTrace("skip slow check | download speed is 0 | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
@@ -129,7 +135,7 @@ public partial class QBitService
 
         if (!wrapper.IsStalled())
         {
-            _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", wrapper.Name);
+            _logger.LogTrace("skip stalled check | download is not in stalled state | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
