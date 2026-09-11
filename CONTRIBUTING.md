@@ -239,9 +239,10 @@ To build the Docker image locally for testing:
 
 2. Build the image:
    ```bash
+   export PACKAGES_PAT=YOUR_GITHUB_PAT
    docker build \
      --build-arg PACKAGES_USERNAME=YOUR_GITHUB_USERNAME \
-     --build-arg PACKAGES_PAT=YOUR_GITHUB_PAT \
+     --secret id=packages_pat,env=PACKAGES_PAT \
      -t cleanuparr:local \
      -f Dockerfile .
    ```
@@ -267,10 +268,11 @@ To build the Docker image locally for testing:
 Use Docker Buildx for multi-platform builds:
 
 ```bash
+export PACKAGES_PAT=YOUR_GITHUB_PAT
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   --build-arg PACKAGES_USERNAME=YOUR_GITHUB_USERNAME \
-  --build-arg PACKAGES_PAT=YOUR_GITHUB_PAT \
+  --secret id=packages_pat,env=PACKAGES_PAT \
   -t cleanuparr:local \
   -f Dockerfile .
 ```

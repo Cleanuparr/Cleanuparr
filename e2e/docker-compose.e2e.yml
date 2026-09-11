@@ -87,7 +87,8 @@ services:
       context: ../code
       args:
         PACKAGES_USERNAME: ${PACKAGES_USERNAME}
-        PACKAGES_PAT: ${PACKAGES_PAT}
+      secrets:
+        - packages_pat
     network_mode: host
     depends_on:
       keycloak:
@@ -287,3 +288,7 @@ services:
       timeout: 3s
       retries: 12
       start_period: 60s
+
+secrets:
+  packages_pat:
+    environment: PACKAGES_PAT
