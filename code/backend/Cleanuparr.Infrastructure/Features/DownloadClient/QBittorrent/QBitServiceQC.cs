@@ -15,7 +15,7 @@ public partial class QBitService
     {
         DownloadCheckResult result = new();
         TorrentInfo? download = (await _client.GetTorrentListAsync(new TorrentListQuery { Hashes = [hash] }))
-            .FirstOrDefault();
+            ?.FirstOrDefault();
 
         if (download is null)
         {
