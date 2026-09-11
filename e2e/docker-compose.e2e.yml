@@ -81,6 +81,8 @@ services:
       start_period: 10s
 
   app:
+    # CI loads a prebuilt image under this name so no leg has to build one.
+    image: ${APP_IMAGE:-cleanuparr-e2e-app}
     build:
       context: ../code
       args:
@@ -143,7 +145,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8090/api/v2/app/version > /dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   transmission:
@@ -163,7 +165,7 @@ services:
       test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9091/transmission/rpc || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   deluge:
@@ -181,7 +183,7 @@ services:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8112 > /dev/null 2>&1 || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   utorrent:
@@ -205,7 +207,7 @@ services:
       test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8080/gui/ || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   # Real Sonarr and Radarr, restored from e2e/arr-seed by setup-test-data.sh.
@@ -226,7 +228,7 @@ services:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:8989/ping || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   radarr:
@@ -243,7 +245,7 @@ services:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:7878/ping || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   # Real LazyLibrarian, restored from e2e/lazylibrarian-seed by setup-test-data.sh.
@@ -265,7 +267,7 @@ services:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:5299/ || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 30s
 
   rutorrent:
@@ -283,5 +285,5 @@ services:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 60
+      retries: 12
       start_period: 60s

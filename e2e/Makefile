@@ -1,32 +1,64 @@
-.PHONY: up up-core up-clients up-arr up-arr-fast up-lazylibrarian down test install setup seed-arr seed-lazylibrarian
+.PHONY: up up-core up-core-fast up-clients up-arr up-arr-fast up-lazylibrarian \
+	up-stack-core up-stack-clients up-stack-arr up-stack-lazylibrarian up-app \
+	down test install setup seed-arr seed-lazylibrarian
 
-ARR_SERVICES = app keycloak nginx wiremock-indexer tracker qbittorrent sonarr radarr
+COMPOSE = docker compose -f docker-compose.e2e.yml
+WAIT = --remove-orphans --wait --wait-timeout 150
 
-LAZYLIBRARIAN_SERVICES = app keycloak nginx wiremock-indexer tracker qbittorrent lazylibrarian
+# The app reaches these through depends_on, so a stack started without it must name them.
+WIREMOCKS = wiremock-arr wiremock-dlc wiremock-notify wiremock-blocklist
+
+# nginx depends_on app, so naming it would drag the app into the stack half.
+APP_SERVICES = app nginx
+
+CORE_STACK = keycloak $(WIREMOCKS)
+CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent
+ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr
+LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent lazylibrarian
 
 setup:
 	bash ./scripts/setup-test-data.sh
 
 up: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300
+	$(COMPOSE) up -d --build $(WAIT)
 
 up-core: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(CORE_STACK)
+
+# Same stack as up-core, built from patched sources so the Seeker can be triggered on demand.
+up-core-fast: down setup
+	bash ./scripts/with-patches.sh $(COMPOSE) build app
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES) $(CORE_STACK)
 
 up-clients: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 app keycloak nginx tracker qbittorrent transmission deluge utorrent rutorrent
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(CLIENTS_STACK)
 
 up-arr: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 $(ARR_SERVICES)
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(ARR_STACK)
 
-# Same stack, built from patched sources so the Seeker can be triggered on demand.
-# The app image is built first, then `up` reuses it instead of rebuilding it clean.
+# Same stack as up-arr, patched like up-core-fast.
 up-arr-fast: down setup
-	bash ./scripts/with-patches.sh docker compose -f docker-compose.e2e.yml build app
-	docker compose -f docker-compose.e2e.yml up -d --remove-orphans --wait --wait-timeout 300 $(ARR_SERVICES)
+	bash ./scripts/with-patches.sh $(COMPOSE) build app
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES) $(ARR_STACK)
 
 up-lazylibrarian: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans --wait --wait-timeout 300 $(LAZYLIBRARIAN_SERVICES)
+	$(COMPOSE) up -d --build $(WAIT) $(APP_SERVICES) $(LAZYLIBRARIAN_STACK)
+
+# CI raises the stack while a separate job is still building the app image.
+up-stack-core: down setup
+	$(COMPOSE) up -d $(WAIT) $(CORE_STACK)
+
+up-stack-clients: down setup
+	$(COMPOSE) up -d $(WAIT) $(CLIENTS_STACK)
+
+up-stack-arr: down setup
+	$(COMPOSE) up -d $(WAIT) $(ARR_STACK)
+
+up-stack-lazylibrarian: down setup
+	$(COMPOSE) up -d $(WAIT) $(LAZYLIBRARIAN_STACK)
+
+up-app:
+	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES)
 
 # Rebuilds e2e/arr-seed from scratch.
 # Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.
@@ -39,7 +71,7 @@ seed-lazylibrarian:
 	bash ./scripts/seed-lazylibrarian.sh
 
 down:
-	docker compose -f docker-compose.e2e.yml down -v
+	$(COMPOSE) down -v
 
 install:
 	npm install
