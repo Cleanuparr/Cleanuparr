@@ -16,8 +16,8 @@ public sealed class PropertiesResponse
     public JsonElement[]? PropertiesRaw { get; set; }
 
     /// <summary>
-    /// Parsed properties as strongly-typed object
+    /// Parsed properties as strongly-typed object, or null when µTorrent does not know the hash
     /// </summary>
     [JsonIgnore]
-    public UTorrentProperties Properties { get; set; } = new();
+    public UTorrentProperties? Properties { get; set; }
 }

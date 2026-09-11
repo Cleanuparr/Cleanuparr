@@ -47,6 +47,27 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
         }
 
         [Fact]
+        public async Task TorrentPropertiesNotFound_ReturnsEmptyResult()
+        {
+            const string hash = "deleted-hash";
+            UTorrentService sut = _fixture.CreateSut();
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(new UTorrentItem { Hash = hash, Name = "Deleted Torrent", Status = 9 });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns((UTorrentProperties?)null);
+
+            DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
         public async Task TorrentFound_SetsIsPrivateCorrectly_WhenPrivate()
         {
             const string hash = "test-hash";
@@ -888,6 +909,105 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
+        public async Task PropertiesNotFound_ReturnsNotFound()
+        {
+            const string hash = "deleted-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(new UTorrentItem { Hash = hash, Name = "Deleted Torrent", Status = 9 });
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns((UTorrentProperties?)null);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            await _fixture.ClientWrapper.DidNotReceive().GetTorrentFilesAsync(hash);
+        }
+
+        [Fact]
+        public async Task TorrentNotFound_ReturnsNotFound()
+        {
+            const string hash = "missing-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns((UTorrentItem?)null);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+            await _fixture.ClientWrapper.DidNotReceive().GetTorrentPropertiesAsync(hash);
+        }
+
+        [Fact]
+        public async Task IgnoredDownload_SkipsFileCheck()
+        {
+            const string hash = "ignored-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new UTorrentFile { Name = "installer.exe", Index = 0, Priority = 2, Size = 1024, Downloaded = 1024 },
+            ]);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, [hash]);
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+            await _fixture.ClientWrapper.DidNotReceive().GetTorrentFilesAsync(hash);
+        }
+
+        [Fact]
+        public async Task PrivateTorrent_WithIgnorePrivate_SkipsFileCheck()
+        {
+            const string hash = "private-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { IgnorePrivate = true });
+
+            StubClient(hash,
+            [
+                new UTorrentFile { Name = "installer.exe", Index = 0, Priority = 2, Size = 1024, Downloaded = 1024 },
+            ], isPrivate: true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            await _fixture.ClientWrapper.DidNotReceive().GetTorrentFilesAsync(hash);
+        }
+
+        [Fact]
+        public async Task NoFiles_SkipsFileCheck()
+        {
+            const string hash = "no-files-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, []);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetFilesPriorityAsync(Arg.Any<string>(), Arg.Any<List<int>>(), Arg.Any<int>());
         }
     }
 }

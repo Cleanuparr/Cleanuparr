@@ -18,7 +18,14 @@ public partial class UTorrentService
 
         foreach (UTorrentItem torrent in torrents.Where(x => !string.IsNullOrEmpty(x.Hash) && x.IsSeeding()))
         {
-            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash);
+            UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(torrent.Hash);
+
+            if (properties is null)
+            {
+                _logger.LogDebug("skip | torrent no longer exists in the download client | {Name}", torrent.Name);
+                continue;
+            }
+
             result.Add(new UTorrentItemWrapper(torrent, properties));
         }
 
@@ -110,7 +117,7 @@ public partial class UTorrentService
 
                 if (file.Priority <= 0)
                 {
-                    _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
+                    _logger.LogDebug("skip | file is not downloaded | {File}", filePath);
                     continue;
                 }
 
@@ -119,7 +126,7 @@ public partial class UTorrentService
 
                 if (hardlinkCount < 0)
                 {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
+                    _logger.LogError("skip | file does not exist or insufficient permissions | {File}", filePath);
                     hasErrors = true;
                     break;
                 }
@@ -138,7 +145,7 @@ public partial class UTorrentService
 
             if (hasHardlinks)
             {
-                _logger.LogDebug("skip | download has hardlinks | {name}", torrent.Name);
+                _logger.LogDebug("skip | download has hardlinks | {Name}", torrent.Name);
                 continue;
             }
 
@@ -146,7 +153,7 @@ public partial class UTorrentService
 
             await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory);
 
-            _logger.LogInformation("category changed for {name}", torrent.Name);
+            _logger.LogInformation("category changed for {Name}", torrent.Name);
 
             torrent.Category = unlinkedConfig.TargetCategory;
         }

@@ -22,11 +22,18 @@ public partial class UTorrentService
         
         if (download?.Hash is null)
         {
-            _logger.LogDebug("Failed to find torrent {hash} in the download client", hash);
+            _logger.LogDebug("Failed to find torrent {Hash} in the download client", hash);
             return result;
         }
         
-        var properties = await _client.GetTorrentPropertiesAsync(hash);
+        UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(hash);
+
+        if (properties is null)
+        {
+            _logger.LogDebug("Failed to find torrent {Hash} in the download client", hash);
+            return result;
+        }
+
         result.IsPrivate = properties.IsPrivate;
         result.Found = true;
         result.Torrent = new UTorrentItemWrapper(download, properties);
@@ -35,7 +42,7 @@ public partial class UTorrentService
         if (ignoredDownloads.Count > 0 &&
             (download.ShouldIgnore(ignoredDownloads) || properties.TrackerList.Any(x => x.ShouldIgnore(ignoredDownloads))))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            _logger.LogInformation("skip | download is ignored | {Name}", download.Name);
             return result;
         }
 
@@ -44,7 +51,7 @@ public partial class UTorrentService
         if (malwareBlockerConfig.IgnorePrivate && result.IsPrivate)
         {
             // ignore private trackers
-            _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            _logger.LogDebug("skip files check | download is private | {Name}", download.Name);
             return result;
         }
         
@@ -52,7 +59,7 @@ public partial class UTorrentService
 
         if (files?.Count is null or 0)
         {
-            _logger.LogDebug("skip files check | no files found | {name}", download.Name);
+            _logger.LogDebug("skip files check | no files found | {Name}", download.Name);
             return result;
         }
 
@@ -78,11 +85,11 @@ public partial class UTorrentService
             {
                 totalUnwantedFiles++;
                 fileIndexes.Add(i);
-                _logger.LogInformation("unwanted file found | {file}", file.Name);
+                _logger.LogInformation("unwanted file found | {File}", file.Name);
 
                 if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
                 {
-                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+                    _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
                     result.ShouldRemove = true;
                     result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
                     return result;
@@ -95,11 +102,11 @@ public partial class UTorrentService
             return result;
         }
         
-        _logger.LogDebug("changing priorities | torrent {hash}", hash);
+        _logger.LogDebug("changing priorities | torrent {Hash}", hash);
 
         if (totalUnwantedFiles == files.Count)
         {
-            _logger.LogDebug("All files are blocked for {name}", download.Name);
+            _logger.LogDebug("All files are blocked for {Name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }

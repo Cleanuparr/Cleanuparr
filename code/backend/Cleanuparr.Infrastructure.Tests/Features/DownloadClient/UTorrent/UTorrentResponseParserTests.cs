@@ -363,18 +363,16 @@ public class UTorrentResponseParserTests
     }
 
     [Fact]
-    public void ParseProperties_EmptyPropsArray_ReturnsDefaultProperties()
+    public void ParseProperties_EmptyPropsArray_ReturnsNoProperties()
     {
-        // Arrange
+        // Arrange — µTorrent answers this way for a hash it no longer holds
         const string json = """{"props": []}""";
 
         // Act
         var response = _parser.ParseProperties(json);
 
-        // Assert — no parsing happens; Properties stays at the empty default
-        response.Properties.ShouldNotBeNull();
-        response.Properties!.Hash.ShouldBe(string.Empty);
-        response.Properties.IsPrivate.ShouldBeFalse();
+        // Assert
+        response.Properties.ShouldBeNull();
     }
 
     [Fact]
