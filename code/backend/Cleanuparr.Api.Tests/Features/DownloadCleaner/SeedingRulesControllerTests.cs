@@ -76,10 +76,16 @@ public class SeedingRulesControllerTests : IDisposable
         return rules.ToList();
     }
 
-    private static T GetCreatedRule<T>(IActionResult result) where T : ISeedingRule
+    private static SeedingRuleResponse GetCreatedRule(IActionResult result)
     {
-        var createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
-        return createdResult.Value.ShouldBeOfType<T>();
+        CreatedAtActionResult createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
+        return createdResult.Value.ShouldBeOfType<SeedingRuleResponse>();
+    }
+
+    private static SeedingRuleResponse GetUpdatedRule(IActionResult result)
+    {
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        return okResult.Value.ShouldBeOfType<SeedingRuleResponse>();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -174,7 +180,7 @@ public class SeedingRulesControllerTests : IDisposable
         var createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
         createdResult.StatusCode.ShouldBe(201);
 
-        QBitSeedingRule rule = GetCreatedRule<QBitSeedingRule>(result);
+        SeedingRuleResponse rule = GetCreatedRule(result);
         rule.Name.ShouldBe("Movies Rule");
         rule.Categories.ShouldBe(new List<string> { "movies", "films" });
     }
@@ -187,7 +193,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        GetCreatedRule<QBitSeedingRule>(result).Priority.ShouldBe(1);
+        GetCreatedRule(result).Priority.ShouldBe(1);
     }
 
     [Fact]
@@ -198,7 +204,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        GetCreatedRule<QBitSeedingRule>(result).MinSeeders.ShouldBe(5);
+        GetCreatedRule(result).MinSeeders.ShouldBe(5);
     }
 
     [Fact]
@@ -209,7 +215,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        GetCreatedRule<QBitSeedingRule>(result).MaxInactiveDays.ShouldBe(30);
+        GetCreatedRule(result).MaxInactiveDays.ShouldBe(30);
     }
 
     [Fact]
@@ -222,7 +228,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        GetCreatedRule<QBitSeedingRule>(result).Priority.ShouldBe(2);
+        GetCreatedRule(result).Priority.ShouldBe(2);
     }
 
     [Fact]
@@ -264,7 +270,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        QBitSeedingRule rule = GetCreatedRule<QBitSeedingRule>(result);
+        SeedingRuleResponse rule = GetCreatedRule(result);
         rule.TrackerPatterns.ShouldBe(new List<string> { "valid.com", "trimmed.com" });
     }
 
@@ -277,7 +283,8 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        GetCreatedRule<TransmissionSeedingRule>(result).TagsAny.ShouldBe(new List<string> { "tag1" });
+        GetCreatedRule(result).TagsAny.ShouldBe(new List<string> { "tag1" });
+        _dataContext.TransmissionSeedingRules.Count().ShouldBe(1);
     }
 
     [Theory]
@@ -311,7 +318,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         IActionResult result = await _controller.CreateSeedingRule(client.Id, request);
 
-        GetCreatedRule<QBitSeedingRule>(result).Action.ShouldBe(SeedingRuleAction.Delete);
+        GetCreatedRule(result).Action.ShouldBe(SeedingRuleAction.Delete);
     }
 
     [Fact]
@@ -346,8 +353,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.UpdateSeedingRule(rule.Id, request);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        SeedingRuleResponse updated = GetUpdatedRule(result);
         updated.Name.ShouldBe("Updated Name");
         updated.Categories.ShouldBe(new List<string> { "tv", "anime" });
     }
@@ -362,8 +368,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.UpdateSeedingRule(rule.Id, request);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        SeedingRuleResponse updated = GetUpdatedRule(result);
         updated.Priority.ShouldBe(5);
     }
 
@@ -377,8 +382,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.UpdateSeedingRule(rule.Id, request);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        SeedingRuleResponse updated = GetUpdatedRule(result);
         updated.TagsAny.ShouldBe(new List<string> { "new-tag" });
         updated.TagsAll.ShouldBe(new List<string> { "must-have" });
     }
@@ -393,8 +397,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.UpdateSeedingRule(rule.Id, request);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        SeedingRuleResponse updated = GetUpdatedRule(result);
         updated.MinSeeders.ShouldBe(5);
     }
 
@@ -408,8 +411,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.UpdateSeedingRule(rule.Id, request);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        SeedingRuleResponse updated = GetUpdatedRule(result);
         updated.MaxInactiveDays.ShouldBe(30);
     }
 

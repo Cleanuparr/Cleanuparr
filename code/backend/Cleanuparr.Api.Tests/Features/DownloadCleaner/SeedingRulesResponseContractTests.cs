@@ -15,7 +15,7 @@ using Xunit;
 namespace Cleanuparr.Api.Tests.Features.DownloadCleaner;
 
 /// <summary>
-/// Create and update hand back the raw entity, a different shape than the list DTO.
+/// List, create and update all hand back the same DTO shape.
 /// </summary>
 public class SeedingRulesResponseContractTests : IDisposable
 {
@@ -50,29 +50,25 @@ public class SeedingRulesResponseContractTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateSeedingRule_ReturnsEntityKeysNotTheListDtoKeys()
+    public async Task CreateSeedingRule_ReturnsTheDocumentedListDtoKeys()
     {
         DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
 
         IActionResult result = await _controller.CreateSeedingRule(client.Id, NewRuleRequest("contract"));
 
-        ResponseContract.Keys(result).ShouldBe(QBitEntityKeys);
-        ResponseContract.Keys(result).ShouldNotBe(ListDtoKeys);
+        ResponseContract.Keys(result).ShouldBe(ListDtoKeys);
     }
 
     [Fact]
-    public async Task UpdateSeedingRule_ReturnsEntityKeysNotTheListDtoKeys()
+    public async Task UpdateSeedingRule_ReturnsTheDocumentedListDtoKeys()
     {
         DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
         QBitSeedingRule rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
 
         IActionResult result = await _controller.UpdateSeedingRule(rule.Id, NewRuleRequest("renamed"));
 
-        ResponseContract.Keys(result).ShouldBe(QBitEntityKeys);
-        ResponseContract.Keys(result).ShouldNotBe(ListDtoKeys);
+        ResponseContract.Keys(result).ShouldBe(ListDtoKeys);
     }
-
-
 
     private static readonly string[] ListDtoKeys =
     [
@@ -92,28 +88,6 @@ public class SeedingRulesResponseContractTests : IDisposable
         "tagsAny",
         "trackerPatterns",
     ];
-
-    private static readonly string[] QBitEntityKeys =
-    [
-        "action",
-        "categories",
-        "deleteSourceFiles",
-        "downloadClientConfig",
-        "downloadClientConfigId",
-        "id",
-        "maxInactiveDays",
-        "maxRatio",
-        "maxSeedTime",
-        "minSeedTime",
-        "minSeeders",
-        "name",
-        "priority",
-        "privacyType",
-        "tagsAll",
-        "tagsAny",
-        "trackerPatterns",
-    ];
-
 
     private static SeedingRuleRequest NewRuleRequest(string name) => new()
     {

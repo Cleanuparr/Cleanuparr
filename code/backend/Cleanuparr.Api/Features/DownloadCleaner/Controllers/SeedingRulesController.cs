@@ -86,7 +86,7 @@ public class SeedingRulesController : ControllerBase
             _logger.LogInformation("Created seeding rule: {RuleName} with ID: {RuleId} for client {ClientId}",
                 rule.Name, rule.Id, downloadClientId);
 
-            return CreatedAtAction(nameof(GetSeedingRules), new { downloadClientId }, rule);
+            return CreatedAtAction(nameof(GetSeedingRules), new { downloadClientId }, SeedingRuleResponse.From(rule));
         }
         finally
         {
@@ -140,7 +140,7 @@ public class SeedingRulesController : ControllerBase
 
             _logger.LogInformation("Updated seeding rule: {RuleName} with ID: {RuleId}", existingRule.Name, id);
 
-            return Ok(existingRule);
+            return Ok(SeedingRuleResponse.From(existingRule));
         }
         finally
         {
