@@ -11,14 +11,13 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Notifications;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Providers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -66,10 +65,7 @@ public class QueueItemRemoverTests : IDisposable
         _eventsContext.SaveChanges();
         ContextProvider.SetJobRunId(_jobRunId);
 
-        var hubContext = Substitute.For<IHubContext<AppHub>>();
-        var clients = Substitute.For<IHubClients>();
-        clients.All.Returns(Substitute.For<IClientProxy>());
-        hubContext.Clients.Returns(clients);
+        IEventNotifier eventNotifier = Substitute.For<IEventNotifier>();
 
         var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         dryRunInterceptor.IsDryRunEnabled().Returns(false);
@@ -79,7 +75,7 @@ public class QueueItemRemoverTests : IDisposable
 
         _eventPublisher = new EventPublisher(
             _eventsContext,
-            hubContext,
+            eventNotifier,
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
             dryRunInterceptor,

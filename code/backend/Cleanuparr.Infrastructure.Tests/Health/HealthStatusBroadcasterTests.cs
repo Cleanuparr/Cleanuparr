@@ -1,5 +1,5 @@
 using Cleanuparr.Infrastructure.Health;
-using Microsoft.AspNetCore.SignalR;
+using Cleanuparr.Infrastructure.Realtime;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Shouldly;
@@ -10,18 +10,7 @@ namespace Cleanuparr.Infrastructure.Tests.Health;
 public sealed class HealthStatusBroadcasterTests
 {
     private readonly IHealthCheckService _healthCheckService = Substitute.For<IHealthCheckService>();
-    private readonly IHubContext<HealthStatusHub> _hubContext = Substitute.For<IHubContext<HealthStatusHub>>();
-    private readonly IClientProxy _allClients = Substitute.For<IClientProxy>();
-
-    public HealthStatusBroadcasterTests()
-    {
-        IHubClients clients = Substitute.For<IHubClients>();
-        clients.All.Returns(_allClients);
-        _hubContext.Clients.Returns(clients);
-        _allClients
-            .SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
-    }
+    private readonly IHealthNotifier _healthNotifier = Substitute.For<IHealthNotifier>();
 
     [Fact]
     public async Task A_dropped_client_is_broadcast_to_every_connection()
@@ -33,10 +22,7 @@ public sealed class HealthStatusBroadcasterTests
 
         _healthCheckService.ClientHealthRemoved += Raise.EventWith(new ClientHealthRemovedEventArgs(clientId));
 
-        await _allClients.Received(1).SendCoreAsync(
-            "ClientRemoved",
-            Arg.Is<object?[]>(args => args.Length == 1 && Equals(args[0], clientId)),
-            Arg.Any<CancellationToken>());
+        await _healthNotifier.Received(1).NotifyClientRemovedAsync(clientId);
     }
 
     [Fact]
@@ -48,10 +34,7 @@ public sealed class HealthStatusBroadcasterTests
 
         _healthCheckService.ClientHealthRemoved += Raise.EventWith(new ClientHealthRemovedEventArgs(Guid.NewGuid()));
 
-        await _allClients.DidNotReceive().SendCoreAsync(
-            "ClientRemoved",
-            Arg.Any<object?[]>(),
-            Arg.Any<CancellationToken>());
+        await _healthNotifier.DidNotReceive().NotifyClientRemovedAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -64,10 +47,7 @@ public sealed class HealthStatusBroadcasterTests
 
         _healthCheckService.ArrInstanceHealthRemoved += Raise.EventWith(new ArrInstanceHealthRemovedEventArgs(instanceId));
 
-        await _allClients.Received(1).SendCoreAsync(
-            "ArrInstanceRemoved",
-            Arg.Is<object?[]>(args => args.Length == 1 && Equals(args[0], instanceId)),
-            Arg.Any<CancellationToken>());
+        await _healthNotifier.Received(1).NotifyArrInstanceRemovedAsync(instanceId);
     }
 
     [Fact]
@@ -79,12 +59,79 @@ public sealed class HealthStatusBroadcasterTests
 
         _healthCheckService.ArrInstanceHealthRemoved += Raise.EventWith(new ArrInstanceHealthRemovedEventArgs(Guid.NewGuid()));
 
-        await _allClients.DidNotReceive().SendCoreAsync(
-            "ArrInstanceRemoved",
-            Arg.Any<object?[]>(),
-            Arg.Any<CancellationToken>());
+        await _healthNotifier.DidNotReceive().NotifyArrInstanceRemovedAsync(Arg.Any<Guid>());
     }
 
+    [Fact]
+    public async Task A_first_sweep_of_a_healthy_client_only_broadcasts_the_status()
+    {
+        HealthStatus status = BuildStatus(isHealthy: true);
+
+        HealthStatusBroadcaster broadcaster = BuildBroadcaster();
+        await broadcaster.StartAsync(CancellationToken.None);
+
+        _healthCheckService.ClientHealthChanged +=
+            Raise.EventWith(new ClientHealthChangedEventArgs(status.ClientId, status, previousStatus: null));
+
+        await _healthNotifier.Received(1).NotifyHealthStatusChangedAsync(status);
+        await _healthNotifier.DidNotReceive().NotifyClientDegradedAsync(Arg.Any<HealthStatus>());
+        await _healthNotifier.DidNotReceive().NotifyClientRecoveredAsync(Arg.Any<HealthStatus>());
+    }
+
+    [Fact]
+    public async Task A_client_turning_unhealthy_is_broadcast_as_degraded()
+    {
+        HealthStatus status = BuildStatus(isHealthy: false);
+
+        HealthStatusBroadcaster broadcaster = BuildBroadcaster();
+        await broadcaster.StartAsync(CancellationToken.None);
+
+        _healthCheckService.ClientHealthChanged +=
+            Raise.EventWith(new ClientHealthChangedEventArgs(status.ClientId, status, BuildStatus(isHealthy: true)));
+
+        await _healthNotifier.Received(1).NotifyHealthStatusChangedAsync(status);
+        await _healthNotifier.Received(1).NotifyClientDegradedAsync(status);
+        await _healthNotifier.DidNotReceive().NotifyClientRecoveredAsync(Arg.Any<HealthStatus>());
+    }
+
+    [Fact]
+    public async Task A_client_turning_healthy_again_is_broadcast_as_recovered()
+    {
+        HealthStatus status = BuildStatus(isHealthy: true);
+
+        HealthStatusBroadcaster broadcaster = BuildBroadcaster();
+        await broadcaster.StartAsync(CancellationToken.None);
+
+        _healthCheckService.ClientHealthChanged +=
+            Raise.EventWith(new ClientHealthChangedEventArgs(status.ClientId, status, BuildStatus(isHealthy: false)));
+
+        await _healthNotifier.Received(1).NotifyHealthStatusChangedAsync(status);
+        await _healthNotifier.Received(1).NotifyClientRecoveredAsync(status);
+        await _healthNotifier.DidNotReceive().NotifyClientDegradedAsync(Arg.Any<HealthStatus>());
+    }
+
+    [Fact]
+    public async Task Stopping_unsubscribes_from_health_changes()
+    {
+        HealthStatusBroadcaster broadcaster = BuildBroadcaster();
+        await broadcaster.StartAsync(CancellationToken.None);
+        await broadcaster.StopAsync(CancellationToken.None);
+
+        HealthStatus status = BuildStatus(isHealthy: false);
+        _healthCheckService.ClientHealthChanged +=
+            Raise.EventWith(new ClientHealthChangedEventArgs(status.ClientId, status, previousStatus: null));
+
+        await _healthNotifier.DidNotReceive().NotifyHealthStatusChangedAsync(Arg.Any<HealthStatus>());
+    }
+
+    private static HealthStatus BuildStatus(bool isHealthy) => new()
+    {
+        ClientId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+        ClientName = "qbit",
+        IsHealthy = isHealthy,
+        LastChecked = DateTimeOffset.UnixEpoch,
+    };
+
     private HealthStatusBroadcaster BuildBroadcaster() =>
-        new(NullLogger<HealthStatusBroadcaster>.Instance, _healthCheckService, _hubContext);
+        new(NullLogger<HealthStatusBroadcaster>.Instance, _healthCheckService, _healthNotifier);
 }

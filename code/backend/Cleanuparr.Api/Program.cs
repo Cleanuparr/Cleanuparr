@@ -3,13 +3,12 @@ using System.Runtime.InteropServices;
 using Cleanuparr.Api;
 using Cleanuparr.Api.Commands;
 using Cleanuparr.Api.DependencyInjection;
-using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.SignalR;
 using Serilog;
 
 if (MigrateToPostgresCommand.Matches(args))
@@ -159,9 +158,8 @@ logger.LogInformation("Server configuration: BIND_ADDRESS={bindAddress}, PORT={p
 // Initialize the host
 app.Init();
 
-// Configure the app hub for SignalR
-var appHub = app.Services.GetRequiredService<IHubContext<AppHub>>();
-SignalRLogSink.Instance.SetAppHubContext(appHub);
+// Point the log sink at the hub adapter
+RealtimeLogSink.Instance.SetNotifier(app.Services.GetRequiredService<ILogNotifier>());
 
 // Configure health check endpoints as middleware (before auth pipeline) so they don't require authentication
 app.UseHealthChecks("/health", new HealthCheckOptions

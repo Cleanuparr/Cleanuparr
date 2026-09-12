@@ -4,12 +4,11 @@ using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Notifications;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -38,11 +37,7 @@ public class StrikerTests : IDisposable
 
         // The striker and the publisher share one scoped context in production.
         // Event foreign keys to strikes and job runs only resolve inside one database.
-        var hubContext = Substitute.For<IHubContext<AppHub>>();
-        var hubClients = Substitute.For<IHubClients>();
-        var clientProxy = Substitute.For<IClientProxy>();
-        hubContext.Clients.Returns(hubClients);
-        hubClients.All.Returns(clientProxy);
+        IEventNotifier eventNotifier = Substitute.For<IEventNotifier>();
 
         var eventLogger = Substitute.For<ILogger<EventPublisher>>();
         var notificationPublisher = Substitute.For<INotificationPublisher>();
@@ -53,7 +48,7 @@ public class StrikerTests : IDisposable
 
         _eventPublisher = new EventPublisher(
             _strikerContext,
-            hubContext,
+            eventNotifier,
             eventLogger,
             notificationPublisher,
             dryRunInterceptor,

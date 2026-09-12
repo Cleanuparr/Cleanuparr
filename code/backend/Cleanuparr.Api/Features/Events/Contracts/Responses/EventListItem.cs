@@ -70,4 +70,8 @@ public class EventListItem
         SearchReason = e.SearchReason,
         GrabbedItems = e.GrabbedItems,
     };
+
+    private static readonly Func<AppEvent, EventListItem> Projection = FromEvent.Compile();
+
+    public static EventListItem From(AppEvent appEvent) => Projection(appEvent);
 }

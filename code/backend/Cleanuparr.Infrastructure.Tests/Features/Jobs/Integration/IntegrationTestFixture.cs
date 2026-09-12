@@ -15,7 +15,7 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Notifications;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
@@ -25,7 +25,6 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using MassTransit;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
@@ -62,7 +61,8 @@ public class IntegrationTestFixture : IDisposable
     public ILazyLibrarianEvaluator LazyLibrarianServiceQC { get; private set; }
     public ILazyLibrarianEvaluator LazyLibrarianServiceCB { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
-    public IHubContext<AppHub> HubContext { get; private set; }
+    public IEventNotifier EventNotifier { get; private set; }
+    public IStatusNotifier StatusNotifier { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; } = null!;
     public IUnlinkedDownloadsService UnlinkedService { get; private set; } = null!;
     public IDeadTorrentService DeadTorrentService { get; private set; } = null!;
@@ -92,7 +92,8 @@ public class IntegrationTestFixture : IDisposable
         LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
         LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianEvaluator>();
         LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianEvaluator>();
-        HubContext = CreateMockHubContext();
+        EventNotifier = Substitute.For<IEventNotifier>();
+        StatusNotifier = Substitute.For<IStatusNotifier>();
 
         SetupDefaults();
         BuildRealServices();
@@ -122,7 +123,7 @@ public class IntegrationTestFixture : IDisposable
     {
         EventPublisher = new EventPublisher(
             EventsContext,
-            HubContext,
+            EventNotifier,
             Substitute.For<ILogger<EventPublisher>>(),
             NotificationPublisher,
             DryRunInterceptor,
@@ -262,7 +263,8 @@ public class IntegrationTestFixture : IDisposable
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         NotificationPublisher = Substitute.For<INotificationPublisher>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        HubContext = CreateMockHubContext();
+        EventNotifier = Substitute.For<IEventNotifier>();
+        StatusNotifier = Substitute.For<IStatusNotifier>();
 
         // Re-setup defaults and rebuild real services
         SetupDefaults();
@@ -270,16 +272,6 @@ public class IntegrationTestFixture : IDisposable
 
         // Clear static state
         Striker.RecurringHashes.Clear();
-    }
-
-    private static IHubContext<AppHub> CreateMockHubContext()
-    {
-        var hubContext = Substitute.For<IHubContext<AppHub>>();
-        var clients = Substitute.For<IHubClients>();
-        var clientProxy = Substitute.For<IClientProxy>();
-        clients.All.Returns(clientProxy);
-        hubContext.Clients.Returns(clients);
-        return hubContext;
     }
 
     public void Dispose()

@@ -14,12 +14,12 @@
       <PackageReference Include="FLM.Transmission" Version="1.0.3" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="MassTransit.Abstractions" Version="8.5.7" />
-      <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
       <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.7.0" />
       <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.7.0" />
       <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.7.0" />
       <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />

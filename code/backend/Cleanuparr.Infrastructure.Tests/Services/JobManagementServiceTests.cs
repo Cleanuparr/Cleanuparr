@@ -1,9 +1,7 @@
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -19,7 +17,6 @@ public class JobManagementServiceTests
     private readonly ILogger<JobManagementService> _logger;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IScheduler _scheduler;
-    private readonly IHubContext<AppHub> _hubContext;
     private readonly JobManagementService _service;
 
     public JobManagementServiceTests()
@@ -27,12 +24,11 @@ public class JobManagementServiceTests
         _logger = Substitute.For<ILogger<JobManagementService>>();
         _schedulerFactory = Substitute.For<ISchedulerFactory>();
         _scheduler = Substitute.For<IScheduler>();
-        _hubContext = Substitute.For<IHubContext<AppHub>>();
 
         _schedulerFactory.GetScheduler(Arg.Any<CancellationToken>())
             .Returns(_scheduler);
 
-        _service = new JobManagementService(_logger, _schedulerFactory, _hubContext);
+        _service = new JobManagementService(_logger, _schedulerFactory);
     }
 
     #region StartJob Tests

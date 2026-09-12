@@ -40,14 +40,10 @@ const EVENT_KEYS = [
   'cycleId',
   'deleteReason',
   'downloadClientId',
-  'downloadClientName',
-  'downloadClientType',
   'eventType',
   'failedImportReasons',
   'grabbedItems',
   'id',
-  'instanceType',
-  'instanceUrl',
   'isCategoryTag',
   'isDryRun',
   'itemHash',
@@ -88,7 +84,7 @@ const MANUAL_EVENT_KEYS = [
   'type',
 ];
 
-const STRIKE_KEYS = ['createdAt', 'downloadId', 'id', 'title', 'type'];
+const STRIKE_KEYS = ['createdAt', 'downloadId', 'id', 'isDryRun', 'title', 'type'];
 
 const LOG_KEYS = [
   'category',
@@ -199,7 +195,6 @@ test.describe('SignalR — app hub', () => {
       );
       expectKeys(manualEvents[0], MANUAL_EVENT_KEYS);
 
-      // The StrikeReceived push carries isDryRun on top of these five.
       const strikes = await hubArrayWhenFilled(connection, 'GetRecentStrikes', 'StrikesReceived', 5);
       expectKeys(strikes[0], STRIKE_KEYS);
       expect(strikes[0]).toMatchObject({ title: TITLE });

@@ -10,9 +10,8 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
-using Cleanuparr.Infrastructure.Hubs;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
+using Cleanuparr.Infrastructure.Realtime;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -58,9 +57,9 @@ public sealed class Seeker : IHandler
     private readonly IArrQueueIterator _arrQueueIterator;
     private readonly IEventPublisher _eventPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly IHostingEnvironment _environment;
+    private readonly IHostEnvironment _environment;
     private readonly TimeProvider _timeProvider;
-    private readonly IHubContext<AppHub> _hubContext;
+    private readonly IStatusNotifier _statusNotifier;
 
     public Seeker(
         ILogger<Seeker> logger,
@@ -72,9 +71,9 @@ public sealed class Seeker : IHandler
         IArrQueueIterator arrQueueIterator,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
-        IHostingEnvironment environment,
+        IHostEnvironment environment,
         TimeProvider timeProvider,
-        IHubContext<AppHub> hubContext)
+        IStatusNotifier statusNotifier)
     {
         _logger = logger;
         _dataContext = dataContext;
@@ -87,7 +86,7 @@ public sealed class Seeker : IHandler
         _dryRunInterceptor = dryRunInterceptor;
         _environment = environment;
         _timeProvider = timeProvider;
-        _hubContext = hubContext;
+        _statusNotifier = statusNotifier;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -114,7 +113,7 @@ public sealed class Seeker : IHandler
         if (replacementItem is not null)
         {
             await ProcessReplacementItemAsync(replacementItem, isDryRun);
-            await _hubContext.Clients.All.SendAsync("SearchStatsUpdated");
+            await _statusNotifier.NotifySearchStatsUpdatedAsync();
             return;
         }
 
@@ -126,7 +125,7 @@ public sealed class Seeker : IHandler
 
         await ProcessProactiveSearchAsync(config, isDryRun, cancellationToken);
 
-        await _hubContext.Clients.All.SendAsync("SearchStatsUpdated");
+        await _statusNotifier.NotifySearchStatsUpdatedAsync();
     }
 
     private async Task ApplyJitter(SeekerConfig config, CancellationToken cancellationToken)

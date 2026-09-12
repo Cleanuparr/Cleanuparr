@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Api.Hubs;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;

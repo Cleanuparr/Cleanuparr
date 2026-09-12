@@ -38,6 +38,15 @@ public static class ResponseContract
     }
 
     /// <summary>
+    /// Serializes a payload that never travels through a controller, such as a hub message.
+    /// </summary>
+    public static JsonElement Payload(object value)
+    {
+        string json = JsonSerializer.Serialize(value, value.GetType(), Options);
+        return JsonDocument.Parse(json).RootElement.Clone();
+    }
+
+    /// <summary>
     /// Top-level property names, sorted so assertions read in a stable order.
     /// </summary>
     public static IReadOnlyList<string> Keys(IActionResult result) => Keys(Body(result));

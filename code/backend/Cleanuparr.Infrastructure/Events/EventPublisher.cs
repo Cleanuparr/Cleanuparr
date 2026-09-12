@@ -3,25 +3,24 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Providers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Events;
 
 /// <summary>
-/// Service for publishing events to database and SignalR hub
+/// Service for publishing events to the database and to connected clients
 /// </summary>
 public class EventPublisher : IEventPublisher
 {
     private readonly EventsContext _context;
-    private readonly IHubContext<AppHub> _appHubContext;
+    private readonly IEventNotifier _eventNotifier;
     private readonly ILogger<EventPublisher> _logger;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
@@ -29,14 +28,14 @@ public class EventPublisher : IEventPublisher
 
     public EventPublisher(
         EventsContext context,
-        IHubContext<AppHub> appHubContext,
+        IEventNotifier eventNotifier,
         ILogger<EventPublisher> logger,
         INotificationPublisher notificationPublisher,
         IDryRunInterceptor dryRunInterceptor,
         IDatabaseProvider databaseProvider)
     {
         _context = context;
-        _appHubContext = appHubContext;
+        _eventNotifier = eventNotifier;
         _logger = logger;
         _notificationPublisher = notificationPublisher;
         _dryRunInterceptor = dryRunInterceptor;
@@ -44,7 +43,7 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
-    /// Generic method for publishing events to database and SignalR clients.
+    /// Generic method for publishing events to the database and to connected clients.
     /// Common context fields are populated here; <paramref name="configure"/> sets event-type-specific typed fields.
     /// </summary>
     public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, Action<AppEvent>? configure = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null)
@@ -187,7 +186,7 @@ public class EventPublisher : IEventPublisher
             strikeId: strikeId,
             isDryRun: isDryRun);
 
-        // Broadcast strike to SignalR clients for real-time dashboard updates
+        // Broadcast strike for real-time dashboard updates
         await BroadcastStrikeAsync(strikeId, strikeType, hash, itemName, isDryRun);
 
         // Send notification (uses ContextProvider internally)
@@ -493,12 +492,11 @@ public class EventPublisher : IEventPublisher
     {
         try
         {
-            // Send to all connected clients via the unified AppHub
-            await _appHubContext.Clients.All.SendAsync("EventReceived", appEventEntity);
+            await _eventNotifier.NotifyEventAsync(appEventEntity);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send event {eventId} to SignalR clients", appEventEntity.Id);
+            _logger.LogError(ex, "Failed to send event {eventId} to connected clients", appEventEntity.Id);
         }
     }
 
@@ -506,12 +504,11 @@ public class EventPublisher : IEventPublisher
     {
         try
         {
-            // Send to all connected clients via the unified AppHub
-            await _appHubContext.Clients.All.SendAsync("ManualEventReceived", appEventEntity);
+            await _eventNotifier.NotifyManualEventAsync(appEventEntity);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send event {eventId} to SignalR clients", appEventEntity.Id);
+            _logger.LogError(ex, "Failed to send event {eventId} to connected clients", appEventEntity.Id);
         }
     }
 
@@ -519,20 +516,11 @@ public class EventPublisher : IEventPublisher
     {
         try
         {
-            var strike = new
-            {
-                Id = strikeId ?? Guid.Empty,
-                Type = strikeType.ToString(),
-                CreatedAt = DateTimeOffset.UtcNow,
-                DownloadId = hash,
-                Title = itemName,
-                IsDryRun = isDryRun,
-            };
-            await _appHubContext.Clients.All.SendAsync("StrikeReceived", strike);
+            await _eventNotifier.NotifyStrikeAsync(strikeId ?? Guid.Empty, strikeType, hash, itemName, isDryRun);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send strike to SignalR clients");
+            _logger.LogError(ex, "Failed to send strike to connected clients");
         }
     }
 }
