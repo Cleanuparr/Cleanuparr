@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Cleanuparr.Api.Features.Auth;
+using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Infrastructure.Features.Auth;
@@ -22,6 +23,7 @@ namespace Cleanuparr.Api.Tests.Features.Auth;
 public sealed class OidcConfigResponseContractTests : IDisposable
 {
     private readonly SqliteConnection _connection;
+    private readonly DbContextOptions<UsersContext> _options;
     private readonly UsersContext _usersContext;
     private readonly AccountController _controller;
     private readonly Guid _userId = Guid.NewGuid();
@@ -31,11 +33,11 @@ public sealed class OidcConfigResponseContractTests : IDisposable
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
-        DbContextOptions<UsersContext> options = new DbContextOptionsBuilder<UsersContext>()
+        _options = new DbContextOptionsBuilder<UsersContext>()
             .UseSqlite(_connection)
             .Options;
 
-        _usersContext = new UsersContext(options);
+        _usersContext = new UsersContext(_options);
         _usersContext.Database.EnsureCreated();
 
         _usersContext.Users.Add(new User
@@ -104,5 +106,26 @@ public sealed class OidcConfigResponseContractTests : IDisposable
 
         ResponseContract.Body(result).GetProperty("clientSecret").GetString()
             .ShouldBe(SensitiveDataHelper.Placeholder);
+    }
+
+    [Fact]
+    public async Task UpdateOidcConfig_WithTheMaskedSecretFromTheResponse_KeepsTheStoredSecret()
+    {
+        IActionResult read = await _controller.GetOidcConfig();
+        string? maskedSecret = ResponseContract.Body(read).GetProperty("clientSecret").GetString();
+
+        await _controller.UpdateOidcConfig(new UpdateOidcConfigRequest
+        {
+            Enabled = true,
+            IssuerUrl = "https://oidc.test",
+            ClientId = "test-client",
+            ClientSecret = maskedSecret!,
+            Scopes = "openid profile email",
+            ProviderName = "TestProvider",
+        });
+
+        using UsersContext verificationContext = new(_options);
+        User? saved = await verificationContext.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == _userId);
+        saved!.Oidc.ClientSecret.ShouldBe("super-secret");
     }
 }

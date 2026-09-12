@@ -494,13 +494,13 @@ public sealed class AccountController : ControllerBase
     [HttpGet("oidc")]
     public async Task<IActionResult> GetOidcConfig()
     {
-        var user = await GetCurrentUser();
+        User? user = await GetCurrentUser();
         if (user is null)
         {
             return Unauthorized();
         }
 
-        return Ok(user.Oidc);
+        return Ok(OidcConfigResponse.From(user.Oidc));
     }
 
     [HttpPut("oidc")]
