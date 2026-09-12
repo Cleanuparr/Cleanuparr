@@ -24,7 +24,7 @@ public partial class TransmissionService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var result = await _client.TorrentGetAsync(Fields);
+        TransmissionTorrents? result = await _client.TorrentGetAsync(Fields);
         if (result?.Torrents is null)
         {
             throw new InvalidOperationException("Transmission returned no torrent list");

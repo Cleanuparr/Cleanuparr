@@ -24,7 +24,7 @@ public partial class RTorrentService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var downloads = await _client.GetAllTorrentsAsync();
+        List<RTorrentTorrent> downloads = await _client.GetAllTorrentsAsync();
 
         List<ITorrentItemWrapper> torrents = downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))

@@ -35,7 +35,7 @@ public partial class UTorrentService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var reported = await _client.GetTorrentsAsync();
+        List<UTorrentItem> reported = await _client.GetTorrentsAsync();
 
         List<ITorrentItemWrapper> torrents = reported
             .Where(x => !string.IsNullOrEmpty(x.Hash))
