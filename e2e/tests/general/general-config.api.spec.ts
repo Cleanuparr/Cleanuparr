@@ -17,7 +17,7 @@ test.describe('General config', () => {
     expectKeys(body, [
       'auth', 'connectivityCheckEnabled', 'connectivityCheckUrls', 'displaySupportBanner',
       'dryRun', 'historyRetentionDays', 'httpCertificateValidation',
-      'httpMaxRetries', 'httpSendUserAgent', 'httpTimeout', 'id', 'ignoredDownloads', 'log',
+      'httpMaxRetries', 'httpSendUserAgent', 'httpTimeout', 'ignoredDownloads', 'log',
       'statusCheckEnabled', 'strikeInactivityWindowHours',
     ]);
     expectKeys(body.log, [

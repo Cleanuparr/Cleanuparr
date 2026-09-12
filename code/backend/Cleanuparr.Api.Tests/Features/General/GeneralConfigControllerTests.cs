@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.General.Contracts.Requests;
+using Cleanuparr.Api.Features.General.Contracts.Responses;
 using Cleanuparr.Api.Features.General.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
@@ -55,7 +56,7 @@ public class GeneralConfigControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        ok.Value.ShouldBeOfType<GeneralConfig>();
+        ok.Value.ShouldBeOfType<GeneralConfigResponse>();
     }
 
     [Fact]

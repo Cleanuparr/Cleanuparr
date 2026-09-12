@@ -53,7 +53,6 @@ public class GeneralConfigResponseContractTests : IDisposable
             "httpMaxRetries",
             "httpSendUserAgent",
             "httpTimeout",
-            "id",
             "ignoredDownloads",
             "log",
             "statusCheckEnabled",
