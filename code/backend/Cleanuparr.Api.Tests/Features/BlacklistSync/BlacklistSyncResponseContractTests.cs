@@ -11,7 +11,7 @@ using Xunit;
 namespace Cleanuparr.Api.Tests.Features.BlacklistSync;
 
 /// <summary>
-/// Records today's wire shape, leaks included.
+/// Records today's wire shape.
 /// </summary>
 public class BlacklistSyncResponseContractTests : IDisposable
 {
@@ -45,7 +45,6 @@ public class BlacklistSyncResponseContractTests : IDisposable
             "blacklistPath",
             "cronExpression",
             "enabled",
-            "id",
         ]);
     }
 }

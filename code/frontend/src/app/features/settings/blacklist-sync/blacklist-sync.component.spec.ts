@@ -8,13 +8,11 @@ import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model'
 import { BlacklistSyncComponent } from './blacklist-sync.component';
 
 const CONFIG: BlacklistSyncConfig = {
-  id: 'cfg-1',
   enabled: true,
   blacklistPath: 'https://example.com/blacklist.txt',
 };
 
 const CONFIG_WITHOUT_PATH: BlacklistSyncConfig = {
-  id: 'cfg-2',
   enabled: false,
 };
 
@@ -93,7 +91,7 @@ describe('BlacklistSyncComponent', () => {
     expect(component.hasErrors()).toBe(false);
   });
 
-  it('turns dirty after an edit, saves the loaded id and goes clean again', () => {
+  it('turns dirty after an edit, saves and goes clean again', () => {
     const { fixture, component, api } = setup();
 
     component.bsForm.blacklistPath().value.set('/config/custom');
@@ -105,8 +103,7 @@ describe('BlacklistSyncComponent', () => {
     fixture.detectChanges();
 
     expect(api.updateConfig).toHaveBeenCalledWith({
-      id: 'cfg-1',
-      enabled: true,
+          enabled: true,
       blacklistPath: '/config/custom',
     });
     expect(component.dirty()).toBe(false);
@@ -121,8 +118,7 @@ describe('BlacklistSyncComponent', () => {
     fixture.detectChanges();
 
     expect(api.updateConfig).toHaveBeenCalledWith({
-      id: 'cfg-2',
-      enabled: false,
+          enabled: false,
       blacklistPath: undefined,
     });
   });

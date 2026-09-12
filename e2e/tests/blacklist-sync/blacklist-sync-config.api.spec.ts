@@ -12,7 +12,7 @@ test.describe('BlacklistSync — config', () => {
 
   test('GET response shape is pinned', async ({ api }) => {
     const body = await (await api.blacklistSync.getConfig()).json();
-    expectKeys(body, ['blacklistPath', 'cronExpression', 'enabled', 'id']);
+    expectKeys(body, ['blacklistPath', 'cronExpression', 'enabled']);
   });
 
   test('PUT toggles enabled + cron (requires blacklistPath when enabled)', async ({ api }) => {
