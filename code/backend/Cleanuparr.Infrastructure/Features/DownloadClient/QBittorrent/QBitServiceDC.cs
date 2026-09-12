@@ -44,7 +44,7 @@ public partial class QBitService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
+        IReadOnlyList<TorrentInfo>? torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
         if (torrentList is null)
         {
             throw new InvalidOperationException("qBittorrent returned no torrent list");

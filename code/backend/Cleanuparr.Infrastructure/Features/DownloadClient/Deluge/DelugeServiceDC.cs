@@ -30,7 +30,7 @@ public partial class DelugeService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var downloads = await _client.GetStatusForAllTorrents();
+        List<DownloadStatus>? downloads = await _client.GetStatusForAllTorrents();
         if (downloads is null)
         {
             throw new DelugeClientException("Deluge returned no torrent status");
