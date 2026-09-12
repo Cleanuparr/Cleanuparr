@@ -63,12 +63,8 @@ public class DownloadCleanerTests : IDisposable
     /// <summary>
     /// Executes the handler and advances time past the 10-second delay
     /// </summary>
-    private async Task ExecuteWithTimeAdvance(DownloadCleaner sut)
-    {
-        var task = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(10));
-        await task;
-    }
+    private Task ExecuteWithTimeAdvance(DownloadCleaner sut) =>
+        _fixture.TimeProvider.AdvanceUntilCompleted(sut.ExecuteAsync());
 
     #region ExecuteAsync Tests (inherited from GenericHandler)
 

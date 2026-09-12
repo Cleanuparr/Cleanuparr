@@ -60,12 +60,8 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         _fixture.DryRunInterceptor,
         _fixture.LazyLibrarianService);
 
-    private async Task ExecuteWithTimeAdvance(DownloadCleaner sut)
-    {
-        var task = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(10));
-        await task;
-    }
+    private Task ExecuteWithTimeAdvance(DownloadCleaner sut) =>
+        _fixture.TimeProvider.AdvanceUntilCompleted(sut.ExecuteAsync());
 
     private static ITorrentItemWrapper MakeTorrent(string name, string savePath)
     {
