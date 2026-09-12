@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
@@ -52,6 +54,7 @@ public sealed class TorrentListErrorSurfacingTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.NotFound)]
     public async Task RTorrent_ListCallReturnsErrorStatus_Throws(HttpStatusCode status)
     {
         FakeHttpMessageHandler handler = new();
@@ -157,6 +160,7 @@ public sealed class TorrentListErrorSurfacingTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.NotFound)]
     public async Task Deluge_ListCallReturnsErrorStatus_Throws(HttpStatusCode status)
     {
         FakeHttpMessageHandler handler = new();
@@ -240,6 +244,7 @@ public sealed class TorrentListErrorSurfacingTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.NotFound)]
     public async Task QBit_ListCallReturnsErrorStatus_Throws(HttpStatusCode status)
     {
         FakeHttpMessageHandler handler = new();
@@ -303,6 +308,7 @@ public sealed class TorrentListErrorSurfacingTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.NotFound)]
     public async Task Transmission_ListCallReturnsErrorStatus_Throws(HttpStatusCode status)
     {
         FakeHttpMessageHandler handler = new();
@@ -346,6 +352,7 @@ public sealed class TorrentListErrorSurfacingTests
     [InlineData(HttpStatusCode.Unauthorized)]
     [InlineData(HttpStatusCode.Forbidden)]
     [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.NotFound)]
     public async Task UTorrent_ListCallReturnsErrorStatus_Throws(HttpStatusCode status)
     {
         FakeHttpMessageHandler handler = new();
@@ -481,6 +488,78 @@ public sealed class TorrentListErrorSurfacingTests
         ]);
 
         await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+    }
+
+    #endregion
+
+    #region Empty client
+
+    // The counterpart to the guard above: a client holding nothing is not a faulty client.
+    // Issue #746 came from reading these two states as one.
+
+    [Fact]
+    public async Task RTorrent_ReportsNoTorrents_ReturnsEmpty()
+    {
+        using RTorrentServiceFixture fixture = new();
+        RTorrentService sut = fixture.CreateSut();
+        fixture.ClientWrapper.GetAllTorrentsAsync()
+            .Returns(new List<Cleanuparr.Domain.Entities.RTorrent.Response.RTorrentTorrent>());
+
+        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+
+        torrents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Deluge_ReportsNoTorrents_ReturnsEmpty()
+    {
+        using DelugeServiceFixture fixture = new();
+        DelugeService sut = fixture.CreateSut();
+        fixture.ClientWrapper.GetStatusForAllTorrents()
+            .Returns(new List<Cleanuparr.Domain.Entities.Deluge.Response.DownloadStatus>());
+
+        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+
+        torrents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task QBit_ReportsNoTorrents_ReturnsEmpty()
+    {
+        using QBitServiceFixture fixture = new();
+        QBitService sut = fixture.CreateSut();
+        fixture.ClientWrapper.GetTorrentListAsync(Arg.Any<TorrentListQuery>())
+            .Returns(new List<TorrentInfo>());
+
+        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+
+        torrents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Transmission_ReportsNoTorrents_ReturnsEmpty()
+    {
+        using TransmissionServiceFixture fixture = new();
+        TransmissionService sut = fixture.CreateSut();
+        fixture.ClientWrapper.TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+            .Returns(new Transmission.API.RPC.Entity.TransmissionTorrents { Torrents = [] });
+
+        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+
+        torrents.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task UTorrent_ReportsNoTorrents_ReturnsEmpty()
+    {
+        using UTorrentServiceFixture fixture = new();
+        UTorrentService sut = fixture.CreateSut();
+        fixture.ClientWrapper.GetTorrentsAsync()
+            .Returns(new List<Cleanuparr.Domain.Entities.UTorrent.Response.UTorrentItem>());
+
+        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+
+        torrents.ShouldBeEmpty();
     }
 
     #endregion
