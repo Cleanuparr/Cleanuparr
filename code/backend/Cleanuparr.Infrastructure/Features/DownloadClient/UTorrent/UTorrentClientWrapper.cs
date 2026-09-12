@@ -14,7 +14,7 @@ public sealed class UTorrentClientWrapper : IUTorrentClientWrapper
     public Task<bool> LoginAsync()
         => _client.LoginAsync();
 
-    public Task<bool> TestConnectionAsync()
+    public Task TestConnectionAsync()
         => _client.TestConnectionAsync();
 
     public Task<List<UTorrentItem>> GetTorrentsAsync()
