@@ -19,19 +19,22 @@ public class StatsService : IStatsService
     private readonly IHealthCheckService _healthCheckService;
     private readonly IJobManagementService _jobManagementService;
     private readonly IDatabaseProvider _databaseProvider;
+    private readonly TimeProvider _timeProvider;
 
     public StatsService(
         ILogger<StatsService> logger,
         EventsContext eventsContext,
         IHealthCheckService healthCheckService,
         IJobManagementService jobManagementService,
-        IDatabaseProvider databaseProvider)
+        IDatabaseProvider databaseProvider,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _eventsContext = eventsContext;
         _healthCheckService = healthCheckService;
         _jobManagementService = jobManagementService;
         _databaseProvider = databaseProvider;
+        _timeProvider = timeProvider;
     }
 
     private static readonly Dictionary<EventType, StrikeType> StrikeEventToType = new()
@@ -55,7 +58,7 @@ public class StatsService : IStatsService
     /// <inheritdoc />
     public async Task<StatsV2Response> GetStatsV2Async(int hours, bool includeDryRun = false)
     {
-        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddHours(-hours);
 
         Dictionary<string, int> byType = await MergedCountsAsync(cutoff, e => e.EventType, includeDryRun);
         Dictionary<string, int> bySeverity = await MergedCountsAsync(cutoff, e => e.Severity, includeDryRun);
@@ -98,14 +101,14 @@ public class StatsService : IStatsService
             Jobs = await GetJobV2StatsAsync(cutoff),
             Health = GetHealthStats(),
             TimeframeHours = hours,
-            GeneratedAt = DateTimeOffset.UtcNow,
+            GeneratedAt = _timeProvider.GetUtcNow(),
         };
     }
 
     /// <inheritdoc />
     public async Task<List<TimelineBucketDto>> GetTimelineAsync(string metric, int hours, TimelineBucketSize? bucket = null, bool includeDryRun = false)
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
         DateTimeOffset cutoff = now.AddHours(-hours);
         TimelineBucketSize size = bucket ?? TimelineBucketing.DefaultFor(hours);
 
