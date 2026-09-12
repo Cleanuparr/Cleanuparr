@@ -1,5 +1,4 @@
 import { PatternMode } from './enums';
-import { StallRule, SlowRule } from './queue-rule.model';
 import type { JobSchedule } from '@shared/utils/schedule.util';
 
 // Re-export for backward compatibility
@@ -25,6 +24,4 @@ export interface QueueCleanerConfig {
   processNoContentId: boolean;
   failedImport: FailedImportConfig;
   downloadingMetadataMaxStrikes: number;
-  stallRules?: StallRule[];
-  slowRules?: SlowRule[];
 }
