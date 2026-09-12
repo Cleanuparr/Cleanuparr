@@ -147,6 +147,83 @@ test.describe('Queue Cleaner UI', () => {
     await expect(card).toHaveCount(0);
   });
 
+  test('a slow rule created in the UI is persisted and survives a reload', async ({ page }) => {
+    const name = `ui-slow-${Date.now()}`;
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    const modal = await openSlowModal(page);
+
+    await modal.locator('app-input').filter({ hasText: 'Name' }).locator('input').fill(name);
+    await modal.locator('app-number-input').filter({ hasText: 'Max Strikes' }).locator('input').fill('9');
+    await modal.locator('app-number-input').filter({ hasText: 'Min Completion' }).locator('input').fill('0');
+    await modal.locator('app-number-input').filter({ hasText: 'Max Completion' }).locator('input').fill('100');
+    await modal.locator('app-size-input').filter({ hasText: 'Minimum Speed' }).locator('input').first().fill('50');
+
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/api/queue-rules/slow') && r.request().method() === 'POST',
+    );
+    await modal.getByRole('button', { name: 'Create' }).click();
+    expect((await created).status()).toBeLessThan(300);
+    await expect(modal).toBeHidden();
+
+    const card = page.locator('.rule-card').filter({ hasText: name });
+    await expect(card).toBeVisible();
+
+    await page.reload();
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    await ensureAccordionExpanded(
+      page,
+      'Slow Download Rules',
+      page.getByRole('button', { name: 'Add Slow Rule' }),
+    );
+    await expect(card).toBeVisible();
+
+    await card.getByRole('button', { name: 'Delete rule' }).click();
+    await page.getByRole('alertdialog', { name: 'Delete Slow Rule' })
+      .getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('editing a stall rule loads its values and persists the change', async ({ page }) => {
+    const name = `ui-edit-${Date.now()}`;
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    const modal = await openStallModal(page);
+
+    await modal.locator('app-input').filter({ hasText: 'Name' }).locator('input').fill(name);
+    await modal.locator('app-number-input').filter({ hasText: 'Max Strikes' }).locator('input').fill('7');
+    await modal.getByRole('button', { name: 'Create' }).click();
+    await expect(modal).toBeHidden();
+
+    const card = page.locator('.rule-card').filter({ hasText: name });
+    await card.getByRole('button', { name: 'Edit rule' }).click();
+
+    // The modal reads the values back from the rule the list endpoint served.
+    const editModal = page.getByRole('dialog', { name: 'Edit Stall Rule' });
+    await expect(editModal.locator('app-input').filter({ hasText: 'Name' }).locator('input')).toHaveValue(name);
+    await expect(editModal.locator('app-number-input').filter({ hasText: 'Max Strikes' }).locator('input')).toHaveValue('7');
+
+    await editModal.locator('app-number-input').filter({ hasText: 'Max Strikes' }).locator('input').fill('11');
+    const updated = page.waitForResponse(
+      (r) => r.url().includes('/api/queue-rules/stall/') && r.request().method() === 'PUT',
+    );
+    await editModal.getByRole('button', { name: 'Update' }).click();
+    expect((await updated).status()).toBeLessThan(300);
+    await expect(editModal).toBeHidden();
+
+    await page.reload();
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    await ensureAccordionExpanded(
+      page,
+      'Stalled Download Rules',
+      page.getByRole('button', { name: 'Add Stall Rule' }),
+    );
+    await expect(card).toContainText('Max Strikes: 11');
+
+    await card.getByRole('button', { name: 'Delete rule' }).click();
+    await page.getByRole('alertdialog', { name: 'Delete Stall Rule' })
+      .getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(card).toHaveCount(0);
+  });
+
   test('unsaved-changes guard fires when dirty and clears after revert', async ({ page }) => {
     await loginAndGotoSettings(page, 'queue-cleaner');
     const enabled = toggle(page, 'Enabled');

@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/base';
 import type { QueueRuleKind } from '../helpers/api/queue-cleaner';
+import { expectKeys } from '../helpers/contract';
 
 const KINDS: QueueRuleKind[] = ['stall', 'slow'];
 
@@ -26,6 +27,21 @@ function buildPayload(kind: QueueRuleKind, name: string, overrides: Record<strin
     ...overrides,
   };
 }
+
+const RULE_KEYS: Record<QueueRuleKind, string[]> = {
+  stall: [
+  'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
+  'maxCompletionPercentage', 'maxStrikes', 'minCompletionPercentage', 'name', 'privacyType',
+  'queueCleanerConfig', 'queueCleanerConfigId', 'resetStrikesOnProgress',
+    'minimumProgress',
+  ],
+  slow: [
+  'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
+  'maxCompletionPercentage', 'maxStrikes', 'minCompletionPercentage', 'name', 'privacyType',
+  'queueCleanerConfig', 'queueCleanerConfigId', 'resetStrikesOnProgress',
+    'ignoreAboveSize', 'ignoreWhileAltSpeedActive', 'maxTimeHours', 'minSpeed',
+  ],
+};
 
 test.describe('QueueCleaner — rules CRUD', () => {
   // Belt-and-braces: SQLite-direct autoReset clears the rule tables, but EF
@@ -67,6 +83,22 @@ test.describe('QueueCleaner — rules CRUD', () => {
 
       const del = await api.queueCleaner.deleteRule(kind, created.id);
       expect(del.status).toBe(204);
+    });
+
+    test(`${kind}: create, list and update all return the same pinned shape`, async ({ api }) => {
+      const created = await (await api.queueCleaner.createRule(kind, buildPayload(kind, `${kind}-shape`))).json();
+      expectKeys(created, RULE_KEYS[kind]);
+
+      const listed = await (await api.queueCleaner.listRules(kind)).json();
+      expectKeys(listed.find((r: { id: string }) => r.id === created.id), RULE_KEYS[kind]);
+
+      const updated = await (await api.queueCleaner.updateRule(kind, created.id, {
+        ...created,
+        name: `${kind}-shape-renamed`,
+      })).json();
+      expectKeys(updated, RULE_KEYS[kind]);
+
+      await api.queueCleaner.deleteRule(kind, created.id);
     });
 
     test(`${kind}: rejects maxStrikes below the minimum`, async ({ api }) => {
