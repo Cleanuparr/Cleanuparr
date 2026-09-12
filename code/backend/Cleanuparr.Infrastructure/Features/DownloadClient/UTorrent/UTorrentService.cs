@@ -123,12 +123,8 @@ public partial class UTorrentService : DownloadService, IUTorrentService
             await _client.LoginAsync();
             
             // Test API connectivity with a simple request
-            var connectionOk = await _client.TestConnectionAsync();
-            if (!connectionOk)
-            {
-                throw new InvalidOperationException("API connection test failed");
-            }
-            
+            await _client.TestConnectionAsync();
+
             _logger.LogDebug("Health check: Successfully connected to µTorrent client {clientId}", _downloadClientConfig.Id);
 
             stopwatch.Stop();

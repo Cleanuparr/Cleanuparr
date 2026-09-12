@@ -89,39 +89,41 @@ public class UTorrentResponseParser : IUTorrentResponseParser
             {
                 foreach (JsonElement[] data in response.TorrentsRaw)
                 {
-                    if (data is { Length: >= 27 })
+                    if (data is not { Length: >= 27 })
                     {
-                        response.Torrents.Add(new UTorrentItem
-                        {
-                            Hash = AsString(data[0]),
-                            Status = AsInt32(data[1]),
-                            Name = AsString(data[2]),
-                            Size = AsInt64(data[3]),
-                            Progress = AsInt32(data[4]),
-                            Downloaded = AsInt64(data[5]),
-                            Uploaded = AsInt64(data[6]),
-                            RatioRaw = AsInt32(data[7]),
-                            UploadSpeed = AsInt32(data[8]),
-                            DownloadSpeed = AsInt32(data[9]),
-                            ETA = AsInt32(data[10]),
-                            Label = AsString(data[11]),
-                            PeersConnected = AsInt32(data[12]),
-                            PeersInSwarm = AsInt32(data[13]),
-                            SeedsConnected = AsInt32(data[14]),
-                            SeedsInSwarm = AsInt32(data[15]),
-                            Availability = AsInt32(data[16]),
-                            QueueOrder = AsInt32(data[17]),
-                            Remaining = AsInt64(data[18]),
-                            DownloadUrl = AsString(data[19]),
-                            RssFeedUrl = AsString(data[20]),
-                            StatusMessage = AsString(data[21]),
-                            StreamId = AsString(data[22]),
-                            DateAdded = AsInt64(data[23]),
-                            DateCompleted = AsInt64(data[24]),
-                            AppUpdateUrl = AsString(data[25]),
-                            SavePath = AsString(data[26])
-                        });
+                        throw new UTorrentParsingException($"Torrent row has {data?.Length ?? 0} of the 27 expected fields", json);
                     }
+
+                    response.Torrents.Add(new UTorrentItem
+                    {
+                        Hash = AsString(data[0]),
+                        Status = AsInt32(data[1]),
+                        Name = AsString(data[2]),
+                        Size = AsInt64(data[3]),
+                        Progress = AsInt32(data[4]),
+                        Downloaded = AsInt64(data[5]),
+                        Uploaded = AsInt64(data[6]),
+                        RatioRaw = AsInt32(data[7]),
+                        UploadSpeed = AsInt32(data[8]),
+                        DownloadSpeed = AsInt32(data[9]),
+                        ETA = AsInt32(data[10]),
+                        Label = AsString(data[11]),
+                        PeersConnected = AsInt32(data[12]),
+                        PeersInSwarm = AsInt32(data[13]),
+                        SeedsConnected = AsInt32(data[14]),
+                        SeedsInSwarm = AsInt32(data[15]),
+                        Availability = AsInt32(data[16]),
+                        QueueOrder = AsInt32(data[17]),
+                        Remaining = AsInt64(data[18]),
+                        DownloadUrl = AsString(data[19]),
+                        RssFeedUrl = AsString(data[20]),
+                        StatusMessage = AsString(data[21]),
+                        StreamId = AsString(data[22]),
+                        DateAdded = AsInt64(data[23]),
+                        DateCompleted = AsInt64(data[24]),
+                        AppUpdateUrl = AsString(data[25]),
+                        SavePath = AsString(data[26])
+                    });
                 }
             }
 

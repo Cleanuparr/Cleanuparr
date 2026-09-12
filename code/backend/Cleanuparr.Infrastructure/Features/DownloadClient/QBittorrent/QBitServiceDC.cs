@@ -44,16 +44,20 @@ public partial class QBitService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
+        IReadOnlyList<TorrentInfo>? torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
         if (torrentList is null)
         {
-            return [];
+            throw new InvalidOperationException("qBittorrent returned no torrent list");
         }
 
-        return torrentList
+        List<ITorrentItemWrapper> torrents = torrentList
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Select(ITorrentItemWrapper (t) => new QBitItemWrapper(t, [], false))
             .ToList();
+
+        ThrowIfTorrentListCollapsed(torrentList.Count, torrents.Count);
+
+        return torrents;
     }
 
     /// <inheritdoc/>

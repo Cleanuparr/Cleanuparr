@@ -99,7 +99,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         {
             if (skippedClientIds.Contains(clientConfig.DownloadClientConfigId))
             {
-                _logger.LogWarning("skip | torrents are unavailable or empty | {name}", clientConfig.DownloadClientConfig.Name);
+                _logger.LogWarning("skip | torrents are unavailable | {name}", clientConfig.DownloadClientConfig.Name);
                 continue;
             }
 
@@ -144,14 +144,13 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get torrents | {name}", downloadClient.Name);
+            _logger.LogError(ex, "Failed to get torrents | {Name}", downloadClient.Name);
             return false;
         }
 
         if (torrents.Count is 0)
         {
-            _logger.LogDebug("No torrents found | {name}", downloadClient.Name);
-            return false;
+            _logger.LogWarning("No torrents reported | {Name}", downloadClient.Name);
         }
 
         foreach (string claimedPath in await downloadService.GetClaimedPathsAsync(torrents))
@@ -159,7 +158,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             claimedPaths.Add(claimedPath);
         }
 
-        _logger.LogDebug("Loaded {count} torrents | {name}", torrents.Count, downloadClient.Name);
+        _logger.LogDebug("Loaded {Count} torrents | {Name}", torrents.Count, downloadClient.Name);
         return true;
     }
 

@@ -24,12 +24,16 @@ public partial class RTorrentService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var downloads = await _client.GetAllTorrentsAsync();
+        List<RTorrentTorrent> downloads = await _client.GetAllTorrentsAsync();
 
-        return downloads
+        List<ITorrentItemWrapper> torrents = downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x))
             .ToList();
+
+        ThrowIfTorrentListCollapsed(downloads.Count, torrents.Count);
+
+        return torrents;
     }
 
     /// <inheritdoc/>

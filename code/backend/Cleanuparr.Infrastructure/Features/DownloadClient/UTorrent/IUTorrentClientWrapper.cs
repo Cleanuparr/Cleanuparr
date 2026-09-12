@@ -5,7 +5,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 public interface IUTorrentClientWrapper
 {
     Task<bool> LoginAsync();
-    Task<bool> TestConnectionAsync();
+    Task TestConnectionAsync();
     Task<List<UTorrentItem>> GetTorrentsAsync();
     Task<UTorrentItem?> GetTorrentAsync(string hash);
     Task<List<UTorrentFile>?> GetTorrentFilesAsync(string hash);

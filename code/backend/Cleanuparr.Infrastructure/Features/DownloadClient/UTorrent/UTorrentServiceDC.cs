@@ -35,12 +35,16 @@ public partial class UTorrentService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var torrents = await _client.GetTorrentsAsync();
+        List<UTorrentItem> reported = await _client.GetTorrentsAsync();
 
-        return torrents
+        List<ITorrentItemWrapper> torrents = reported
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Select(ITorrentItemWrapper (x) => new UTorrentItemWrapper(x, new UTorrentProperties()))
             .ToList();
+
+        ThrowIfTorrentListCollapsed(reported.Count, torrents.Count);
+
+        return torrents;
     }
 
     /// <inheritdoc/>

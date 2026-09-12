@@ -51,18 +51,10 @@ public sealed class UTorrentClient
     /// <summary>
     /// Tests the authentication and basic API connectivity
     /// </summary>
-    /// <returns>True if authentication and basic API call works</returns>
-    public async Task<bool> TestConnectionAsync()
+    /// <exception cref="UTorrentException">Authentication failed or the response could not be read.</exception>
+    public async Task TestConnectionAsync()
     {
-        try
-        {
-            var torrents = await GetTorrentsAsync();
-            return true; // If we can get torrents, authentication is working
-        }
-        catch
-        {
-            return false;
-        }
+        await GetTorrentsAsync();
     }
 
     /// <summary>
