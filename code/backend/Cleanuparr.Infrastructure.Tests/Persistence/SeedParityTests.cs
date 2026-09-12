@@ -144,7 +144,6 @@ public class SeedParityTests
             foreach (JsonPropertyInfo property in typeInfo.Properties.ToList())
             {
                 if (string.Equals(property.Name, "Id", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(property.Name, "EncryptionKey", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(property.Name, "Instances", StringComparison.OrdinalIgnoreCase))
                 {
                     typeInfo.Properties.Remove(property);

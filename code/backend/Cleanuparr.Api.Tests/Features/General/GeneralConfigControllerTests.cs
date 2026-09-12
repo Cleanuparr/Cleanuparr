@@ -71,7 +71,6 @@ public class GeneralConfigControllerTests : IDisposable
             HttpTimeout = 60,
             HttpSendUserAgent = true,
             StatusCheckEnabled = false,
-            EncryptionKey = existing.EncryptionKey,
             IgnoredDownloads = new List<string> { "ignored-item" },
             StrikeInactivityWindowHours = 48,
             Log = MatchingLogRequest(existing.Log),
@@ -102,7 +101,6 @@ public class GeneralConfigControllerTests : IDisposable
         var request = new UpdateGeneralConfigRequest
         {
             HttpTimeout = 0,
-            EncryptionKey = existing.EncryptionKey,
             StrikeInactivityWindowHours = 24,
             Log = MatchingLogRequest(existing.Log),
             Auth = new UpdateAuthConfigRequest(),
@@ -120,7 +118,6 @@ public class GeneralConfigControllerTests : IDisposable
         var request = new UpdateGeneralConfigRequest
         {
             HttpTimeout = 60,
-            EncryptionKey = existing.EncryptionKey,
             StrikeInactivityWindowHours = 200,
             Log = MatchingLogRequest(existing.Log),
             Auth = new UpdateAuthConfigRequest(),
@@ -138,7 +135,6 @@ public class GeneralConfigControllerTests : IDisposable
         var request = new UpdateGeneralConfigRequest
         {
             HttpTimeout = 60,
-            EncryptionKey = existing.EncryptionKey,
             StrikeInactivityWindowHours = 24,
             ConnectivityCheckEnabled = true,
             ConnectivityCheckUrls = new List<string>(),
