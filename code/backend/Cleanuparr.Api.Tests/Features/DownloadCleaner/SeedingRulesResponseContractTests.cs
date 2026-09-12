@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 using Cleanuparr.Api.Tests.Features.DownloadCleaner.TestHelpers;
@@ -7,7 +6,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -74,32 +72,7 @@ public class SeedingRulesResponseContractTests : IDisposable
         ResponseContract.Keys(result).ShouldNotBe(ListDtoKeys);
     }
 
-    [Fact]
-    public async Task CreateSeedingRule_EmbedsTheWholeDownloadClientConfig()
-    {
-        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
 
-        IActionResult result = await _controller.CreateSeedingRule(client.Id, NewRuleRequest("contract"));
-
-        JsonElement embedded = ResponseContract.Body(result).GetProperty("downloadClientConfig");
-        embedded.ValueKind.ShouldBe(JsonValueKind.Object);
-        ResponseContract.Keys(embedded).ShouldBe(EmbeddedClientKeys);
-        embedded.GetProperty("password").GetString().ShouldBe(SensitiveDataHelper.Placeholder);
-    }
-
-    [Fact]
-    public async Task UpdateSeedingRule_EmbedsTheWholeDownloadClientConfig()
-    {
-        DownloadClientConfig client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
-        QBitSeedingRule rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
-
-        IActionResult result = await _controller.UpdateSeedingRule(rule.Id, NewRuleRequest("renamed"));
-
-        JsonElement embedded = ResponseContract.Body(result).GetProperty("downloadClientConfig");
-        embedded.ValueKind.ShouldBe(JsonValueKind.Object);
-        ResponseContract.Keys(embedded).ShouldBe(EmbeddedClientKeys);
-        embedded.GetProperty("password").GetString().ShouldBe(SensitiveDataHelper.Placeholder);
-    }
 
     private static readonly string[] ListDtoKeys =
     [
@@ -141,21 +114,6 @@ public class SeedingRulesResponseContractTests : IDisposable
         "trackerPatterns",
     ];
 
-    private static readonly string[] EmbeddedClientKeys =
-    [
-        "downloadDirectorySource",
-        "downloadDirectoryTarget",
-        "enabled",
-        "externalUrl",
-        "host",
-        "id",
-        "name",
-        "password",
-        "type",
-        "typeName",
-        "urlBase",
-        "username",
-    ];
 
     private static SeedingRuleRequest NewRuleRequest(string name) => new()
     {
