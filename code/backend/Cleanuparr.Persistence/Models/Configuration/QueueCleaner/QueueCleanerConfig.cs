@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Entities;
 
 namespace Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -28,14 +27,8 @@ public sealed record QueueCleanerConfig : IJobConfig
 
     public ushort DownloadingMetadataMaxStrikes { get; set; }
     
-    /// <summary>
-    /// Managed through the queue rules endpoints, never loaded or written by the config endpoint.
-    /// </summary>
-    [JsonIgnore]
     public List<StallRule> StallRules { get; set; } = [];
     
-    /// <inheritdoc cref="StallRules" />
-    [JsonIgnore]
     public List<SlowRule> SlowRules { get; set; } = [];
     
     public void Validate()
