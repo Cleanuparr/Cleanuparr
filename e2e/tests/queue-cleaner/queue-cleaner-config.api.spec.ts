@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/base';
+import { expectKeys } from '../helpers/contract';
 
 test.describe('QueueCleaner — config', () => {
   test('GET returns the config singleton', async ({ api }) => {
@@ -7,6 +8,14 @@ test.describe('QueueCleaner — config', () => {
     const body = await res.json();
     expect(body).toHaveProperty('enabled');
     expect(body).toHaveProperty('cronExpression');
+  });
+
+  test('GET response shape is pinned', async ({ api }) => {
+    const body = await (await api.queueCleaner.getConfig()).json();
+    expectKeys(body, [
+      'cronExpression', 'downloadingMetadataMaxStrikes', 'enabled', 'failedImport', 'id',
+      'ignoredDownloads', 'processNoContentId', 'slowRules', 'stallRules', 'useAdvancedScheduling',
+    ]);
   });
 
   test('PUT updates enabled flag and cron', async ({ api }) => {

@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/base';
+import { expectKeys } from '../helpers/contract';
 
 test.describe('BlacklistSync — config', () => {
   test('GET returns config singleton', async ({ api }) => {
@@ -7,6 +8,11 @@ test.describe('BlacklistSync — config', () => {
     const body = await res.json();
     expect(body).toHaveProperty('enabled');
     expect(body).toHaveProperty('cronExpression');
+  });
+
+  test('GET response shape is pinned', async ({ api }) => {
+    const body = await (await api.blacklistSync.getConfig()).json();
+    expectKeys(body, ['blacklistPath', 'cronExpression', 'enabled', 'id']);
   });
 
   test('PUT toggles enabled + cron (requires blacklistPath when enabled)', async ({ api }) => {
