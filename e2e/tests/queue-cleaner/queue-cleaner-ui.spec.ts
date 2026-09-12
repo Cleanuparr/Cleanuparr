@@ -110,6 +110,43 @@ test.describe('Queue Cleaner UI', () => {
     await expect(modal).toBeHidden();
   });
 
+  test('a stall rule created in the UI is persisted and survives a reload', async ({ page }) => {
+    const name = `ui-stall-${Date.now()}`;
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    const modal = await openStallModal(page);
+
+    await modal.locator('app-input').filter({ hasText: 'Name' }).locator('input').fill(name);
+    await modal.locator('app-number-input').filter({ hasText: 'Max Strikes' }).locator('input').fill('12');
+    await modal.locator('app-number-input').filter({ hasText: 'Min Completion' }).locator('input').fill('0');
+    await modal.locator('app-number-input').filter({ hasText: 'Max Completion' }).locator('input').fill('90');
+
+    // Create writes through its own endpoint, not the page's Save Settings button.
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/api/queue-rules/stall') && r.request().method() === 'POST',
+    );
+    await modal.getByRole('button', { name: 'Create' }).click();
+    expect((await created).status()).toBeLessThan(300);
+    await expect(modal).toBeHidden();
+
+    const card = page.locator('.rule-card').filter({ hasText: name });
+    await expect(card).toBeVisible();
+
+    await page.reload();
+    // Enabled gates the rule sections and was never saved, so re-arm it client-side.
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    await ensureAccordionExpanded(
+      page,
+      'Stalled Download Rules',
+      page.getByRole('button', { name: 'Add Stall Rule' }),
+    );
+    await expect(card).toBeVisible();
+
+    await card.getByRole('button', { name: 'Delete rule' }).click();
+    const confirmDialog = page.getByRole('alertdialog', { name: 'Delete Stall Rule' });
+    await confirmDialog.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(card).toHaveCount(0);
+  });
+
   test('unsaved-changes guard fires when dirty and clears after revert', async ({ page }) => {
     await loginAndGotoSettings(page, 'queue-cleaner');
     const enabled = toggle(page, 'Enabled');
