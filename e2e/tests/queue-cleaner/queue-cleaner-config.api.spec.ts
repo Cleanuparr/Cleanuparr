@@ -13,8 +13,8 @@ test.describe('QueueCleaner — config', () => {
   test('GET response shape is pinned', async ({ api }) => {
     const body = await (await api.queueCleaner.getConfig()).json();
     expectKeys(body, [
-      'cronExpression', 'downloadingMetadataMaxStrikes', 'enabled', 'failedImport', 'id',
-      'ignoredDownloads', 'processNoContentId', 'slowRules', 'stallRules', 'useAdvancedScheduling',
+      'cronExpression', 'downloadingMetadataMaxStrikes', 'enabled', 'failedImport',
+      'ignoredDownloads', 'processNoContentId', 'useAdvancedScheduling',
     ]);
   });
 

@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.QueueCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.QueueCleaner.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -63,11 +64,8 @@ public class QueueCleanerResponseContractTests : IDisposable
             "downloadingMetadataMaxStrikes",
             "enabled",
             "failedImport",
-            "id",
             "ignoredDownloads",
             "processNoContentId",
-            "slowRules",
-            "stallRules",
             "useAdvancedScheduling",
         ]);
     }
@@ -94,7 +92,7 @@ public class QueueCleanerResponseContractTests : IDisposable
     public async Task UpdateStallRule_ReturnsTheDocumentedKeys()
     {
         IActionResult created = await _rulesController.CreateStallRule(NewStallDto("contract"));
-        Guid id = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<StallRule>().Id;
+        Guid id = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<StallRuleResponse>().Id;
 
         IActionResult result = await _rulesController.UpdateStallRule(id, NewStallDto("renamed"));
 
@@ -123,7 +121,7 @@ public class QueueCleanerResponseContractTests : IDisposable
     public async Task UpdateSlowRule_ReturnsTheDocumentedKeys()
     {
         IActionResult created = await _rulesController.CreateSlowRule(NewSlowDto("contract"));
-        Guid id = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<SlowRule>().Id;
+        Guid id = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<SlowRuleResponse>().Id;
 
         IActionResult result = await _rulesController.UpdateSlowRule(id, NewSlowDto("renamed"));
 
@@ -142,8 +140,6 @@ public class QueueCleanerResponseContractTests : IDisposable
         "minimumProgress",
         "name",
         "privacyType",
-        "queueCleanerConfig",
-        "queueCleanerConfigId",
         "resetStrikesOnProgress",
     ];
 
@@ -162,8 +158,6 @@ public class QueueCleanerResponseContractTests : IDisposable
         "minSpeed",
         "name",
         "privacyType",
-        "queueCleanerConfig",
-        "queueCleanerConfigId",
         "resetStrikesOnProgress",
     ];
 

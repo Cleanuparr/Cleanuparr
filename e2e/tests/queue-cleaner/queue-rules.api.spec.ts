@@ -30,16 +30,14 @@ function buildPayload(kind: QueueRuleKind, name: string, overrides: Record<strin
 
 const RULE_KEYS: Record<QueueRuleKind, string[]> = {
   stall: [
-  'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
-  'maxCompletionPercentage', 'maxStrikes', 'minCompletionPercentage', 'name', 'privacyType',
-  'queueCleanerConfig', 'queueCleanerConfigId', 'resetStrikesOnProgress',
-    'minimumProgress',
+    'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
+    'maxCompletionPercentage', 'maxStrikes', 'minCompletionPercentage', 'minimumProgress',
+    'name', 'privacyType', 'resetStrikesOnProgress',
   ],
   slow: [
-  'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
-  'maxCompletionPercentage', 'maxStrikes', 'minCompletionPercentage', 'name', 'privacyType',
-  'queueCleanerConfig', 'queueCleanerConfigId', 'resetStrikesOnProgress',
-    'ignoreAboveSize', 'ignoreWhileAltSpeedActive', 'maxTimeHours', 'minSpeed',
+    'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id', 'ignoreAboveSize',
+    'ignoreWhileAltSpeedActive', 'maxCompletionPercentage', 'maxStrikes', 'maxTimeHours',
+    'minCompletionPercentage', 'minSpeed', 'name', 'privacyType', 'resetStrikesOnProgress',
   ],
 };
 

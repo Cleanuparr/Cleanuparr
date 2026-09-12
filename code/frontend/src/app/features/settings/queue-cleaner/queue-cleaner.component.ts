@@ -355,7 +355,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
       : generateCronExpression(jobSchedule);
 
     const config: QueueCleanerConfig = {
-      ...this.config,
       enabled: m.enabled,
       useAdvancedScheduling: m.useAdvancedScheduling,
       cronExpression,

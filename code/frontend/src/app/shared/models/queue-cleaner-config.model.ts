@@ -1,5 +1,4 @@
 import { PatternMode } from './enums';
-import type { JobSchedule } from '@shared/utils/schedule.util';
 
 // Re-export for backward compatibility
 export type { JobSchedule } from '@shared/utils/schedule.util';
@@ -19,7 +18,6 @@ export interface QueueCleanerConfig {
   enabled: boolean;
   cronExpression: string;
   useAdvancedScheduling: boolean;
-  jobSchedule?: JobSchedule;
   ignoredDownloads: string[];
   processNoContentId: boolean;
   failedImport: FailedImportConfig;

@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.QueueCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
@@ -37,10 +38,10 @@ public sealed class QueueCleanerConfigController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var config = await _dataContext.QueueCleanerConfigs
+            QueueCleanerConfig config = await _dataContext.QueueCleanerConfigs
                 .AsNoTracking()
                 .FirstAsync();
-            return Ok(config);
+            return Ok(QueueCleanerConfigResponse.From(config));
         }
         finally
         {

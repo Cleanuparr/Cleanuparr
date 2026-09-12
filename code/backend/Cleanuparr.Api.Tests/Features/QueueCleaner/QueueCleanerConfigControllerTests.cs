@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.QueueCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.QueueCleaner.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -43,7 +44,7 @@ public class QueueCleanerConfigControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        ok.Value.ShouldBeOfType<QueueCleanerConfig>();
+        ok.Value.ShouldBeOfType<QueueCleanerConfigResponse>();
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.QueueCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.QueueCleaner.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -48,7 +49,7 @@ public class QueueRulesControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var rules = ok.Value.ShouldBeOfType<List<StallRule>>();
+        var rules = ok.Value.ShouldBeOfType<List<StallRuleResponse>>();
         rules.ShouldBeEmpty();
     }
 
@@ -63,7 +64,7 @@ public class QueueRulesControllerTests : IDisposable
 
         // Assert
         var created = result.ShouldBeOfType<CreatedAtActionResult>();
-        var rule = created.Value.ShouldBeOfType<StallRule>();
+        var rule = created.Value.ShouldBeOfType<StallRuleResponse>();
         rule.Name.ShouldBe("default");
         rule.Id.ShouldNotBe(Guid.Empty);
         (await _dataContext.StallRules.CountAsync()).ShouldBe(1);
@@ -113,14 +114,14 @@ public class QueueRulesControllerTests : IDisposable
     {
         // Arrange
         var create = (CreatedAtActionResult)await _controller.CreateStallRule(NewStallDto(name: "orig"));
-        var id = ((StallRule)create.Value!).Id;
+        var id = ((StallRuleResponse)create.Value!).Id;
 
         // Act
         var result = await _controller.UpdateStallRule(id, NewStallDto(name: "renamed"));
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var rule = ok.Value.ShouldBeOfType<StallRule>();
+        var rule = ok.Value.ShouldBeOfType<StallRuleResponse>();
         rule.Name.ShouldBe("renamed");
         var saved = await _dataContext.StallRules.AsNoTracking().FirstAsync(r => r.Id == id);
         saved.Name.ShouldBe("renamed");
@@ -132,7 +133,7 @@ public class QueueRulesControllerTests : IDisposable
         // Arrange
         await _controller.CreateStallRule(NewStallDto(name: "alpha"));
         var betaCreate = (CreatedAtActionResult)await _controller.CreateStallRule(NewStallDto(name: "beta"));
-        var betaId = ((StallRule)betaCreate.Value!).Id;
+        var betaId = ((StallRuleResponse)betaCreate.Value!).Id;
 
         // Act — try to rename beta → alpha
         var result = await _controller.UpdateStallRule(betaId, NewStallDto(name: "alpha"));
@@ -146,7 +147,7 @@ public class QueueRulesControllerTests : IDisposable
     {
         // Arrange
         var create = (CreatedAtActionResult)await _controller.CreateStallRule(NewStallDto(name: "doomed"));
-        var id = ((StallRule)create.Value!).Id;
+        var id = ((StallRuleResponse)create.Value!).Id;
 
         // Act
         var result = await _controller.DeleteStallRule(id);
@@ -178,7 +179,7 @@ public class QueueRulesControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var rules = ok.Value.ShouldBeOfType<List<SlowRule>>();
+        var rules = ok.Value.ShouldBeOfType<List<SlowRuleResponse>>();
         rules.ShouldBeEmpty();
     }
 
@@ -193,7 +194,7 @@ public class QueueRulesControllerTests : IDisposable
 
         // Assert
         var created = result.ShouldBeOfType<CreatedAtActionResult>();
-        var rule = created.Value.ShouldBeOfType<SlowRule>();
+        var rule = created.Value.ShouldBeOfType<SlowRuleResponse>();
         rule.Name.ShouldBe("slow-default");
         (await _dataContext.SlowRules.CountAsync()).ShouldBe(1);
     }
