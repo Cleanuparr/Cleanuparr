@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadClient.Contracts.Responses;
 using Cleanuparr.Api.Features.DownloadClient.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Entities.HealthCheck;
@@ -66,7 +67,7 @@ public class DownloadClientControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var dict = ok.Value!.GetType().GetProperty("clients")!.GetValue(ok.Value) as List<DownloadClientConfig>;
+        var dict = ok.Value!.GetType().GetProperty("clients")!.GetValue(ok.Value) as List<DownloadClientConfigResponse>;
         dict.ShouldNotBeNull();
         dict!.Count.ShouldBe(3);
         // qBittorrent (0) comes before Deluge (1) by enum value, then alphabetical within type
@@ -95,7 +96,7 @@ public class DownloadClientControllerTests : IDisposable
 
         // Assert
         var created = result.ShouldBeOfType<CreatedAtActionResult>();
-        var entity = created.Value.ShouldBeOfType<DownloadClientConfig>();
+        var entity = created.Value.ShouldBeOfType<DownloadClientConfigResponse>();
         entity.Name.ShouldBe("my-client");
         (await _dataContext.DownloadClients.CountAsync()).ShouldBe(1);
     }
