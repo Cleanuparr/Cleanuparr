@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Api.Controllers;
+using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
@@ -12,7 +13,7 @@ using Xunit;
 namespace Cleanuparr.Api.Tests.Controllers;
 
 /// <summary>
-/// Records today's wire shape, leaks included.
+/// Pins the manual event response shape.
 /// </summary>
 public class ManualEventsResponseContractTests : IDisposable
 {
@@ -54,7 +55,7 @@ public class ManualEventsResponseContractTests : IDisposable
     {
         await SeedEventAsync();
 
-        ActionResult<PaginatedResult<ManualEvent>> result = await _controller.GetManualEvents();
+        ActionResult<PaginatedResult<ManualEventResponse>> result = await _controller.GetManualEvents();
 
         ResponseContract.Keys(result.Result!).ShouldBe(
         [
@@ -71,9 +72,9 @@ public class ManualEventsResponseContractTests : IDisposable
     {
         await SeedEventAsync();
 
-        ActionResult<PaginatedResult<ManualEvent>> result = await _controller.GetManualEvents();
+        ActionResult<PaginatedResult<ManualEventResponse>> result = await _controller.GetManualEvents();
 
-        FirstItemKeys(result.Result!).ShouldBe(EntityKeys);
+        FirstItemKeys(result.Result!).ShouldBe(ResponseKeys);
     }
 
     [Fact]
@@ -81,15 +82,23 @@ public class ManualEventsResponseContractTests : IDisposable
     {
         ManualEvent seeded = await SeedEventAsync();
 
-        ActionResult<ManualEvent> result = await _controller.GetManualEvent(seeded.Id);
+        ActionResult<ManualEventResponse> result = await _controller.GetManualEvent(seeded.Id);
 
-        ResponseContract.Keys(result.Result!).ShouldBe(EntityKeys);
+        ResponseContract.Keys(result.Result!).ShouldBe(ResponseKeys);
+    }
+
+    [Fact]
+    public async Task GetManualEvent_ReturnsNotFound_ForAnUnknownId()
+    {
+        ActionResult<ManualEventResponse> result = await _controller.GetManualEvent(Guid.NewGuid());
+
+        result.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     /// <summary>
-    /// Both endpoints serve this unprojected.
+    /// Every column of the entity, all of them persisted.
     /// </summary>
-    private static readonly string[] EntityKeys =
+    private static readonly string[] ResponseKeys =
     [
         "downloadClientName",
         "downloadClientType",

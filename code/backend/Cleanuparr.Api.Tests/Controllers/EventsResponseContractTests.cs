@@ -14,7 +14,7 @@ using Xunit;
 namespace Cleanuparr.Api.Tests.Controllers;
 
 /// <summary>
-/// The single-event endpoints serve a wider shape than the list projection.
+/// Every event endpoint serves the same projected shape.
 /// </summary>
 public class EventsResponseContractTests : IDisposable
 {
@@ -81,36 +81,51 @@ public class EventsResponseContractTests : IDisposable
     }
 
     [Fact]
-    public async Task GetEvent_ReturnsTheRawEntityKeys_NotTheListItemKeys()
+    public async Task GetEvent_ReturnsTheDocumentedListItemKeys()
     {
         AppEvent seeded = await SeedEventAsync();
 
-        ActionResult<AppEvent> result = await _controller.GetEvent(seeded.Id);
+        ActionResult<EventListItem> result = await _controller.GetEvent(seeded.Id);
 
-        ResponseContract.Keys(result.Result!).ShouldBe(RawEntityKeys);
+        ResponseContract.Keys(result.Result!).ShouldBe(ListItemKeys);
     }
 
     [Fact]
-    public async Task GetEventsByTracking_ReturnsTheRawEntityKeys_NotTheListItemKeys()
+    public async Task GetEvent_ReturnsNotFound_ForAnUnknownId()
+    {
+        ActionResult<EventListItem> result = await _controller.GetEvent(Guid.NewGuid());
+
+        result.Result.ShouldBeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetEventsByTracking_ReturnsTheDocumentedListItemKeys()
     {
         await SeedEventAsync();
 
-        ActionResult<List<AppEvent>> result = await _controller.GetEventsByTracking(_trackingId);
+        ActionResult<List<EventListItem>> result = await _controller.GetEventsByTracking(_trackingId);
 
-        ResponseContract.FirstItemKeys(result.Result!).ShouldBe(RawEntityKeys);
+        ResponseContract.FirstItemKeys(result.Result!).ShouldBe(ListItemKeys);
     }
 
     [Fact]
-    public async Task SingleEventShape_AddsTheNotificationOnlyKeysThatTheListShapeOmits()
+    public async Task SingleEventShape_MatchesTheListShape()
     {
-        RawEntityKeys.Except(ListItemKeys).ShouldBe(
-        [
-            "downloadClientName",
-            "downloadClientType",
-            "instanceType",
-            "instanceUrl",
-        ]);
-        ListItemKeys.Except(RawEntityKeys).ShouldBeEmpty();
+        AppEvent seeded = await SeedEventAsync();
+
+        ActionResult<EventListItem> single = await _controller.GetEvent(seeded.Id);
+        ActionResult<PaginatedResult<EventListItem>> list = await _controller.GetEvents();
+
+        ResponseContract.Keys(single.Result!).ShouldBe(FirstItemKeys(list.Result!));
+    }
+
+    [Fact]
+    public void ListItemShape_DropsTheNotificationOnlyKeys()
+    {
+        ListItemKeys.ShouldNotContain("downloadClientName");
+        ListItemKeys.ShouldNotContain("downloadClientType");
+        ListItemKeys.ShouldNotContain("instanceType");
+        ListItemKeys.ShouldNotContain("instanceUrl");
     }
 
     /// <summary>
@@ -129,47 +144,6 @@ public class EventsResponseContractTests : IDisposable
         "failedImportReasons",
         "grabbedItems",
         "id",
-        "isCategoryTag",
-        "isDryRun",
-        "itemHash",
-        "itemTitle",
-        "jobRunId",
-        "message",
-        "newCategory",
-        "oldCategory",
-        "removeFromClient",
-        "searchReason",
-        "searchStatus",
-        "searchType",
-        "seedRatio",
-        "seedingTimeHours",
-        "severity",
-        "strikeCount",
-        "strikeId",
-        "timestamp",
-        "trackingId",
-    ];
-
-    /// <summary>
-    /// The four extra keys are [NotMapped] notification fields, null over the wire.
-    /// </summary>
-    private static readonly string[] RawEntityKeys =
-    [
-        "arrInstanceId",
-        "cleanReason",
-        "cleanedCategory",
-        "completedAt",
-        "cycleId",
-        "deleteReason",
-        "downloadClientId",
-        "downloadClientName",
-        "downloadClientType",
-        "eventType",
-        "failedImportReasons",
-        "grabbedItems",
-        "id",
-        "instanceType",
-        "instanceUrl",
         "isCategoryTag",
         "isDryRun",
         "itemHash",

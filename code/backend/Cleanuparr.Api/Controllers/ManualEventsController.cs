@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Contracts.Responses;
+using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
@@ -24,7 +25,7 @@ public class ManualEventsController : ControllerBase
     /// Gets manual events with pagination and filtering
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<ManualEvent>>> GetManualEvents(
+    public async Task<ActionResult<PaginatedResult<ManualEventResponse>>> GetManualEvents(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] bool? isResolved = null,
@@ -99,9 +100,9 @@ public class ManualEventsController : ControllerBase
             .ToListAsync();
 
         // Return paginated result
-        var result = new PaginatedResult<ManualEvent>
+        var result = new PaginatedResult<ManualEventResponse>
         {
-            Items = events,
+            Items = events.Select(ManualEventResponse.From).ToList(),
             Page = page,
             PageSize = pageSize,
             TotalCount = totalCount,
@@ -115,14 +116,16 @@ public class ManualEventsController : ControllerBase
     /// Gets a specific manual event by ID
     /// </summary>
     [HttpGet("{id}")]
-    public async Task<ActionResult<ManualEvent>> GetManualEvent(Guid id)
+    public async Task<ActionResult<ManualEventResponse>> GetManualEvent(Guid id)
     {
-        var eventEntity = await _context.ManualEvents.FindAsync(id);
+        ManualEvent? eventEntity = await _context.ManualEvents.FindAsync(id);
 
-        if (eventEntity == null)
+        if (eventEntity is null)
+        {
             return NotFound();
+        }
 
-        return Ok(eventEntity);
+        return Ok(ManualEventResponse.From(eventEntity));
     }
 
     /// <summary>
