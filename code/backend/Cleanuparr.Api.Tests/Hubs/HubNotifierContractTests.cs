@@ -173,7 +173,7 @@ public class HubNotifierContractTests
     {
         await new StatusNotifier(_appHub.Context).NotifySearchStatsUpdatedAsync();
 
-        _appHub.Single().ShouldBe(("SearchStatsUpdated", null));
+        _appHub.SingleWithoutPayload().ShouldBe("SearchStatsUpdated");
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class HubNotifierContractTests
     {
         await new StatusNotifier(_appHub.Context).NotifyCustomFormatScoresUpdatedAsync();
 
-        _appHub.Single().ShouldBe(("CfScoresUpdated", null));
+        _appHub.SingleWithoutPayload().ShouldBe("CfScoresUpdated");
     }
 
     [Theory]

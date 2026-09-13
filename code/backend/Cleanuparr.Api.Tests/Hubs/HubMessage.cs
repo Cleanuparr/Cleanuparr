@@ -9,7 +9,7 @@ namespace Cleanuparr.Api.Tests.Hubs;
 public sealed class HubMessage<THub>
     where THub : Hub
 {
-    private readonly List<(string Method, object? Payload)> _sends = [];
+    private readonly List<(string Method, object?[] Arguments)> _sends = [];
 
     public IHubContext<THub> Context { get; }
 
@@ -25,16 +25,42 @@ public sealed class HubMessage<THub>
             .SendCoreAsync(Arg.Any<string>(), Arg.Any<object?[]>(), Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
-                object?[] args = callInfo.ArgAt<object?[]>(1);
-                _sends.Add((callInfo.ArgAt<string>(0), args.Length == 0 ? null : args[0]));
+                _sends.Add((callInfo.ArgAt<string>(0), callInfo.ArgAt<object?[]>(1)));
                 return Task.CompletedTask;
             });
     }
 
     /// <summary>
-    /// The single message broadcast so far, failing when there was not exactly one.
+    /// The single message broadcast so far, failing unless it carried exactly one argument.
     /// </summary>
     public (string Method, object? Payload) Single()
+    {
+        (string method, object?[] arguments) = SingleSend();
+
+        if (arguments.Length != 1)
+        {
+            throw new InvalidOperationException($"Expected one argument, got {arguments.Length}.");
+        }
+
+        return (method, arguments[0]);
+    }
+
+    /// <summary>
+    /// The name of the single message broadcast so far, failing unless it carried no arguments.
+    /// </summary>
+    public string SingleWithoutPayload()
+    {
+        (string method, object?[] arguments) = SingleSend();
+
+        if (arguments.Length != 0)
+        {
+            throw new InvalidOperationException($"Expected no arguments, got {arguments.Length}.");
+        }
+
+        return method;
+    }
+
+    private (string Method, object?[] Arguments) SingleSend()
     {
         if (_sends.Count != 1)
         {
