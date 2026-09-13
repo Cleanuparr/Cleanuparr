@@ -78,7 +78,11 @@ test.describe('General Settings UI', () => {
       await page.reload();
       await ensureToggle(toggle(page, 'Display Support Banner'), bannerBefore);
       await numberInput(page, 'Strike Inactivity Window').fill(windowBefore);
-      await ignoredChip(page, ignored).getByRole('button', { name: 'Remove' }).click();
+      // The chip is gone when it failed to persist, and clicking a missing Remove would
+      // time out and replace the assertion error that got us here.
+      if (await ignoredChip(page, ignored).count()) {
+        await ignoredChip(page, ignored).getByRole('button', { name: 'Remove' }).click();
+      }
       await saveSettings(page, 'general');
     }
   });
