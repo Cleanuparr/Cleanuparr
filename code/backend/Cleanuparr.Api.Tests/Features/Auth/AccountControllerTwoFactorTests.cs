@@ -109,6 +109,7 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         _secret.ShouldNotBe(previousSecret);
         _recoveryCodes.Count.ShouldBe(10);
         _recoveryCodes.ShouldNotContain(previousCodes[0]);
+        (await ReadUpdatedAt()).ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     [Fact, TestPriority(4)]
@@ -380,6 +381,14 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         body.GetProperty("requiresTwoFactor").GetBoolean().ShouldBeTrue();
 
         return body.GetProperty("loginToken").GetString()!;
+    }
+
+    private async Task<DateTimeOffset> ReadUpdatedAt()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+        return (await context.Users.AsNoTracking().FirstAsync()).UpdatedAt;
     }
 
     private async Task<int> CountRecoveryCodes()
