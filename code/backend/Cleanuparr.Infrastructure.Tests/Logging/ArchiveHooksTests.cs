@@ -34,7 +34,7 @@ public sealed class ArchiveHooksTests : IDisposable
     public void OnFileDeleting_DropsAnArchiveOlderThanTheTimeLimit()
     {
         string path = WriteLog("stale.log", DateTimeOffset.UtcNow.AddDays(-2));
-        ArchiveHooks hooks = new(retainedFileCountLimit: 0, retainedFileTimeLimit: TimeSpan.FromHours(1));
+        ArchiveHooks hooks = new(retainedFileCountLimit: 0, retainedFileTimeLimit: TimeSpan.FromHours(1), timeProvider: TimeProvider.System);
 
         hooks.OnFileDeleting(path);
 
@@ -45,7 +45,7 @@ public sealed class ArchiveHooksTests : IDisposable
     public void OnFileDeleting_KeepsAnArchiveInsideTheTimeLimit()
     {
         string path = WriteLog("fresh.log", DateTimeOffset.UtcNow.AddMinutes(-5));
-        ArchiveHooks hooks = new(retainedFileCountLimit: 0, retainedFileTimeLimit: TimeSpan.FromHours(1));
+        ArchiveHooks hooks = new(retainedFileCountLimit: 0, retainedFileTimeLimit: TimeSpan.FromHours(1), timeProvider: TimeProvider.System);
 
         hooks.OnFileDeleting(path);
 

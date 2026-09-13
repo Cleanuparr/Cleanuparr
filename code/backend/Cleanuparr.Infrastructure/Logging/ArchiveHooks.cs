@@ -9,10 +9,12 @@ public class ArchiveHooks : FileLifecycleHooks
     private readonly CompressionLevel _compressionLevel;
     private readonly ushort _retainedFileCountLimit;
     private readonly TimeSpan? _retainedFileTimeLimit;
+    private readonly TimeProvider _timeProvider;
 
     public ArchiveHooks(
         ushort retainedFileCountLimit,
         TimeSpan? retainedFileTimeLimit,
+        TimeProvider timeProvider,
         CompressionLevel compressionLevel = CompressionLevel.Fastest
     )
     {
@@ -28,6 +30,7 @@ public class ArchiveHooks : FileLifecycleHooks
         
         _retainedFileCountLimit = retainedFileCountLimit;
         _retainedFileTimeLimit = retainedFileTimeLimit;
+        _timeProvider = timeProvider;
         _compressionLevel = compressionLevel;
     }
 
@@ -69,7 +72,7 @@ public class ArchiveHooks : FileLifecycleHooks
         if (_retainedFileTimeLimit is not null)
         {
             filesToDeleteQuery = filesToDeleteQuery
-                .Where(file => file.LastWriteTimeUtc < DateTimeOffset.UtcNow - _retainedFileTimeLimit);
+                .Where(file => file.LastWriteTimeUtc < _timeProvider.GetUtcNow() - _retainedFileTimeLimit);
         }
         
         List<FileInfo> filesToDelete = filesToDeleteQuery.ToList();
