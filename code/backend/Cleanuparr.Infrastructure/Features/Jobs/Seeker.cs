@@ -113,7 +113,7 @@ public sealed class Seeker : IHandler
         if (replacementItem is not null)
         {
             await ProcessReplacementItemAsync(replacementItem, isDryRun);
-            await _statusNotifier.NotifySearchStatsUpdatedAsync();
+            await _statusNotifier.NotifySearchStatsUpdatedAsync(cancellationToken);
             return;
         }
 
@@ -125,7 +125,7 @@ public sealed class Seeker : IHandler
 
         await ProcessProactiveSearchAsync(config, isDryRun, cancellationToken);
 
-        await _statusNotifier.NotifySearchStatsUpdatedAsync();
+        await _statusNotifier.NotifySearchStatsUpdatedAsync(cancellationToken);
     }
 
     private async Task ApplyJitter(SeekerConfig config, CancellationToken cancellationToken)
