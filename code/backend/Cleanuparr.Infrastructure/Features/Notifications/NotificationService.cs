@@ -10,15 +10,18 @@ public sealed class NotificationService
     private readonly ILogger<NotificationService> _logger;
     private readonly INotificationConfigurationService _configurationService;
     private readonly INotificationProviderFactory _providerFactory;
+    private readonly TimeProvider _timeProvider;
 
     public NotificationService(
         ILogger<NotificationService> logger,
         INotificationConfigurationService configurationService,
-        INotificationProviderFactory providerFactory)
+        INotificationProviderFactory providerFactory,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _configurationService = configurationService;
         _providerFactory = providerFactory;
+        _timeProvider = timeProvider;
     }
 
     public async Task SendNotificationAsync(NotificationEventType eventType, NotificationContext context)
@@ -66,7 +69,7 @@ public sealed class NotificationService
             Severity = EventSeverity.Information,
             Data = new Dictionary<string, string>
             {
-                ["Test time"] = DateTimeOffset.UtcNow.ToString("o"),
+                ["Test time"] = _timeProvider.GetUtcNow().ToString("o"),
                 ["Provider type"] = providerConfig.Type.ToString(),
             },
             Image = new Uri(providerConfig.Type is NotificationProviderType.Apprise

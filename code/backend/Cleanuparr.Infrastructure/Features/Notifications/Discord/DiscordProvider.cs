@@ -8,15 +8,18 @@ namespace Cleanuparr.Infrastructure.Features.Notifications.Discord;
 public sealed class DiscordProvider : NotificationProviderBase<DiscordConfig>
 {
     private readonly IDiscordProxy _proxy;
+    private readonly TimeProvider _timeProvider;
 
     public DiscordProvider(
         string name,
         NotificationProviderType type,
         DiscordConfig config,
-        IDiscordProxy proxy)
+        IDiscordProxy proxy,
+        TimeProvider timeProvider)
         : base(name, type, config)
     {
         _proxy = proxy;
+        _timeProvider = timeProvider;
     }
 
     public override async Task SendNotificationAsync(NotificationContext context)
@@ -46,7 +49,7 @@ public sealed class DiscordProvider : NotificationProviderBase<DiscordConfig>
                 Text = "Cleanuparr",
                 IconUrl = Constants.LogoUrl
             },
-            Timestamp = DateTimeOffset.UtcNow.ToString("o")
+            Timestamp = _timeProvider.GetUtcNow().ToString("o")
         };
 
         if (context.Image != null)

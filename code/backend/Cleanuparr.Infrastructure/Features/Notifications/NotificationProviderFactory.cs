@@ -82,8 +82,9 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
     {
         var discordConfig = (DiscordConfig)config.Configuration;
         var proxy = _serviceProvider.GetRequiredService<IDiscordProxy>();
+        var timeProvider = _serviceProvider.GetRequiredService<TimeProvider>();
 
-        return new DiscordProvider(config.Name, config.Type, discordConfig, proxy);
+        return new DiscordProvider(config.Name, config.Type, discordConfig, proxy, timeProvider);
     }
 
     private INotificationProvider CreateGotifyProvider(NotificationProviderDto config)

@@ -22,7 +22,7 @@ public class DiscordProviderTests
             WebhookUrl = "https://discord.example.com/webhook",
         };
 
-        _provider = new DiscordProvider("TestDiscord", NotificationProviderType.Discord, config, _proxy);
+        _provider = new DiscordProvider("TestDiscord", NotificationProviderType.Discord, config, _proxy, TimeProvider.System);
     }
 
     [Fact]

@@ -25,19 +25,22 @@ public sealed class NotificationProvidersController : ControllerBase
     private readonly INotificationConfigurationService _notificationConfigurationService;
     private readonly NotificationService _notificationService;
     private readonly IAppriseCliDetector _appriseCliDetector;
+    private readonly TimeProvider _timeProvider;
 
     public NotificationProvidersController(
         ILogger<NotificationProvidersController> logger,
         DataContext dataContext,
         INotificationConfigurationService notificationConfigurationService,
         NotificationService notificationService,
-        IAppriseCliDetector appriseCliDetector)
+        IAppriseCliDetector appriseCliDetector,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _dataContext = dataContext;
         _notificationConfigurationService = notificationConfigurationService;
         _notificationService = notificationService;
         _appriseCliDetector = appriseCliDetector;
+        _timeProvider = timeProvider;
     }
 
     [HttpGet]
@@ -432,7 +435,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 NotifiarrConfiguration = notifiarrConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -512,7 +515,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 AppriseConfiguration = appriseConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -595,7 +598,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 NtfyConfiguration = ntfyConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -672,7 +675,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 TelegramConfiguration = telegramConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -1137,7 +1140,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 DiscordConfiguration = discordConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -1349,7 +1352,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 PushoverConfiguration = pushoverConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -1558,7 +1561,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
                 OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 GotifyConfiguration = gotifyConfig,
-                UpdatedAt = DateTimeOffset.UtcNow
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _dataContext.NotificationConfigs.Remove(existingProvider);

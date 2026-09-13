@@ -32,14 +32,16 @@ public class NotificationProvidersControllerTests : IDisposable
         NotificationService notificationService = new(
             Substitute.For<ILogger<NotificationService>>(),
             configurationService,
-            Substitute.For<INotificationProviderFactory>());
+            Substitute.For<INotificationProviderFactory>(),
+            TimeProvider.System);
 
         _controller = new NotificationProvidersController(
             Substitute.For<ILogger<NotificationProvidersController>>(),
             _dataContext,
             configurationService,
             notificationService,
-            Substitute.For<IAppriseCliDetector>());
+            Substitute.For<IAppriseCliDetector>(),
+            TimeProvider.System);
 
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }

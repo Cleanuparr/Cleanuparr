@@ -30,7 +30,8 @@ public class NotificationConsumerTests
         _notificationService = new NotificationService(
             _serviceLogger,
             _configurationService,
-            _providerFactory);
+            _providerFactory,
+            TimeProvider.System);
     }
 
     #region Consume Tests - FailedImportStrikeNotification
