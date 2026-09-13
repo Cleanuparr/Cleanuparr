@@ -734,11 +734,6 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("dry_run");
 
-                    b.Property<string>("EncryptionKey")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("encryption_key");
-
                     b.Property<int>("HistoryRetentionDays")
                         .HasColumnType("integer")
                         .HasColumnName("history_retention_days");

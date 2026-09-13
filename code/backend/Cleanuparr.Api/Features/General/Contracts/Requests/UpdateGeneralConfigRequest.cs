@@ -21,8 +21,6 @@ public sealed record UpdateGeneralConfigRequest
 
     public bool StatusCheckEnabled { get; init; } = true;
 
-    public string EncryptionKey { get; init; } = Guid.NewGuid().ToString();
-
     public List<string> IgnoredDownloads { get; init; } = [];
 
     public bool ConnectivityCheckEnabled { get; init; }
@@ -46,7 +44,6 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.HttpCertificateValidation = HttpCertificateValidation;
         existingConfig.HttpSendUserAgent = HttpSendUserAgent;
         existingConfig.StatusCheckEnabled = StatusCheckEnabled;
-        existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;
         existingConfig.ConnectivityCheckEnabled = ConnectivityCheckEnabled;
         existingConfig.ConnectivityCheckUrls = ConnectivityCheckUrls;

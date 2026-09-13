@@ -30,8 +30,6 @@ public sealed record GeneralConfig : IConfig
 
     public bool StatusCheckEnabled { get; set; } = true;
 
-    public string EncryptionKey { get; set; } = Guid.NewGuid().ToString();
-
     public List<string> IgnoredDownloads { get; set; } = [];
 
     public bool ConnectivityCheckEnabled { get; set; }
