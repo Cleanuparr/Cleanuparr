@@ -51,7 +51,8 @@ test.describe('Blacklist Sync UI', () => {
   });
 
   test('saved blacklist sync settings survive a reload', async ({ page }) => {
-    const path = 'https://example.com/e2e-roundtrip-blacklist.txt';
+    // Unique per run, so a retry after a failed restore cannot assert the value it already found.
+    const path = `https://example.com/e2e-roundtrip-blacklist-${Date.now()}.txt`;
     await loginAndGotoSettings(page, 'blacklist-sync');
 
     const enabledBefore = await isToggleOn(toggle(page, 'Enabled'));

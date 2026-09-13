@@ -59,15 +59,17 @@ test.describe('General Settings UI', () => {
 
     const bannerBefore = await isToggleOn(toggle(page, 'Display Support Banner'));
     const windowBefore = await numberInput(page, 'Strike Inactivity Window').inputValue();
+    // The field is bounded 1..168, so pick a value that always differs from the saved one.
+    const windowAfter = windowBefore === '42' ? '24' : '42';
 
     await toggle(page, 'Display Support Banner').click();
-    await numberInput(page, 'Strike Inactivity Window').fill('42');
+    await numberInput(page, 'Strike Inactivity Window').fill(windowAfter);
     await addChip(page, 'Ignored Downloads', ignored);
     await saveSettings(page, 'general');
 
     await page.reload();
     await expect(toggle(page, 'Display Support Banner')).toHaveAttribute('aria-checked', String(!bannerBefore));
-    await expect(numberInput(page, 'Strike Inactivity Window')).toHaveValue('42');
+    await expect(numberInput(page, 'Strike Inactivity Window')).toHaveValue(windowAfter);
     await expect(ignoredChip(page, ignored)).toBeVisible();
 
     await ensureToggle(toggle(page, 'Display Support Banner'), bannerBefore);
