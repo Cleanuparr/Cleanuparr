@@ -18,7 +18,7 @@ public interface IEventPublisher
     /// <summary>
     /// Records a strike for a download and sends a notification.
     /// </summary>
-    Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null);
+    Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid strikeId);
 
     /// <summary>
     /// Records that a download recovered and that its strikes of this type are clear.

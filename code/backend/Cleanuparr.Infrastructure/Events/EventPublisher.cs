@@ -142,7 +142,7 @@ public class EventPublisher : IEventPublisher
     /// <summary>
     /// Publishes a strike event with context data and notifications
     /// </summary>
-    public async Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null)
+    public async Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid strikeId)
     {
         // Determine the appropriate EventType based on StrikeType
         EventType eventType = strikeType switch
@@ -512,11 +512,11 @@ public class EventPublisher : IEventPublisher
         }
     }
 
-    private async Task BroadcastStrikeAsync(Guid? strikeId, StrikeType strikeType, string hash, string itemName, bool isDryRun)
+    private async Task BroadcastStrikeAsync(Guid strikeId, StrikeType strikeType, string hash, string itemName, bool isDryRun)
     {
         try
         {
-            await _eventNotifier.NotifyStrikeAsync(strikeId ?? Guid.Empty, strikeType, hash, itemName, isDryRun);
+            await _eventNotifier.NotifyStrikeAsync(strikeId, strikeType, hash, itemName, isDryRun);
         }
         catch (Exception ex)
         {
