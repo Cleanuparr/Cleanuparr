@@ -167,6 +167,9 @@ jobs:
   e2e:
     needs: validate
     if: needs.validate.outputs.build == 'e2e'
+    permissions:
+      contents: read
+      actions: read
     concurrency:
       group: pr-e2e-${{ needs.validate.outputs.pr_number }}
       cancel-in-progress: true
