@@ -80,7 +80,10 @@ public class RealtimeLogSink : ILogEventSink
         _logBuffer.Enqueue(entry);
 
         // Trim buffer if it exceeds the limit
-        while (_logBuffer.Count > _bufferSize && _logBuffer.TryDequeue(out _)) { }
+        while (_logBuffer.Count > _bufferSize && _logBuffer.TryDequeue(out _))
+        {
+            // Nothing to do here
+        }
     }
 
     private static string? GetPropertyValue(LogEvent logEvent, string propertyName, string? defaultValue = null)
