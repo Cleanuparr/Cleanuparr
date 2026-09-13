@@ -56,7 +56,7 @@ public class EventCleanupService : BackgroundService
         _logger.LogInformation("Event cleanup service stopped");
     }
 
-    private async Task PerformCleanupAsync()
+    internal async Task PerformCleanupAsync()
     {
         try
         {
@@ -128,7 +128,7 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    private async Task CleanupStrikesAsync(EventsContext eventsContext, ushort inactivityWindowHours)
+    internal async Task CleanupStrikesAsync(EventsContext eventsContext, ushort inactivityWindowHours)
     {
         var cutoffDate = DateTimeOffset.UtcNow.AddHours(-inactivityWindowHours);
 

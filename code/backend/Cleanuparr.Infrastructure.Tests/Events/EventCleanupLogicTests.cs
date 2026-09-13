@@ -20,18 +20,29 @@ namespace Cleanuparr.Infrastructure.Tests.Events;
 public class EventCleanupLogicTests : IDisposable
 {
     private readonly EventsContext _context;
+    private readonly DataContext _dataContext;
+    private readonly ServiceProvider _serviceProvider;
     private readonly EventCleanupService _service;
 
     public EventCleanupLogicTests()
     {
         _context = TestEventsContextFactory.Create();
+        _dataContext = TestDataContextFactory.Create();
+
+        ServiceCollection services = new();
+        services.AddSingleton(_context);
+        services.AddSingleton(_dataContext);
+        _serviceProvider = services.BuildServiceProvider();
+
         _service = new EventCleanupService(
             Substitute.For<ILogger<EventCleanupService>>(),
-            Substitute.For<IServiceScopeFactory>());
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>());
     }
 
     public void Dispose()
     {
+        _serviceProvider.Dispose();
+        _dataContext.Dispose();
         _context.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -149,5 +160,97 @@ public class EventCleanupLogicTests : IDisposable
         remaining.ShouldContain(referencedByManualEvent.Id);
         remaining.ShouldContain(recent.Id);
         remaining.ShouldContain(incomplete.Id);
+    }
+
+    [Fact]
+    public async Task CleanupStrikesAsync_DeletesStrikesOfItemsOutsideTheInactivityWindow()
+    {
+        JobRun run = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = DateTimeOffset.UtcNow.AddDays(-2) };
+        _context.JobRuns.Add(run);
+
+        DownloadItem inactive = new() { DownloadId = "inactive", Title = "inactive" };
+        DownloadItem active = new() { DownloadId = "active", Title = "active" };
+        _context.DownloadItems.AddRange(inactive, active);
+
+        // The inactive item's most recent strike predates the window, so all of its strikes go.
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = inactive.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-48),
+        });
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = inactive.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-30),
+        });
+        // The active item keeps every strike, including the old one, because it was struck again recently.
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = active.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-48),
+        });
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = active.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
+        });
+        await _context.SaveChangesAsync();
+
+        await _service.CleanupStrikesAsync(_context, inactivityWindowHours: 24);
+
+        List<Guid> remainingStrikes = await _context.Strikes.Select(s => s.DownloadItemId).ToListAsync();
+        remainingStrikes.ShouldAllBe(id => id == active.Id);
+        remainingStrikes.Count.ShouldBe(2);
+
+        List<string> remainingItems = await _context.DownloadItems.Select(d => d.DownloadId).ToListAsync();
+        remainingItems.ShouldBe(["active"]);
+    }
+
+    [Fact]
+    public async Task PerformCleanupAsync_PrunesTransientRowsBeyondTheRetentionWindow()
+    {
+        DateTimeOffset old = DateTimeOffset.UtcNow.AddDays(-40);
+        DateTimeOffset recent = DateTimeOffset.UtcNow.AddDays(-5);
+
+        JobRun staleRun = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = old, CompletedAt = old };
+        JobRun recentRun = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = recent, CompletedAt = recent };
+        _context.JobRuns.AddRange(staleRun, recentRun);
+
+        _context.ManualEvents.Add(new ManualEvent
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "stale",
+            Severity = EventSeverity.Warning,
+            Timestamp = old,
+            IsResolved = true,
+            ResolvedAt = old,
+        });
+        _context.ManualEvents.Add(new ManualEvent
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "recent",
+            Severity = EventSeverity.Warning,
+            Timestamp = old,
+            IsResolved = true,
+            ResolvedAt = recent,
+        });
+        await _context.SaveChangesAsync();
+
+        await _service.PerformCleanupAsync();
+
+        List<string> manualEvents = await _context.ManualEvents.Select(e => e.Message).ToListAsync();
+        manualEvents.ShouldBe(["recent"]);
+
+        List<Guid> jobRuns = await _context.JobRuns.Select(j => j.Id).ToListAsync();
+        jobRuns.ShouldNotContain(staleRun.Id);
+        jobRuns.ShouldContain(recentRun.Id);
     }
 }
