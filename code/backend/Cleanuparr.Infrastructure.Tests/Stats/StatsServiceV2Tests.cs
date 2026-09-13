@@ -9,6 +9,7 @@ using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -17,6 +18,9 @@ namespace Cleanuparr.Infrastructure.Tests.Stats;
 
 public class StatsServiceV2Tests : IDisposable
 {
+    // Midday so the hourly events in the bucketing tests share a calendar day.
+    private static readonly DateTimeOffset Now = new(2024, 6, 12, 12, 0, 0, TimeSpan.Zero);
+
     private readonly EventsContext _context;
     private readonly IHealthCheckService _health;
     private readonly IJobManagementService _jobs;
@@ -33,7 +37,13 @@ public class StatsServiceV2Tests : IDisposable
         _jobs = Substitute.For<IJobManagementService>();
         _jobs.GetAllJobs().ReturnsForAnyArgs(Task.FromResult<IReadOnlyList<JobInfo>>([]));
 
-        _service = new StatsService(Substitute.For<ILogger<StatsService>>(), _context, _health, _jobs, new SqliteDatabaseProvider());
+        _service = new StatsService(
+            Substitute.For<ILogger<StatsService>>(),
+            _context,
+            _health,
+            _jobs,
+            new SqliteDatabaseProvider(),
+            new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -55,7 +65,7 @@ public class StatsServiceV2Tests : IDisposable
         EventType = type,
         Message = type.ToString(),
         Severity = EventSeverity.Information,
-        Timestamp = timestamp ?? DateTimeOffset.UtcNow.AddHours(-1),
+        Timestamp = timestamp ?? Now.AddHours(-1),
         DeleteReason = deleteReason,
         CleanReason = cleanReason,
         SearchStatus = searchStatus,
@@ -120,7 +130,7 @@ public class StatsServiceV2Tests : IDisposable
     public async Task GetStatsV2Async_StrikesRespectTimeframe()
     {
         _context.Events.Add(Event(EventType.StalledStrike));
-        _context.Events.Add(Event(EventType.StalledStrike, timestamp: DateTimeOffset.UtcNow.AddHours(-100)));
+        _context.Events.Add(Event(EventType.StalledStrike, timestamp: Now.AddHours(-100)));
         await _context.SaveChangesAsync();
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
@@ -210,7 +220,7 @@ public class StatsServiceV2Tests : IDisposable
     [Fact]
     public async Task GetStatsV2Async_AggregatesJobRunsWithinTheTimeframe()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = Now;
         _context.JobRuns.Add(Run(JobType.QueueCleaner, JobRunStatus.Completed, now.AddHours(-2)));
         _context.JobRuns.Add(Run(JobType.QueueCleaner, JobRunStatus.Failed, now.AddHours(-1)));
         _context.JobRuns.Add(Run(JobType.MalwareBlocker, JobRunStatus.Completed, now.AddHours(-3)));
@@ -219,7 +229,7 @@ public class StatsServiceV2Tests : IDisposable
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
-        stats.GeneratedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        stats.GeneratedAt.ShouldBe(Now);
         stats.Jobs.Total.ShouldBe(3);
         stats.Jobs.Completed.ShouldBe(2);
         stats.Jobs.Failed.ShouldBe(1);
@@ -228,14 +238,14 @@ public class StatsServiceV2Tests : IDisposable
         queueCleaner.Total.ShouldBe(2);
         queueCleaner.Completed.ShouldBe(1);
         queueCleaner.Failed.ShouldBe(1);
-        queueCleaner.LastRunAt!.Value.ShouldBe(now.AddHours(-1), TimeSpan.FromSeconds(1));
+        queueCleaner.LastRunAt!.Value.ShouldBe(now.AddHours(-1));
         queueCleaner.NextRunAt.ShouldBeNull();
     }
 
     [Fact]
     public async Task GetStatsV2Async_JobsCarryTheNextScheduledRun()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = Now;
         DateTimeOffset nextQueueCleanerRun = now.AddMinutes(5);
         DateTimeOffset nextSeekerRun = now.AddMinutes(30);
 
@@ -266,7 +276,7 @@ public class StatsServiceV2Tests : IDisposable
     {
         Guid clientId = Guid.NewGuid();
         Guid instanceId = Guid.NewGuid();
-        DateTimeOffset checkedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+        DateTimeOffset checkedAt = Now.AddMinutes(-2);
 
         _health.GetAllClientHealth().Returns(new Dictionary<Guid, HealthStatus>
         {
@@ -351,7 +361,7 @@ public class StatsServiceV2Tests : IDisposable
     [Fact]
     public async Task GetTimelineAsync_BucketsHourlyForShortTimeframesAndDailyBeyond()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = Now;
         _context.Events.Add(Event(EventType.StrikeReset, timestamp: now));
         _context.Events.Add(Event(EventType.StrikeReset, timestamp: now.AddHours(-2)));
         _context.Events.Add(Event(EventType.StrikeReset, timestamp: now.AddDays(-3)));
@@ -370,7 +380,7 @@ public class StatsServiceV2Tests : IDisposable
     [Fact]
     public async Task GetTimelineAsync_MonthBucketsAreFirstOfMonth()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = Now;
         _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now));
         _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-40)));
         _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-75)));
@@ -386,7 +396,7 @@ public class StatsServiceV2Tests : IDisposable
     [Fact]
     public async Task GetTimelineAsync_WeekBucketsStartOnMonday()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = Now;
         _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now));
         _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-10)));
         _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-20)));
