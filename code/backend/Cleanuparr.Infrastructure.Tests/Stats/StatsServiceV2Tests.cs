@@ -219,6 +219,7 @@ public class StatsServiceV2Tests : IDisposable
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
+        stats.GeneratedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
         stats.Jobs.Total.ShouldBe(3);
         stats.Jobs.Completed.ShouldBe(2);
         stats.Jobs.Failed.ShouldBe(1);
