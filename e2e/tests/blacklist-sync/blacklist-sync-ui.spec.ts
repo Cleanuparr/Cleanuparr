@@ -62,13 +62,18 @@ test.describe('Blacklist Sync UI', () => {
     await textInput(page, 'Blacklist File Path').fill(path);
     await saveSettings(page, 'blacklist_sync');
 
-    await page.reload();
-    await expect(toggle(page, 'Enabled')).toHaveAttribute('aria-checked', 'true');
-    await expect(textInput(page, 'Blacklist File Path')).toHaveValue(path);
-
-    // The path must go back before Enabled, the required error only applies while enabled.
-    await textInput(page, 'Blacklist File Path').fill(pathBefore);
-    await ensureToggle(toggle(page, 'Enabled'), enabledBefore);
-    await saveSettings(page, 'blacklist_sync');
+    // The save above is the first persisted change, so everything past it restores in `finally`.
+    // The app container is only restarted between spec folders, so a leak here reaches the rest of them.
+    try {
+      await page.reload();
+      await expect(toggle(page, 'Enabled')).toHaveAttribute('aria-checked', 'true');
+      await expect(textInput(page, 'Blacklist File Path')).toHaveValue(path);
+    } finally {
+      await page.reload();
+      // The path must go back before Enabled, the required error only applies while enabled.
+      await textInput(page, 'Blacklist File Path').fill(pathBefore);
+      await ensureToggle(toggle(page, 'Enabled'), enabledBefore);
+      await saveSettings(page, 'blacklist_sync');
+    }
   });
 });

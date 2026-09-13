@@ -67,14 +67,19 @@ test.describe('General Settings UI', () => {
     await addChip(page, 'Ignored Downloads', ignored);
     await saveSettings(page, 'general');
 
-    await page.reload();
-    await expect(toggle(page, 'Display Support Banner')).toHaveAttribute('aria-checked', String(!bannerBefore));
-    await expect(numberInput(page, 'Strike Inactivity Window')).toHaveValue(windowAfter);
-    await expect(ignoredChip(page, ignored)).toBeVisible();
-
-    await ensureToggle(toggle(page, 'Display Support Banner'), bannerBefore);
-    await numberInput(page, 'Strike Inactivity Window').fill(windowBefore);
-    await ignoredChip(page, ignored).getByRole('button', { name: 'Remove' }).click();
-    await saveSettings(page, 'general');
+    // The save above is the first persisted change, so everything past it restores in `finally`.
+    // The app container is only restarted between spec folders, so a leak here reaches the rest of them.
+    try {
+      await page.reload();
+      await expect(toggle(page, 'Display Support Banner')).toHaveAttribute('aria-checked', String(!bannerBefore));
+      await expect(numberInput(page, 'Strike Inactivity Window')).toHaveValue(windowAfter);
+      await expect(ignoredChip(page, ignored)).toBeVisible();
+    } finally {
+      await page.reload();
+      await ensureToggle(toggle(page, 'Display Support Banner'), bannerBefore);
+      await numberInput(page, 'Strike Inactivity Window').fill(windowBefore);
+      await ignoredChip(page, ignored).getByRole('button', { name: 'Remove' }).click();
+      await saveSettings(page, 'general');
+    }
   });
 });
