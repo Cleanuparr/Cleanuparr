@@ -496,7 +496,7 @@ public class EventPublisher : IEventPublisher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send event {eventId} to connected clients", appEventEntity.Id);
+            _logger.LogError(ex, "Failed to send event {EventId} to connected clients", appEventEntity.Id);
         }
     }
 
@@ -508,7 +508,7 @@ public class EventPublisher : IEventPublisher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send event {eventId} to connected clients", appEventEntity.Id);
+            _logger.LogError(ex, "Failed to send event {EventId} to connected clients", appEventEntity.Id);
         }
     }
 
