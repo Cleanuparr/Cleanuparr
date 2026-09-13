@@ -422,6 +422,25 @@ public class JobManagementServiceTests
     }
 
     [Fact]
+    public async Task TriggerJobOnce_StampsTheTriggerNameWithTheCurrentTime()
+    {
+        // Arrange
+        ITrigger? scheduled = null;
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.ScheduleJob(Arg.Do<ITrigger>(t => scheduled = t), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
+
+        // Act
+        await _service.TriggerJobOnce(JobType.MalwareBlocker);
+
+        // Assert: the trailing ticks keep every one-time trigger unique
+        scheduled.ShouldNotBeNull();
+        long ticks = long.Parse(scheduled.Key.Name.Split('-').Last());
+        new DateTimeOffset(ticks, TimeSpan.Zero).ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task TriggerJobOnce_WhenSchedulerThrows_ReturnsFalse()
     {
         // Arrange

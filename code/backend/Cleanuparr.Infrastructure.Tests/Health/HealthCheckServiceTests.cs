@@ -609,6 +609,57 @@ public sealed class HealthCheckServiceTests : IDisposable
 
     #endregion
 
+    #region Check timestamps
+
+    [Fact]
+    public async Task A_client_check_stamps_the_time_it_ran()
+    {
+        Seed(SeedClient("qbit"));
+        HealthCheckService service = BuildService();
+
+        HealthStatus probed = await service.CheckClientHealthAsync(Seeded("qbit"));
+        probed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+
+        HealthStatus missing = await service.CheckClientHealthAsync(Guid.NewGuid());
+        missing.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+
+        ProbeThrows(new InvalidOperationException("boom"));
+        HealthStatus failed = await service.CheckClientHealthAsync(Seeded("qbit"));
+        failed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task An_arr_check_stamps_the_time_it_ran()
+    {
+        SeedArr(InstanceType.Sonarr, "main", enabled: true);
+        HealthCheckService service = BuildService();
+
+        ArrHealthStatus probed = await service.CheckArrInstanceHealthAsync(Seeded("main"));
+        probed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+
+        ArrHealthStatus missing = await service.CheckArrInstanceHealthAsync(Guid.NewGuid());
+        missing.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+
+        ArrProbeThrows(new InvalidOperationException("api key rejected"));
+        ArrHealthStatus failed = await service.CheckArrInstanceHealthAsync(Seeded("main"));
+        failed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task An_arr_sweep_stamps_every_instance_it_probed()
+    {
+        SeedArr(InstanceType.Sonarr, "reachable", enabled: true);
+        SeedArr(InstanceType.Radarr, "broken", enabled: true);
+        ArrProbeThrows(new InvalidOperationException("api key rejected"), forInstanceNamed: "broken");
+
+        IDictionary<Guid, ArrHealthStatus> results = await BuildService().CheckAllArrInstancesHealthAsync();
+
+        results[Seeded("reachable")].LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        results[Seeded("broken")].LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    #endregion
+
     private Guid Seeded(string name) => _seededIds[name];
 
     private void ProbeReturns(HealthCheckResult result, string? forClientNamed = null)
