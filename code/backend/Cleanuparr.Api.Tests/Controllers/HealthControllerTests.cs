@@ -16,7 +16,7 @@ public sealed class HealthControllerTests
 
     public HealthControllerTests()
     {
-        _controller = new HealthController(_healthCheckService, Substitute.For<ILogger<HealthController>>());
+        _controller = new HealthController(_healthCheckService, Substitute.For<ILogger<HealthController>>(), TimeProvider.System);
     }
 
     private void ReportsStatus(HealthStatus status)

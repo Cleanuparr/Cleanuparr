@@ -47,7 +47,8 @@ public sealed class GenericJobTests : IDisposable
 
     private GenericJob<Seeker> BuildJob() => new(
         Substitute.For<ILogger<GenericJob<Seeker>>>(),
-        _serviceProvider.GetRequiredService<IServiceScopeFactory>());
+        _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+        TimeProvider.System);
 
     [Fact]
     public async Task Execute_StampsTheRunAsCompleted()

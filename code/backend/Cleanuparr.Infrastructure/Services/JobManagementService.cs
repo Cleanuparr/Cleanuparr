@@ -14,12 +14,14 @@ public class JobManagementService : IJobManagementService
 {
     private readonly ILogger<JobManagementService> _logger;
     private readonly ISchedulerFactory _schedulerFactory;
+    private readonly TimeProvider _timeProvider;
     private readonly ConcurrentDictionary<string, JobKey> _jobKeys = new();
 
-    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory)
+    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory, TimeProvider timeProvider)
     {
         _logger = logger;
         _schedulerFactory = schedulerFactory;
+        _timeProvider = timeProvider;
     }
 
     public async Task<bool> StartJob(JobType jobType, JobSchedule? schedule = null, string? directCronExpression = null)
@@ -152,7 +154,7 @@ public class JobManagementService : IJobManagementService
         try
         {
             var immediateTrigger = TriggerBuilder.Create()
-                .WithIdentity($"{jobKey.Name}-immediate-{reason}-{DateTimeOffset.UtcNow.Ticks}")
+                .WithIdentity($"{jobKey.Name}-immediate-{reason}-{_timeProvider.GetUtcNow().Ticks}")
                 .ForJob(jobKey)
                 .StartNow()
                 .Build();

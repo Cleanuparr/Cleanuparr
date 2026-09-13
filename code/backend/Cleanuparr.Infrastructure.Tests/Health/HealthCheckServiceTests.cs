@@ -803,7 +803,8 @@ public sealed class HealthCheckServiceTests : IDisposable
 
         return new HealthCheckService(
             NullLogger<HealthCheckService>.Instance,
-            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>());
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            TimeProvider.System);
     }
 
     public void Dispose()

@@ -19,11 +19,13 @@ public sealed class GenericJob<T> : IJob
 {
     private readonly ILogger<GenericJob<T>> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
 
-    public GenericJob(ILogger<GenericJob<T>> logger, IServiceScopeFactory scopeFactory)
+    public GenericJob(ILogger<GenericJob<T>> logger, IServiceScopeFactory scopeFactory, TimeProvider timeProvider)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
     }
 
     public async Task Execute(IJobExecutionContext context)
@@ -68,7 +70,7 @@ public sealed class GenericJob<T> : IJob
             var jobRun = await eventsContext.JobRuns.FindAsync(jobRunId);
             if (jobRun is not null)
             {
-                jobRun.CompletedAt = DateTimeOffset.UtcNow;
+                jobRun.CompletedAt = _timeProvider.GetUtcNow();
                 jobRun.Status = status;
                 await eventsContext.SaveChangesAsync();
             }

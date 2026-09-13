@@ -17,6 +17,7 @@ public class HealthCheckService : IHealthCheckService
     private readonly Dictionary<Guid, HealthStatus> _healthStatuses = new();
     private readonly Dictionary<Guid, ArrHealthStatus> _arrHealthStatuses = new();
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
     private readonly object _lockObject = new();
 
     /// <summary>
@@ -36,11 +37,13 @@ public class HealthCheckService : IHealthCheckService
 
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
-        IServiceScopeFactory scopeFactory
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider
     )
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc />
@@ -65,7 +68,7 @@ public class HealthCheckService : IHealthCheckService
                 {
                     ClientId = clientId,
                     IsHealthy = false,
-                    LastChecked = DateTimeOffset.UtcNow,
+                    LastChecked = _timeProvider.GetUtcNow(),
                     ErrorMessage = "Client not found in configuration"
                 };
                 
@@ -87,7 +90,7 @@ public class HealthCheckService : IHealthCheckService
                 ClientName = downloadClientConfig.Name,
                 ClientTypeName = downloadClientConfig.TypeName,
                 IsHealthy = healthResult.IsHealthy,
-                LastChecked = DateTimeOffset.UtcNow,
+                LastChecked = _timeProvider.GetUtcNow(),
                 ErrorMessage = healthResult.ErrorMessage,
                 ResponseTime = healthResult.ResponseTime
             };
@@ -103,7 +106,7 @@ public class HealthCheckService : IHealthCheckService
             {
                 ClientId = clientId,
                 IsHealthy = false,
-                LastChecked = DateTimeOffset.UtcNow,
+                LastChecked = _timeProvider.GetUtcNow(),
                 ErrorMessage = $"Error: {ex.Message}"
             };
             
@@ -198,7 +201,7 @@ public class HealthCheckService : IHealthCheckService
                 {
                     InstanceId = instanceId,
                     IsHealthy = false,
-                    LastChecked = DateTimeOffset.UtcNow,
+                    LastChecked = _timeProvider.GetUtcNow(),
                     ErrorMessage = "Arr instance not found in configuration"
                 };
 
@@ -216,7 +219,7 @@ public class HealthCheckService : IHealthCheckService
                 InstanceName = arrInstance.Instance.Name,
                 InstanceType = arrInstance.Config.Type,
                 IsHealthy = true,
-                LastChecked = DateTimeOffset.UtcNow
+                LastChecked = _timeProvider.GetUtcNow()
             };
 
             UpdateArrHealthStatus(status);
@@ -230,7 +233,7 @@ public class HealthCheckService : IHealthCheckService
             {
                 InstanceId = instanceId,
                 IsHealthy = false,
-                LastChecked = DateTimeOffset.UtcNow,
+                LastChecked = _timeProvider.GetUtcNow(),
                 ErrorMessage = $"Error: {ex.Message}"
             };
 
@@ -281,7 +284,7 @@ public class HealthCheckService : IHealthCheckService
                         InstanceName = entry.Instance.Name,
                         InstanceType = entry.Config.Type,
                         IsHealthy = true,
-                        LastChecked = DateTimeOffset.UtcNow
+                        LastChecked = _timeProvider.GetUtcNow()
                     };
 
                     UpdateArrHealthStatus(status);
@@ -298,7 +301,7 @@ public class HealthCheckService : IHealthCheckService
                         InstanceName = entry.Instance.Name,
                         InstanceType = entry.Config.Type,
                         IsHealthy = false,
-                        LastChecked = DateTimeOffset.UtcNow,
+                        LastChecked = _timeProvider.GetUtcNow(),
                         ErrorMessage = $"Error: {ex.Message}"
                     };
 

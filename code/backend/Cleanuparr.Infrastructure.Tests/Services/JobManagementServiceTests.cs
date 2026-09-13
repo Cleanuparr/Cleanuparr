@@ -28,7 +28,7 @@ public class JobManagementServiceTests
         _schedulerFactory.GetScheduler(Arg.Any<CancellationToken>())
             .Returns(_scheduler);
 
-        _service = new JobManagementService(_logger, _schedulerFactory);
+        _service = new JobManagementService(_logger, _schedulerFactory, TimeProvider.System);
     }
 
     #region StartJob Tests
