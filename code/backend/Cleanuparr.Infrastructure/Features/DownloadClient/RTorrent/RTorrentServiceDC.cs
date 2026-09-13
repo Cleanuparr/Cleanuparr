@@ -17,7 +17,7 @@ public partial class RTorrentService
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             // Seeding: complete=1 (finished) and state=1 (started)
             .Where(x => x is { Complete: 1, State: 1 })
-            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x))
+            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x, null, _timeProvider))
             .ToList();
     }
 
@@ -28,7 +28,7 @@ public partial class RTorrentService
 
         return downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x))
+            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x, null, _timeProvider))
             .ToList();
     }
 

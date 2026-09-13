@@ -81,6 +81,7 @@ public class DelugeServiceFixture : IDisposable
             config,
             RuleEvaluator,
             SeedingRuleEvaluator,
+            TimeProvider.System,
             ClientWrapper
         );
     }

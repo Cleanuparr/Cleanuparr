@@ -94,6 +94,8 @@ public class DownloadServiceFactoryTests : IDisposable
             _memoryCache,
             TimeProvider.System));
 
+        services.AddSingleton(TimeProvider.System);
+
         _serviceProvider = services.BuildServiceProvider();
         _factory = new DownloadServiceFactory(_logger, _serviceProvider);
     }

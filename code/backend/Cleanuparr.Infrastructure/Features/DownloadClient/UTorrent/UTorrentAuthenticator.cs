@@ -18,6 +18,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
     private readonly IUTorrentHttpService _httpService;
     private readonly DownloadClientConfig _config;
     private readonly ILogger<UTorrentAuthenticator> _logger;
+    private readonly TimeProvider _timeProvider;
     
     // Use a static concurrent dictionary to ensure same client instances share the same semaphore
     // This prevents multiple instances of the same client from authenticating simultaneously
@@ -32,12 +33,14 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         IMemoryCache cache,
         IUTorrentHttpService httpService,
         DownloadClientConfig config,
-        ILogger<UTorrentAuthenticator> logger)
+        ILogger<UTorrentAuthenticator> logger,
+        TimeProvider timeProvider)
     {
         _cache = cache;
         _httpService = httpService;
         _config = config;
         _logger = logger;
+        _timeProvider = timeProvider;
         
         // Create unique client key based on connection details
         // This ensures different µTorrent instances don't share auth tokens
@@ -149,8 +152,8 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
                 {
                     AuthToken = token,
                     GuidCookie = guidCookie,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    ExpiresAt = DateTimeOffset.UtcNow.Add(TokenExpiryDuration)
+                    CreatedAt = _timeProvider.GetUtcNow(),
+                    ExpiresAt = _timeProvider.GetUtcNow().Add(TokenExpiryDuration)
                 };
                 
                 // Cache with both sliding and absolute expiration

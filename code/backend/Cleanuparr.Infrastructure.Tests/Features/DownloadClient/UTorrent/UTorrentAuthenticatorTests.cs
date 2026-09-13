@@ -35,7 +35,8 @@ public sealed class UTorrentAuthenticatorTests : IDisposable
             _cache,
             _httpService,
             config,
-            NullLogger<UTorrentAuthenticator>.Instance);
+            NullLogger<UTorrentAuthenticator>.Instance,
+            TimeProvider.System);
     }
 
     public void Dispose()

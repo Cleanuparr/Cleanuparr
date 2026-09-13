@@ -29,6 +29,7 @@ public abstract class DownloadService : IDownloadService
     protected readonly DownloadClientConfig _downloadClientConfig;
     protected readonly IQueueRuleEvaluator _queueRuleEvaluator;
     private readonly ISeedingRuleEvaluator _seedingRuleEvaluator;
+    protected readonly TimeProvider _timeProvider;
 
     protected DownloadService(
         ILogger<DownloadService> logger,
@@ -41,7 +42,8 @@ public abstract class DownloadService : IDownloadService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IQueueRuleEvaluator queueRuleEvaluator,
-        ISeedingRuleEvaluator seedingRuleEvaluator
+        ISeedingRuleEvaluator seedingRuleEvaluator,
+        TimeProvider timeProvider
     )
     {
         _logger = logger;
@@ -55,6 +57,7 @@ public abstract class DownloadService : IDownloadService
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
         _queueRuleEvaluator = queueRuleEvaluator;
         _seedingRuleEvaluator = seedingRuleEvaluator;
+        _timeProvider = timeProvider;
     }
     
     public DownloadClientConfig ClientConfig => _downloadClientConfig;
@@ -404,7 +407,7 @@ public abstract class DownloadService : IDownloadService
             return true;
         }
 
-        double inactiveDays = (DateTime.UtcNow - lastActivity.Value).TotalDays;
+        double inactiveDays = (_timeProvider.GetUtcNow().UtcDateTime - lastActivity.Value).TotalDays;
 
         if (inactiveDays < inactivityRule.MaxInactiveDays)
         {

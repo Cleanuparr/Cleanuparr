@@ -17,7 +17,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "ABC123DEF456", Name = "Test" };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Hash.ShouldBe("ABC123DEF456");
@@ -30,7 +30,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test Torrent Name" };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Name.ShouldBe("Test Torrent Name");
@@ -43,7 +43,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", IsPrivate = 1 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsPrivate.ShouldBeTrue();
@@ -56,7 +56,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", IsPrivate = 0 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsPrivate.ShouldBeFalse();
@@ -69,7 +69,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", SizeBytes = 1024000 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Size.ShouldBe(1024000);
@@ -82,7 +82,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", DownRate = 500000 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.DownloadSpeed.ShouldBe(500000);
@@ -95,7 +95,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", CompletedBytes = 750000 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.DownloadedBytes.ShouldBe(750000);
@@ -108,7 +108,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Category.ShouldBe("movies");
@@ -119,7 +119,7 @@ public class RTorrentItemWrapperTests
         {
             // Arrange
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             wrapper.Category = "tv";
@@ -139,7 +139,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Ratio = 1500 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Ratio.ShouldBe(1.5);
@@ -152,7 +152,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Ratio = 0 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Ratio.ShouldBe(0);
@@ -165,7 +165,7 @@ public class RTorrentItemWrapperTests
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Ratio = 10000 };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Ratio.ShouldBe(10.0);
@@ -187,7 +187,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.CompletionPercentage.ShouldBe(50.0);
@@ -206,7 +206,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.CompletionPercentage.ShouldBe(0.0);
@@ -225,7 +225,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.CompletionPercentage.ShouldBe(100.0);
@@ -247,7 +247,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsDownloading().ShouldBeTrue();
@@ -266,7 +266,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsDownloading().ShouldBeFalse();
@@ -285,7 +285,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsDownloading().ShouldBeFalse();
@@ -310,7 +310,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsStalled().ShouldBeTrue();
@@ -332,7 +332,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsStalled().ShouldBeFalse();
@@ -352,7 +352,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.IsStalled().ShouldBeFalse();
@@ -374,7 +374,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.SeedingTimeSeconds.ShouldBe(0);
@@ -393,7 +393,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.SeedingTimeSeconds.ShouldBe(0);
@@ -413,7 +413,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert - should be approximately 2 hours (7200 seconds)
             (wrapper.SeedingTimeSeconds >= 7190 && wrapper.SeedingTimeSeconds <= 7210).ShouldBeTrue();
@@ -436,7 +436,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Eta.ShouldBe(0);
@@ -456,7 +456,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Eta.ShouldBe(5);
@@ -476,7 +476,7 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
             wrapper.Eta.ShouldBe(0);
@@ -490,7 +490,7 @@ public class RTorrentItemWrapperTests
         {
             // Arrange
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             var result = wrapper.IsIgnored(new List<string>());
@@ -504,7 +504,7 @@ public class RTorrentItemWrapperTests
         {
             // Arrange
             var torrent = new RTorrentTorrent { Hash = "ABC123", Name = "Test", Label = "movies" };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             var result = wrapper.IsIgnored(new List<string> { "ABC123" });
@@ -518,7 +518,7 @@ public class RTorrentItemWrapperTests
         {
             // Arrange
             var torrent = new RTorrentTorrent { Hash = "ABC123", Name = "Test", Label = "movies" };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             var result = wrapper.IsIgnored(new List<string> { "abc123" });
@@ -532,7 +532,7 @@ public class RTorrentItemWrapperTests
         {
             // Arrange
             var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             var result = wrapper.IsIgnored(new List<string> { "movies" });
@@ -552,7 +552,7 @@ public class RTorrentItemWrapperTests
                 Label = "movies",
                 Trackers = new List<string> { "https://tracker.example.com/announce" }
             };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             var result = wrapper.IsIgnored(new List<string> { "example.com" });
@@ -572,7 +572,7 @@ public class RTorrentItemWrapperTests
                 Label = "movies",
                 Trackers = new List<string> { "https://tracker.example.com/announce" }
             };
-            var wrapper = new RTorrentItemWrapper(torrent);
+            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Act
             var result = wrapper.IsIgnored(new List<string> { "other.com", "tv", "HASH2" });
@@ -587,7 +587,7 @@ public class RTorrentItemWrapperTests
     {
         // Arrange
         var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test" };
-        var wrapper = new RTorrentItemWrapper(torrent);
+        var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
         // Act
         var result = wrapper.SeederCount;
@@ -601,7 +601,7 @@ public class RTorrentItemWrapperTests
     {
         // Arrange
         var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test" };
-        var wrapper = new RTorrentItemWrapper(torrent);
+        var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
         // Act
         var result = wrapper.TrackerHealth;
@@ -615,7 +615,7 @@ public class RTorrentItemWrapperTests
     {
         // Arrange
         var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test" };
-        var wrapper = new RTorrentItemWrapper(torrent);
+        var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
         // Act
         var result = wrapper.AddedOn;
