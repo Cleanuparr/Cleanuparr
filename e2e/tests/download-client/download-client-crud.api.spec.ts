@@ -1,10 +1,34 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { DownloadClientType } from '../helpers/api/download-client';
 import { buildDownloadClientPayload } from '../helpers/api/download-client';
+import { expectKeys } from '../helpers/contract';
 
 const TYPES: DownloadClientType[] = ['qbittorrent', 'transmission', 'deluge', 'utorrent', 'rtorrent'];
 
 test.describe('DownloadClient — CRUD', () => {
+  test('response shape is pinned and the password stays masked', async ({ api }) => {
+    const payload = buildDownloadClientPayload('qbittorrent', {
+      name: `shape-e2e-${Date.now()}`,
+      host: TEST_CONFIG.mocks.downloadClientUrl,
+      username: 'admin',
+      password: 'admin',
+    });
+    const created = await (await api.downloadClient.create(payload)).json();
+
+    const clientKeys = [
+      'downloadDirectorySource', 'downloadDirectoryTarget', 'enabled', 'externalUrl', 'host',
+      'id', 'name', 'password', 'type', 'typeName', 'urlBase', 'username',
+    ];
+    expectKeys(created, clientKeys);
+    expect(created.password).toBe('\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022');
+
+    const list = await (await api.downloadClient.list()).json();
+    expectKeys(list, ['clients']);
+    expectKeys(list.clients.find((c: { id: string }) => c.id === created.id), clientKeys);
+
+    await api.downloadClient.delete(created.id);
+  });
+
   for (const type of TYPES) {
     test(`${type}: create + list + update + delete`, async ({ api }) => {
       const payload = buildDownloadClientPayload(type, {

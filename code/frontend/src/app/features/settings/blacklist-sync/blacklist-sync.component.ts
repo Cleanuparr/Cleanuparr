@@ -39,7 +39,6 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   readonly saved = signal(false);
 
   private readonly model = signal<BlacklistSyncFormModel>({ enabled: false, blacklistPath: '' });
-  private configId = '';
 
   readonly bsForm = form(this.model, (p) => {
     required(p.blacklistPath, {
@@ -57,7 +56,6 @@ export class BlacklistSyncComponent implements HasPendingChanges {
         return;
       }
       untracked(() => {
-        this.configId = config.id;
         this.model.set({ enabled: config.enabled, blacklistPath: config.blacklistPath ?? '' });
         this.savedSnapshot.set(this.buildSnapshot());
       });
@@ -85,7 +83,6 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   save(): void {
     const m = this.model();
     const config: BlacklistSyncConfig = {
-      id: this.configId,
       enabled: m.enabled,
       blacklistPath: m.blacklistPath || undefined,
     };

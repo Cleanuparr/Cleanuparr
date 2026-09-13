@@ -3,10 +3,12 @@ using System.Linq;
 
 using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadClient.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -42,14 +44,15 @@ public sealed class DownloadClientController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var clients = await _dataContext.DownloadClients
+            List<DownloadClientConfig> clientConfigs = await _dataContext.DownloadClients
                 .AsNoTracking()
                 .ToListAsync();
 
-            clients = clients
+            List<DownloadClientConfigResponse> clients = clientConfigs
                 .Where(c => !EnumSentinel.IsUnknown(c.TypeName) && !EnumSentinel.IsUnknown(c.Type))
                 .OrderBy(c => c.TypeName)
                 .ThenBy(c => c.Name)
+                .Select(DownloadClientConfigResponse.From)
                 .ToList();
 
             return Ok(new { clients });
@@ -74,7 +77,7 @@ public sealed class DownloadClientController : ControllerBase
             _dataContext.DownloadClients.Add(clientConfig);
             await _dataContext.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetDownloadClientConfig), new { id = clientConfig.Id }, clientConfig);
+            return CreatedAtAction(nameof(GetDownloadClientConfig), new { id = clientConfig.Id }, DownloadClientConfigResponse.From(clientConfig));
         }
         finally
         {
@@ -104,7 +107,7 @@ public sealed class DownloadClientController : ControllerBase
             _dataContext.Entry(existingClient).CurrentValues.SetValues(clientToPersist);
             await _dataContext.SaveChangesAsync();
 
-            return Ok(clientToPersist);
+            return Ok(DownloadClientConfigResponse.From(clientToPersist));
         }
         finally
         {

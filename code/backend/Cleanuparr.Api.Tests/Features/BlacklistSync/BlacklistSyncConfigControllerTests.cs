@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.BlacklistSync.Contracts.Requests;
+using Cleanuparr.Api.Features.BlacklistSync.Contracts.Responses;
 using Cleanuparr.Api.Features.BlacklistSync.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -42,7 +43,7 @@ public class BlacklistSyncConfigControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        ok.Value.ShouldBeOfType<BlacklistSyncConfig>();
+        ok.Value.ShouldBeOfType<BlacklistSyncConfigResponse>();
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/base';
 import { buildDownloadClientPayload } from '../helpers/api/download-client';
+import { expectKeys } from '../helpers/contract';
 
 test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
   let downloadClientId: string;
@@ -29,6 +30,41 @@ test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
     const rules = await res.json();
     expect(Array.isArray(rules)).toBe(true);
     expect(rules).toHaveLength(0);
+  });
+
+  test('create, list and update all return the same rule shape', async ({ api }) => {
+    const created = await (await api.downloadCleaner.createSeedingRule(downloadClientId, {
+      name: `shape-e2e-${Date.now()}`,
+      categories: ['movies'],
+      trackerPatterns: ['tracker.example.com'],
+      tagsAny: ['hd'],
+      tagsAll: [],
+      privacyType: 'Both',
+      maxRatio: 2.0,
+      minSeedTime: 0,
+      maxSeedTime: -1,
+      minSeeders: 5,
+      maxInactiveDays: 30,
+      deleteSourceFiles: true,
+    })).json();
+
+    const ruleKeys = [
+      'action', 'categories', 'deleteSourceFiles', 'id', 'maxInactiveDays', 'maxRatio',
+      'maxSeedTime', 'minSeedTime', 'minSeeders', 'name', 'priority', 'privacyType',
+      'tagsAll', 'tagsAny', 'trackerPatterns',
+    ];
+    expectKeys(created, ruleKeys);
+
+    const listed = await (await api.downloadCleaner.listSeedingRules(downloadClientId)).json();
+    expectKeys(listed.find((r: { id: string }) => r.id === created.id), ruleKeys);
+
+    const updated = await (await api.downloadCleaner.updateSeedingRule(
+      created.id,
+      { ...created, name: `${created.name}-renamed` },
+    )).json();
+    expectKeys(updated, ruleKeys);
+
+    await api.downloadCleaner.deleteSeedingRule(created.id);
   });
 
   test('creates a seeding rule with new fields', async ({ api }) => {

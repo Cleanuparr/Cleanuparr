@@ -3,6 +3,9 @@ import {
   loginAndGotoSettings,
   toggle,
   textInput,
+  isToggleOn,
+  ensureToggle,
+  saveSettings,
   expectGuardOnLeave,
   expectNoGuardOnLeave,
 } from '../helpers/ui';
@@ -12,6 +15,7 @@ import {
 test.describe('Blacklist Sync UI', () => {
   const pathField = (page: import('@playwright/test').Page) =>
     page.locator('app-input').filter({ hasText: 'Blacklist File Path' });
+
 
   test('path field is gated by Enabled and required when enabled', async ({ page }) => {
     await loginAndGotoSettings(page, 'blacklist-sync');
@@ -44,5 +48,32 @@ test.describe('Blacklist Sync UI', () => {
     // Reverting the toggle restores the saved snapshot -> no guard on leave.
     await toggle(page, 'Enabled').click();
     await expectNoGuardOnLeave(page);
+  });
+
+  test('saved blacklist sync settings survive a reload', async ({ page }) => {
+    // Unique per run, so a retry after a failed restore cannot assert the value it already found.
+    const path = `https://example.com/e2e-roundtrip-blacklist-${Date.now()}.txt`;
+    await loginAndGotoSettings(page, 'blacklist-sync');
+
+    const enabledBefore = await isToggleOn(toggle(page, 'Enabled'));
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    const pathBefore = await textInput(page, 'Blacklist File Path').inputValue();
+
+    await textInput(page, 'Blacklist File Path').fill(path);
+    await saveSettings(page, 'blacklist_sync');
+
+    // The save above is the first persisted change, so everything past it restores in `finally`.
+    // The app container is only restarted between spec folders, so a leak here reaches the rest of them.
+    try {
+      await page.reload();
+      await expect(toggle(page, 'Enabled')).toHaveAttribute('aria-checked', 'true');
+      await expect(textInput(page, 'Blacklist File Path')).toHaveValue(path);
+    } finally {
+      await page.reload();
+      // The path must go back before Enabled, the required error only applies while enabled.
+      await textInput(page, 'Blacklist File Path').fill(pathBefore);
+      await ensureToggle(toggle(page, 'Enabled'), enabledBefore);
+      await saveSettings(page, 'blacklist_sync');
+    }
   });
 });

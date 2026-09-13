@@ -1,5 +1,6 @@
 using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.QueueCleaner.Contracts.Responses;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -35,13 +36,13 @@ public class QueueRulesController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var rules = await _dataContext.StallRules
+            List<StallRule> rules = await _dataContext.StallRules
                 .OrderBy(r => r.MinCompletionPercentage)
                 .ThenBy(r => r.Name)
                 .AsNoTracking()
                 .ToListAsync();
 
-            return Ok(rules);
+            return Ok(rules.Select(StallRuleResponse.From).ToList());
         }
         finally
         {
@@ -97,7 +98,7 @@ public class QueueRulesController : ControllerBase
 
             _logger.LogInformation("Created stall rule: {RuleName} with ID: {RuleId}", rule.Name, rule.Id);
 
-            return CreatedAtAction(nameof(GetStallRules), new { id = rule.Id }, rule);
+            return CreatedAtAction(nameof(GetStallRules), new { id = rule.Id }, StallRuleResponse.From(rule));
         }
         finally
         {
@@ -158,7 +159,7 @@ public class QueueRulesController : ControllerBase
 
             _logger.LogInformation("Updated stall rule: {RuleName} with ID: {RuleId}", updatedRule.Name, id);
 
-            return Ok(updatedRule);
+            return Ok(StallRuleResponse.From(updatedRule));
         }
         finally
         {
@@ -199,13 +200,13 @@ public class QueueRulesController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var rules = await _dataContext.SlowRules
+            List<SlowRule> rules = await _dataContext.SlowRules
                 .OrderBy(r => r.MinCompletionPercentage)
                 .ThenBy(r => r.Name)
                 .AsNoTracking()
                 .ToListAsync();
 
-            return Ok(rules);
+            return Ok(rules.Select(SlowRuleResponse.From).ToList());
         }
         finally
         {
@@ -264,7 +265,7 @@ public class QueueRulesController : ControllerBase
 
             _logger.LogInformation("Created slow rule: {RuleName} with ID: {RuleId}", rule.Name, rule.Id);
 
-            return CreatedAtAction(nameof(GetSlowRules), new { id = rule.Id }, rule);
+            return CreatedAtAction(nameof(GetSlowRules), new { id = rule.Id }, SlowRuleResponse.From(rule));
         }
         finally
         {
@@ -328,7 +329,7 @@ public class QueueRulesController : ControllerBase
 
             _logger.LogInformation("Updated slow rule: {RuleName} with ID: {RuleId}", updatedRule.Name, id);
 
-            return Ok(updatedRule);
+            return Ok(SlowRuleResponse.From(updatedRule));
         }
         finally
         {

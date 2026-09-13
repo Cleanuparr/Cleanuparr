@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
+using Cleanuparr.Api.Features.General.Contracts.Responses;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,10 +35,10 @@ public sealed class GeneralConfigController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var config = await _dataContext.GeneralConfigs
+            GeneralConfig config = await _dataContext.GeneralConfigs
                 .AsNoTracking()
                 .FirstAsync();
-            return Ok(config);
+            return Ok(GeneralConfigResponse.From(config));
         }
         finally
         {

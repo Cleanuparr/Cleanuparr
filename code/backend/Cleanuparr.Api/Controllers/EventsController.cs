@@ -136,25 +136,31 @@ public class EventsController : ControllerBase
     /// Gets a specific event by ID
     /// </summary>
     [HttpGet("{id}")]
-    public async Task<ActionResult<AppEvent>> GetEvent(Guid id)
+    public async Task<ActionResult<EventListItem>> GetEvent(Guid id)
     {
-        var eventEntity = await _context.Events.FindAsync(id);
+        EventListItem? eventItem = await _context.Events
+            .Where(e => e.Id == id)
+            .Select(EventListItem.FromEvent)
+            .FirstOrDefaultAsync();
 
-        if (eventEntity == null)
+        if (eventItem is null)
+        {
             return NotFound();
+        }
 
-        return Ok(eventEntity);
+        return Ok(eventItem);
     }
 
     /// <summary>
     /// Gets events by tracking ID
     /// </summary>
     [HttpGet("tracking/{trackingId}")]
-    public async Task<ActionResult<List<AppEvent>>> GetEventsByTracking(Guid trackingId)
+    public async Task<ActionResult<List<EventListItem>>> GetEventsByTracking(Guid trackingId)
     {
-        var events = await _context.Events
+        List<EventListItem> events = await _context.Events
             .Where(e => e.TrackingId == trackingId)
             .OrderBy(e => e.Timestamp)
+            .Select(EventListItem.FromEvent)
             .ToListAsync();
 
         return Ok(events);

@@ -100,6 +100,15 @@ export async function addChip(scope: Scope, label: string, value: string): Promi
   await input.press('Enter');
 }
 
+/** Click Save Settings and assert the page's own config PUT succeeded. */
+export async function saveSettings(page: Page, configName: string): Promise<void> {
+  const put = page.waitForResponse(
+    (r) => r.url().endsWith(`/api/configuration/${configName}`) && r.request().method() === 'PUT',
+  );
+  await page.getByRole('button', { name: /Save Settings|Saved!/ }).click();
+  expect((await put).status()).toBeLessThan(300);
+}
+
 // --- Unsaved-changes navigation guard ---------------------------------------
 // pendingChangesGuard shows a confirm alertdialog titled "Unsaved Changes"
 // (buttons "Leave" / "Stay") when leaving a dirty settings route via a router

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.BlacklistSync.Contracts.Requests;
+using Cleanuparr.Api.Features.BlacklistSync.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
@@ -38,10 +39,10 @@ public sealed class BlacklistSyncConfigController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var config = await _dataContext.BlacklistSyncConfigs
+            BlacklistSyncConfig config = await _dataContext.BlacklistSyncConfigs
                 .AsNoTracking()
                 .FirstAsync();
-            return Ok(config);
+            return Ok(BlacklistSyncConfigResponse.From(config));
         }
         finally
         {

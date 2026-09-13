@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/base';
+import { expectKeys } from '../helpers/contract';
 
 test.describe('General config', () => {
   test('GET returns the singleton config', async ({ api }) => {
@@ -9,6 +10,21 @@ test.describe('General config', () => {
     expect(body).toHaveProperty('ignoredDownloads');
     expect(body).toHaveProperty('log');
     expect(body).toHaveProperty('auth');
+  });
+
+  test('GET response shape is pinned', async ({ api }) => {
+    const body = await api.general.getJsonConfig();
+    expectKeys(body, [
+      'auth', 'connectivityCheckEnabled', 'connectivityCheckUrls', 'displaySupportBanner',
+      'dryRun', 'historyRetentionDays', 'httpCertificateValidation',
+      'httpMaxRetries', 'httpSendUserAgent', 'httpTimeout', 'ignoredDownloads', 'log',
+      'statusCheckEnabled', 'strikeInactivityWindowHours',
+    ]);
+    expectKeys(body.log, [
+      'archiveEnabled', 'archiveRetainedCount', 'archiveTimeLimitHours', 'level',
+      'retainedFileCount', 'rollingSizeMB', 'timeLimitHours',
+    ]);
+    expectKeys(body.auth, ['disableAuthForLocalAddresses', 'trustForwardedHeaders', 'trustedNetworks']);
   });
 
   test('PUT toggles dry run', async ({ api }) => {

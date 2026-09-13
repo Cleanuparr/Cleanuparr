@@ -1,4 +1,5 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
+import { expectKeys } from '../helpers/contract';
 
 test.describe('Account — OIDC config CRUD', () => {
   test.afterEach(async ({ api }) => {
@@ -11,6 +12,14 @@ test.describe('Account — OIDC config CRUD', () => {
       providerName: TEST_CONFIG.oidcProviderName,
       exclusiveMode: false,
     });
+  });
+
+  test('GET response shape is pinned', async ({ api }) => {
+    const body = await (await api.account.getOidcConfig()).json();
+    expectKeys(body, [
+      'authorizedSubject', 'clientId', 'clientSecret', 'enabled', 'exclusiveMode',
+      'issuerUrl', 'providerName', 'redirectUrl', 'scopes',
+    ]);
   });
 
   test('GET returns the current OIDC config', async ({ api }) => {
