@@ -63,7 +63,7 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     private OidcAuthService CreateService()
     {
-        return new OidcAuthService(_httpClientFactory, _usersContext, _logger);
+        return new OidcAuthService(_httpClientFactory, _usersContext, _logger, TimeProvider.System);
     }
 
     #region StoreOneTimeCode Tests
@@ -178,7 +178,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         IHttpClientFactory factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient("OidcAuth").Returns(_ => new HttpClient(handler));
 
-        OidcAuthService service = new(factory, _usersContext, _logger);
+        OidcAuthService service = new(factory, _usersContext, _logger, TimeProvider.System);
 
         // Drops the call the constructor made.
         // What remains is what the discovery fetch asks for.
@@ -308,7 +308,7 @@ public sealed class OidcAuthServiceTests : IDisposable
     {
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient("OidcAuth").Returns(new HttpClient(handler));
-        return new OidcAuthService(factory, _usersContext, _logger);
+        return new OidcAuthService(factory, _usersContext, _logger, TimeProvider.System);
     }
 
     /// <summary>
@@ -976,7 +976,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             // Invoke the private static CleanupExpiredEntries directly (bypassing the timer)
             var method = typeof(OidcAuthService)
                 .GetMethod("CleanupExpiredEntries", BindingFlags.NonPublic | BindingFlags.Static)!;
-            method.Invoke(null, new object?[] { null });
+            method.Invoke(null, new object?[] { TimeProvider.System });
 
             // Expired flow state must have been removed
             var pendingFlowsField = typeof(OidcAuthService)

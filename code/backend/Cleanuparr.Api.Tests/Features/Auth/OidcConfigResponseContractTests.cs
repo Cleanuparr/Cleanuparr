@@ -66,8 +66,9 @@ public sealed class OidcConfigResponseContractTests : IDisposable
             Substitute.For<ITotpService>(),
             Substitute.For<IPlexAuthService>(),
             Substitute.For<IOidcAuthService>(),
-            new LoginAttemptTracker(_usersContext, NullLogger<LoginAttemptTracker>.Instance),
-            NullLogger<AccountController>.Instance);
+            new LoginAttemptTracker(_usersContext, NullLogger<LoginAttemptTracker>.Instance, TimeProvider.System),
+            NullLogger<AccountController>.Instance,
+            TimeProvider.System);
         ControllerTestContext.Attach(_controller);
         _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
             new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, _userId.ToString())], "Test"));

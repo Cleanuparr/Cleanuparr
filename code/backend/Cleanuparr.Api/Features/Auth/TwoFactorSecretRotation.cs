@@ -10,14 +10,14 @@ internal static class TwoFactorSecretRotation
     /// <summary>
     /// Replaces the user's TOTP secret and recovery codes.
     /// </summary>
-    internal static TotpSetupResponse Rotate(ITotpService totpService, UsersContext usersContext, User user)
+    internal static TotpSetupResponse Rotate(ITotpService totpService, UsersContext usersContext, User user, TimeProvider timeProvider)
     {
         string secret = totpService.GenerateSecret();
         string qrUri = totpService.GetQrCodeUri(secret, user.Username);
         List<string> recoveryCodes = totpService.GenerateRecoveryCodes();
 
         user.TotpSecret = secret;
-        user.UpdatedAt = DateTimeOffset.UtcNow;
+        user.UpdatedAt = timeProvider.GetUtcNow();
 
         usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
 

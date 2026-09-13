@@ -31,6 +31,7 @@ public sealed class AuthController : ControllerBase
     private readonly LoginAttemptTracker _loginAttemptTracker;
     private readonly ILogger<AuthController> _logger;
     private readonly IWebHostEnvironment _environment;
+    private readonly TimeProvider _timeProvider;
 
     public AuthController(
         UsersContext usersContext,
@@ -42,7 +43,8 @@ public sealed class AuthController : ControllerBase
         IOidcAuthService oidcAuthService,
         LoginAttemptTracker loginAttemptTracker,
         ILogger<AuthController> logger,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        TimeProvider timeProvider)
     {
         _usersContext = usersContext;
         _dataContext = dataContext;
@@ -54,6 +56,7 @@ public sealed class AuthController : ControllerBase
         _loginAttemptTracker = loginAttemptTracker;
         _logger = logger;
         _environment = environment;
+        _timeProvider = timeProvider;
     }
 
     [HttpGet("status")]
@@ -112,8 +115,8 @@ public sealed class AuthController : ControllerBase
                 TotpEnabled = false,
                 ApiKey = GenerateApiKey(),
                 SetupCompleted = false,
-                CreatedAt = DateTimeOffset.UtcNow,
-                UpdatedAt = DateTimeOffset.UtcNow
+                CreatedAt = _timeProvider.GetUtcNow(),
+                UpdatedAt = _timeProvider.GetUtcNow()
             };
 
             _usersContext.Users.Add(user);
@@ -150,7 +153,7 @@ public sealed class AuthController : ControllerBase
             }
 
             // Secret is finalized on verify
-            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
+            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user, _timeProvider);
 
             await _usersContext.SaveChangesAsync();
 
@@ -190,7 +193,7 @@ public sealed class AuthController : ControllerBase
             }
 
             user.TotpEnabled = true;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+            user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("2FA enabled for user {Username}", user.Username);
@@ -221,7 +224,7 @@ public sealed class AuthController : ControllerBase
             }
 
             user.SetupCompleted = true;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+            user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("Setup completed for user {Username}", user.Username);
@@ -261,7 +264,7 @@ public sealed class AuthController : ControllerBase
             User current = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
 
             // Check lockout
-            if (LoginAttemptTracker.GetLockoutSecondsRemaining(current) is { } remaining)
+            if (_loginAttemptTracker.GetLockoutSecondsRemaining(current) is { } remaining)
             {
                 throw new RateLimitException("Account is locked", remaining);
             }
@@ -335,7 +338,7 @@ public sealed class AuthController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid login token");
             }
 
-            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            if (_loginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
             {
                 throw new RateLimitException("Account is locked", remaining);
             }
@@ -380,13 +383,13 @@ public sealed class AuthController : ControllerBase
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.TokenHash == tokenHash && r.RevokedAt == null);
 
-            if (storedToken is null || storedToken.ExpiresAt < DateTimeOffset.UtcNow)
+            if (storedToken is null || storedToken.ExpiresAt < _timeProvider.GetUtcNow())
             {
                 return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid or expired refresh token");
             }
 
             // Revoke the old token (rotation)
-            storedToken.RevokedAt = DateTimeOffset.UtcNow;
+            storedToken.RevokedAt = _timeProvider.GetUtcNow();
 
             // Generate new tokens
             var response = await GenerateTokenResponse(storedToken.User);
@@ -413,7 +416,7 @@ public sealed class AuthController : ControllerBase
 
             if (storedToken is not null)
             {
-                storedToken.RevokedAt = DateTimeOffset.UtcNow;
+                storedToken.RevokedAt = _timeProvider.GetUtcNow();
                 await _usersContext.SaveChangesAsync();
             }
 
@@ -478,7 +481,7 @@ public sealed class AuthController : ControllerBase
             user.PlexUsername = plexAccount.Username;
             user.PlexEmail = plexAccount.Email;
             user.PlexAuthToken = pinResult.AuthToken;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+            user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("Plex account linked during setup for user {Username}: {PlexUsername}",
@@ -691,8 +694,8 @@ public sealed class AuthController : ControllerBase
             Id = Guid.NewGuid(),
             UserId = user.Id,
             TokenHash = HashRefreshToken(refreshToken),
-            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
-            CreatedAt = DateTimeOffset.UtcNow
+            ExpiresAt = _timeProvider.GetUtcNow().AddDays(7),
+            CreatedAt = _timeProvider.GetUtcNow()
         });
 
         await _usersContext.SaveChangesAsync();
@@ -720,7 +723,7 @@ public sealed class AuthController : ControllerBase
             if (_totpService.VerifyRecoveryCode(code, recoveryCode.CodeHash))
             {
                 recoveryCode.IsUsed = true;
-                recoveryCode.UsedAt = DateTimeOffset.UtcNow;
+                recoveryCode.UsedAt = _timeProvider.GetUtcNow();
                 await _usersContext.SaveChangesAsync();
 
                 _logger.LogWarning("Recovery code used for user {Username}", user.Username);

@@ -29,23 +29,26 @@ public sealed class OidcAuthService : IOidcAuthService
     
     // Reference held to prevent GC collection; the timer fires CleanupExpiredEntries every minute
     #pragma warning disable IDE0052
-    private static readonly Timer CleanupTimer = new(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+    private static readonly Timer CleanupTimer = new(_ => CleanupExpiredEntries(TimeProvider.System), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     #pragma warning restore IDE0052
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly HttpClient _httpClient;
     private readonly UsersContext _usersContext;
     private readonly ILogger<OidcAuthService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public OidcAuthService(
         IHttpClientFactory httpClientFactory,
         UsersContext usersContext,
-        ILogger<OidcAuthService> logger)
+        ILogger<OidcAuthService> logger,
+        TimeProvider timeProvider)
     {
         _httpClientFactory = httpClientFactory;
         _httpClient = httpClientFactory.CreateClient(Constants.HttpClientOidcAuthName);
         _usersContext = usersContext;
         _logger = logger;
+        _timeProvider = timeProvider;
     }
 
     public async Task<OidcAuthorizationResult> StartAuthorization(string redirectUri, string? initiatorUserId = null)
@@ -76,7 +79,7 @@ public sealed class OidcAuthService : IOidcAuthService
             CodeVerifier = codeVerifier,
             RedirectUri = redirectUri,
             InitiatorUserId = initiatorUserId,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow()
         };
 
         if (!PendingFlows.TryAdd(state, flowState))
@@ -114,7 +117,7 @@ public sealed class OidcAuthService : IOidcAuthService
             };
         }
 
-        if (DateTimeOffset.UtcNow - flowState.CreatedAt > FlowStateExpiry)
+        if (_timeProvider.GetUtcNow() - flowState.CreatedAt > FlowStateExpiry)
         {
             PendingFlows.TryRemove(state, out _);
             _logger.LogWarning("OIDC flow state expired for state: {State}", state);
@@ -206,7 +209,7 @@ public sealed class OidcAuthService : IOidcAuthService
         // Clean up if at capacity
         if (OneTimeCodes.Count >= MaxOneTimeCodes)
         {
-            CleanupExpiredOneTimeCodes();
+            CleanupExpiredOneTimeCodes(_timeProvider);
 
             // If still at capacity after cleanup, evict oldest entries
             while (OneTimeCodes.Count >= MaxOneTimeCodes)
@@ -228,7 +231,7 @@ public sealed class OidcAuthService : IOidcAuthService
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = expiresIn,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow()
         };
 
         // Retry with new codes on collision
@@ -251,7 +254,7 @@ public sealed class OidcAuthService : IOidcAuthService
             return null;
         }
 
-        if (DateTimeOffset.UtcNow - entry.CreatedAt > OneTimeCodeExpiry)
+        if (_timeProvider.GetUtcNow() - entry.CreatedAt > OneTimeCodeExpiry)
         {
             return null;
         }
@@ -461,9 +464,9 @@ public sealed class OidcAuthService : IOidcAuthService
             .Replace('/', '_');
     }
 
-    private static void CleanupExpiredEntries(object? state)
+    private static void CleanupExpiredEntries(TimeProvider timeProvider)
     {
-        var flowCutoff = DateTimeOffset.UtcNow - FlowStateExpiry;
+        DateTimeOffset flowCutoff = timeProvider.GetUtcNow() - FlowStateExpiry;
         foreach (var kvp in PendingFlows)
         {
             if (kvp.Value.CreatedAt < flowCutoff)
@@ -472,12 +475,12 @@ public sealed class OidcAuthService : IOidcAuthService
             }
         }
 
-        CleanupExpiredOneTimeCodes();
+        CleanupExpiredOneTimeCodes(timeProvider);
     }
 
-    private static void CleanupExpiredOneTimeCodes()
+    private static void CleanupExpiredOneTimeCodes(TimeProvider timeProvider)
     {
-        var codeCutoff = DateTimeOffset.UtcNow - OneTimeCodeExpiry;
+        DateTimeOffset codeCutoff = timeProvider.GetUtcNow() - OneTimeCodeExpiry;
         foreach (var kvp in OneTimeCodes)
         {
             if (kvp.Value.CreatedAt < codeCutoff)

@@ -39,7 +39,7 @@ public sealed class JwtServiceTests : IDisposable
     {
         User user = new() { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hash", TotpSecret = "secret", ApiKey = "key" };
 
-        string token = new JwtService().GenerateAccessToken(user);
+        string token = new JwtService(TimeProvider.System).GenerateAccessToken(user);
 
         ExpiryOf(token).ShouldBe(DateTime.UtcNow.Add(AccessTokenLifetime), TimeSpan.FromSeconds(5));
     }
@@ -47,7 +47,7 @@ public sealed class JwtServiceTests : IDisposable
     [Fact]
     public void GenerateLoginToken_ExpiresFiveMinutesAfterItWasIssued()
     {
-        string token = new JwtService().GenerateLoginToken(Guid.NewGuid());
+        string token = new JwtService(TimeProvider.System).GenerateLoginToken(Guid.NewGuid());
 
         ExpiryOf(token).ShouldBe(DateTime.UtcNow.Add(LoginTokenLifetime), TimeSpan.FromSeconds(5));
     }

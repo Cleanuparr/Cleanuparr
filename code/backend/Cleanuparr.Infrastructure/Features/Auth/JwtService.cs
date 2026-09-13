@@ -15,10 +15,12 @@ public sealed class JwtService : IJwtService
     private static readonly TimeSpan LoginTokenLifetime = TimeSpan.FromMinutes(5);
 
     private readonly byte[] _signingKey;
+    private readonly TimeProvider _timeProvider;
 
-    public JwtService()
+    public JwtService(TimeProvider timeProvider)
     {
         _signingKey = GetOrCreateSigningKey();
+        _timeProvider = timeProvider;
     }
 
     public string GenerateAccessToken(User user)
@@ -105,7 +107,7 @@ public sealed class JwtService : IJwtService
             issuer: Issuer,
             audience: Audience,
             claims: claims,
-            expires: DateTimeOffset.UtcNow.Add(lifetime).UtcDateTime,
+            expires: _timeProvider.GetUtcNow().Add(lifetime).UtcDateTime,
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
