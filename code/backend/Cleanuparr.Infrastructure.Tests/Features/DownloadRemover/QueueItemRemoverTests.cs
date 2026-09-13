@@ -79,7 +79,8 @@ public class QueueItemRemoverTests : IDisposable
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
             dryRunInterceptor,
-            new SqliteDatabaseProvider());
+            new SqliteDatabaseProvider(),
+            TimeProvider.System);
 
         // Create in-memory DataContext with seeded SeekerConfig
         _dataContext = TestDataContextFactory.Create();

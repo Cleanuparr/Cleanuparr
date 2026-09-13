@@ -127,7 +127,9 @@ public class IntegrationTestFixture : IDisposable
             Substitute.For<ILogger<EventPublisher>>(),
             NotificationPublisher,
             DryRunInterceptor,
-            new SqliteDatabaseProvider());
+            // The wall clock, not the fixture's fake: event timestamps still come from entity initializers.
+            new SqliteDatabaseProvider(),
+            System.TimeProvider.System);
 
         // Expose EventPublisher as both concrete and interface
         EventPublisherInterface = EventPublisher;

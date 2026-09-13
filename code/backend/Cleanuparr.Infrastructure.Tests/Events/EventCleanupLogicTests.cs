@@ -36,7 +36,8 @@ public class EventCleanupLogicTests : IDisposable
 
         _service = new EventCleanupService(
             Substitute.For<ILogger<EventCleanupService>>(),
-            _serviceProvider.GetRequiredService<IServiceScopeFactory>());
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            TimeProvider.System);
     }
 
     public void Dispose()
