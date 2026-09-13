@@ -20,7 +20,7 @@ public class SearchStatsControllerTests : IDisposable
     {
         _dataContext = SeekerTestDataFactory.CreateDataContext();
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
-        _controller = new SearchStatsController(_dataContext, _eventsContext);
+        _controller = new SearchStatsController(_dataContext, _eventsContext, TimeProvider.System);
     }
 
     public void Dispose()

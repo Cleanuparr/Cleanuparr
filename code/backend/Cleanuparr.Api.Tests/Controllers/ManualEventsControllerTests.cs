@@ -18,7 +18,7 @@ public sealed class ManualEventsControllerTests : IDisposable
     public ManualEventsControllerTests()
     {
         _context = ConfigControllerTestDataFactory.CreateEventsContext();
-        _controller = new ManualEventsController(_context);
+        _controller = new ManualEventsController(_context, TimeProvider.System);
     }
 
     public void Dispose()

@@ -25,7 +25,7 @@ public class EventsResponseContractTests : IDisposable
     public EventsResponseContractTests()
     {
         _context = ConfigControllerTestDataFactory.CreateEventsContext();
-        _controller = new EventsController(_context, new SqliteDatabaseProvider());
+        _controller = new EventsController(_context, new SqliteDatabaseProvider(), TimeProvider.System);
     }
 
     public void Dispose()

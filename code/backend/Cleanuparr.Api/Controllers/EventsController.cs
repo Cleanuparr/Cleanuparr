@@ -19,11 +19,13 @@ public class EventsController : ControllerBase
 {
     private readonly EventsContext _context;
     private readonly IDatabaseProvider _databaseProvider;
+    private readonly TimeProvider _timeProvider;
 
-    public EventsController(EventsContext context, IDatabaseProvider databaseProvider)
+    public EventsController(EventsContext context, IDatabaseProvider databaseProvider, TimeProvider timeProvider)
     {
         _context = context;
         _databaseProvider = databaseProvider;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -188,7 +190,7 @@ public class EventsController : ControllerBase
     public async Task<ActionResult<EventTypeTimelineResponse>> GetTimeline([FromQuery] int hours = 720)
     {
         hours = TimelineWindow.ClampHours(hours);
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
         DateTimeOffset cutoff = now.AddHours(-hours);
         TimelineBucketSize size = TimelineBucketing.DefaultFor(hours);
 

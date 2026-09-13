@@ -19,7 +19,7 @@ public class EventsControllerTimelineTests : IDisposable
     public EventsControllerTimelineTests()
     {
         _context = SeekerTestDataFactory.CreateEventsContext();
-        _controller = new EventsController(_context, new SqliteDatabaseProvider());
+        _controller = new EventsController(_context, new SqliteDatabaseProvider(), TimeProvider.System);
     }
 
     public void Dispose()

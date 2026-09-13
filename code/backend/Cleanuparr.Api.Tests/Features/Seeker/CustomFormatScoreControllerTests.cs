@@ -21,7 +21,7 @@ public class CustomFormatScoreControllerTests : IDisposable
     {
         _dataContext = SeekerTestDataFactory.CreateDataContext();
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
-        _controller = new CustomFormatScoreController(_dataContext, _eventsContext, new SqliteDatabaseProvider());
+        _controller = new CustomFormatScoreController(_dataContext, _eventsContext, new SqliteDatabaseProvider(), TimeProvider.System);
     }
 
     public void Dispose()
