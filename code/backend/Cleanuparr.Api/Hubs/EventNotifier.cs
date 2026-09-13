@@ -11,10 +11,12 @@ namespace Cleanuparr.Api.Hubs;
 public sealed class EventNotifier : IEventNotifier
 {
     private readonly IHubContext<AppHub> _hubContext;
+    private readonly TimeProvider _timeProvider;
 
-    public EventNotifier(IHubContext<AppHub> hubContext)
+    public EventNotifier(IHubContext<AppHub> hubContext, TimeProvider timeProvider)
     {
         _hubContext = hubContext;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc />
@@ -36,7 +38,7 @@ public sealed class EventNotifier : IEventNotifier
         {
             Id = strikeId,
             Type = strikeType.ToString(),
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = _timeProvider.GetUtcNow(),
             DownloadId = downloadId,
             Title = itemTitle,
             IsDryRun = isDryRun,

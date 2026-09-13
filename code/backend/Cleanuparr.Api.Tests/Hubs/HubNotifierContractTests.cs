@@ -25,7 +25,7 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyEventAsync_SendsEventReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context).NotifyEventAsync(new AppEvent
+        await new EventNotifier(_appHub.Context, TimeProvider.System).NotifyEventAsync(new AppEvent
         {
             EventType = EventType.QueueItemDeleted,
             Message = "deleted",
@@ -74,7 +74,7 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyManualEventAsync_SendsManualEventReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context).NotifyManualEventAsync(new ManualEvent
+        await new EventNotifier(_appHub.Context, TimeProvider.System).NotifyManualEventAsync(new ManualEvent
         {
             Message = "needs attention",
             Severity = EventSeverity.Warning,
@@ -109,7 +109,7 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyStrikeAsync_SendsStrikeReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context)
+        await new EventNotifier(_appHub.Context, TimeProvider.System)
             .NotifyStrikeAsync(Guid.NewGuid(), StrikeType.FailedImport, "HASH", "title", isDryRun: true);
 
         (string method, object? payload) = _appHub.Single();
