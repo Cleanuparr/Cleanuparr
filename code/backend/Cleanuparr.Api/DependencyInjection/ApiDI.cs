@@ -2,7 +2,8 @@ using System.Diagnostics;
 using Cleanuparr.Api.Filters;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Infrastructure.Health;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Api.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Microsoft.AspNetCore.Http.Json;
 using System.Text;
 using Cleanuparr.Api.Middleware;
@@ -31,6 +32,12 @@ public static class ApiDI
         services
             .AddSignalR()
             .AddJsonProtocol(options => CleanuparrJsonConfiguration.ConfigureApi(options.PayloadSerializerOptions));
+
+        // Hub adapters for the Infrastructure notification ports
+        services.AddSingleton<IEventNotifier, EventNotifier>();
+        services.AddSingleton<ILogNotifier, LogNotifier>();
+        services.AddSingleton<IStatusNotifier, StatusNotifier>();
+        services.AddSingleton<IHealthNotifier, HealthNotifier>();
         
         // Add health status broadcaster
         services.AddHostedService<HealthStatusBroadcaster>();

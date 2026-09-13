@@ -1,32 +1,32 @@
-using Microsoft.AspNetCore.SignalR;
+using Cleanuparr.Infrastructure.Realtime;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Health;
 
 /// <summary>
-/// Service that broadcasts health status changes via SignalR
+/// Service that broadcasts health status changes to connected clients
 /// </summary>
 public class HealthStatusBroadcaster : IHostedService
 {
     private readonly ILogger<HealthStatusBroadcaster> _logger;
     private readonly IHealthCheckService _healthCheckService;
-    private readonly IHubContext<HealthStatusHub> _hubContext;
+    private readonly IHealthNotifier _healthNotifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthStatusBroadcaster"/> class
     /// </summary>
     /// <param name="logger">The logger</param>
     /// <param name="healthCheckService">The health check service</param>
-    /// <param name="hubContext">The SignalR hub context</param>
+    /// <param name="healthNotifier">The health notifier</param>
     public HealthStatusBroadcaster(
         ILogger<HealthStatusBroadcaster> logger,
         IHealthCheckService healthCheckService,
-        IHubContext<HealthStatusHub> hubContext)
+        IHealthNotifier healthNotifier)
     {
         _logger = logger;
         _healthCheckService = healthCheckService;
-        _hubContext = hubContext;
+        _healthNotifier = healthNotifier;
     }
 
     /// <inheritdoc />
@@ -61,7 +61,7 @@ public class HealthStatusBroadcaster : IHostedService
         {
             _logger.LogDebug("Broadcasting health status removal for arr instance {InstanceId}", e.InstanceId);
 
-            await _hubContext.Clients.All.SendAsync("ArrInstanceRemoved", e.InstanceId);
+            await _healthNotifier.NotifyArrInstanceRemovedAsync(e.InstanceId);
         }
         catch (Exception ex)
         {
@@ -75,7 +75,7 @@ public class HealthStatusBroadcaster : IHostedService
         {
             _logger.LogDebug("Broadcasting health status removal for client {ClientId}", e.ClientId);
 
-            await _hubContext.Clients.All.SendAsync("ClientRemoved", e.ClientId);
+            await _healthNotifier.NotifyClientRemovedAsync(e.ClientId);
         }
         catch (Exception ex)
         {
@@ -90,20 +90,20 @@ public class HealthStatusBroadcaster : IHostedService
             _logger.LogDebug("Broadcasting health status change for client {ClientId}", e.ClientId);
             
             // Broadcast to all clients
-            await _hubContext.Clients.All.SendAsync("HealthStatusChanged", e.Status);
+            await _healthNotifier.NotifyHealthStatusChangedAsync(e.Status);
             
             // Send degradation messages
             if (e.IsDegraded)
             {
                 _logger.LogWarning("Client {ClientId} health degraded", e.ClientId);
-                await _hubContext.Clients.All.SendAsync("ClientDegraded", e.Status);
+                await _healthNotifier.NotifyClientDegradedAsync(e.Status);
             }
             
             // Send recovery messages
             if (e.IsRecovered)
             {
                 _logger.LogInformation("Client {ClientId} health recovered", e.ClientId);
-                await _hubContext.Clients.All.SendAsync("ClientRecovered", e.Status);
+                await _healthNotifier.NotifyClientRecoveredAsync(e.Status);
             }
         }
         catch (Exception ex)

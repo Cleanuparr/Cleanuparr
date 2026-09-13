@@ -2,10 +2,9 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Cleanuparr.Domain.Entities.AppStatus;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -17,7 +16,7 @@ namespace Cleanuparr.Infrastructure.Tests.Services;
 public class AppStatusRefreshServiceTests : IDisposable
 {
     private readonly ILogger<AppStatusRefreshService> _logger;
-    private readonly IHubContext<AppHub> _hubContext;
+    private readonly IStatusNotifier _statusNotifier;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppStatusSnapshot _snapshot;
     private readonly JsonSerializerOptions _jsonOptions;
@@ -28,18 +27,12 @@ public class AppStatusRefreshServiceTests : IDisposable
     public AppStatusRefreshServiceTests()
     {
         _logger = Substitute.For<ILogger<AppStatusRefreshService>>();
-        _hubContext = Substitute.For<IHubContext<AppHub>>();
+        _statusNotifier = Substitute.For<IStatusNotifier>();
         _httpClientFactory = Substitute.For<IHttpClientFactory>();
         _snapshot = new AppStatusSnapshot();
         _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         _httpHandler = new FakeHttpMessageHandler();
         _scopeFactory = Substitute.For<IServiceScopeFactory>();
-
-        // Setup hub context
-        var clients = Substitute.For<IHubClients>();
-        var clientProxy = Substitute.For<IClientProxy>();
-        clients.All.Returns(clientProxy);
-        _hubContext.Clients.Returns(clients);
     }
 
     public void Dispose()
@@ -51,7 +44,7 @@ public class AppStatusRefreshServiceTests : IDisposable
     {
         _service = new AppStatusRefreshService(
             _logger,
-            _hubContext,
+            _statusNotifier,
             _httpClientFactory,
             _snapshot,
             _jsonOptions,

@@ -1,11 +1,10 @@
 using System.Text.Json;
 using Cleanuparr.Domain.Entities.AppStatus;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Shared.Helpers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,7 +15,7 @@ namespace Cleanuparr.Infrastructure.Services;
 public sealed class AppStatusRefreshService : BackgroundService
 {
     private readonly ILogger<AppStatusRefreshService> _logger;
-    private readonly IHubContext<AppHub> _hubContext;
+    private readonly IStatusNotifier _statusNotifier;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppStatusSnapshot _snapshot;
     private readonly JsonSerializerOptions _jsonOptions;
@@ -29,7 +28,7 @@ public sealed class AppStatusRefreshService : BackgroundService
 
     public AppStatusRefreshService(
         ILogger<AppStatusRefreshService> logger,
-        IHubContext<AppHub> hubContext,
+        IStatusNotifier statusNotifier,
         IHttpClientFactory httpClientFactory,
         AppStatusSnapshot snapshot,
         JsonSerializerOptions jsonOptions,
@@ -37,7 +36,7 @@ public sealed class AppStatusRefreshService : BackgroundService
     )
     {
         _logger = logger;
-        _hubContext = hubContext;
+        _statusNotifier = statusNotifier;
         _httpClientFactory = httpClientFactory;
         _snapshot = snapshot;
         _jsonOptions = jsonOptions;
@@ -141,7 +140,7 @@ public sealed class AppStatusRefreshService : BackgroundService
             return;
         }
 
-        await _hubContext.Clients.All.SendAsync("AppStatusUpdated", status, cancellationToken);
+        await _statusNotifier.NotifyAppStatusAsync(status, cancellationToken);
         _lastBroadcast = status;
     }
 }

@@ -3,7 +3,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl.Matchers;
@@ -15,14 +14,12 @@ public class JobManagementService : IJobManagementService
 {
     private readonly ILogger<JobManagementService> _logger;
     private readonly ISchedulerFactory _schedulerFactory;
-    private readonly IHubContext<Hubs.AppHub> _hubContext;
     private readonly ConcurrentDictionary<string, JobKey> _jobKeys = new();
 
-    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory, IHubContext<Hubs.AppHub> hubContext)
+    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory)
     {
         _logger = logger;
         _schedulerFactory = schedulerFactory;
-        _hubContext = hubContext;
     }
 
     public async Task<bool> StartJob(JobType jobType, JobSchedule? schedule = null, string? directCronExpression = null)

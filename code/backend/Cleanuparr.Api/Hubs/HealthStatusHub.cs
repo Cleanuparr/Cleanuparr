@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
 
-namespace Cleanuparr.Infrastructure.Health;
+namespace Cleanuparr.Api.Hubs;
 
 /// <summary>
-/// SignalR hub for broadcasting health status updates
+/// Hub for broadcasting health status updates
 /// </summary>
 public class HealthStatusHub : Hub
 {

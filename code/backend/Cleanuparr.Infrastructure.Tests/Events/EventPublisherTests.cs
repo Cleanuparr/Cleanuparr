@@ -2,13 +2,12 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -22,10 +21,9 @@ namespace Cleanuparr.Infrastructure.Tests.Events;
 public class EventPublisherTests : IDisposable
 {
     private readonly EventsContext _context;
-    private readonly IHubContext<AppHub> _hubContext;
     private readonly INotificationPublisher _notificationPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly IClientProxy _clientProxy;
+    private readonly IEventNotifier _eventNotifier;
     private readonly EventPublisher _publisher;
 
     public EventPublisherTests()
@@ -38,22 +36,16 @@ public class EventPublisherTests : IDisposable
         _context = new EventsContext(options);
 
         // Setup mocks
-        _hubContext = Substitute.For<IHubContext<AppHub>>();
         _notificationPublisher = Substitute.For<INotificationPublisher>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        _clientProxy = Substitute.For<IClientProxy>();
-
-        // Setup HubContext to return client proxy
-        var clients = Substitute.For<IHubClients>();
-        clients.All.Returns(_clientProxy);
-        _hubContext.Clients.Returns(clients);
+        _eventNotifier = Substitute.For<IEventNotifier>();
 
         // Setup dry run interceptor to report dry run as disabled by default
         _dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
         _publisher = new EventPublisher(
             _context,
-            _hubContext,
+            _eventNotifier,
             Substitute.For<ILogger<EventPublisher>>(),
             _notificationPublisher,
             _dryRunInterceptor,
@@ -144,7 +136,7 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishAsync_NotifiesSignalRClients()
+    public async Task PublishAsync_NotifiesConnectedClients()
     {
         // Arrange
         var eventType = EventType.CategoryChanged;
@@ -155,25 +147,19 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishAsync(eventType, message, severity);
 
         // Assert
-        await _clientProxy.Received(1).SendCoreAsync(
-            "EventReceived",
-            Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
-            Arg.Any<CancellationToken>());
+        await _eventNotifier.Received(1).NotifyEventAsync(Arg.Any<AppEvent>());
     }
 
     [Fact]
-    public async Task PublishAsync_WhenSignalRFails_LogsError()
+    public async Task PublishAsync_WhenTheNotifierFails_LogsError()
     {
         // Arrange
         var eventType = EventType.QueueItemDeleted;
         var message = "Test message";
         var severity = EventSeverity.Important;
 
-        _clientProxy.SendCoreAsync(
-                Arg.Any<string>(),
-                Arg.Any<object[]>(),
-                Arg.Any<CancellationToken>())
-            .ThrowsAsync(new Exception("SignalR connection failed"));
+        _eventNotifier.NotifyEventAsync(Arg.Any<AppEvent>())
+            .ThrowsAsync(new Exception("hub connection failed"));
 
         // Act - should not throw
         await _publisher.PublishAsync(eventType, message, severity);
@@ -244,7 +230,7 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishManualAsync_NotifiesSignalRClients()
+    public async Task PublishManualAsync_NotifiesConnectedClients()
     {
         // Arrange
         var message = "Manual event";
@@ -254,10 +240,7 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, message, severity);
 
         // Assert
-        await _clientProxy.Received(1).SendCoreAsync(
-            "ManualEventReceived",
-            Arg.Is<object[]>(args => args.Length == 1 && args[0] is ManualEvent),
-            Arg.Any<CancellationToken>());
+        await _eventNotifier.Received(1).NotifyManualEventAsync(Arg.Any<ManualEvent>());
     }
 
     #endregion
@@ -812,10 +795,7 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishSearchStarted(Guid.NewGuid());
 
         // Assert
-        await _clientProxy.DidNotReceive().SendCoreAsync(
-            Arg.Any<string>(),
-            Arg.Any<object[]>(),
-            Arg.Any<CancellationToken>());
+        await _eventNotifier.DidNotReceive().NotifyEventAsync(Arg.Any<AppEvent>());
     }
 
     [Fact]
@@ -827,7 +807,7 @@ public class EventPublisherTests : IDisposable
 
         Guid completedEventId = await _publisher.PublishSearchTriggered("Completed", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
         await _publisher.PublishSearchCompleted(completedEventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://radarr");
-        _clientProxy.ClearReceivedCalls();
+        _eventNotifier.ClearReceivedCalls();
 
         // Act
         int failed = await _publisher.FailStrandedSearchEvents(arrInstanceId);
@@ -835,10 +815,7 @@ public class EventPublisherTests : IDisposable
         // Assert
         failed.ShouldBe(0);
 
-        await _clientProxy.DidNotReceive().SendCoreAsync(
-            Arg.Any<string>(),
-            Arg.Any<object[]>(),
-            Arg.Any<CancellationToken>());
+        await _eventNotifier.DidNotReceive().NotifyEventAsync(Arg.Any<AppEvent>());
     }
 
     [Fact]
@@ -938,16 +915,13 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_NotifiesSignalRClients()
+    public async Task PublishSearchTriggered_NotifiesConnectedClients()
     {
         // Act
         await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
-        await _clientProxy.Received(1).SendCoreAsync(
-            "EventReceived",
-            Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
-            Arg.Any<CancellationToken>());
+        await _eventNotifier.Received(1).NotifyEventAsync(Arg.Any<AppEvent>());
     }
 
     [Fact]
@@ -1052,22 +1026,19 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_NotifiesSignalRClients()
+    public async Task PublishSearchCompleted_NotifiesConnectedClients()
     {
         // Arrange
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Reset mock to only capture the completion call
-        _clientProxy.ClearReceivedCalls();
+        _eventNotifier.ClearReceivedCalls();
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
-        await _clientProxy.Received(1).SendCoreAsync(
-            "EventReceived",
-            Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
-            Arg.Any<CancellationToken>());
+        await _eventNotifier.Received(1).NotifyEventAsync(Arg.Any<AppEvent>());
     }
 
     [Fact]

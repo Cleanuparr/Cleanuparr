@@ -12,13 +12,12 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Http;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Providers;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,14 +74,11 @@ public class DownloadServiceFactoryTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         var eventsContext = new EventsContext(eventsContextOptions);
-        var hubContext = Substitute.For<IHubContext<AppHub>>();
-        var clients = Substitute.For<IHubClients>();
-        clients.All.Returns(Substitute.For<IClientProxy>());
-        hubContext.Clients.Returns(clients);
+        IEventNotifier eventNotifier = Substitute.For<IEventNotifier>();
 
         services.AddSingleton<IEventPublisher>(new EventPublisher(
             eventsContext,
-            hubContext,
+            eventNotifier,
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
             Substitute.For<IDryRunInterceptor>(),

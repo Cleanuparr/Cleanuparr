@@ -9,9 +9,8 @@ using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
-using Cleanuparr.Infrastructure.Hubs;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SignalR;
+using Cleanuparr.Infrastructure.Realtime;
+using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -30,8 +29,8 @@ public class SeekerTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly IHostingEnvironment _hostingEnvironment;
-    private readonly IHubContext<AppHub> _hubContext;
+    private readonly IHostEnvironment _hostingEnvironment;
+    private readonly IStatusNotifier _statusNotifier;
 
     public SeekerTests(JobHandlerFixture fixture)
     {
@@ -42,14 +41,10 @@ public class SeekerTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        _hostingEnvironment = Substitute.For<IHostingEnvironment>();
-        _hubContext = Substitute.For<IHubContext<AppHub>>();
+        _hostingEnvironment = Substitute.For<IHostEnvironment>();
+        _statusNotifier = Substitute.For<IStatusNotifier>();
 
         // Default: hub context setup
-        var mockClients = Substitute.For<IHubClients>();
-        var mockClientProxy = Substitute.For<IClientProxy>();
-        mockClients.All.Returns(mockClientProxy);
-        _hubContext.Clients.Returns(mockClients);
 
         // Default: development mode (skips jitter)
         _hostingEnvironment.EnvironmentName.Returns("Development");
@@ -95,7 +90,7 @@ public class SeekerTests : IDisposable
             _dryRunInterceptor,
             _hostingEnvironment,
             _fixture.TimeProvider,
-            _hubContext
+            _statusNotifier
         );
     }
 
@@ -4265,7 +4260,7 @@ public class SeekerTests : IDisposable
 
     #endregion
 
-    #region SignalR Notifications
+    #region Realtime Notifications
 
     [Fact]
     public async Task ExecuteAsync_ProactiveSearch_SendsSearchStatsUpdated()
@@ -4315,9 +4310,7 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — SignalR notification sent
-        await _hubContext.Clients.All.Received(1)
-            .SendCoreAsync("SearchStatsUpdated", Arg.Any<object?[]>(), Arg.Any<CancellationToken>());
+        await _statusNotifier.Received(1).NotifySearchStatsUpdatedAsync(Arg.Any<CancellationToken>());
     }
 
     #endregion

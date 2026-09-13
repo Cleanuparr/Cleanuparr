@@ -1,7 +1,7 @@
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
-using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Realtime;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -10,7 +10,6 @@ using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using System.Data.Common;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -30,7 +29,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
-    private readonly IHubContext<AppHub> _hubContext;
+    private readonly IStatusNotifier _statusNotifier;
 
     public CustomFormatScoreSyncerTests(JobHandlerFixture fixture)
     {
@@ -40,12 +39,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
         _logger = Substitute.For<ILogger<CustomFormatScoreSyncer>>();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
-        _hubContext = Substitute.For<IHubContext<AppHub>>();
+        _statusNotifier = Substitute.For<IStatusNotifier>();
 
-        var mockClients = Substitute.For<IHubClients>();
-        var mockClientProxy = Substitute.For<IClientProxy>();
-        mockClients.All.Returns(mockClientProxy);
-        _hubContext.Clients.Returns(mockClients);
     }
 
     public void Dispose()
@@ -62,7 +57,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _fixture.TimeProvider,
-            _hubContext,
+            _statusNotifier,
             new SqliteDatabaseProvider()
         );
     }
@@ -577,7 +572,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 new FakeTimeProvider(),
-                _hubContext,
+                _statusNotifier,
                 new SqliteDatabaseProvider());
 
             await sut.ExecuteAsync();
@@ -1195,7 +1190,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 new FakeTimeProvider(),
-                _hubContext,
+                _statusNotifier,
                 new SqliteDatabaseProvider());
 
             await sut.ExecuteAsync();

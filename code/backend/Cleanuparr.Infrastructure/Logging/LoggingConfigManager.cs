@@ -105,8 +105,8 @@ public static class LoggingConfigManager
             hooks: archiveHooks
         );
 
-        // Add SignalR sink for real-time log updates
-        logConfig.WriteTo.Sink(SignalRLogSink.Instance);
+        // Add the realtime sink for live log updates
+        logConfig.WriteTo.Sink(RealtimeLogSink.Instance);
 
         // Apply standard overrides
         logConfig

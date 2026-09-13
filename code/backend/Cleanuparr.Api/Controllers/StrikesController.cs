@@ -128,15 +128,7 @@ public class StrikesController : ControllerBase
             .Include(s => s.DownloadItem)
             .OrderByDescending(s => s.CreatedAt)
             .Take(count)
-            .Select(s => new RecentStrikeDto
-            {
-                Id = s.Id,
-                Type = s.Type.ToString(),
-                CreatedAt = s.CreatedAt,
-                DownloadId = s.DownloadItem.DownloadId,
-                Title = s.DownloadItem.Title,
-                IsDryRun = s.IsDryRun,
-            })
+            .Select(RecentStrikeDto.FromStrike)
             .ToListAsync();
 
         return Ok(strikes);

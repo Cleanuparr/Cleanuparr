@@ -4,7 +4,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.State;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -32,7 +32,7 @@ public class SeekerIntegrationTests : IDisposable
 
     private SeekerJob CreateSut()
     {
-        var environment = Substitute.For<IHostingEnvironment>();
+        var environment = Substitute.For<IHostEnvironment>();
         environment.EnvironmentName.Returns("Development");
 
         return new SeekerJob(
@@ -47,7 +47,7 @@ public class SeekerIntegrationTests : IDisposable
             _fixture.DryRunInterceptor,
             environment,
             _fixture.TimeProvider,
-            _fixture.HubContext);
+            _fixture.StatusNotifier);
     }
 
     [Fact]
