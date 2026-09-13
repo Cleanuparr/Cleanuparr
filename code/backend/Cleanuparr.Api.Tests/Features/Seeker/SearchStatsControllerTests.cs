@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Api.Features.Seeker.Controllers;
 using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -29,12 +30,46 @@ public class SearchStatsControllerTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    private static SearchStatsSummaryResponse Summary(IActionResult result) =>
+        result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SearchStatsSummaryResponse>();
+
     private static JsonElement GetResponseBody(IActionResult result)
     {
         var okResult = result.ShouldBeOfType<OkObjectResult>();
         var json = JsonSerializer.Serialize(okResult.Value);
         return JsonDocument.Parse(json).RootElement;
     }
+
+    #region GetSummary
+
+    [Fact]
+    public async Task GetSummary_CountsSearchesInsideTheSevenAndThirtyDayWindows()
+    {
+        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-1));
+        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-10));
+        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-40));
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        summary.TotalSearchesAllTime.ShouldBe(3);
+        summary.SearchesLast7Days.ShouldBe(1);
+        summary.SearchesLast30Days.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetSummary_ExcludesSearchesOnTheFarSideOfEachWindow()
+    {
+        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-7).AddMinutes(-1));
+        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-30).AddMinutes(-1));
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        summary.TotalSearchesAllTime.ShouldBe(2);
+        summary.SearchesLast7Days.ShouldBe(0);
+        summary.SearchesLast30Days.ShouldBe(1);
+    }
+
+    #endregion
 
     #region GetEvents with SearchEventData
 
