@@ -115,7 +115,8 @@ public class HubNotifierContractTests
         (string method, object? payload) = _appHub.Single();
 
         method.ShouldBe("StrikeReceived");
-        payload.ShouldBeOfType<RecentStrikeDto>();
+        RecentStrikeDto strike = payload.ShouldBeOfType<RecentStrikeDto>();
+        strike.CreatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
         ResponseContract.Keys(ResponseContract.Payload(payload)).ShouldBe(
         [
             "createdAt",
