@@ -8,7 +8,8 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Auth;
 
-public sealed class OidcCleanupServiceTests
+[Collection(OidcStaticStateCollection.Name)]
+public sealed class OidcCleanupServiceTests : IDisposable
 {
     private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
@@ -37,6 +38,11 @@ public sealed class OidcCleanupServiceTests
 
         // Assert
         OneTimeCodes().ContainsKey(code).ShouldBeFalse();
+    }
+
+    public void Dispose()
+    {
+        OidcStaticState.Clear();
     }
 
     private static IDictionary<string, object> OneTimeCodes()

@@ -20,6 +20,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Auth;
 
+[Collection(OidcStaticStateCollection.Name)]
 public sealed class OidcAuthServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
@@ -1058,6 +1059,7 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     public void Dispose()
     {
+        OidcStaticState.Clear();
         _usersContext.Dispose();
         _connection.Dispose();
     }
