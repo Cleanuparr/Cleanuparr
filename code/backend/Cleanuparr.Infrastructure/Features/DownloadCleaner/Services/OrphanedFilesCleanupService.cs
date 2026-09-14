@@ -150,7 +150,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
         if (torrents.Count is 0)
         {
-            _logger.LogWarning("No torrents reported | {Name}", downloadClient.Name);
+            _logger.LogInformation("No torrents found in the download client | {Name}", downloadClient.Name);
         }
 
         foreach (string claimedPath in await downloadService.GetClaimedPathsAsync(torrents))
