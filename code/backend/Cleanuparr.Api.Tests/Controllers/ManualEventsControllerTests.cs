@@ -5,6 +5,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 using Xunit;
 
@@ -12,13 +13,15 @@ namespace Cleanuparr.Api.Tests.Controllers;
 
 public sealed class ManualEventsControllerTests : IDisposable
 {
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     private readonly EventsContext _context;
     private readonly ManualEventsController _controller;
 
     public ManualEventsControllerTests()
     {
         _context = ConfigControllerTestDataFactory.CreateEventsContext();
-        _controller = new ManualEventsController(_context, TimeProvider.System);
+        _controller = new ManualEventsController(_context, new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -55,7 +58,7 @@ public sealed class ManualEventsControllerTests : IDisposable
         ManualEvent stored = await _context.ManualEvents.AsNoTracking().SingleAsync();
         stored.IsResolved.ShouldBeTrue();
         stored.ResolvedAt.ShouldNotBeNull();
-        stored.ResolvedAt!.Value.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        stored.ResolvedAt!.Value.ShouldBe(Now);
     }
 
     [Fact]
@@ -80,7 +83,7 @@ public sealed class ManualEventsControllerTests : IDisposable
         stored.Count.ShouldBe(2);
         stored.ShouldAllBe(e => e.IsResolved);
         stored.ShouldAllBe(e => e.ResolvedAt != null);
-        stored[0].ResolvedAt!.Value.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        stored[0].ResolvedAt!.Value.ShouldBe(Now);
         stored[1].ResolvedAt!.Value.ShouldBe(stored[0].ResolvedAt!.Value);
     }
 }

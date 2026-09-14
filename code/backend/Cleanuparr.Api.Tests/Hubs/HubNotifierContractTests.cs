@@ -9,6 +9,7 @@ using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Persistence.Models.Events;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 using Xunit;
 
@@ -109,14 +110,16 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyStrikeAsync_SendsStrikeReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context, TimeProvider.System)
+        DateTimeOffset now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
+        await new EventNotifier(_appHub.Context, new FakeTimeProvider(now))
             .NotifyStrikeAsync(Guid.NewGuid(), StrikeType.FailedImport, "HASH", "title", isDryRun: true);
 
         (string method, object? payload) = _appHub.Single();
 
         method.ShouldBe("StrikeReceived");
         RecentStrikeDto strike = payload.ShouldBeOfType<RecentStrikeDto>();
-        strike.CreatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        strike.CreatedAt.ShouldBe(now);
         ResponseContract.Keys(ResponseContract.Payload(payload)).ShouldBe(
         [
             "createdAt",

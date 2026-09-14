@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Quartz;
 using Shouldly;
@@ -45,10 +46,12 @@ public sealed class GenericJobTests : IDisposable
         _eventsContext.Dispose();
     }
 
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     private GenericJob<Seeker> BuildJob() => new(
         Substitute.For<ILogger<GenericJob<Seeker>>>(),
         _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-        TimeProvider.System);
+        new FakeTimeProvider(Now));
 
     [Fact]
     public async Task Execute_StampsTheRunAsCompleted()
@@ -58,7 +61,7 @@ public sealed class GenericJobTests : IDisposable
         JobRun run = await _eventsContext.JobRuns.SingleAsync();
         run.Status.ShouldBe(JobRunStatus.Completed);
         run.CompletedAt.ShouldNotBeNull();
-        run.CompletedAt!.Value.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        run.CompletedAt!.Value.ShouldBe(Now);
     }
 
     [Fact]
@@ -70,7 +73,7 @@ public sealed class GenericJobTests : IDisposable
 
         JobRun run = await _eventsContext.JobRuns.SingleAsync();
         run.Status.ShouldBe(JobRunStatus.Failed);
-        run.CompletedAt!.Value.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        run.CompletedAt!.Value.ShouldBe(Now);
     }
 
     /// <summary>

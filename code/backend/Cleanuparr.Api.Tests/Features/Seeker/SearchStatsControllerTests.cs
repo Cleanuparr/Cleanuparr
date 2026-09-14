@@ -6,12 +6,15 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Seeker;
 
 public class SearchStatsControllerTests : IDisposable
 {
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
     private readonly SearchStatsController _controller;
@@ -20,7 +23,7 @@ public class SearchStatsControllerTests : IDisposable
     {
         _dataContext = SeekerTestDataFactory.CreateDataContext();
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
-        _controller = new SearchStatsController(_dataContext, _eventsContext, TimeProvider.System);
+        _controller = new SearchStatsController(_dataContext, _eventsContext, new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -45,9 +48,9 @@ public class SearchStatsControllerTests : IDisposable
     [Fact]
     public async Task GetSummary_CountsSearchesInsideTheSevenAndThirtyDayWindows()
     {
-        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-1));
-        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-10));
-        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-40));
+        AddSearchEvent(timestamp: Now.UtcDateTime.AddDays(-1));
+        AddSearchEvent(timestamp: Now.UtcDateTime.AddDays(-10));
+        AddSearchEvent(timestamp: Now.UtcDateTime.AddDays(-40));
 
         SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
 
@@ -59,8 +62,8 @@ public class SearchStatsControllerTests : IDisposable
     [Fact]
     public async Task GetSummary_ExcludesSearchesOnTheFarSideOfEachWindow()
     {
-        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-7).AddMinutes(-1));
-        AddSearchEvent(timestamp: DateTime.UtcNow.AddDays(-30).AddMinutes(-1));
+        AddSearchEvent(timestamp: Now.UtcDateTime.AddDays(-7).AddMinutes(-1));
+        AddSearchEvent(timestamp: Now.UtcDateTime.AddDays(-30).AddMinutes(-1));
 
         SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
 
@@ -211,9 +214,9 @@ public class SearchStatsControllerTests : IDisposable
     [Fact]
     public async Task GetEvents_WithSortByTimestampAscending_OldestFirst()
     {
-        AddSearchEvent(itemTitle: "Newest", timestamp: DateTime.UtcNow);
-        AddSearchEvent(itemTitle: "Oldest", timestamp: DateTime.UtcNow.AddHours(-2));
-        AddSearchEvent(itemTitle: "Middle", timestamp: DateTime.UtcNow.AddHours(-1));
+        AddSearchEvent(itemTitle: "Newest", timestamp: Now.UtcDateTime);
+        AddSearchEvent(itemTitle: "Oldest", timestamp: Now.UtcDateTime.AddHours(-2));
+        AddSearchEvent(itemTitle: "Middle", timestamp: Now.UtcDateTime.AddHours(-1));
 
         var result = await _controller.GetEvents(sortDirection: Cleanuparr.Domain.Enums.SortDirection.Asc);
         var body = GetResponseBody(result);
@@ -311,7 +314,7 @@ public class SearchStatsControllerTests : IDisposable
             ArrInstanceId = arrInstanceId,
             CycleId = cycleId,
             SearchStatus = searchStatus,
-            Timestamp = timestamp ?? DateTime.UtcNow
+            Timestamp = timestamp ?? Now.UtcDateTime
         };
 
         if (itemTitle is not null)
