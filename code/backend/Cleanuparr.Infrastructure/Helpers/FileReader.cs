@@ -20,6 +20,14 @@ public class FileReader
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     /// <summary>
+    /// Resolves a configured path to something the file system understands, unwrapping a file:// URI to the path it points at.
+    /// </summary>
+    public static string ToLocalPath(string path) =>
+        Uri.TryCreate(path, UriKind.Absolute, out Uri? uri) && uri.Scheme == Uri.UriSchemeFile
+            ? uri.LocalPath
+            : path;
+
+    /// <summary>
     /// Reads content from either a local file or HTTP(S) URL
     /// Extracted from BlocklistProvider.ReadContentAsync for reuse
     /// </summary>
@@ -32,10 +40,11 @@ public class FileReader
             return await ReadFromUrlAsync(path);
         }
 
-        if (File.Exists(path))
+        string localPath = ToLocalPath(path);
+
+        if (File.Exists(localPath))
         {
-            // local file path
-            return await File.ReadAllLinesAsync(path);
+            return await File.ReadAllLinesAsync(localPath);
         }
 
         throw new ArgumentException($"File not found: {path}");
