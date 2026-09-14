@@ -769,6 +769,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             _timeProvider.Advance(TimeSpan.FromMinutes(11));
 
             OidcAuthorizationResult result = await service.StartAuthorization(redirectUri);
+            insertedKeys.Add(result.State);
 
             result.State.ShouldNotBeNullOrEmpty();
             PendingFlowKeys().ShouldNotContain(insertedKeys[0]);
