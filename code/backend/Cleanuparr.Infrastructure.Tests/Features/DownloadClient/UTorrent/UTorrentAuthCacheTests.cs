@@ -6,75 +6,93 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient.UTorrent;
 
 public class UTorrentAuthCacheTests
 {
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void IsValid_AllFieldsSetAndExpiresInFuture_ReturnsTrue()
     {
         // Arrange
-        var cache = new UTorrentAuthCache
+        UTorrentAuthCache cache = new()
         {
             AuthToken = "token",
             GuidCookie = "guid",
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            CreatedAt = Now,
+            ExpiresAt = Now.AddMinutes(5),
         };
 
         // Act / Assert
-        cache.IsValid.ShouldBeTrue();
+        cache.IsValid(Now).ShouldBeTrue();
     }
 
     [Fact]
     public void IsValid_Expired_ReturnsFalse()
     {
         // Arrange
-        var cache = new UTorrentAuthCache
+        UTorrentAuthCache cache = new()
         {
             AuthToken = "token",
             GuidCookie = "guid",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-1),
+            CreatedAt = Now.AddMinutes(-10),
+            ExpiresAt = Now.AddMinutes(-1),
         };
 
         // Act / Assert
-        cache.IsValid.ShouldBeFalse();
+        cache.IsValid(Now).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsValid_ExpiresExactlyNow_ReturnsFalse()
+    {
+        // Arrange
+        UTorrentAuthCache cache = new()
+        {
+            AuthToken = "token",
+            GuidCookie = "guid",
+            CreatedAt = Now.AddMinutes(-20),
+            ExpiresAt = Now,
+        };
+
+        // Act / Assert
+        cache.IsValid(Now).ShouldBeFalse();
     }
 
     [Fact]
     public void IsValid_MissingAuthToken_ReturnsFalse()
     {
         // Arrange
-        var cache = new UTorrentAuthCache
+        UTorrentAuthCache cache = new()
         {
             AuthToken = string.Empty,
             GuidCookie = "guid",
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            ExpiresAt = Now.AddMinutes(5),
         };
 
         // Act / Assert
-        cache.IsValid.ShouldBeFalse();
+        cache.IsValid(Now).ShouldBeFalse();
     }
 
     [Fact]
     public void IsValid_MissingGuidCookie_ReturnsFalse()
     {
         // Arrange
-        var cache = new UTorrentAuthCache
+        UTorrentAuthCache cache = new()
         {
             AuthToken = "token",
             GuidCookie = string.Empty,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            ExpiresAt = Now.AddMinutes(5),
         };
 
         // Act / Assert
-        cache.IsValid.ShouldBeFalse();
+        cache.IsValid(Now).ShouldBeFalse();
     }
 
     [Fact]
     public void IsValid_DefaultInstance_ReturnsFalse()
     {
         // Arrange — defaults: empty token + cookie, ExpiresAt = MinValue
-        var cache = new UTorrentAuthCache();
+        UTorrentAuthCache cache = new();
 
         // Act / Assert
-        cache.IsValid.ShouldBeFalse();
+        cache.IsValid(Now).ShouldBeFalse();
     }
 }

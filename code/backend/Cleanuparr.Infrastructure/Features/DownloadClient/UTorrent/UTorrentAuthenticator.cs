@@ -64,7 +64,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         {
             var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
             return _cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-                   cachedAuth?.IsValid == true;
+                   cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true;
         }
     }
 
@@ -75,7 +75,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         {
             var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
             if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-                cachedAuth?.IsValid == true)
+                cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
             {
                 return cachedAuth.GuidCookie;
             }
@@ -90,7 +90,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         
         // Fast path: Check if we have valid cached auth
         if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-            cachedAuth?.IsValid == true)
+            cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
         {
             return true;
         }
@@ -109,7 +109,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
 
         var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
         if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-            cachedAuth?.IsValid == true)
+            cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
         {
             return cachedAuth.AuthToken;
         }
@@ -127,7 +127,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
 
         var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
         if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-            cachedAuth?.IsValid == true)
+            cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
         {
             return cachedAuth.GuidCookie;
         }
@@ -209,7 +209,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         {
             // Double-check: another thread might have refreshed while we were waiting
             if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-                cachedAuth?.IsValid == true)
+                cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
             {
                 return true;
             }

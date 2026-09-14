@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -15,6 +16,8 @@ public sealed class UTorrentAuthenticatorTests : IDisposable
 
     private readonly MemoryCache _cache = new(new MemoryCacheOptions());
     private readonly IUTorrentHttpService _httpService = Substitute.For<IUTorrentHttpService>();
+    // far enough ahead that the wall clock would call every session valid
+    private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2100, 1, 1, 12, 0, 0, TimeSpan.Zero));
     private readonly UTorrentAuthenticator _authenticator;
 
     public UTorrentAuthenticatorTests()
@@ -36,7 +39,7 @@ public sealed class UTorrentAuthenticatorTests : IDisposable
             _httpService,
             config,
             NullLogger<UTorrentAuthenticator>.Instance,
-            TimeProvider.System);
+            _timeProvider);
     }
 
     public void Dispose()
@@ -58,8 +61,8 @@ public sealed class UTorrentAuthenticatorTests : IDisposable
         UTorrentAuthCache session = CachedSession();
         session.AuthToken.ShouldBe("token");
         session.GuidCookie.ShouldBe("guid");
-        session.CreatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
-        session.ExpiresAt.ShouldBe(session.CreatedAt.Add(TokenExpiryDuration), TimeSpan.FromSeconds(1));
+        session.CreatedAt.ShouldBe(_timeProvider.GetUtcNow());
+        session.ExpiresAt.ShouldBe(session.CreatedAt.Add(TokenExpiryDuration));
     }
 
     [Fact]
@@ -70,5 +73,28 @@ public sealed class UTorrentAuthenticatorTests : IDisposable
 
         _authenticator.IsAuthenticated.ShouldBeTrue();
         await _httpService.Received(1).GetTokenAndCookieAsync();
+    }
+
+    [Fact]
+    public async Task EnsureAuthenticatedAsync_PastTheExpiryWindow_ReauthenticatesOnTheInjectedClock()
+    {
+        (await _authenticator.EnsureAuthenticatedAsync()).ShouldBeTrue();
+
+        _timeProvider.Advance(TokenExpiryDuration.Add(TimeSpan.FromMinutes(1)));
+
+        _authenticator.IsAuthenticated.ShouldBeFalse();
+        (await _authenticator.EnsureAuthenticatedAsync()).ShouldBeTrue();
+        await _httpService.Received(2).GetTokenAndCookieAsync();
+    }
+
+    [Fact]
+    public async Task GetValidTokenAsync_PastTheExpiryWindow_MintsAFreshSession()
+    {
+        await _authenticator.EnsureAuthenticatedAsync();
+        _timeProvider.Advance(TokenExpiryDuration.Add(TimeSpan.FromMinutes(1)));
+
+        (await _authenticator.GetValidTokenAsync()).ShouldBe("token");
+
+        CachedSession().CreatedAt.ShouldBe(_timeProvider.GetUtcNow());
     }
 }
