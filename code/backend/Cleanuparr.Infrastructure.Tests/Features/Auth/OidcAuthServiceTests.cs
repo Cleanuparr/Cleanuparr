@@ -26,6 +26,8 @@ public sealed class OidcAuthServiceTests : IDisposable
     private readonly UsersContext _usersContext;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<OidcAuthService> _logger;
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+    private readonly FakeTimeProvider _timeProvider = new(Now);
 
     public OidcAuthServiceTests()
     {
@@ -64,7 +66,7 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     private OidcAuthService CreateService()
     {
-        return new OidcAuthService(_httpClientFactory, _usersContext, _logger, TimeProvider.System);
+        return new OidcAuthService(_httpClientFactory, _usersContext, _logger, _timeProvider);
     }
 
     #region StoreOneTimeCode Tests
@@ -179,7 +181,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         IHttpClientFactory factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient("OidcAuth").Returns(_ => new HttpClient(handler));
 
-        OidcAuthService service = new(factory, _usersContext, _logger, TimeProvider.System);
+        OidcAuthService service = new(factory, _usersContext, _logger, _timeProvider);
 
         // Drops the call the constructor made.
         // What remains is what the discovery fetch asks for.
@@ -309,7 +311,7 @@ public sealed class OidcAuthServiceTests : IDisposable
     {
         var factory = Substitute.For<IHttpClientFactory>();
         factory.CreateClient("OidcAuth").Returns(new HttpClient(handler));
-        return new OidcAuthService(factory, _usersContext, _logger, timeProvider ?? TimeProvider.System);
+        return new OidcAuthService(factory, _usersContext, _logger, timeProvider ?? _timeProvider);
     }
 
     /// <summary>
@@ -752,8 +754,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         OidcAuthService.ClearDiscoveryCache();
 
         const string redirectUri = "https://app.test/api/auth/oidc/callback";
-        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
-        OidcAuthService service = CreateServiceWithHandler(CreateDiscoveryHandler(), timeProvider);
+        OidcAuthService service = CreateServiceWithHandler(CreateDiscoveryHandler());
 
         List<string> insertedKeys = [];
         try
@@ -761,11 +762,11 @@ public sealed class OidcAuthServiceTests : IDisposable
             // fill to capacity, stamped on the injected clock
             for (int i = 0; i < 100; i++)
             {
-                insertedKeys.Add(InsertPendingFlowState(redirectUri, timeProvider.GetUtcNow()));
+                insertedKeys.Add(InsertPendingFlowState(redirectUri));
             }
 
             // only the injected clock moves; the wall clock does not
-            timeProvider.Advance(TimeSpan.FromMinutes(11));
+            _timeProvider.Advance(TimeSpan.FromMinutes(11));
 
             OidcAuthorizationResult result = await service.StartAuthorization(redirectUri);
 
@@ -793,7 +794,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             .ToList();
     }
 
-    private static string InsertExpiredOneTimeCode()
+    private string InsertExpiredOneTimeCode()
     {
         var oneTimeCodesField = typeof(OidcAuthService)
             .GetField("OneTimeCodes", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -804,7 +805,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         SetReflectionProperty(entry, "AccessToken", "test-access");
         SetReflectionProperty(entry, "RefreshToken", "test-refresh");
         SetReflectionProperty(entry, "ExpiresIn", 3600);
-        SetReflectionProperty(entry, "CreatedAt", DateTimeOffset.UtcNow - TimeSpan.FromSeconds(31));
+        SetReflectionProperty(entry, "CreatedAt", _timeProvider.GetUtcNow() - TimeSpan.FromSeconds(31));
 
         var code = "expired-test-code-" + Guid.NewGuid().ToString("N");
         oneTimeCodes.GetType().GetMethod("TryAdd")!.Invoke(oneTimeCodes, new[] { code, entry });
@@ -814,7 +815,7 @@ public sealed class OidcAuthServiceTests : IDisposable
     /// <summary>
     /// Replaces the stored OidcFlowState with one whose CreatedAt is backdated by the given age.
     /// </summary>
-    private static void BackdateFlowState(string state, TimeSpan age)
+    private void BackdateFlowState(string state, TimeSpan age)
     {
         var pendingFlowsField = typeof(OidcAuthService)
             .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -832,7 +833,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         foreach (var prop in flowType.GetProperties())
         {
             var value = prop.Name == "CreatedAt"
-                ? DateTimeOffset.UtcNow - age
+                ? _timeProvider.GetUtcNow() - age
                 : prop.GetValue(existing);
             SetReflectionProperty(newEntry, prop.Name, value!);
         }
@@ -842,7 +843,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         tryUpdate.Invoke(pendingFlows, new[] { state, newEntry, existing });
     }
 
-    private static string InsertPendingFlowState(string redirectUri, DateTimeOffset? createdAt = null)
+    private string InsertPendingFlowState(string redirectUri, DateTimeOffset? createdAt = null)
     {
         var pendingFlowsField = typeof(OidcAuthService)
             .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -855,7 +856,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         SetReflectionProperty(entry, "Nonce", "test-nonce");
         SetReflectionProperty(entry, "CodeVerifier", "test-verifier");
         SetReflectionProperty(entry, "RedirectUri", redirectUri);
-        SetReflectionProperty(entry, "CreatedAt", createdAt ?? DateTimeOffset.UtcNow);
+        SetReflectionProperty(entry, "CreatedAt", createdAt ?? _timeProvider.GetUtcNow());
 
         pendingFlows.GetType().GetMethod("TryAdd")!.Invoke(pendingFlows, new[] { key, entry });
         return key;
@@ -1023,7 +1024,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             // Invoke the private static CleanupExpiredEntries directly (bypassing the timer)
             var method = typeof(OidcAuthService)
                 .GetMethod("CleanupExpiredEntries", BindingFlags.NonPublic | BindingFlags.Static)!;
-            method.Invoke(null, new object?[] { TimeProvider.System });
+            method.Invoke(null, new object?[] { _timeProvider });
 
             // Expired flow state must have been removed
             var pendingFlowsField = typeof(OidcAuthService)

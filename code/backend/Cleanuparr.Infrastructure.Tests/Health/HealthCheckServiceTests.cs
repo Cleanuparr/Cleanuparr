@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -18,6 +19,8 @@ namespace Cleanuparr.Infrastructure.Tests.Health;
 
 public sealed class HealthCheckServiceTests : IDisposable
 {
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<DataContext> _options;
     private readonly IDownloadServiceFactory _downloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
@@ -618,14 +621,14 @@ public sealed class HealthCheckServiceTests : IDisposable
         HealthCheckService service = BuildService();
 
         HealthStatus probed = await service.CheckClientHealthAsync(Seeded("qbit"));
-        probed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        probed.LastChecked.ShouldBe(Now);
 
         HealthStatus missing = await service.CheckClientHealthAsync(Guid.NewGuid());
-        missing.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        missing.LastChecked.ShouldBe(Now);
 
         ProbeThrows(new InvalidOperationException("boom"));
         HealthStatus failed = await service.CheckClientHealthAsync(Seeded("qbit"));
-        failed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        failed.LastChecked.ShouldBe(Now);
     }
 
     [Fact]
@@ -635,14 +638,14 @@ public sealed class HealthCheckServiceTests : IDisposable
         HealthCheckService service = BuildService();
 
         ArrHealthStatus probed = await service.CheckArrInstanceHealthAsync(Seeded("main"));
-        probed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        probed.LastChecked.ShouldBe(Now);
 
         ArrHealthStatus missing = await service.CheckArrInstanceHealthAsync(Guid.NewGuid());
-        missing.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        missing.LastChecked.ShouldBe(Now);
 
         ArrProbeThrows(new InvalidOperationException("api key rejected"));
         ArrHealthStatus failed = await service.CheckArrInstanceHealthAsync(Seeded("main"));
-        failed.LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        failed.LastChecked.ShouldBe(Now);
     }
 
     [Fact]
@@ -654,8 +657,8 @@ public sealed class HealthCheckServiceTests : IDisposable
 
         IDictionary<Guid, ArrHealthStatus> results = await BuildService().CheckAllArrInstancesHealthAsync();
 
-        results[Seeded("reachable")].LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
-        results[Seeded("broken")].LastChecked.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        results[Seeded("reachable")].LastChecked.ShouldBe(Now);
+        results[Seeded("broken")].LastChecked.ShouldBe(Now);
     }
 
     #endregion
@@ -804,7 +807,7 @@ public sealed class HealthCheckServiceTests : IDisposable
         return new HealthCheckService(
             NullLogger<HealthCheckService>.Instance,
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
-            TimeProvider.System);
+            new FakeTimeProvider(Now));
     }
 
     public void Dispose()

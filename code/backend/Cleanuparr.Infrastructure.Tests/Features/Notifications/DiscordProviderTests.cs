@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -11,6 +12,8 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class DiscordProviderTests
 {
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     private readonly IDiscordProxy _proxy = Substitute.For<IDiscordProxy>();
     private readonly DiscordProvider _provider;
 
@@ -22,7 +25,7 @@ public class DiscordProviderTests
             WebhookUrl = "https://discord.example.com/webhook",
         };
 
-        _provider = new DiscordProvider("TestDiscord", NotificationProviderType.Discord, config, _proxy, TimeProvider.System);
+        _provider = new DiscordProvider("TestDiscord", NotificationProviderType.Discord, config, _proxy, new FakeTimeProvider(Now));
     }
 
     [Fact]
@@ -41,6 +44,6 @@ public class DiscordProviderTests
         string timestamp = payload.Embeds.Single().Timestamp!;
 
         DateTimeOffset.Parse(timestamp, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
-            .ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+            .ShouldBe(Now);
     }
 }

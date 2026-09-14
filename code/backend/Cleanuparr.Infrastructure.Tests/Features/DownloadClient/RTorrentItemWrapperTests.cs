@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 using Xunit;
 
@@ -403,8 +404,9 @@ public class RTorrentItemWrapperTests
         public void CalculatesSeedingTime_WhenComplete()
         {
             // Arrange
-            var finishedTime = DateTimeOffset.UtcNow.AddHours(-2).ToUnixTimeSeconds();
-            var torrent = new RTorrentTorrent
+            FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+            long finishedTime = timeProvider.GetUtcNow().AddHours(-2).ToUnixTimeSeconds();
+            RTorrentTorrent torrent = new()
             {
                 Hash = "HASH1",
                 Name = "Test",
@@ -413,10 +415,31 @@ public class RTorrentItemWrapperTests
             };
 
             // Act
-            var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
+            RTorrentItemWrapper wrapper = new(torrent, null, timeProvider);
 
-            // Assert - should be approximately 2 hours (7200 seconds)
-            (wrapper.SeedingTimeSeconds >= 7190 && wrapper.SeedingTimeSeconds <= 7210).ShouldBeTrue();
+            // Assert
+            wrapper.SeedingTimeSeconds.ShouldBe(7200);
+        }
+
+        [Fact]
+        public void CalculatesSeedingTime_WhenTheClockAdvances()
+        {
+            // Arrange
+            FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+            RTorrentTorrent torrent = new()
+            {
+                Hash = "HASH1",
+                Name = "Test",
+                Complete = 1,
+                TimestampFinished = timeProvider.GetUtcNow().ToUnixTimeSeconds()
+            };
+            RTorrentItemWrapper wrapper = new(torrent, null, timeProvider);
+
+            // Act
+            timeProvider.Advance(TimeSpan.FromMinutes(30));
+
+            // Assert
+            wrapper.SeedingTimeSeconds.ShouldBe(1800);
         }
     }
 
