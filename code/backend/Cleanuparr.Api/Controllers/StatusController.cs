@@ -19,7 +19,6 @@ public class StatusController : ControllerBase
     private readonly ILogger<StatusController> _logger;
     private readonly DataContext _dataContext;
     private readonly IInstanceHealthChecker _healthChecker;
-    private readonly TimeProvider _timeProvider;
 
     // Every member is seeded in arr_configs, so a new one must not be forgotten here.
     private static readonly IReadOnlyList<InstanceType> ArrTypes = EnumSentinel.SelectableValues<InstanceType>();
@@ -27,13 +26,11 @@ public class StatusController : ControllerBase
     public StatusController(
         ILogger<StatusController> logger,
         DataContext dataContext,
-        IInstanceHealthChecker healthChecker,
-        TimeProvider timeProvider)
+        IInstanceHealthChecker healthChecker)
     {
         _logger = logger;
         _dataContext = dataContext;
         _healthChecker = healthChecker;
-        _timeProvider = timeProvider;
     }
 
     [HttpGet]
@@ -60,8 +57,7 @@ public class StatusController : ControllerBase
             {
                 Version = GetType().Assembly.GetName().Version?.ToString() ?? "Unknown",
                 StartTime = process.StartTime,
-                // ponytail: measured against the real process start, so a fake clock here yields nonsense
-                UpTime = _timeProvider.GetUtcNow() - process.StartTime.ToUniversalTime(),
+                UpTime = DateTime.UtcNow - process.StartTime.ToUniversalTime(),
                 MemoryUsageMB = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
                 ProcessorTime = process.TotalProcessorTime,
             },

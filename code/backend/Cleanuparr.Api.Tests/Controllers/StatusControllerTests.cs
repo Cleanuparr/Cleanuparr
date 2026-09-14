@@ -28,8 +28,7 @@ public class StatusControllerTests : IDisposable
         _controller = new StatusController(
             Substitute.For<ILogger<StatusController>>(),
             _dataContext,
-            _healthChecker,
-            TimeProvider.System);
+            _healthChecker);
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
