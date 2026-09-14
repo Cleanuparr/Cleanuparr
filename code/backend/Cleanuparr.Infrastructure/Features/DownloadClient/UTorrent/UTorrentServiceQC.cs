@@ -38,7 +38,7 @@ public partial class UTorrentService
         SetDownloadClientContext();
 
         // Create ITorrentItem wrapper for consistent interface usage
-        UTorrentItemWrapper torrent = new(download, properties);
+        UTorrentItemWrapper torrent = new(download, properties, _timeProvider);
         result.Torrent = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))

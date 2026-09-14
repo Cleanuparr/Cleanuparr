@@ -12,15 +12,17 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 {
     private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
+    private readonly TimeProvider _timeProvider;
 
     public UTorrentItem Info { get; }
 
     public UTorrentProperties Properties { get; }
 
-    public UTorrentItemWrapper(UTorrentItem torrentItem, UTorrentProperties torrentProperties)
+    public UTorrentItemWrapper(UTorrentItem torrentItem, UTorrentProperties torrentProperties, TimeProvider timeProvider)
     {
         Info = torrentItem ?? throw new ArgumentNullException(nameof(torrentItem));
         Properties = torrentProperties ?? throw new ArgumentNullException(nameof(torrentProperties));
+        _timeProvider = timeProvider;
         _trackerDomains = new Lazy<IReadOnlyList<string>>(() => Properties.TrackerList
             .Select(url => UriService.GetDomain(url))
             .Where(d => d is not null)
@@ -59,7 +61,9 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     public long Eta => Info.ETA;
     
-    public long SeedingTimeSeconds => (long?)Info.SeedingTime?.TotalSeconds ?? 0;
+    /// <inheritdoc/>
+    /// <remarks>µTorrent reports no seeding time, so it is derived from the completion timestamp.</remarks>
+    public long SeedingTimeSeconds => CalculateSeedingTime();
 
     public DateTime? LastActivityTime => null;
 
@@ -113,5 +117,21 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Calculate seeding time based on the timestamp when the torrent finished downloading.
+    /// µTorrent doesn't natively track seeding time, so we calculate it from completion timestamp.
+    /// </summary>
+    private long CalculateSeedingTime()
+    {
+        // If not finished yet, no seeding time
+        if (Info.DateCompletedDateTime is null)
+        {
+            return 0;
+        }
+
+        long seedingTime = (long)(_timeProvider.GetUtcNow() - Info.DateCompletedDateTime.Value).TotalSeconds;
+        return seedingTime > 0 ? seedingTime : 0;
     }
 }
