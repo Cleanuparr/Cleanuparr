@@ -175,7 +175,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
                 _logger.LogWarning(ex, "Authentication attempt {Attempt} failed for µTorrent client '{ClientName}', retrying in {Delay}ms", 
                     retryCount, _config.Name, backoffDelay.TotalMilliseconds);
                 
-                await Task.Delay(backoffDelay);
+                await Task.Delay(backoffDelay, _timeProvider);
                 backoffDelay = TimeSpan.FromMilliseconds(backoffDelay.TotalMilliseconds * 1.5); // Exponential backoff
             }
             catch (Exception ex)

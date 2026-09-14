@@ -42,7 +42,7 @@ public class EventCleanupService : BackgroundService
 
                 await PerformCleanupAsync();
                 
-                await Task.Delay(_cleanupInterval, stoppingToken);
+                await Task.Delay(_cleanupInterval, _timeProvider, stoppingToken);
             }
             catch (OperationCanceledException)
             {

@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -16,6 +17,7 @@ namespace Cleanuparr.Infrastructure.Tests.Services;
 public class AppStatusRefreshServiceTests : IDisposable
 {
     private readonly ILogger<AppStatusRefreshService> _logger;
+    private readonly FakeTimeProvider _timeProvider = new();
     private readonly IStatusNotifier _statusNotifier;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppStatusSnapshot _snapshot;
@@ -48,7 +50,8 @@ public class AppStatusRefreshServiceTests : IDisposable
             _httpClientFactory,
             _snapshot,
             _jsonOptions,
-            _scopeFactory);
+            _scopeFactory,
+            _timeProvider);
         return _service;
     }
 

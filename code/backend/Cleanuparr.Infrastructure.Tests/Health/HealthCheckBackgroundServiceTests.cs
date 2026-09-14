@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -12,6 +13,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
 {
     private readonly ILogger<HealthCheckBackgroundService> _logger;
     private readonly IHealthCheckService _healthCheckService;
+    private readonly FakeTimeProvider _timeProvider = new();
     private HealthCheckBackgroundService? _service;
 
     public HealthCheckBackgroundServiceTests()
@@ -29,7 +31,8 @@ public class HealthCheckBackgroundServiceTests : IDisposable
     {
         _service = new HealthCheckBackgroundService(
             _logger,
-            _healthCheckService);
+            _healthCheckService,
+            _timeProvider);
         return _service;
     }
 
@@ -62,6 +65,43 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Should not throw
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OnlyPollsAgainWhenTheInjectedClockAdvances()
+    {
+        // Arrange
+        HealthCheckBackgroundService service = CreateService();
+        int calls = 0;
+
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(_ =>
+            {
+                Interlocked.Increment(ref calls);
+                return (IDictionary<Guid, HealthStatus>)new Dictionary<Guid, HealthStatus>();
+            });
+        _healthCheckService
+            .CheckAllArrInstancesHealthAsync()
+            .Returns(new Dictionary<Guid, ArrHealthStatus>());
+
+        using CancellationTokenSource cts = new();
+
+        // Act
+        await service.StartAsync(cts.Token);
+
+        // nudging the fake clock is the only thing that can release the loop's delay
+        for (int attempt = 0; attempt < 200 && Volatile.Read(ref calls) < 2; attempt++)
+        {
+            _timeProvider.Advance(TimeSpan.FromMinutes(5));
+            await Task.Delay(10);
+        }
+
+        cts.Cancel();
+        await service.StopAsync(CancellationToken.None);
+
+        // Assert
+        Volatile.Read(ref calls).ShouldBeGreaterThanOrEqualTo(2);
     }
 
     [Fact]
