@@ -28,7 +28,7 @@ public class JobManagementServiceTests
         _schedulerFactory.GetScheduler(Arg.Any<CancellationToken>())
             .Returns(_scheduler);
 
-        _service = new JobManagementService(_logger, _schedulerFactory, TimeProvider.System);
+        _service = new JobManagementService(_logger, _schedulerFactory);
     }
 
     #region StartJob Tests
@@ -422,22 +422,23 @@ public class JobManagementServiceTests
     }
 
     [Fact]
-    public async Task TriggerJobOnce_StampsTheTriggerNameWithTheCurrentTime()
+    public async Task TriggerJobOnce_GivesEveryOneTimeTriggerADistinctIdentity()
     {
         // Arrange
-        ITrigger? scheduled = null;
+        List<ITrigger> scheduled = [];
         _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .Returns(true);
-        _scheduler.ScheduleJob(Arg.Do<ITrigger>(t => scheduled = t), Arg.Any<CancellationToken>())
+        _scheduler.ScheduleJob(Arg.Do<ITrigger>(scheduled.Add), Arg.Any<CancellationToken>())
             .Returns(DateTimeOffset.Now);
 
         // Act
         await _service.TriggerJobOnce(JobType.MalwareBlocker);
+        await _service.TriggerJobOnce(JobType.MalwareBlocker);
 
-        // Assert: the trailing ticks keep every one-time trigger unique
-        scheduled.ShouldNotBeNull();
-        long ticks = long.Parse(scheduled.Key.Name.Split('-').Last());
-        new DateTimeOffset(ticks, TimeSpan.Zero).ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        // Assert
+        scheduled.Count.ShouldBe(2);
+        scheduled[0].Key.Name.ShouldStartWith("MalwareBlocker-immediate-manual-");
+        scheduled[1].Key.Name.ShouldNotBe(scheduled[0].Key.Name);
     }
 
     [Fact]
