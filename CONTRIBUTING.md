@@ -1,3 +1,8 @@
+# Due to the recent spike in people considering themselves developers because AI can do the work for them, this project is not currently accepting any new PR contributions.
+
+<details>
+<summary>Old contributing guide</summary>
+
 # Contributing to Cleanuparr
 
 Thanks for your interest in contributing to Cleanuparr! This guide will help you get started with development.
@@ -377,3 +382,5 @@ By contributing to Cleanuparr, you agree that your contributions will be license
 ---
 
 Thanks for contributing to Cleanuparr!
+
+</details>
