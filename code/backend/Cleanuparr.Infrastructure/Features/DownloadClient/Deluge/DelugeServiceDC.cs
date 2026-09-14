@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -29,16 +30,20 @@ public partial class DelugeService
     /// <inheritdoc/>
     public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
-        var downloads = await _client.GetStatusForAllTorrents();
+        List<DownloadStatus>? downloads = await _client.GetStatusForAllTorrents();
         if (downloads is null)
         {
-            return [];
+            throw new DelugeClientException("Deluge returned no torrent status");
         }
 
-        return downloads
+        List<ITorrentItemWrapper> torrents = downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Select(ITorrentItemWrapper (x) => new DelugeItemWrapper(x))
             .ToList();
+
+        ThrowIfTorrentListCollapsed(downloads.Count, torrents.Count);
+
+        return torrents;
     }
 
     /// <inheritdoc/>

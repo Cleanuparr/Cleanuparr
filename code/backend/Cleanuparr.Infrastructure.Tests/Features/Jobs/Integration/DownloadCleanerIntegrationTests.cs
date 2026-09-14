@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Files;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
@@ -110,8 +111,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act - advance time past the 10s delay
         var executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert: Only the orphaned download should be passed to filter/clean
         mockDownloadService.Received().FilterDownloadsToBeCleanedAsync(
@@ -157,8 +157,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act
         var executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert: Only the non-ignored download should be processed
         mockDownloadService.Received().FilterDownloadsToBeCleanedAsync(
@@ -232,8 +231,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act
         var executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert: Full DownloadCleaned event property verification
         var events = await _fixture.EventsContext.Events.ToListAsync();
@@ -311,8 +309,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act
         var executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert: Full CategoryChanged event property verification
         var events = await _fixture.EventsContext.Events.ToListAsync();
@@ -353,8 +350,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act
         Task executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert: the torrent was stopped and stayed in the client
         downloadService.StoppedHashes.ShouldBe(["stop_hash"]);
@@ -384,16 +380,14 @@ public class DownloadCleanerIntegrationTests : IDisposable
         RecordingDownloadService downloadService = SetupSeedingRuleRun(SeedingRuleAction.Stop, torrent);
 
         Task firstRun = CreateSut().ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await firstRun;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(firstRun);
 
         // The clients keep listing a stopped torrent as seeding.
         torrent.IsStopped.Returns(true);
 
         // Act
         Task secondRun = CreateSut().ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await secondRun;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(secondRun);
 
         // Assert: no second stop and no second event
         downloadService.StoppedHashes.ShouldBe(["stop_hash"]);
@@ -418,8 +412,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act
         Task executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert
         downloadService.DeletedHashes.ShouldBe(["paused_hash"]);
@@ -445,8 +438,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         // Act
         Task executeTask = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(15));
-        await executeTask;
+        await _fixture.TimeProvider.AdvanceUntilCompleted(executeTask);
 
         // Assert
         downloadService.DeletedHashes.ShouldBeEmpty();

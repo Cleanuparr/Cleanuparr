@@ -317,19 +317,27 @@ public sealed class RTorrentClient
         var array = value.Element("array");
         var data = array?.Element("data");
 
-        if (data == null) return result;
+        if (data == null)
+        {
+            throw new RTorrentClientException("Invalid XML-RPC response: expected an array of torrents");
+        }
 
         foreach (var itemValue in data.Elements("value"))
         {
             var innerArray = itemValue.Element("array")?.Element("data");
-            if (innerArray == null) continue;
+            if (innerArray == null)
+            {
+                throw new RTorrentClientException("Invalid XML-RPC response: torrent row is not an array");
+            }
 
             var values = innerArray.Elements("value").Select(ParseSingleValue).ToArray();
             var torrent = CreateTorrentFromValues(values);
-            if (torrent != null)
+            if (torrent == null)
             {
-                result.Add(torrent);
+                throw new RTorrentClientException($"Invalid XML-RPC response: torrent row has {values.Length} of {TorrentFields.Length} fields");
             }
+
+            result.Add(torrent);
         }
 
         return result;

@@ -63,12 +63,8 @@ public class DownloadCleanerTests : IDisposable
     /// <summary>
     /// Executes the handler and advances time past the 10-second delay
     /// </summary>
-    private async Task ExecuteWithTimeAdvance(DownloadCleaner sut)
-    {
-        var task = sut.ExecuteAsync();
-        _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(10));
-        await task;
-    }
+    private Task ExecuteWithTimeAdvance(DownloadCleaner sut) =>
+        _fixture.TimeProvider.AdvanceUntilCompleted(sut.ExecuteAsync());
 
     #region ExecuteAsync Tests (inherited from GenericHandler)
 
@@ -151,6 +147,39 @@ public class DownloadCleanerTests : IDisposable
 
         // Assert
         _logger.HasLogContaining(LogLevel.Information, "No seeding downloads found").ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecuteInternalAsync_WhenNoSeedingDownloadsFound_OrphanedFilesStillRuns()
+    {
+        // Arrange
+        DownloadClientConfig client = TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, client,
+            scanDirectories: [Path.Combine(Path.GetTempPath(), "cleanuparr-tests", Guid.NewGuid().ToString("N"))],
+            orphanedDirectory: Path.Combine(Path.GetTempPath(), "cleanuparr-tests", Guid.NewGuid().ToString("N")));
+
+        // Bound to the persisted client, because the orphaned scan matches configs by client id
+        IDownloadService mockDownloadService = Substitute.For<IDownloadService>();
+        mockDownloadService.ClientConfig.Returns(client);
+        mockDownloadService.LoginAsync().Returns(Task.CompletedTask);
+        mockDownloadService.GetSeedingDownloads().Returns([]);
+        mockDownloadService.GetAllTorrentsLite().Returns([]);
+        mockDownloadService.GetClaimedPathsAsync(Arg.Any<IReadOnlyList<ITorrentItemWrapper>>())
+            .Returns(Task.FromResult<IReadOnlyList<string>>([]));
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        DownloadCleaner sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert - the scan reached its directory loop, so the orphaned pass is not gated on seeding downloads
+        _logger.HasLogContaining(LogLevel.Information, "No seeding downloads found").ShouldBeTrue();
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "Scan directory does not exist").ShouldBeTrue();
     }
 
     [Fact]
