@@ -106,7 +106,7 @@ public class EventPublisher : IEventPublisher
 
         if (normalizedHash is not null)
         {
-            // ponytail: 1h cooldown is hardcoded by request; make it a config value only if it needs tuning.
+            // 1h cooldown is hardcoded by request; make it a config value only if it needs tuning.
             DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddHours(-1);
 
             // Suppress if an unresolved event already exists (dedup) OR one was resolved < 1h ago (post-resolve cooldown).
