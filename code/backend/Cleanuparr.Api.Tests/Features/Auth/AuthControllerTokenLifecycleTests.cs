@@ -46,8 +46,8 @@ public class AuthControllerTokenLifecycleTests : IClassFixture<CustomWebApplicat
         _refreshToken = await Login();
 
         RefreshToken issued = await NewestToken();
-        issued.CreatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
-        issued.ExpiresAt.ShouldBe(DateTimeOffset.UtcNow.AddDays(7), TimeSpan.FromSeconds(5));
+        issued.CreatedAt.ShouldBe(_factory.Clock.GetUtcNow());
+        issued.ExpiresAt.ShouldBe(_factory.Clock.GetUtcNow().AddDays(7));
     }
 
     [Fact, TestPriority(1)]
@@ -64,7 +64,7 @@ public class AuthControllerTokenLifecycleTests : IClassFixture<CustomWebApplicat
         using (scope)
         {
             RefreshToken revoked = await context.RefreshTokens.SingleAsync(t => t.RevokedAt != null);
-            revoked.RevokedAt!.Value.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+            revoked.RevokedAt!.Value.ShouldBe(_factory.Clock.GetUtcNow());
         }
 
         _refreshToken = rotated;
@@ -106,7 +106,7 @@ public class AuthControllerTokenLifecycleTests : IClassFixture<CustomWebApplicat
                 .OrderByDescending(t => t.CreatedAt)
                 .FirstAsync();
             revoked.RevokedAt.ShouldNotBeNull();
-            revoked.RevokedAt!.Value.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+            revoked.RevokedAt!.Value.ShouldBe(_factory.Clock.GetUtcNow());
         }
     }
 

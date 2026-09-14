@@ -61,7 +61,7 @@ public class AccountControllerPlexTests : IClassFixture<AccountControllerPlexTes
 
         User user = await CurrentUser();
         user.PlexUsername.ShouldBe("setup-plex-user");
-        user.UpdatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        user.UpdatedAt.ShouldBe(_factory.Clock.GetUtcNow());
     }
 
     [Fact, TestPriority(1)]
@@ -94,7 +94,7 @@ public class AccountControllerPlexTests : IClassFixture<AccountControllerPlexTes
         body.GetProperty("apiKey").GetString().ShouldNotBeNullOrEmpty();
 
         User user = await CurrentUser();
-        user.UpdatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        user.UpdatedAt.ShouldBe(_factory.Clock.GetUtcNow());
     }
 
     [Fact, TestPriority(3)]
@@ -108,7 +108,7 @@ public class AccountControllerPlexTests : IClassFixture<AccountControllerPlexTes
 
         User user = await CurrentUser();
         user.PlexUsername.ShouldBe("account-plex-user");
-        user.UpdatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        user.UpdatedAt.ShouldBe(_factory.Clock.GetUtcNow());
     }
 
     [Fact, TestPriority(4)]
@@ -121,7 +121,7 @@ public class AccountControllerPlexTests : IClassFixture<AccountControllerPlexTes
 
         User user = await CurrentUser();
         user.PlexUsername.ShouldBeNull();
-        user.UpdatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        user.UpdatedAt.ShouldBe(_factory.Clock.GetUtcNow());
     }
 
     private void PlexReturns(string authToken, string plexUsername)

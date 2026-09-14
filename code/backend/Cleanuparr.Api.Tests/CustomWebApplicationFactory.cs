@@ -1,7 +1,10 @@
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 // Integration tests share file-system state (config-dir used by SetupGuardMiddleware),
@@ -16,6 +19,13 @@ namespace Cleanuparr.Api.Tests;
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _tempDir;
+
+    /// <summary>
+    /// Frozen clock the host resolves for TimeProvider, so timestamp assertions can be exact.
+    /// Seeded from the real instant because JWT validation still runs on the wall clock,
+    /// and a host stamping tokens at a distant instant would reject its own requests.
+    /// </summary>
+    public FakeTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
     public CustomWebApplicationFactory()
     {
@@ -37,6 +47,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 services.Remove(hostedService);
             }
+
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(Clock);
         });
     }
 

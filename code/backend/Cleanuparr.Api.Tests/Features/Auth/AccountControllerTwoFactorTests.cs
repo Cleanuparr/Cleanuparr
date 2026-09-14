@@ -109,7 +109,7 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         _secret.ShouldNotBe(previousSecret);
         _recoveryCodes.Count.ShouldBe(10);
         _recoveryCodes.ShouldNotContain(previousCodes[0]);
-        (await ReadUpdatedAt()).ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        (await ReadUpdatedAt()).ShouldBe(_factory.Clock.GetUtcNow());
     }
 
     [Fact, TestPriority(4)]
