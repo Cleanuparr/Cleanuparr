@@ -12,6 +12,22 @@ public class FileReader
     }
     
     /// <summary>
+    /// Whether a configured path points at a remote URL rather than a file on disk.
+    /// An absolute local path parses as a file:// URI, so the scheme has to be checked.
+    /// </summary>
+    public static bool IsRemote(string? path) =>
+        Uri.TryCreate(path, UriKind.Absolute, out Uri? uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    /// <summary>
+    /// Resolves a configured path to something the file system understands, unwrapping a file:// URI to the path it points at.
+    /// </summary>
+    public static string ToLocalPath(string path) =>
+        Uri.TryCreate(path, UriKind.Absolute, out Uri? uri) && uri.Scheme == Uri.UriSchemeFile
+            ? uri.LocalPath
+            : path;
+
+    /// <summary>
     /// Reads content from either a local file or HTTP(S) URL
     /// Extracted from BlocklistProvider.ReadContentAsync for reuse
     /// </summary>
@@ -19,15 +35,16 @@ public class FileReader
     /// <returns>Array of lines from the content</returns>
     public async Task<string[]> ReadContentAsync(string path)
     {
-        if (Uri.TryCreate(path, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        if (IsRemote(path))
         {
             return await ReadFromUrlAsync(path);
         }
 
-        if (File.Exists(path))
+        string localPath = ToLocalPath(path);
+
+        if (File.Exists(localPath))
         {
-            // local file path
-            return await File.ReadAllLinesAsync(path);
+            return await File.ReadAllLinesAsync(localPath);
         }
 
         throw new ArgumentException($"File not found: {path}");
