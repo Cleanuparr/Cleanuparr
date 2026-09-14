@@ -296,6 +296,17 @@ public sealed class TorrentListErrorSurfacingTests
         await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
     }
 
+    [Fact]
+    public async Task QBit_ReportsSomeTorrentsWithoutHashes_Throws()
+    {
+        using QBitServiceFixture fixture = new();
+        QBitService sut = fixture.CreateSut();
+        fixture.ClientWrapper.GetTorrentListAsync(Arg.Any<TorrentListQuery>())
+            .Returns(new List<TorrentInfo> { new() { Hash = "hash1" }, new() });
+
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+    }
+
     #endregion
 
     #region Transmission

@@ -90,19 +90,19 @@ public abstract class DownloadService : IDownloadService
     public abstract Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents);
 
     /// <summary>
-    /// Rejects a torrent list that lost every row the client reported.
+    /// Rejects a torrent list that lost any row the client reported.
     /// </summary>
     /// <param name="reportedCount">Rows the client sent.</param>
     /// <param name="usableCount">Rows that survived parsing and filtering.</param>
-    /// <exception cref="InvalidOperationException">Every reported row was unusable.</exception>
+    /// <exception cref="InvalidOperationException">At least one reported row was unusable.</exception>
     protected void ThrowIfTorrentListCollapsed(int reportedCount, int usableCount)
     {
-        if (reportedCount is 0 || usableCount > 0)
+        if (reportedCount == usableCount)
         {
             return;
         }
 
-        throw new InvalidOperationException($"{_downloadClientConfig.Name} reported {reportedCount} torrents, none of them usable");
+        throw new InvalidOperationException($"{_downloadClientConfig.Name} reported {reportedCount} torrents, only {usableCount} usable");
     }
 
     protected async Task<IReadOnlyList<string>> BuildClaimedPathsAsync(
