@@ -20,6 +20,7 @@ public sealed class AppStatusRefreshService : BackgroundService
     private readonly AppStatusSnapshot _snapshot;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
     private AppStatus? _lastBroadcast;
 
     private static readonly Uri StatusUri = new("https://cleanuparr-status.pages.dev/status.json");
@@ -32,7 +33,8 @@ public sealed class AppStatusRefreshService : BackgroundService
         IHttpClientFactory httpClientFactory,
         AppStatusSnapshot snapshot,
         JsonSerializerOptions jsonOptions,
-        IServiceScopeFactory scopeFactory
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider
     )
     {
         _logger = logger;
@@ -41,13 +43,14 @@ public sealed class AppStatusRefreshService : BackgroundService
         _snapshot = snapshot;
         _jsonOptions = jsonOptions;
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            await Task.Delay(StartupDelay, stoppingToken);
+            await Task.Delay(StartupDelay, _timeProvider, stoppingToken);
         }
         catch (OperationCanceledException)
         {
@@ -60,7 +63,7 @@ public sealed class AppStatusRefreshService : BackgroundService
 
             try
             {
-                await Task.Delay(PollInterval, stoppingToken);
+                await Task.Delay(PollInterval, _timeProvider, stoppingToken);
             }
             catch (OperationCanceledException)
             {

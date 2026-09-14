@@ -23,7 +23,7 @@ public class ManualEventsResponseContractTests : IDisposable
     public ManualEventsResponseContractTests()
     {
         _context = ConfigControllerTestDataFactory.CreateEventsContext();
-        _controller = new ManualEventsController(_context);
+        _controller = new ManualEventsController(_context, TimeProvider.System);
     }
 
     public void Dispose()

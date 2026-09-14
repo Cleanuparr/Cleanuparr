@@ -9,6 +9,7 @@ using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Persistence.Models.Events;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 using Xunit;
 
@@ -25,7 +26,7 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyEventAsync_SendsEventReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context).NotifyEventAsync(new AppEvent
+        await new EventNotifier(_appHub.Context, TimeProvider.System).NotifyEventAsync(new AppEvent
         {
             EventType = EventType.QueueItemDeleted,
             Message = "deleted",
@@ -74,7 +75,7 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyManualEventAsync_SendsManualEventReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context).NotifyManualEventAsync(new ManualEvent
+        await new EventNotifier(_appHub.Context, TimeProvider.System).NotifyManualEventAsync(new ManualEvent
         {
             Message = "needs attention",
             Severity = EventSeverity.Warning,
@@ -109,13 +110,16 @@ public class HubNotifierContractTests
     [Fact]
     public async Task NotifyStrikeAsync_SendsStrikeReceivedWithTheDocumentedKeys()
     {
-        await new EventNotifier(_appHub.Context)
+        DateTimeOffset now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
+        await new EventNotifier(_appHub.Context, new FakeTimeProvider(now))
             .NotifyStrikeAsync(Guid.NewGuid(), StrikeType.FailedImport, "HASH", "title", isDryRun: true);
 
         (string method, object? payload) = _appHub.Single();
 
         method.ShouldBe("StrikeReceived");
-        payload.ShouldBeOfType<RecentStrikeDto>();
+        RecentStrikeDto strike = payload.ShouldBeOfType<RecentStrikeDto>();
+        strike.CreatedAt.ShouldBe(now);
         ResponseContract.Keys(ResponseContract.Payload(payload)).ShouldBe(
         [
             "createdAt",

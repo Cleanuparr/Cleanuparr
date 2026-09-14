@@ -13,7 +13,7 @@ public static class AuthDI
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         // Get the signing key from the JwtService
-        var jwtService = new JwtService();
+        var jwtService = new JwtService(TimeProvider.System);
         var signingKey = jwtService.GetOrCreateSigningKey();
 
         services

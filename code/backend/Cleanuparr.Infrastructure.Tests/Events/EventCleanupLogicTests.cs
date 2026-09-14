@@ -7,6 +7,7 @@ using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -19,19 +20,33 @@ namespace Cleanuparr.Infrastructure.Tests.Events;
 /// </summary>
 public class EventCleanupLogicTests : IDisposable
 {
+    private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
+
     private readonly EventsContext _context;
+    private readonly DataContext _dataContext;
+    private readonly ServiceProvider _serviceProvider;
     private readonly EventCleanupService _service;
 
     public EventCleanupLogicTests()
     {
         _context = TestEventsContextFactory.Create();
+        _dataContext = TestDataContextFactory.Create();
+
+        ServiceCollection services = new();
+        services.AddSingleton(_context);
+        services.AddSingleton(_dataContext);
+        _serviceProvider = services.BuildServiceProvider();
+
         _service = new EventCleanupService(
             Substitute.For<ILogger<EventCleanupService>>(),
-            Substitute.For<IServiceScopeFactory>());
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            new FakeTimeProvider(Now));
     }
 
     public void Dispose()
     {
+        _serviceProvider.Dispose();
+        _dataContext.Dispose();
         _context.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -44,14 +59,14 @@ public class EventCleanupLogicTests : IDisposable
             EventType = EventType.StrikeReset,
             Message = "stale",
             Severity = EventSeverity.Information,
-            Timestamp = DateTimeOffset.UtcNow.AddDays(-400),
+            Timestamp = Now.AddDays(-400),
         });
         _context.Events.Add(new AppEvent
         {
             EventType = EventType.StrikeReset,
             Message = "fresh",
             Severity = EventSeverity.Information,
-            Timestamp = DateTimeOffset.UtcNow.AddDays(-10),
+            Timestamp = Now.AddDays(-10),
         });
         await _context.SaveChangesAsync();
 
@@ -65,7 +80,7 @@ public class EventCleanupLogicTests : IDisposable
     [Fact]
     public async Task DeleteResolvedManualEventsAsync_KeepsRecentlyResolvedOldEvents()
     {
-        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+        DateTimeOffset cutoff = Now.AddDays(-30);
 
         // Created long ago but resolved just now — must survive so the publish cooldown still sees it.
         ManualEvent freshlyResolved = new()
@@ -73,9 +88,9 @@ public class EventCleanupLogicTests : IDisposable
             Type = ManualEventType.RecurringDownload,
             Message = "fresh",
             Severity = EventSeverity.Warning,
-            Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
+            Timestamp = Now.AddDays(-40),
             IsResolved = true,
-            ResolvedAt = DateTimeOffset.UtcNow,
+            ResolvedAt = Now,
         };
         // Created and resolved long ago — safe to delete.
         ManualEvent longResolved = new()
@@ -83,9 +98,9 @@ public class EventCleanupLogicTests : IDisposable
             Type = ManualEventType.SearchNotTriggered,
             Message = "stale",
             Severity = EventSeverity.Warning,
-            Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
+            Timestamp = Now.AddDays(-40),
             IsResolved = true,
-            ResolvedAt = DateTimeOffset.UtcNow.AddDays(-35),
+            ResolvedAt = Now.AddDays(-35),
         };
         // Old but still unresolved — never deleted here.
         ManualEvent unresolved = new()
@@ -93,7 +108,7 @@ public class EventCleanupLogicTests : IDisposable
             Type = ManualEventType.RecurringDownload,
             Message = "open",
             Severity = EventSeverity.Warning,
-            Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
+            Timestamp = Now.AddDays(-40),
             IsResolved = false,
         };
         _context.ManualEvents.AddRange(freshlyResolved, longResolved, unresolved);
@@ -110,8 +125,8 @@ public class EventCleanupLogicTests : IDisposable
     [Fact]
     public async Task PruneJobRunsAsync_DeletesOnlyOldCompletedUnreferencedRuns()
     {
-        DateTimeOffset oldTime = DateTimeOffset.UtcNow.AddDays(-40);
-        DateTimeOffset recentTime = DateTimeOffset.UtcNow.AddDays(-5);
+        DateTimeOffset oldTime = Now.AddDays(-40);
+        DateTimeOffset recentTime = Now.AddDays(-5);
 
         JobRun unreferenced = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = oldTime };
         JobRun referencedByStrike = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = oldTime };
@@ -140,7 +155,7 @@ public class EventCleanupLogicTests : IDisposable
         });
         await _context.SaveChangesAsync();
 
-        await _service.PruneJobRunsAsync(_context, DateTimeOffset.UtcNow.AddDays(-30));
+        await _service.PruneJobRunsAsync(_context, Now.AddDays(-30));
 
         List<Guid> remaining = await _context.JobRuns.Select(j => j.Id).ToListAsync();
         remaining.ShouldNotContain(unreferenced.Id);
@@ -149,5 +164,97 @@ public class EventCleanupLogicTests : IDisposable
         remaining.ShouldContain(referencedByManualEvent.Id);
         remaining.ShouldContain(recent.Id);
         remaining.ShouldContain(incomplete.Id);
+    }
+
+    [Fact]
+    public async Task CleanupStrikesAsync_DeletesStrikesOfItemsOutsideTheInactivityWindow()
+    {
+        JobRun run = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = Now.AddDays(-2) };
+        _context.JobRuns.Add(run);
+
+        DownloadItem inactive = new() { DownloadId = "inactive", Title = "inactive" };
+        DownloadItem active = new() { DownloadId = "active", Title = "active" };
+        _context.DownloadItems.AddRange(inactive, active);
+
+        // The inactive item's most recent strike predates the window, so all of its strikes go.
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = inactive.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = Now.AddHours(-48),
+        });
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = inactive.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = Now.AddHours(-30),
+        });
+        // The active item keeps every strike, including the old one, because it was struck again recently.
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = active.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = Now.AddHours(-48),
+        });
+        _context.Strikes.Add(new Strike
+        {
+            DownloadItemId = active.Id,
+            JobRunId = run.Id,
+            Type = StrikeType.Stalled,
+            CreatedAt = Now.AddHours(-1),
+        });
+        await _context.SaveChangesAsync();
+
+        await _service.CleanupStrikesAsync(_context, inactivityWindowHours: 24);
+
+        List<Guid> remainingStrikes = await _context.Strikes.Select(s => s.DownloadItemId).ToListAsync();
+        remainingStrikes.ShouldAllBe(id => id == active.Id);
+        remainingStrikes.Count.ShouldBe(2);
+
+        List<string> remainingItems = await _context.DownloadItems.Select(d => d.DownloadId).ToListAsync();
+        remainingItems.ShouldBe(["active"]);
+    }
+
+    [Fact]
+    public async Task PerformCleanupAsync_PrunesTransientRowsBeyondTheRetentionWindow()
+    {
+        DateTimeOffset old = Now.AddDays(-40);
+        DateTimeOffset recent = Now.AddDays(-5);
+
+        JobRun staleRun = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = old, CompletedAt = old };
+        JobRun recentRun = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = recent, CompletedAt = recent };
+        _context.JobRuns.AddRange(staleRun, recentRun);
+
+        _context.ManualEvents.Add(new ManualEvent
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "stale",
+            Severity = EventSeverity.Warning,
+            Timestamp = old,
+            IsResolved = true,
+            ResolvedAt = old,
+        });
+        _context.ManualEvents.Add(new ManualEvent
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "recent",
+            Severity = EventSeverity.Warning,
+            Timestamp = old,
+            IsResolved = true,
+            ResolvedAt = recent,
+        });
+        await _context.SaveChangesAsync();
+
+        await _service.PerformCleanupAsync();
+
+        List<string> manualEvents = await _context.ManualEvents.Select(e => e.Message).ToListAsync();
+        manualEvents.ShouldBe(["recent"]);
+
+        List<Guid> jobRuns = await _context.JobRuns.Select(j => j.Id).ToListAsync();
+        jobRuns.ShouldNotContain(staleRun.Id);
+        jobRuns.ShouldContain(recentRun.Id);
     }
 }

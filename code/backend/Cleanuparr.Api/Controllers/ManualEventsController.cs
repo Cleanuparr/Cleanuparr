@@ -15,10 +15,12 @@ namespace Cleanuparr.Api.Controllers;
 public class ManualEventsController : ControllerBase
 {
     private readonly EventsContext _context;
+    private readonly TimeProvider _timeProvider;
 
-    public ManualEventsController(EventsContext context)
+    public ManualEventsController(EventsContext context, TimeProvider timeProvider)
     {
         _context = context;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -140,7 +142,7 @@ public class ManualEventsController : ControllerBase
             return NotFound();
 
         eventEntity.IsResolved = true;
-        eventEntity.ResolvedAt = DateTimeOffset.UtcNow;
+        eventEntity.ResolvedAt = _timeProvider.GetUtcNow();
         await _context.SaveChangesAsync();
 
         return Ok();
@@ -152,7 +154,7 @@ public class ManualEventsController : ControllerBase
     [HttpPost("resolve_all")]
     public async Task<ActionResult<object>> ResolveAllManualEvents()
     {
-        DateTimeOffset resolvedAt = DateTimeOffset.UtcNow;
+        DateTimeOffset resolvedAt = _timeProvider.GetUtcNow();
         int resolvedCount = await _context.ManualEvents
             .Where(e => !e.IsResolved)
             .ExecuteUpdateAsync(setter => setter

@@ -4,6 +4,7 @@ using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Auth;
@@ -14,6 +15,10 @@ public sealed class LoginAttemptTrackerTests : IDisposable
     private readonly UsersContext _usersContext;
     private readonly LoginAttemptTracker _sut;
     private readonly Guid _userId = Guid.NewGuid();
+
+    // Frozen at the real now, because the lockout windows are relative.
+    // Rounding must not drift while the test runs.
+    private readonly FakeTimeProvider _clock = new(DateTimeOffset.UtcNow);
 
     public LoginAttemptTrackerTests()
     {
@@ -38,7 +43,7 @@ public sealed class LoginAttemptTrackerTests : IDisposable
         });
         _usersContext.SaveChanges();
 
-        _sut = new LoginAttemptTracker(_usersContext, NullLogger<LoginAttemptTracker>.Instance);
+        _sut = new LoginAttemptTracker(_usersContext, NullLogger<LoginAttemptTracker>.Instance, _clock);
     }
 
     [Fact]
@@ -51,7 +56,7 @@ public sealed class LoginAttemptTrackerTests : IDisposable
         User user = await _usersContext.Users.FirstAsync(u => u.Id == _userId);
         user.FailedLoginAttempts.ShouldBe(3);
         user.LockoutEnd.ShouldNotBeNull();
-        LoginAttemptTracker.GetLockoutSecondsRemaining(user).ShouldNotBeNull();
+        _sut.GetLockoutSecondsRemaining(user).ShouldNotBeNull();
     }
 
     [Fact]
@@ -67,7 +72,7 @@ public sealed class LoginAttemptTrackerTests : IDisposable
 
         User user = await _usersContext.Users.FirstAsync(u => u.Id == _userId);
         user.FailedLoginAttempts.ShouldBe(151);
-        LoginAttemptTracker.GetLockoutSecondsRemaining(user)!.Value.ShouldBeLessThanOrEqualTo(300);
+        _sut.GetLockoutSecondsRemaining(user)!.Value.ShouldBeLessThanOrEqualTo(300);
     }
 
     [Fact]
@@ -81,7 +86,7 @@ public sealed class LoginAttemptTrackerTests : IDisposable
         User user = await _usersContext.Users.FirstAsync(u => u.Id == _userId);
         user.FailedLoginAttempts.ShouldBe(0);
         user.LockoutEnd.ShouldBeNull();
-        LoginAttemptTracker.GetLockoutSecondsRemaining(user).ShouldBeNull();
+        _sut.GetLockoutSecondsRemaining(user).ShouldBeNull();
     }
 
     [Fact]
@@ -89,23 +94,23 @@ public sealed class LoginAttemptTrackerTests : IDisposable
     {
         User user = CreateUser(lockoutEnd: null);
 
-        LoginAttemptTracker.GetLockoutSecondsRemaining(user).ShouldBeNull();
+        _sut.GetLockoutSecondsRemaining(user).ShouldBeNull();
     }
 
     [Fact]
     public void GetLockoutSecondsRemaining_WithExpiredLockout_ReturnsNull()
     {
-        User user = CreateUser(DateTimeOffset.UtcNow.AddSeconds(-1));
+        User user = CreateUser(_clock.GetUtcNow().AddSeconds(-1));
 
-        LoginAttemptTracker.GetLockoutSecondsRemaining(user).ShouldBeNull();
+        _sut.GetLockoutSecondsRemaining(user).ShouldBeNull();
     }
 
     [Fact]
     public void GetLockoutSecondsRemaining_WithActiveLockout_RoundsUpToWholeSeconds()
     {
-        User user = CreateUser(DateTimeOffset.UtcNow.AddSeconds(9.9));
+        User user = CreateUser(_clock.GetUtcNow().AddSeconds(9.9));
 
-        LoginAttemptTracker.GetLockoutSecondsRemaining(user).ShouldBe(10);
+        _sut.GetLockoutSecondsRemaining(user).ShouldBe(10);
     }
 
     private static User CreateUser(DateTimeOffset? lockoutEnd)

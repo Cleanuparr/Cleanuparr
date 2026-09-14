@@ -89,6 +89,8 @@ public static class LoggingConfigManager
             ? new ArchiveHooks(
                 retainedFileCountLimit: config.Log.ArchiveRetainedCount,
                 retainedFileTimeLimit: config.Log.ArchiveTimeLimitHours > 0 ? TimeSpan.FromHours(config.Log.ArchiveTimeLimitHours) : null,
+                // Serilog is configured outside the container, so the clock comes from the system directly.
+                timeProvider: TimeProvider.System,
                 compressionLevel: CompressionLevel.SmallestSize
             )
             : null;

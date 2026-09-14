@@ -52,7 +52,8 @@ public class StrikerTests : IDisposable
             eventLogger,
             notificationPublisher,
             dryRunInterceptor,
-            new SqliteDatabaseProvider());
+            new SqliteDatabaseProvider(),
+            TimeProvider.System);
 
         _striker = new Striker(_logger, _strikerContext, _eventPublisher, dryRunInterceptor);
 

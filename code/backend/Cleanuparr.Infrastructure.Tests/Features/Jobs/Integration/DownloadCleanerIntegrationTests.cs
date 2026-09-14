@@ -481,6 +481,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             downloadClient,
             Substitute.For<IQueueRuleEvaluator>(),
             new SeedingRuleEvaluator(),
+            System.TimeProvider.System,
             torrents.ToList());
 
         _fixture.DryRunInterceptor
@@ -516,10 +517,11 @@ public class DownloadCleanerIntegrationTests : IDisposable
             DownloadClientConfig downloadClientConfig,
             IQueueRuleEvaluator queueRuleEvaluator,
             ISeedingRuleEvaluator seedingRuleEvaluator,
+            TimeProvider timeProvider,
             List<ITorrentItemWrapper> seedingDownloads
         ) : base(
             logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService, httpClientProvider,
-            eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator)
+            eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator, timeProvider)
         {
             _seedingDownloads = seedingDownloads;
         }

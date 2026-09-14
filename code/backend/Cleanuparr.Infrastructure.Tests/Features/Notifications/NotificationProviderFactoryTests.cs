@@ -49,6 +49,7 @@ public class NotificationProviderFactoryTests
         services.AddSingleton(_telegramProxy);
         services.AddSingleton(_discordProxy);
         services.AddSingleton(_gotifyProxy);
+        services.AddSingleton(TimeProvider.System);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);

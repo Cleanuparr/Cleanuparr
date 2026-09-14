@@ -82,6 +82,7 @@ public class RTorrentServiceFixture : IDisposable
             config,
             RuleEvaluator,
             SeedingRuleEvaluator,
+            TimeProvider.System,
             ClientWrapper
         );
     }

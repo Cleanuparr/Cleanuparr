@@ -10,7 +10,8 @@ public sealed class UTorrentAuthCache
     public DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset ExpiresAt { get; init; }
     
-    public bool IsValid => DateTimeOffset.UtcNow < ExpiresAt && 
-                          !string.IsNullOrEmpty(AuthToken) && 
-                          !string.IsNullOrEmpty(GuidCookie);
+    /// <param name="now">The current time, from the caller's clock.</param>
+    public bool IsValid(DateTimeOffset now) => now < ExpiresAt &&
+                                               !string.IsNullOrEmpty(AuthToken) &&
+                                               !string.IsNullOrEmpty(GuidCookie);
 }

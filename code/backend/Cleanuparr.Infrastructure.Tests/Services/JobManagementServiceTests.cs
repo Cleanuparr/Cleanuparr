@@ -422,6 +422,26 @@ public class JobManagementServiceTests
     }
 
     [Fact]
+    public async Task TriggerJobOnce_GivesEveryOneTimeTriggerADistinctIdentity()
+    {
+        // Arrange
+        List<ITrigger> scheduled = [];
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.ScheduleJob(Arg.Do<ITrigger>(scheduled.Add), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
+
+        // Act
+        await _service.TriggerJobOnce(JobType.MalwareBlocker);
+        await _service.TriggerJobOnce(JobType.MalwareBlocker);
+
+        // Assert
+        scheduled.Count.ShouldBe(2);
+        scheduled[0].Key.Name.ShouldStartWith("MalwareBlocker-immediate-manual-");
+        scheduled[1].Key.Name.ShouldNotBe(scheduled[0].Key.Name);
+    }
+
+    [Fact]
     public async Task TriggerJobOnce_WhenSchedulerThrows_ReturnsFalse()
     {
         // Arrange

@@ -14,10 +14,12 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     private readonly IReadOnlyList<string> _trackers;
     private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
     private string? _category;
+    private readonly TimeProvider _timeProvider;
 
-    public RTorrentItemWrapper(RTorrentTorrent torrent, IReadOnlyList<string>? trackers = null)
+    public RTorrentItemWrapper(RTorrentTorrent torrent, IReadOnlyList<string>? trackers, TimeProvider timeProvider)
     {
         Info = torrent ?? throw new ArgumentNullException(nameof(torrent));
+        _timeProvider = timeProvider;
         _trackers = trackers ?? torrent.Trackers ?? [];
         _category = torrent.Label;
         _trackerDomains = new Lazy<IReadOnlyList<string>>(() => _trackers
@@ -145,7 +147,7 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
             return 0;
         }
 
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long now = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         var seedingTime = now - Info.TimestampFinished;
         return seedingTime > 0 ? seedingTime : 0;
     }

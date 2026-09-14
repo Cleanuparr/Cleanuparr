@@ -87,6 +87,7 @@ public class QBitServiceFixture : IDisposable
             config,
             RuleEvaluator,
             SeedingRuleEvaluator,
+            TimeProvider.System,
             ClientWrapper
         );
     }

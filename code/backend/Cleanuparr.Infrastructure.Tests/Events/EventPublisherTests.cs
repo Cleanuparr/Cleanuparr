@@ -49,7 +49,8 @@ public class EventPublisherTests : IDisposable
             Substitute.For<ILogger<EventPublisher>>(),
             _notificationPublisher,
             _dryRunInterceptor,
-            new SqliteDatabaseProvider());
+            new SqliteDatabaseProvider(),
+            TimeProvider.System);
 
         // Setup JobRunId in context for tests
         ContextProvider.SetJobRunId(Guid.NewGuid());

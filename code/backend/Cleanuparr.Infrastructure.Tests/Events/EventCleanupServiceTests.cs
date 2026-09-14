@@ -45,7 +45,7 @@ public class EventCleanupServiceTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
         var cts = new CancellationTokenSource();
 
         // Act - start and immediately cancel
@@ -63,7 +63,7 @@ public class EventCleanupServiceTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
         var cts = new CancellationTokenSource();
 
         // Act
@@ -83,7 +83,7 @@ public class EventCleanupServiceTests : IDisposable
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         // Act
-        var service = new EventCleanupService(_logger, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
 
         // Assert - service should be created without exception
         service.ShouldNotBeNull();
@@ -94,7 +94,7 @@ public class EventCleanupServiceTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
         var cts = new CancellationTokenSource();
 
         // Act - cancel immediately

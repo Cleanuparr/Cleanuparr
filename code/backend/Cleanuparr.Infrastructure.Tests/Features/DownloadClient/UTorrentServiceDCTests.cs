@@ -153,9 +153,9 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }),
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash2", Label = "tv" }, new UTorrentProperties { Hash = "hash2", Pex = 1, Trackers = "" }),
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash3", Label = "music" }, new UTorrentProperties { Hash = "hash3", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System),
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash2", Label = "tv" }, new UTorrentProperties { Hash = "hash2", Pex = 1, Trackers = "" }, TimeProvider.System),
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash3", Label = "music" }, new UTorrentProperties { Hash = "hash3", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             var categories = new List<ISeedingRule>
@@ -182,7 +182,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "Movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "Movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             var categories = new List<ISeedingRule>
@@ -206,7 +206,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "music" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "music" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             var categories = new List<ISeedingRule>
@@ -237,8 +237,8 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }),
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash2", Label = "tv" }, new UTorrentProperties { Hash = "hash2", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System),
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash2", Label = "tv" }, new UTorrentProperties { Hash = "hash2", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -258,7 +258,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "Movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "Movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -277,8 +277,8 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "", Label = "movies" }, new UTorrentProperties { Hash = "", Pex = 1, Trackers = "" }),
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "", Label = "movies" }, new UTorrentProperties { Hash = "", Pex = 1, Trackers = "" }, TimeProvider.System),
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -298,7 +298,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
-                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "tv" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "tv" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -480,7 +480,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Arrange
             UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
                 new UTorrentItem { Hash = "hash1", Status = UTorrentStatus.Checked },
-                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
 
             // Act & Assert
             wrapper.IsStopped.ShouldBeTrue();
@@ -496,7 +496,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
                     Hash = "hash1",
                     Status = UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Paused
                 },
-                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
 
             // Act & Assert
             wrapper.IsStopped.ShouldBeTrue();
@@ -508,7 +508,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Arrange
             UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
                 new UTorrentItem { Hash = "hash1", Status = UTorrentStatus.Started | UTorrentStatus.Checked },
-                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
 
             // Act & Assert
             wrapper.IsStopped.ShouldBeFalse();
@@ -575,7 +575,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -601,7 +601,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -627,7 +627,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             // Act
@@ -653,7 +653,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -691,7 +691,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -728,7 +728,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -765,7 +765,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -804,7 +804,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -842,7 +842,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             {
                 new UTorrentItemWrapper(
                     new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
-                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+                    new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -869,7 +869,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             var sut = _fixture.CreateSut();
             var wrapper = new UTorrentItemWrapper(
                 new UTorrentItem { Hash = "hash1", Name = "Renamed Display", SavePath = "/downloads" },
-                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
             _fixture.ClientWrapper
                 .GetTorrentFilesAsync("hash1")
                 .Returns(new List<UTorrentFile>

@@ -10,6 +10,7 @@ public class HealthCheckBackgroundService : BackgroundService
 {
     private readonly ILogger<HealthCheckBackgroundService> _logger;
     private readonly IHealthCheckService _healthCheckService;
+    private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _checkInterval;
 
     /// <summary>
@@ -17,13 +18,16 @@ public class HealthCheckBackgroundService : BackgroundService
     /// </summary>
     /// <param name="logger">The logger</param>
     /// <param name="healthCheckService">The health check service</param>
+    /// <param name="timeProvider">The time provider</param>
     public HealthCheckBackgroundService(
         ILogger<HealthCheckBackgroundService> logger,
-        IHealthCheckService healthCheckService)
+        IHealthCheckService healthCheckService,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _healthCheckService = healthCheckService;
-        
+        _timeProvider = timeProvider;
+
         _checkInterval = TimeSpan.FromMinutes(5);
     }
 
@@ -104,7 +108,7 @@ public class HealthCheckBackgroundService : BackgroundService
                 }
 
                 // Wait for the next check interval
-                await Task.Delay(_checkInterval, stoppingToken);
+                await Task.Delay(_checkInterval, _timeProvider, stoppingToken);
             }
         }
         catch (OperationCanceledException)

@@ -162,20 +162,4 @@ public sealed class UTorrentItem
     public DateTimeOffset? DateCompletedDateTime =>
         DateCompleted > 0 ? DateTimeOffset.FromUnixTimeSeconds(DateCompleted) : null;
 
-    /// <summary>
-    /// Seeding time in seconds (calculated from DateCompleted to now)
-    /// </summary>
-    [JsonIgnore]
-    public TimeSpan? SeedingTime
-    {
-        get
-        {
-            if (DateCompletedDateTime.HasValue)
-            {
-                return DateTimeOffset.UtcNow - DateCompletedDateTime.Value;
-            }
-            
-            return null;
-        }
-    }
 } 

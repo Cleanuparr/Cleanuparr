@@ -15,13 +15,15 @@ public class EventCleanupService : BackgroundService
 {
     private readonly ILogger<EventCleanupService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(4); // Run every 4 hours
     private readonly int _eventRetentionDays = 30; // Keep events for 30 days
 
-    public EventCleanupService(ILogger<EventCleanupService> logger, IServiceScopeFactory scopeFactory)
+    public EventCleanupService(ILogger<EventCleanupService> logger, IServiceScopeFactory scopeFactory, TimeProvider timeProvider)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -40,7 +42,7 @@ public class EventCleanupService : BackgroundService
 
                 await PerformCleanupAsync();
                 
-                await Task.Delay(_cleanupInterval, stoppingToken);
+                await Task.Delay(_cleanupInterval, _timeProvider, stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -56,7 +58,7 @@ public class EventCleanupService : BackgroundService
         _logger.LogInformation("Event cleanup service stopped");
     }
 
-    private async Task PerformCleanupAsync()
+    internal async Task PerformCleanupAsync()
     {
         try
         {
@@ -68,7 +70,7 @@ public class EventCleanupService : BackgroundService
                 .AsNoTracking()
                 .FirstAsync();
 
-            DateTimeOffset eventCutoff = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
+            DateTimeOffset eventCutoff = _timeProvider.GetUtcNow().AddDays(-_eventRetentionDays);
 
             // Resolved manual events are transient
             await DeleteResolvedManualEventsAsync(eventsContext, eventCutoff);
@@ -102,7 +104,7 @@ public class EventCleanupService : BackgroundService
 
     internal async Task PruneEventsAsync(EventsContext eventsContext, ushort retentionDays)
     {
-        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
+        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-retentionDays);
         int deleted = await eventsContext.Events
             .Where(e => e.Timestamp < cutoff)
             .ExecuteDeleteAsync();
@@ -128,9 +130,9 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    private async Task CleanupStrikesAsync(EventsContext eventsContext, ushort inactivityWindowHours)
+    internal async Task CleanupStrikesAsync(EventsContext eventsContext, ushort inactivityWindowHours)
     {
-        var cutoffDate = DateTimeOffset.UtcNow.AddHours(-inactivityWindowHours);
+        DateTimeOffset cutoffDate = _timeProvider.GetUtcNow().AddHours(-inactivityWindowHours);
 
         // Sliding window: find items whose most recent strike is older than the inactivity window.
         // As long as a download keeps receiving new strikes, all its strikes are preserved.

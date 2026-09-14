@@ -82,7 +82,8 @@ public class DownloadServiceFactoryTests : IDisposable
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
             Substitute.For<IDryRunInterceptor>(),
-            new SqliteDatabaseProvider()));
+            new SqliteDatabaseProvider(),
+            TimeProvider.System));
 
         // BlocklistProvider requires specific constructor arguments
         var scopeFactory = Substitute.For<IServiceScopeFactory>();
@@ -90,7 +91,10 @@ public class DownloadServiceFactoryTests : IDisposable
         services.AddSingleton<IBlocklistProvider>(new BlocklistProvider(
             Substitute.For<ILogger<BlocklistProvider>>(),
             scopeFactory,
-            _memoryCache));
+            _memoryCache,
+            TimeProvider.System));
+
+        services.AddSingleton(TimeProvider.System);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new DownloadServiceFactory(_logger, _serviceProvider);

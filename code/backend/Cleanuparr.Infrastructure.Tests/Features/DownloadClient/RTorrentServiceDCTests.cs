@@ -107,9 +107,9 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "movies" }),
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH2", Name = "Torrent 2", Label = "tv" }),
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH3", Name = "Torrent 3", Label = "music" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "movies" }, null, TimeProvider.System),
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH2", Name = "Torrent 2", Label = "tv" }, null, TimeProvider.System),
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH3", Name = "Torrent 3", Label = "music" }, null, TimeProvider.System)
             };
 
             var categories = new List<ISeedingRule>
@@ -136,7 +136,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "Movies" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "Movies" }, null, TimeProvider.System)
             };
 
             var categories = new List<ISeedingRule>
@@ -160,7 +160,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "music" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "music" }, null, TimeProvider.System)
             };
 
             var categories = new List<ISeedingRule>
@@ -209,9 +209,9 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "movies" }),
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH2", Name = "Torrent 2", Label = "tv" }),
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH3", Name = "Torrent 3", Label = "music" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "movies" }, null, TimeProvider.System),
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH2", Name = "Torrent 2", Label = "tv" }, null, TimeProvider.System),
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH3", Name = "Torrent 3", Label = "music" }, null, TimeProvider.System)
             };
 
             var unlinkedConfig = new UnlinkedConfig { Categories = ["movies", "tv"] };
@@ -232,8 +232,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "", Name = "No Hash", Label = "movies" }),
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Valid Hash", Label = "movies" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "", Name = "No Hash", Label = "movies" }, null, TimeProvider.System),
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Valid Hash", Label = "movies" }, null, TimeProvider.System)
             };
 
             var unlinkedConfig = new UnlinkedConfig { Categories = ["movies"] };
@@ -255,7 +255,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "tv" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "tv" }, null, TimeProvider.System)
             };
 
             var unlinkedConfig = new UnlinkedConfig { Categories = ["movies"] };
@@ -391,7 +391,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
         {
             // Arrange
             RTorrentItemWrapper wrapper = new RTorrentItemWrapper(
-                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 0 });
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 0 }, null, TimeProvider.System);
 
             // Act & Assert
             wrapper.IsStopped.ShouldBeTrue();
@@ -402,7 +402,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
         {
             // Arrange
             RTorrentItemWrapper wrapper = new RTorrentItemWrapper(
-                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1 });
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1 }, null, TimeProvider.System);
 
             // Act & Assert
             wrapper.IsStopped.ShouldBeFalse();
@@ -491,7 +491,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             // Act
@@ -516,7 +516,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             // Act
@@ -541,7 +541,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             // Act
@@ -566,7 +566,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -595,7 +595,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -632,7 +632,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -668,7 +668,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -704,7 +704,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -740,7 +740,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var downloads = new List<ITorrentItemWrapper>
             {
-                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -782,7 +782,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                     Hash = "HASH1", Name = "movie.mkv", Label = "movies",
                     BasePath = "/downloads/movie.mkv",
                     Directory = "/downloads"
-                })
+                }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -825,7 +825,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                     Hash = "HASH1", Name = "Test", Label = "movies",
                     BasePath = "/downloads",
                     Directory = null
-                })
+                }, null, TimeProvider.System)
             };
 
             _fixture.ClientWrapper
@@ -861,7 +861,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 TargetCategory = "unlinked"
             };
 
-            var wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" });
+            var wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System);
             var downloads = new List<ITorrentItemWrapper> { wrapper };
 
             _fixture.ClientWrapper
@@ -901,7 +901,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Renamed Display",
                 BasePath = "/downloads/show",
                 Directory = "/downloads"
-            });
+            }, null, TimeProvider.System);
 
             IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
 

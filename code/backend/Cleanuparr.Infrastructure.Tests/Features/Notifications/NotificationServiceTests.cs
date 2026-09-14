@@ -26,7 +26,8 @@ public class NotificationServiceTests
         _service = new NotificationService(
             _logger,
             _configService,
-            _providerFactory);
+            _providerFactory,
+            TimeProvider.System);
     }
 
     #region SendNotificationAsync Tests

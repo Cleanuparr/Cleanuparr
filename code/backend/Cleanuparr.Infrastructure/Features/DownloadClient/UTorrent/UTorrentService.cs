@@ -33,11 +33,12 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         DownloadClientConfig downloadClientConfig,
         ILoggerFactory loggerFactory,
         IQueueRuleEvaluator queueRuleEvaluator,
-        ISeedingRuleEvaluator seedingRuleEvaluator
+        ISeedingRuleEvaluator seedingRuleEvaluator,
+        TimeProvider timeProvider
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator, timeProvider
     )
     {
         // Create the new layered client with dependency injection
@@ -46,7 +47,8 @@ public partial class UTorrentService : DownloadService, IUTorrentService
             cache,
             httpService,
             downloadClientConfig,
-            loggerFactory.CreateLogger<UTorrentAuthenticator>()
+            loggerFactory.CreateLogger<UTorrentAuthenticator>(),
+            timeProvider
         );
         var responseParser = new UTorrentResponseParser(loggerFactory.CreateLogger<UTorrentResponseParser>());
 
@@ -73,11 +75,12 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         DownloadClientConfig downloadClientConfig,
         IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator,
+         TimeProvider timeProvider,
         IUTorrentClientWrapper clientWrapper
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator, timeProvider
     )
     {
         _client = clientWrapper;

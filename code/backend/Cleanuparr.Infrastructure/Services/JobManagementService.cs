@@ -152,7 +152,7 @@ public class JobManagementService : IJobManagementService
         try
         {
             var immediateTrigger = TriggerBuilder.Create()
-                .WithIdentity($"{jobKey.Name}-immediate-{reason}-{DateTimeOffset.UtcNow.Ticks}")
+                .WithIdentity($"{jobKey.Name}-immediate-{reason}-{Guid.NewGuid():N}")
                 .ForJob(jobKey)
                 .StartNow()
                 .Build();

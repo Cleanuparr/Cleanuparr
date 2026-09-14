@@ -87,7 +87,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
         var cts = new CancellationTokenSource();
 
         // Act
@@ -110,7 +110,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         // Note: In-memory provider doesn't support ExecuteDeleteAsync,
         // so the cleanup will fail. This test verifies the service handles errors gracefully.
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
         var cts = new CancellationTokenSource();
 
         // Act

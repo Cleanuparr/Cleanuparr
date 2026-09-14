@@ -25,6 +25,7 @@ public class EventPublisher : IEventPublisher
     private readonly INotificationPublisher _notificationPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IDatabaseProvider _databaseProvider;
+    private readonly TimeProvider _timeProvider;
 
     public EventPublisher(
         EventsContext context,
@@ -32,7 +33,8 @@ public class EventPublisher : IEventPublisher
         ILogger<EventPublisher> logger,
         INotificationPublisher notificationPublisher,
         IDryRunInterceptor dryRunInterceptor,
-        IDatabaseProvider databaseProvider)
+        IDatabaseProvider databaseProvider,
+        TimeProvider timeProvider)
     {
         _context = context;
         _eventNotifier = eventNotifier;
@@ -40,6 +42,7 @@ public class EventPublisher : IEventPublisher
         _notificationPublisher = notificationPublisher;
         _dryRunInterceptor = dryRunInterceptor;
         _databaseProvider = databaseProvider;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -103,8 +106,8 @@ public class EventPublisher : IEventPublisher
 
         if (normalizedHash is not null)
         {
-            // ponytail: 1h cooldown is hardcoded by request; make it a config value only if it needs tuning.
-            DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-1);
+            // 1h cooldown is hardcoded by request; make it a config value only if it needs tuning.
+            DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddHours(-1);
 
             // Suppress if an unresolved event already exists (dedup) OR one was resolved < 1h ago (post-resolve cooldown).
             bool suppress = await _context.ManualEvents.AnyAsync(e =>
@@ -387,7 +390,7 @@ public class EventPublisher : IEventPublisher
         }
 
         existingEvent.SearchStatus = status;
-        existingEvent.CompletedAt = DateTimeOffset.UtcNow;
+        existingEvent.CompletedAt = _timeProvider.GetUtcNow();
 
         if (grabbedItems is { Count: > 0 })
         {
@@ -458,7 +461,7 @@ public class EventPublisher : IEventPublisher
         foreach (AppEvent strandedEvent in strandedEvents)
         {
             strandedEvent.SearchStatus = SearchCommandStatus.Failed;
-            strandedEvent.CompletedAt = DateTimeOffset.UtcNow;
+            strandedEvent.CompletedAt = _timeProvider.GetUtcNow();
         }
 
         await _context.SaveChangesAsync();

@@ -26,7 +26,7 @@ public partial class UTorrentService
                 continue;
             }
 
-            result.Add(new UTorrentItemWrapper(torrent, properties));
+            result.Add(new UTorrentItemWrapper(torrent, properties, _timeProvider));
         }
 
         return result;
@@ -39,7 +39,7 @@ public partial class UTorrentService
 
         return torrents
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(ITorrentItemWrapper (x) => new UTorrentItemWrapper(x, new UTorrentProperties()))
+            .Select(ITorrentItemWrapper (x) => new UTorrentItemWrapper(x, new UTorrentProperties(), _timeProvider))
             .ToList();
     }
 

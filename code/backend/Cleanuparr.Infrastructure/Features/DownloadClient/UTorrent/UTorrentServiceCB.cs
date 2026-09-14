@@ -36,7 +36,7 @@ public partial class UTorrentService
 
         result.IsPrivate = properties.IsPrivate;
         result.Found = true;
-        result.Torrent = new UTorrentItemWrapper(download, properties);
+        result.Torrent = new UTorrentItemWrapper(download, properties, _timeProvider);
         SetDownloadClientContext();
 
         if (ignoredDownloads.Count > 0 &&

@@ -6,6 +6,8 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -30,14 +32,16 @@ public class NotificationProvidersControllerTests : IDisposable
         NotificationService notificationService = new(
             Substitute.For<ILogger<NotificationService>>(),
             configurationService,
-            Substitute.For<INotificationProviderFactory>());
+            Substitute.For<INotificationProviderFactory>(),
+            TimeProvider.System);
 
         _controller = new NotificationProvidersController(
             Substitute.For<ILogger<NotificationProvidersController>>(),
             _dataContext,
             configurationService,
             notificationService,
-            Substitute.For<IAppriseCliDetector>());
+            Substitute.For<IAppriseCliDetector>(),
+            TimeProvider.System);
 
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
@@ -46,6 +50,15 @@ public class NotificationProvidersControllerTests : IDisposable
     {
         _dataContext.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    private async Task ShouldBeStampedNow(Guid id)
+    {
+        NotificationConfig stored = await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .FirstAsync(c => c.Id == id);
+
+        stored.UpdatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
     }
 
     private static NotificationProviderResponse Created(IActionResult result) =>
@@ -94,6 +107,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion
@@ -141,6 +155,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion
@@ -185,6 +200,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion
@@ -229,6 +245,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion
@@ -270,6 +287,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion
@@ -314,6 +332,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion
@@ -358,6 +377,7 @@ public class NotificationProvidersControllerTests : IDisposable
             }));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
+        await ShouldBeStampedNow(provider.Id);
     }
 
     #endregion

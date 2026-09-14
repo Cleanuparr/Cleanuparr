@@ -17,11 +17,13 @@ public sealed class SearchStatsController : ControllerBase
 {
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
+    private readonly TimeProvider _timeProvider;
 
-    public SearchStatsController(DataContext dataContext, EventsContext eventsContext)
+    public SearchStatsController(DataContext dataContext, EventsContext eventsContext, TimeProvider timeProvider)
     {
         _dataContext = dataContext;
         _eventsContext = eventsContext;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -30,8 +32,9 @@ public sealed class SearchStatsController : ControllerBase
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary()
     {
-        DateTimeOffset sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-        DateTimeOffset thirtyDaysAgo = DateTimeOffset.UtcNow.AddDays(-30);
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        DateTimeOffset sevenDaysAgo = now.AddDays(-7);
+        DateTimeOffset thirtyDaysAgo = now.AddDays(-30);
 
         // Event counts from EventsContext
         var searchEvents = _eventsContext.Events

@@ -28,6 +28,7 @@ public sealed class AccountController : ControllerBase
     private readonly IOidcAuthService _oidcAuthService;
     private readonly LoginAttemptTracker _loginAttemptTracker;
     private readonly ILogger<AccountController> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public AccountController(
         UsersContext usersContext,
@@ -36,7 +37,8 @@ public sealed class AccountController : ControllerBase
         IPlexAuthService plexAuthService,
         IOidcAuthService oidcAuthService,
         LoginAttemptTracker loginAttemptTracker,
-        ILogger<AccountController> logger)
+        ILogger<AccountController> logger,
+        TimeProvider timeProvider)
     {
         _usersContext = usersContext;
         _passwordService = passwordService;
@@ -45,6 +47,7 @@ public sealed class AccountController : ControllerBase
         _oidcAuthService = oidcAuthService;
         _loginAttemptTracker = loginAttemptTracker;
         _logger = logger;
+        _timeProvider = timeProvider;
     }
 
     [HttpGet]
@@ -89,7 +92,7 @@ public sealed class AccountController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "Current password is incorrect");
             }
 
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = _timeProvider.GetUtcNow();
 
             user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
             user.UpdatedAt = now;
@@ -143,7 +146,7 @@ public sealed class AccountController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "New username must be different from the current username");
             }
 
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = _timeProvider.GetUtcNow();
             string previousUsername = user.Username;
 
             user.Username = newUsername;
@@ -183,7 +186,7 @@ public sealed class AccountController : ControllerBase
 
             user = currentUser;
 
-            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            if (_loginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
             {
                 throw new RateLimitException("Account is locked", remaining);
             }
@@ -199,7 +202,7 @@ public sealed class AccountController : ControllerBase
             }
             else
             {
-                setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
+                setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user, _timeProvider);
 
                 await _usersContext.SaveChangesAsync();
             }
@@ -252,7 +255,7 @@ public sealed class AccountController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
             }
 
-            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user);
+            TotpSetupResponse setup = TwoFactorSecretRotation.Rotate(_totpService, _usersContext, user, _timeProvider);
 
             await _usersContext.SaveChangesAsync();
 
@@ -295,7 +298,7 @@ public sealed class AccountController : ControllerBase
             }
 
             user.TotpEnabled = true;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+            user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("2FA enabled for user {Username}", user.Username);
@@ -332,7 +335,7 @@ public sealed class AccountController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, "2FA is not enabled");
             }
 
-            if (LoginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
+            if (_loginAttemptTracker.GetLockoutSecondsRemaining(user) is { } remaining)
             {
                 throw new RateLimitException("Account is locked", remaining);
             }
@@ -349,7 +352,7 @@ public sealed class AccountController : ControllerBase
             {
                 user.TotpEnabled = false;
                 user.TotpSecret = string.Empty;
-                user.UpdatedAt = DateTimeOffset.UtcNow;
+                user.UpdatedAt = _timeProvider.GetUtcNow();
 
                 // Remove all recovery codes
                 _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
@@ -408,7 +411,7 @@ public sealed class AccountController : ControllerBase
         rng.GetBytes(bytes);
 
         user.ApiKey = Convert.ToHexString(bytes).ToLowerInvariant();
-        user.UpdatedAt = DateTimeOffset.UtcNow;
+        user.UpdatedAt = _timeProvider.GetUtcNow();
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("API key regenerated for user {Username}", user.Username);
@@ -456,7 +459,7 @@ public sealed class AccountController : ControllerBase
         user.PlexUsername = plexAccount.Username;
         user.PlexEmail = plexAccount.Email;
         user.PlexAuthToken = pinResult.AuthToken;
-        user.UpdatedAt = DateTimeOffset.UtcNow;
+        user.UpdatedAt = _timeProvider.GetUtcNow();
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("Plex account linked for user {Username}: {PlexUsername}",
@@ -483,7 +486,7 @@ public sealed class AccountController : ControllerBase
         user.PlexUsername = null;
         user.PlexEmail = null;
         user.PlexAuthToken = null;
-        user.UpdatedAt = DateTimeOffset.UtcNow;
+        user.UpdatedAt = _timeProvider.GetUtcNow();
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("Plex account unlinked for user {Username}", user.Username);
@@ -518,7 +521,7 @@ public sealed class AccountController : ControllerBase
 
             request.ApplyTo(user.Oidc);
             user.Oidc.Validate();
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+            user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
             return Ok(new { message = "OIDC configuration updated" });
@@ -606,7 +609,7 @@ public sealed class AccountController : ControllerBase
         }
 
         user.Oidc.AuthorizedSubject = result.Subject;
-        user.UpdatedAt = DateTimeOffset.UtcNow;
+        user.UpdatedAt = _timeProvider.GetUtcNow();
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("OIDC account linked with subject: {Subject} by user: {Username}",
@@ -629,7 +632,7 @@ public sealed class AccountController : ControllerBase
 
             user.Oidc.AuthorizedSubject = string.Empty;
             user.Oidc.ExclusiveMode = false;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
+            user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("OIDC account unlinked for user {Username}", user.Username);
@@ -678,7 +681,7 @@ public sealed class AccountController : ControllerBase
                 .Select(v => v.FeatureId)
                 .ToHashSet();
 
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = _timeProvider.GetUtcNow();
 
             foreach (var featureId in request.FeatureIds.Distinct())
             {

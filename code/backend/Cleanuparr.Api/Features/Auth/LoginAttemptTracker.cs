@@ -13,24 +13,28 @@ public sealed class LoginAttemptTracker
 
     private readonly UsersContext _usersContext;
     private readonly ILogger<LoginAttemptTracker> _logger;
+    private readonly TimeProvider _timeProvider;
 
-    public LoginAttemptTracker(UsersContext usersContext, ILogger<LoginAttemptTracker> logger)
+    public LoginAttemptTracker(UsersContext usersContext, ILogger<LoginAttemptTracker> logger, TimeProvider timeProvider)
     {
         _usersContext = usersContext;
         _logger = logger;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
     /// Returns the seconds left on the lockout, or null when the account is not locked.
     /// </summary>
-    public static int? GetLockoutSecondsRemaining(User user)
+    public int? GetLockoutSecondsRemaining(User user)
     {
-        if (user.LockoutEnd is null || user.LockoutEnd.Value <= DateTimeOffset.UtcNow)
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+
+        if (user.LockoutEnd is null || user.LockoutEnd.Value <= now)
         {
             return null;
         }
 
-        return (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalSeconds);
+        return (int)Math.Ceiling((user.LockoutEnd.Value - now).TotalSeconds);
     }
 
     /// <summary>
@@ -44,7 +48,7 @@ public sealed class LoginAttemptTracker
         user.FailedLoginAttempts++;
 
         int lockoutSeconds = Math.Min(user.FailedLoginAttempts * 2, MaxLockoutSeconds);
-        user.LockoutEnd = DateTimeOffset.UtcNow.AddSeconds(lockoutSeconds);
+        user.LockoutEnd = _timeProvider.GetUtcNow().AddSeconds(lockoutSeconds);
         await _usersContext.SaveChangesAsync();
 
         _logger.LogWarning("Failed login attempt {Attempts} for user {Username}, locked for {Seconds}s",

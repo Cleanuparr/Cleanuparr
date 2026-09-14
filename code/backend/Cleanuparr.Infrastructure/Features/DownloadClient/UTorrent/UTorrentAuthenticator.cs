@@ -18,6 +18,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
     private readonly IUTorrentHttpService _httpService;
     private readonly DownloadClientConfig _config;
     private readonly ILogger<UTorrentAuthenticator> _logger;
+    private readonly TimeProvider _timeProvider;
     
     // Use a static concurrent dictionary to ensure same client instances share the same semaphore
     // This prevents multiple instances of the same client from authenticating simultaneously
@@ -32,12 +33,14 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         IMemoryCache cache,
         IUTorrentHttpService httpService,
         DownloadClientConfig config,
-        ILogger<UTorrentAuthenticator> logger)
+        ILogger<UTorrentAuthenticator> logger,
+        TimeProvider timeProvider)
     {
         _cache = cache;
         _httpService = httpService;
         _config = config;
         _logger = logger;
+        _timeProvider = timeProvider;
         
         // Create unique client key based on connection details
         // This ensures different µTorrent instances don't share auth tokens
@@ -61,7 +64,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         {
             var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
             return _cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-                   cachedAuth?.IsValid == true;
+                   cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true;
         }
     }
 
@@ -72,7 +75,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         {
             var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
             if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-                cachedAuth?.IsValid == true)
+                cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
             {
                 return cachedAuth.GuidCookie;
             }
@@ -87,7 +90,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         
         // Fast path: Check if we have valid cached auth
         if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-            cachedAuth?.IsValid == true)
+            cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
         {
             return true;
         }
@@ -106,7 +109,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
 
         var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
         if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-            cachedAuth?.IsValid == true)
+            cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
         {
             return cachedAuth.AuthToken;
         }
@@ -124,7 +127,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
 
         var cacheKey = CacheKeys.UTorrent.GetAuthTokenKey(_clientKey);
         if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-            cachedAuth?.IsValid == true)
+            cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
         {
             return cachedAuth.GuidCookie;
         }
@@ -149,8 +152,8 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
                 {
                     AuthToken = token,
                     GuidCookie = guidCookie,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    ExpiresAt = DateTimeOffset.UtcNow.Add(TokenExpiryDuration)
+                    CreatedAt = _timeProvider.GetUtcNow(),
+                    ExpiresAt = _timeProvider.GetUtcNow().Add(TokenExpiryDuration)
                 };
                 
                 // Cache with both sliding and absolute expiration
@@ -172,7 +175,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
                 _logger.LogWarning(ex, "Authentication attempt {Attempt} failed for µTorrent client '{ClientName}', retrying in {Delay}ms", 
                     retryCount, _config.Name, backoffDelay.TotalMilliseconds);
                 
-                await Task.Delay(backoffDelay);
+                await Task.Delay(backoffDelay, _timeProvider);
                 backoffDelay = TimeSpan.FromMilliseconds(backoffDelay.TotalMilliseconds * 1.5); // Exponential backoff
             }
             catch (Exception ex)
@@ -206,7 +209,7 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         {
             // Double-check: another thread might have refreshed while we were waiting
             if (_cache.TryGetValue(cacheKey, out UTorrentAuthCache? cachedAuth) && 
-                cachedAuth?.IsValid == true)
+                cachedAuth?.IsValid(_timeProvider.GetUtcNow()) == true)
             {
                 return true;
             }

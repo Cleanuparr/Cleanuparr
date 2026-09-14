@@ -125,6 +125,21 @@ public class StatusControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSystemStatus_MeasuresUpTimeFromTheProcessStart()
+    {
+        // Act
+        IActionResult result = await _controller.GetSystemStatus();
+
+        // Assert
+        SystemStatusResponse status = result.ShouldBeOfType<OkObjectResult>().Value
+            .ShouldBeOfType<SystemStatusResponse>();
+        status.Application.UpTime.ShouldBeGreaterThan(TimeSpan.Zero);
+        status.Application.UpTime.ShouldBe(
+            DateTimeOffset.UtcNow - status.Application.StartTime.ToUniversalTime(),
+            TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task GetDownloadClientStatus_ReturnsTheClientsKey()
     {
         // Act

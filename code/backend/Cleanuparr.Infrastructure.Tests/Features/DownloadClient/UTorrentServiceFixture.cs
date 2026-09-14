@@ -81,6 +81,7 @@ public class UTorrentServiceFixture : IDisposable
             config,
             RuleEvaluator,
             SeedingRuleEvaluator,
+            TimeProvider.System,
             ClientWrapper
         );
     }

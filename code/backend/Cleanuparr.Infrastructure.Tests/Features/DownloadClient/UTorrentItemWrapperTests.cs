@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
+using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 using Xunit;
 
@@ -15,7 +16,7 @@ public class UTorrentItemWrapperTests
         var torrentProperties = new UTorrentProperties();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new UTorrentItemWrapper(null!, torrentProperties));
+        Should.Throw<ArgumentNullException>(() => new UTorrentItemWrapper(null!, torrentProperties, TimeProvider.System));
     }
 
     [Fact]
@@ -25,7 +26,7 @@ public class UTorrentItemWrapperTests
         var torrentItem = new UTorrentItem();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new UTorrentItemWrapper(torrentItem, null!));
+        Should.Throw<ArgumentNullException>(() => new UTorrentItemWrapper(torrentItem, null!, TimeProvider.System));
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public class UTorrentItemWrapperTests
         var expectedHash = "test-hash-123";
         var torrentItem = new UTorrentItem { Hash = expectedHash };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.Hash;
@@ -51,7 +52,7 @@ public class UTorrentItemWrapperTests
         var expectedName = "Test Torrent";
         var torrentItem = new UTorrentItem { Name = expectedName };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.Name;
@@ -66,7 +67,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem();
         var torrentProperties = new UTorrentProperties { Pex = -1 }; // -1 means private torrent
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.IsPrivate;
@@ -82,7 +83,7 @@ public class UTorrentItemWrapperTests
         var expectedSize = 1024L * 1024 * 1024; // 1GB
         var torrentItem = new UTorrentItem { Size = expectedSize };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.Size;
@@ -101,7 +102,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { Progress = progress };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.CompletionPercentage;
@@ -118,7 +119,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { Downloaded = downloaded };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.DownloadedBytes;
@@ -137,7 +138,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { RatioRaw = ratioRaw };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.Ratio;
@@ -155,7 +156,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { ETA = eta };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.Eta;
@@ -165,19 +166,47 @@ public class UTorrentItemWrapperTests
     }
 
     [Fact]
-    public void SeedingTimeSeconds_WithCompletedDate_ReturnsPositiveValue()
+    public void SeedingTimeSeconds_WithCompletedDate_CountsFromTheInjectedClock()
     {
-        // Arrange - Set DateCompleted to 1 hour ago
-        var oneHourAgo = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds();
-        var torrentItem = new UTorrentItem { DateCompleted = oneHourAgo };
-        var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        // Arrange
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        long oneHourAgo = timeProvider.GetUtcNow().AddHours(-1).ToUnixTimeSeconds();
+        UTorrentItem torrentItem = new() { DateCompleted = oneHourAgo };
+        UTorrentProperties torrentProperties = new();
+        UTorrentItemWrapper wrapper = new(torrentItem, torrentProperties, timeProvider);
 
         // Act
-        var result = wrapper.SeedingTimeSeconds;
+        long result = wrapper.SeedingTimeSeconds;
 
-        // Assert - Should be approximately 3600 seconds (1 hour), allow some tolerance
-        result.ShouldBeInRange(3599L, 3601L);
+        // Assert
+        result.ShouldBe(3600L);
+    }
+
+    [Fact]
+    public void SeedingTimeSeconds_WhenTheClockAdvances_Grows()
+    {
+        // Arrange
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        UTorrentItem torrentItem = new() { DateCompleted = timeProvider.GetUtcNow().ToUnixTimeSeconds() };
+        UTorrentItemWrapper wrapper = new(torrentItem, new UTorrentProperties(), timeProvider);
+
+        // Act
+        timeProvider.Advance(TimeSpan.FromMinutes(30));
+
+        // Assert
+        wrapper.SeedingTimeSeconds.ShouldBe(1800L);
+    }
+
+    [Fact]
+    public void SeedingTimeSeconds_WhenCompletedInTheFuture_ReturnsZero()
+    {
+        // Arrange
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        UTorrentItem torrentItem = new() { DateCompleted = timeProvider.GetUtcNow().AddHours(1).ToUnixTimeSeconds() };
+        UTorrentItemWrapper wrapper = new(torrentItem, new UTorrentProperties(), timeProvider);
+
+        // Act / Assert
+        wrapper.SeedingTimeSeconds.ShouldBe(0L);
     }
 
     [Fact]
@@ -186,7 +215,7 @@ public class UTorrentItemWrapperTests
         // Arrange - DateCompleted = 0 means not completed
         var torrentItem = new UTorrentItem { DateCompleted = 0 };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.SeedingTimeSeconds;
@@ -201,7 +230,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
         var result = wrapper.IsIgnored(Array.Empty<string>());
@@ -216,7 +245,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
         var ignoredDownloads = new[] { "abc123" };
 
         // Act
@@ -232,7 +261,7 @@ public class UTorrentItemWrapperTests
         // Arrange
         var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent", Label = "test-category" };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
         var ignoredDownloads = new[] { "test-category" };
 
         // Act
@@ -251,7 +280,7 @@ public class UTorrentItemWrapperTests
         {
             Trackers = "http://tracker.example.com/announce"
         };
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
         var ignoredDownloads = new[] { "tracker.example.com" };
 
         // Act
@@ -270,7 +299,7 @@ public class UTorrentItemWrapperTests
         {
             Trackers = "http://tracker.example.com/announce"
         };
-        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
         var ignoredDownloads = new[] { "notmatching" };
 
         // Act
@@ -285,7 +314,7 @@ public class UTorrentItemWrapperTests
     {
         // Arrange
         var torrentItem = new UTorrentItem { SeedsInSwarm = 15 };
-        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties(), TimeProvider.System);
 
         // Act
         var result = wrapper.SeederCount;
@@ -299,7 +328,7 @@ public class UTorrentItemWrapperTests
     {
         // Arrange
         var torrentItem = new UTorrentItem();
-        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties(), TimeProvider.System);
 
         // Act
         var result = wrapper.TrackerHealth;
@@ -313,7 +342,7 @@ public class UTorrentItemWrapperTests
     {
         // Arrange
         var torrentItem = new UTorrentItem { DateAdded = 1700000000 };
-        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties(), TimeProvider.System);
 
         // Act
         var result = wrapper.AddedOn;
@@ -327,7 +356,7 @@ public class UTorrentItemWrapperTests
     {
         // Arrange
         var torrentItem = new UTorrentItem { DateAdded = 0 };
-        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties(), TimeProvider.System);
 
         // Act
         var result = wrapper.AddedOn;
