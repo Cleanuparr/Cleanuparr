@@ -15,8 +15,8 @@ using Shouldly;
 namespace Cleanuparr.Api.Tests.Features.Auth;
 
 /// <summary>
-/// Covers the account endpoints that stamp <see cref="User.UpdatedAt"/> and were only reachable from e2e:
-/// Plex linking during setup and from account settings, and API key regeneration.
+/// Covers the account endpoints that stamp <see cref="User.UpdatedAt"/>.
+/// Plex linking at setup and from settings, plus API key regeneration.
 /// </summary>
 [Collection("Auth Integration Tests")]
 [TestCaseOrderer("Cleanuparr.Api.Tests.PriorityOrderer", "Cleanuparr.Api.Tests")]

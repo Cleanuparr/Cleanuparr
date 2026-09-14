@@ -4,9 +4,8 @@ using Microsoft.Extensions.Logging;
 namespace Cleanuparr.Infrastructure.Features.Auth;
 
 /// <summary>
-/// Background service that periodically drops expired OIDC flow states and one-time codes.
-/// One-time codes hold real access and refresh tokens, so they are purged rather than left
-/// to be evicted by the next login.
+/// Drops expired OIDC flow states and one-time codes on a timer.
+/// One-time codes hold live tokens, so logins must not be the only thing clearing them.
 /// </summary>
 public sealed class OidcCleanupService : BackgroundService
 {

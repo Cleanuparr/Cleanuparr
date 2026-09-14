@@ -22,8 +22,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     /// <summary>
     /// Frozen clock the host resolves for TimeProvider, so timestamp assertions can be exact.
-    /// Seeded from the real instant because JWT validation still runs on the wall clock,
-    /// and a host stamping tokens at a distant instant would reject its own requests.
+    /// Seeded from the real instant because JWT validation still reads the wall clock.
+    /// A host stamping tokens at a distant instant rejects its own requests.
     /// </summary>
     public FakeTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 

@@ -16,7 +16,8 @@ public sealed class LoginAttemptTrackerTests : IDisposable
     private readonly LoginAttemptTracker _sut;
     private readonly Guid _userId = Guid.NewGuid();
 
-    // Frozen at the real now: the lockout windows are relative, and rounding must not drift while the test runs.
+    // Frozen at the real now, because the lockout windows are relative.
+    // Rounding must not drift while the test runs.
     private readonly FakeTimeProvider _clock = new(DateTimeOffset.UtcNow);
 
     public LoginAttemptTrackerTests()
