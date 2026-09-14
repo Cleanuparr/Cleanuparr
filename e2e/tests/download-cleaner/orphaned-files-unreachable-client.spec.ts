@@ -121,6 +121,6 @@ test.describe.serial('Orphaned files cleanup — refuses to scan when client dat
 
     expect(existsSync(realDownload)).toBe(true);
     expect(existsSync(join(HOST_ORPHANED_DIR, 'real-download.mkv'))).toBe(false);
-    expect(readdirSync(HOST_ORPHANED_DIR).length).toBe(0);
+    expect(readdirSync(HOST_ORPHANED_DIR)).toHaveLength(0);
   });
 });

@@ -207,7 +207,7 @@ test.describe.serial('Orphaned files cleanup — client with no torrents', () =>
     await new Promise((r) => setTimeout(r, 20_000));
 
     expect(existsSync(fresh)).toBe(true);
-    expect(readdirSync(HOST_ORPHANED_DIR).length).toBe(0);
+    expect(readdirSync(HOST_ORPHANED_DIR)).toHaveLength(0);
   });
 
   test('Empty client is scanned while an unreachable sibling is left alone', async () => {
@@ -250,6 +250,6 @@ test.describe.serial('Orphaned files cleanup — client with no torrents', () =>
     expect(existsSync(orphan)).toBe(false);
 
     expect(existsSync(realDownload)).toBe(true);
-    expect(readdirSync(HOST_SIBLING_ORPHANED_DIR).length).toBe(0);
+    expect(readdirSync(HOST_SIBLING_ORPHANED_DIR)).toHaveLength(0);
   });
 });
