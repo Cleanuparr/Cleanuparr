@@ -461,7 +461,7 @@ public sealed class OidcAuthService : IOidcAuthService
             .Replace('/', '_');
     }
 
-    private static void CleanupExpiredEntries(TimeProvider timeProvider)
+    internal static void CleanupExpiredEntries(TimeProvider timeProvider)
     {
         DateTimeOffset flowCutoff = timeProvider.GetUtcNow() - FlowStateExpiry;
         foreach (var kvp in PendingFlows)

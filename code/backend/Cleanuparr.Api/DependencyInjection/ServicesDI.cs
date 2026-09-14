@@ -39,6 +39,7 @@ public static class ServicesDI
             .AddScoped<LoginAttemptTracker>()
             .AddScoped<IPlexAuthService, PlexAuthService>()
             .AddScoped<IOidcAuthService, OidcAuthService>()
+            .AddHostedService<OidcCleanupService>()
             .AddScoped<IEventPublisher, EventPublisher>()
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
