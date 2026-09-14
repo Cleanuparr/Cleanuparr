@@ -26,11 +26,6 @@ public sealed class OidcAuthService : IOidcAuthService
     private static readonly ConcurrentDictionary<string, OidcFlowState> PendingFlows = new();
     private static readonly ConcurrentDictionary<string, OidcOneTimeCodeEntry> OneTimeCodes = new();
     private static readonly ConcurrentDictionary<string, ConfigurationManager<OpenIdConnectConfiguration>> ConfigManagers = new();
-    
-    // Reference held to prevent GC collection; the timer fires CleanupExpiredEntries every minute
-    #pragma warning disable IDE0052
-    private static readonly Timer CleanupTimer = new(_ => CleanupExpiredEntries(TimeProvider.System), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-    #pragma warning restore IDE0052
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly HttpClient _httpClient;
@@ -59,6 +54,8 @@ public sealed class OidcAuthService : IOidcAuthService
         {
             throw new InvalidOperationException("OIDC is not enabled");
         }
+
+        CleanupExpiredEntries(_timeProvider);
 
         if (PendingFlows.Count >= MaxPendingFlows)
         {
