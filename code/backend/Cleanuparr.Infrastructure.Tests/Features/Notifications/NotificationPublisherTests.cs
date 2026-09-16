@@ -774,8 +774,11 @@ public class NotificationPublisherTests
         _configService.GetProvidersForEventAsync(NotificationEventType.ForceImported)
             .Returns(new List<NotificationProviderDto>());
 
-        // Act & Assert - Should not throw
+        // Act
         await _publisher.NotifyForceImported(1);
+
+        // Assert
+        await _configService.Received(1).GetProvidersForEventAsync(NotificationEventType.ForceImported);
     }
 
     [Fact]
