@@ -186,7 +186,7 @@ public abstract class ArrClient : IArrClient
         }
         catch
         {
-            _logger.LogError("manual import candidates failed | {uri}", uriBuilder.Uri);
+            _logger.LogError("manual import candidates failed | {Uri}", uriBuilder.Uri);
             throw;
         }
 
@@ -216,7 +216,7 @@ public abstract class ArrClient : IArrClient
         }
         catch
         {
-            _logger.LogError("force import failed | {uri}", uriBuilder.Uri);
+            _logger.LogError("force import failed | {Uri}", uriBuilder.Uri);
             throw;
         }
     }

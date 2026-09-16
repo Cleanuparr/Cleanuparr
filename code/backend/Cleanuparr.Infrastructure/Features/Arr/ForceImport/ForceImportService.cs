@@ -109,7 +109,7 @@ public sealed class ForceImportService : IForceImportService
 
         if (!arrClient.SupportsForceImport)
         {
-            _logger.LogDebug("skip force import | not supported for {type} | {title}", instance.ArrConfig.Type, record.Title);
+            _logger.LogDebug("skip force import | not supported for {Type} | {Title}", instance.ArrConfig.Type, record.Title);
             return ForceImportOutcome.NotApplicable;
         }
 
@@ -121,7 +121,7 @@ public sealed class ForceImportService : IForceImportService
         if (!arrClient.HasContentId(record))
         {
             // Without a content id there is nothing to match a candidate against.
-            _logger.LogDebug("skip force import | item is missing the content id | {title}", record.Title);
+            _logger.LogDebug("skip force import | item is missing the content id | {Title}", record.Title);
             return ForceImportOutcome.NotApplicable;
         }
 
@@ -129,7 +129,7 @@ public sealed class ForceImportService : IForceImportService
 
         if (_cache.TryGetValue(gaveUpKey, out DateTimeOffset gaveUpAt) && _timeProvider.GetUtcNow() - gaveUpAt < GaveUpWindow)
         {
-            _logger.LogDebug("skip force import | out of tries | {title}", record.Title);
+            _logger.LogDebug("skip force import | out of tries | {Title}", record.Title);
             return ForceImportOutcome.NotApplicable;
         }
 
@@ -144,7 +144,7 @@ public sealed class ForceImportService : IForceImportService
             _cache.Remove(triesKey);
             pending.TryRemove(record.DownloadId, out _);
 
-            _logger.LogInformation("give up force import | {tries} tries spent | {title}", tries, record.Title);
+            _logger.LogInformation("give up force import | {Tries} tries spent | {Title}", tries, record.Title);
 
             return ForceImportOutcome.NotApplicable;
         }
@@ -176,7 +176,7 @@ public sealed class ForceImportService : IForceImportService
             pending[record.DownloadId] = new PendingForceImport(record, files.Count);
 
             _logger.LogInformation(
-                "asked the arr to import {count} file(s) | try {try} | {title}",
+                "asked the arr to import {Count} file(s) | try {Try} | {Title}",
                 files.Count, tries + 1, record.Title
             );
         }
@@ -184,11 +184,11 @@ public sealed class ForceImportService : IForceImportService
         {
             // The arr answered, so the try is spent and the strike path stays reachable.
             SpendTry();
-            _logger.LogError(exception, "force import failed | try {try} | {title}", tries + 1, record.Title);
+            _logger.LogError(exception, "force import failed | try {Try} | {Title}", tries + 1, record.Title);
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "wait for force import | the arr was not reached | {title}", record.Title);
+            _logger.LogWarning(exception, "wait for force import | the arr was not reached | {Title}", record.Title);
         }
 
         return ForceImportOutcome.Deferred;
@@ -213,7 +213,7 @@ public sealed class ForceImportService : IForceImportService
                 continue;
             }
 
-            _logger.LogInformation("force imported {count} file(s) | {title}", attempt.FileCount, attempt.Record.Title);
+            _logger.LogInformation("force imported {Count} file(s) | {Title}", attempt.FileCount, attempt.Record.Title);
 
             // The notification reads the record for its title and its poster.
             ContextProvider.Set(nameof(QueueRecord), attempt.Record);
@@ -259,14 +259,14 @@ public sealed class ForceImportService : IForceImportService
 
         if (statuses.Count is 0)
         {
-            _logger.LogDebug("skip force import | no status message found | {title}", record.Title);
+            _logger.LogDebug("skip force import | no status message found | {Title}", record.Title);
             return false;
         }
 
         // The arr states a block on the whole download as a title with nothing under it.
         if (statuses.Any(status => status.Messages?.Any(message => !string.IsNullOrWhiteSpace(message)) is not true))
         {
-            _logger.LogDebug("skip force import | a status message carries no reason | {title}", record.Title);
+            _logger.LogDebug("skip force import | a status message carries no reason | {Title}", record.Title);
             return false;
         }
 
@@ -279,7 +279,7 @@ public sealed class ForceImportService : IForceImportService
         if (unsafeMessages.Count > 0)
         {
             _logger.LogDebug(
-                "skip force import | unexpected reason | {reasons} | {title}",
+                "skip force import | unexpected reason | {Reasons} | {Title}",
                 string.Join("; ", unsafeMessages), record.Title
             );
 
@@ -311,7 +311,7 @@ public sealed class ForceImportService : IForceImportService
         }
 
         _cache.Set(sightingKey, _timeProvider.GetUtcNow(), SightingWindow);
-        _logger.LogDebug("skip force import | first sighting | {title}", record.Title);
+        _logger.LogDebug("skip force import | first sighting | {Title}", record.Title);
 
         return false;
     }
@@ -334,14 +334,14 @@ public sealed class ForceImportService : IForceImportService
                 return false;
             }
 
-            _logger.LogDebug("skip force import | {command} is {status} | {url}", running.Name, running.Status, instance.Url);
+            _logger.LogDebug("skip force import | {Command} is {Status} | {Url}", running.Name, running.Status, instance.Url);
 
             return true;
         }
         catch (Exception exception)
         {
             // Without the command list there is no proof the arr is idle.
-            _logger.LogWarning(exception, "skip force import | command list unavailable | {url}", instance.Url);
+            _logger.LogWarning(exception, "skip force import | command list unavailable | {Url}", instance.Url);
             return true;
         }
     }
@@ -357,7 +357,7 @@ public sealed class ForceImportService : IForceImportService
 
         if (candidates.Count is 0)
         {
-            _logger.LogInformation("skip force import | the arr found no file to import | {title}", record.Title);
+            _logger.LogInformation("skip force import | the arr found no file to import | {Title}", record.Title);
             return (null, ForceImportOutcome.NotApplicable);
         }
 
@@ -376,7 +376,7 @@ public sealed class ForceImportService : IForceImportService
             if (blocking.Count > 0)
             {
                 _logger.LogInformation(
-                    "skip force import | unexpected rejection | {reasons} | {name}",
+                    "skip force import | unexpected rejection | {Reasons} | {Name}",
                     string.Join("; ", blocking), name
                 );
 
@@ -388,7 +388,7 @@ public sealed class ForceImportService : IForceImportService
             if (file is null)
             {
                 _logger.LogWarning(
-                    "skip force import | file belongs to other content or maps to no episode | {name}",
+                    "skip force import | file belongs to other content or maps to no episode | {Name}",
                     name
                 );
 
