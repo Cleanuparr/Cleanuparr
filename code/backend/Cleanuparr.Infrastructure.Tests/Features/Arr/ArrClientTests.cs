@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -682,6 +683,45 @@ public class ArrClientTests
 
         // Assert
         result.ShouldBeTrue();
+    }
+
+    #endregion
+
+    #region ForceImport
+
+    [Fact]
+    public void SupportsForceImport_IsFalseUnlessTheClientOptsIn()
+    {
+        _client.SupportsForceImport.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void MapCandidate_MapsNothingUnlessTheClientOptsIn()
+    {
+        _client.MapCandidate(new QueueRecord { DownloadId = "HASH", Title = "item" }, new ManualImportCandidate())
+            .ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetManualImportCandidatesAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetManualImportCandidatesAsync(_arrInstance, "HASH"));
+    }
+
+    [Fact]
+    public async Task ForceImportAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.BadRequest);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.ForceImportAsync(_arrInstance, [new ManualImportFile { Path = "/downloads/item.mkv" }]));
     }
 
     #endregion

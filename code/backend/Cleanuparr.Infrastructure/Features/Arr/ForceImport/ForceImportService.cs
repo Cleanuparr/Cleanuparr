@@ -207,17 +207,12 @@ public sealed class ForceImportService : IForceImportService
             return;
         }
 
-        List<string> gone = pending.Keys
-            .Where(downloadId => !queuedDownloadIds.Contains(downloadId))
+        List<KeyValuePair<string, PendingForceImport>> gone = pending
+            .Where(entry => !queuedDownloadIds.Contains(entry.Key))
             .ToList();
 
-        foreach (string downloadId in gone)
+        foreach ((string downloadId, PendingForceImport attempt) in gone)
         {
-            if (!pending.TryGetValue(downloadId, out PendingForceImport? attempt))
-            {
-                continue;
-            }
-
             _logger.LogInformation("force imported {Count} file(s) | {Title}", attempt.FileCount, attempt.Record.Title);
 
             // The notification reads the record for its title and its poster.

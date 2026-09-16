@@ -574,6 +574,12 @@ public class ForceImportServiceTests
     }
 
     [Fact]
+    public void Forget_NothingIsPending_DoesNothing()
+    {
+        Should.NotThrow(() => _sut.Forget(_instance, "HASH"));
+    }
+
+    [Fact]
     public async Task ReconcileAsync_CleanuparrRemovedTheDownload_ReportsNothing()
     {
         // Arrange: the download left the queue because Cleanuparr took it out
