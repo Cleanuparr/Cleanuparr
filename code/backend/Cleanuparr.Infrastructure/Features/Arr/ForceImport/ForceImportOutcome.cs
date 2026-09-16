@@ -1,5 +1,8 @@
 namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
+/// <summary>
+/// What the queue cleaner does with a download after force import looked at it.
+/// </summary>
 public enum ForceImportOutcome
 {
     /// <summary>

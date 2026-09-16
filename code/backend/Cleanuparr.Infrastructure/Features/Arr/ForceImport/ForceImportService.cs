@@ -15,6 +15,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
+/// <summary>
+/// Asks an arr to import what it blocked, and reports the imports that landed.
+/// </summary>
 public sealed class ForceImportService : IForceImportService
 {
     /// <summary>
@@ -98,6 +101,7 @@ public sealed class ForceImportService : IForceImportService
         _timeProvider = timeProvider;
     }
 
+    /// <inheritdoc/>
     public async Task<ForceImportOutcome> TryImportAsync(IArrClient arrClient, ArrInstance instance, QueueRecord record)
     {
         FailedImportConfig config = ContextProvider.Get<QueueCleanerConfig>().FailedImport;
@@ -194,6 +198,7 @@ public sealed class ForceImportService : IForceImportService
         return ForceImportOutcome.Deferred;
     }
 
+    /// <inheritdoc/>
     public async Task ReconcileAsync(ArrInstance instance, IReadOnlySet<string> queuedDownloadIds)
     {
         if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending) ||
@@ -226,6 +231,7 @@ public sealed class ForceImportService : IForceImportService
         }
     }
 
+    /// <inheritdoc/>
     public void Forget(ArrInstance instance, string downloadId)
     {
         if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending))

@@ -4,6 +4,9 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
+/// <summary>
+/// Force import for downloads an arr blocked for a reason that is safe to force past.
+/// </summary>
 public interface IForceImportService
 {
     /// <summary>
