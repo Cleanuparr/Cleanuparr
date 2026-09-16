@@ -19,6 +19,10 @@ public sealed record FailedImportConfigResponse
 
     public bool ChangeCategory { get; init; }
 
+    public bool ForceImport { get; init; }
+
+    public ushort ForceImportMaxTries { get; init; }
+
     public static FailedImportConfigResponse From(FailedImportConfig config) => new()
     {
         MaxStrikes = config.MaxStrikes,
@@ -28,5 +32,7 @@ public sealed record FailedImportConfigResponse
         Patterns = config.Patterns,
         PatternMode = config.PatternMode,
         ChangeCategory = config.ChangeCategory,
+        ForceImport = config.ForceImport,
+        ForceImportMaxTries = config.ForceImportMaxTries,
     };
 }

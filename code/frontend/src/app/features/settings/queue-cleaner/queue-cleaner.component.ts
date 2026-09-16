@@ -241,8 +241,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
           failedPatterns: config.failedImport.patterns ?? [],
           failedPatternMode: config.failedImport.patternMode ?? PatternMode.Exclude,
           failedChangeCategory: config.failedImport.changeCategory ?? false,
-          failedForceImport: config.failedImport.forceImport ?? false,
-          failedForceImportMaxTries: config.failedImport.forceImportMaxTries ?? 3,
+          failedForceImport: config.failedImport.forceImport,
+          failedForceImportMaxTries: config.failedImport.forceImportMaxTries,
           metadataMaxStrikes: config.downloadingMetadataMaxStrikes,
         });
         this.savedSnapshot.set(this.buildSnapshot());
