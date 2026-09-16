@@ -1,7 +1,14 @@
 import { resolve } from 'node:path';
 import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
-import { RADARR, RUN_TAG, SONARR, resetLiveArrState, teardownInstances } from '../helpers/seeker-live';
+import {
+  RADARR,
+  RUN_TAG,
+  SONARR,
+  createdInstances,
+  resetLiveArrState,
+  teardownInstances,
+} from '../helpers/seeker-live';
 import type { SeededArr } from '../helpers/seeker-live';
 import { buildSingleFileTorrent, buildSparseSingleFileTorrent } from '../helpers/torrent-fixtures';
 import { torznabSearchStub, torznabTorrentStub } from '../helpers/mocks/torznab-stubs';
@@ -190,6 +197,9 @@ async function arrangeForceImport(api: CleanuparrApi, target: ForceImportTarget)
   });
 
   expect(created.ok, `createInstance: ${created.status}`).toBe(true);
+
+  // teardownInstances only deletes what it tracks, and a leftover instance runs in the next test.
+  createdInstances.push({ type: target.arr.type, id: (await created.json()).id });
 }
 
 for (const target of TARGETS) {
