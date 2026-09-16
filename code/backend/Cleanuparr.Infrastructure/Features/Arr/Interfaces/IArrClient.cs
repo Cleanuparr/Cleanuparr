@@ -30,6 +30,15 @@ public interface IArrClient
     Task ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files);
 
     /// <summary>
+    /// Counts the times the arr recorded an import for a download.
+    /// </summary>
+    /// <remarks>
+    /// The arr keeps history past the download, so only a count that grew proves a new import.
+    /// </remarks>
+    /// <param name="downloadId">The download id as the arr reports it, which the arr matches exactly.</param>
+    Task<int> GetImportedCountAsync(ArrInstance arrInstance, string downloadId);
+
+    /// <summary>
     /// Builds the import payload for a candidate.
     /// </summary>
     /// <returns>The payload, or null when the candidate maps to other content than the queue record.</returns>

@@ -139,6 +139,16 @@ async function importedFiles(target: ForceImportTarget): Promise<Array<{ id: num
   return target.arr.arr.get(target.filesPath);
 }
 
+/** Cleanuparr announces an import only after the arr's own history records it. */
+async function forceImportedEvents(api: CleanuparrApi, downloadId: string): Promise<number> {
+  const res = await api.events.list({ eventType: 'ForceImported', page: 1, pageSize: 500 });
+  expect(res.status, 'events query failed').toBe(200);
+
+  const body: { items?: Array<{ itemHash?: string }> } = await res.json();
+
+  return (body.items ?? []).filter((e) => (e.itemHash ?? '').toLowerCase() === downloadId.toLowerCase()).length;
+}
+
 /**
  * The rejections the arr itself puts on the files it offers.
  *
@@ -243,6 +253,17 @@ for (const target of TARGETS) {
 
       expect((await importedFiles(target))[0].relativePath).toContain(release);
       await expect.poll(async () => (await target.arr.arr.queue()).length, { timeout: 60_000 }).toBe(0);
+
+      // The announcement waits on the arr's history, so this is the real confirmation round trip.
+      await expect
+        .poll(
+          async () => {
+            await api.jobs.trigger('QueueCleaner');
+            return forceImportedEvents(api, downloadId);
+          },
+          { timeout: 120_000, intervals: [5_000] },
+        )
+        .toBe(1);
     });
 
     test('imports a download the arr blocked on matching the item by ID', async ({ api }) => {

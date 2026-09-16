@@ -254,6 +254,7 @@ test.describe.serial('QueueCleaner force import', () => {
     // Nothing is announced until the arr proves the import by dropping it.
     expect(await forceImportedEvents(api, downloadId)).toBe(0);
 
+    await mocks.arr.stub(ArrStubs.arrHistoryStub([ArrStubs.arrImportedHistoryRecord(downloadId)], downloadId));
     await mocks.arr.stub(ArrStubs.arrRawQueueStub(emptyQueueBody()));
 
     await expect
@@ -271,6 +272,22 @@ test.describe.serial('QueueCleaner force import', () => {
     await new Promise((r) => setTimeout(r, 3_000));
 
     expect(await forceImportedEvents(api, downloadId)).toBe(1);
+  });
+
+  test('reports nothing when the download left the queue without an import', async ({ api, mocks }) => {
+    test.setTimeout(300_000);
+
+    const downloadId = 'HASH-FORCE-IMPORT-VANISHED';
+    await arrange(api, mocks, 'sonarr-force-import-vanished', downloadId, [candidate({ downloadId })]);
+
+    await runUntilImport(api, mocks);
+
+    // The download is gone from the queue, and the arr's history says it never landed.
+    await mocks.arr.stub(ArrStubs.arrRawQueueStub(emptyQueueBody()));
+
+    await runThreeTimes(api);
+
+    expect(await forceImportedEvents(api, downloadId)).toBe(0);
   });
 
   test('refuses a file that maps to another series', async ({ api, mocks }) => {

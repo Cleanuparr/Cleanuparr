@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.History;
 using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -219,6 +220,35 @@ public abstract class ArrClient : IArrClient
             _logger.LogError("force import failed | {Uri}", uriBuilder.Uri);
             throw;
         }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> GetImportedCountAsync(ArrInstance arrInstance, string downloadId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/history";
+        // The import events are named differently per arr, so every row for the download comes back.
+        uriBuilder.Query = $"downloadId={Uri.EscapeDataString(downloadId)}&page=1&pageSize=200";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            _logger.LogError("history failed | {Uri}", uriBuilder.Uri);
+            throw;
+        }
+
+        ArrHistoryResponse? history = await DeserializeStreamAsync<ArrHistoryResponse>(response);
+
+        return history?.Records
+            .Count(record => record.EventType?.EndsWith("Imported", StringComparison.InvariantCultureIgnoreCase) is true) ?? 0;
     }
 
     /// <inheritdoc/>

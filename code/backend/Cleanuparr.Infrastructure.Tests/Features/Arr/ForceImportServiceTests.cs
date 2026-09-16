@@ -33,6 +33,9 @@ public class ForceImportServiceTests
     private readonly ForceImportService _sut;
     private readonly ArrInstance _instance;
 
+    /// <summary>How many imports the arr has recorded, which is what its history reports.</summary>
+    private int _importedByTheArr;
+
     public ForceImportServiceTests()
     {
         _arrClient = Substitute.For<IArrClient>();
@@ -51,9 +54,19 @@ public class ForceImportServiceTests
             ArrConfig = new ArrConfig { Type = InstanceType.Sonarr },
         };
 
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
+            .Returns(_ =>
+            {
+                _importedByTheArr++;
+                return Task.CompletedTask;
+            });
+
         _arrClient.SupportsForceImport.Returns(true);
         _arrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
         _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        // The arr records one import per asked file, unless a test says otherwise.
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>())
+            .Returns(_ => _importedByTheArr);
         _arrClient.MapCandidate(Arg.Any<QueueRecord>(), Arg.Any<ManualImportCandidate>())
             .Returns(new ManualImportFile { Path = "/downloads/show.mkv", SeriesId = 7, EpisodeIds = [9] });
 
@@ -395,7 +408,7 @@ public class ForceImportServiceTests
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
         // Act
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert: the refused try leaves try 1's file count untouched
         await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
@@ -513,7 +526,7 @@ public class ForceImportServiceTests
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
         // Act
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
         await _striker.Received(1).ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
@@ -529,7 +542,7 @@ public class ForceImportServiceTests
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
         // Act
-        await _sut.ReconcileAsync(_instance, new HashSet<string> { record.DownloadId });
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string> { record.DownloadId });
 
         // Assert
         await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
@@ -544,8 +557,8 @@ public class ForceImportServiceTests
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
         // Act
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
         await _eventPublisher.Received(1).PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
@@ -564,13 +577,106 @@ public class ForceImportServiceTests
             .Returns(Task.FromException(new Exception("the event went nowhere")));
 
         // Act
-        await Should.ThrowAsync<Exception>(() => _sut.ReconcileAsync(_instance, new HashSet<string>()));
+        await Should.ThrowAsync<Exception>(() => _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>()));
 
         _eventPublisher.ClearSubstitute(ClearOptions.ReturnValues);
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
         await _eventPublisher.Received(2).PublishForceImported(record.Title, record.DownloadId, 1);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_TheArrRecordedNoImport_ReportsNothing()
+    {
+        // Arrange: the download left the queue without the arr importing it
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        _importedByTheArr = 0;
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert
+        await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_AnOlderImportOfTheSameDownload_ReportsNothing()
+    {
+        // Arrange: the arr imported this download once before, and its history keeps that row
+        _importedByTheArr = 1;
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        _importedByTheArr = 1;
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_TheHistoryIsUnavailable_ReportsItOnALaterRun()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>())
+            .Returns<int>(_ => throw new HttpRequestException("the arr is down"));
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>()).Returns(_ => _importedByTheArr);
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_TheImportNeverLanded_GivesUpOnIt()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        _importedByTheArr = 0;
+
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+        _timeProvider.Advance(TimeSpan.FromHours(6));
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert: the entry is gone, so an import recorded later is not read as this one
+        _importedByTheArr = 1;
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_TheHistoryIsUnavailable_AsksForNothing()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>())
+            .Returns<int>(_ => throw new HttpRequestException("the arr is down"));
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: a try is worth spending only on a request the arr received
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 
     [Fact]
@@ -589,7 +695,7 @@ public class ForceImportServiceTests
         _sut.Forget(_instance, record.DownloadId);
 
         // Act
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
         await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
@@ -599,7 +705,7 @@ public class ForceImportServiceTests
     public async Task ReconcileAsync_NothingPending_ReportsNothing()
     {
         // Act
-        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
         await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());

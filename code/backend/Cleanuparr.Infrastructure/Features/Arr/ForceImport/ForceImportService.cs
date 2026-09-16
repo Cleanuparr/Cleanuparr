@@ -165,6 +165,19 @@ public sealed class ForceImportService : IForceImportService
 
         void SpendTry() => _cache.Set(triesKey, tries + 1, TriesWindow);
 
+        int importedBefore;
+
+        try
+        {
+            // The arr keeps history past the download, so only a count that grew proves this import.
+            importedBefore = await arrClient.GetImportedCountAsync(instance, record.DownloadId);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "wait for force import | history unavailable | {Title}", record.Title);
+            return ForceImportOutcome.Deferred;
+        }
+
         try
         {
             (List<ManualImportFile>? files, ForceImportOutcome? failure) = await BuildFilesAsync(arrClient, instance, record);
@@ -177,7 +190,7 @@ public sealed class ForceImportService : IForceImportService
             await arrClient.ForceImportAsync(instance, files);
 
             SpendTry();
-            pending[record.DownloadId] = new PendingForceImport(record, files.Count);
+            pending[record.DownloadId] = new PendingForceImport(record, files.Count, importedBefore, _timeProvider.GetUtcNow());
 
             _logger.LogInformation(
                 "asked the arr to import {Count} file(s) | try {Try} | {Title}",
@@ -199,7 +212,7 @@ public sealed class ForceImportService : IForceImportService
     }
 
     /// <inheritdoc/>
-    public async Task ReconcileAsync(ArrInstance instance, IReadOnlySet<string> queuedDownloadIds)
+    public async Task ReconcileAsync(IArrClient arrClient, ArrInstance instance, IReadOnlySet<string> queuedDownloadIds)
     {
         if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending) ||
             pending is null)
@@ -213,6 +226,11 @@ public sealed class ForceImportService : IForceImportService
 
         foreach ((string downloadId, PendingForceImport attempt) in gone)
         {
+            if (!await WasImportedAsync(arrClient, instance, downloadId, attempt))
+            {
+                continue;
+            }
+
             _logger.LogInformation("force imported {Count} file(s) | {Title}", attempt.FileCount, attempt.Record.Title);
 
             // The notification reads the record for its title and its poster.
@@ -224,6 +242,45 @@ public sealed class ForceImportService : IForceImportService
             // A throw above leaves the entry for the next run, and both steps survive a repeat.
             pending.TryRemove(downloadId, out _);
         }
+    }
+
+    /// <summary>
+    /// A download can leave the queue for reasons no one asked for, so the arr has to confirm the import.
+    /// </summary>
+    private async Task<bool> WasImportedAsync(
+        IArrClient arrClient,
+        ArrInstance instance,
+        string downloadId,
+        PendingForceImport attempt
+    )
+    {
+        int importedNow;
+
+        try
+        {
+            importedNow = await arrClient.GetImportedCountAsync(instance, downloadId);
+        }
+        catch (Exception exception)
+        {
+            // Without the history there is no proof either way, so the next run asks again.
+            _logger.LogWarning(exception, "wait for force import | history unavailable | {Title}", attempt.Record.Title);
+            return false;
+        }
+
+        if (importedNow > attempt.ImportedBefore)
+        {
+            return true;
+        }
+
+        if (_timeProvider.GetUtcNow() - attempt.AskedAt < PendingWindow)
+        {
+            return false;
+        }
+
+        _logger.LogInformation("give up force import | the arr never imported it | {Title}", attempt.Record.Title);
+        GetPending(instance).TryRemove(downloadId, out _);
+
+        return false;
     }
 
     /// <inheritdoc/>

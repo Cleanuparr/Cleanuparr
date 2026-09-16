@@ -199,11 +199,36 @@ export function arrManualImportStub(downloadId: string, candidates: Array<Record
   };
 }
 
+/**
+ * Serves the arr's history, which is how a force import is confirmed.
+ *
+ * An empty history is an arr that imported nothing.
+ */
+export function arrHistoryStub(records: Array<Record<string, unknown>> = [], downloadId?: string): Mapping {
+  return {
+    request: {
+      method: 'GET',
+      urlPath: '/api/v3/history',
+      ...(downloadId ? { queryParameters: { downloadId: { equalTo: downloadId } } } : {}),
+    },
+    response: {
+      status: 200,
+      jsonBody: { page: 1, pageSize: 200, totalRecords: records.length, records },
+    },
+  };
+}
+
+/** One row of the kind an arr writes when it imports a file. */
+export function arrImportedHistoryRecord(downloadId: string): Record<string, unknown> {
+  return { id: 1, eventType: 'downloadFolderImported', downloadId };
+}
+
 export async function applyArrDefaults(arr: WireMockClient): Promise<void> {
   await arr.stubMany([
     arrHealthStub(),
     arrEmptyQueueStub(),
     arrTagsStub(),
     arrCustomFormatsStub(),
+    arrHistoryStub(),
   ]);
 }

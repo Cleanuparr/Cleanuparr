@@ -714,6 +714,43 @@ public class ArrClientTests
     }
 
     [Fact]
+    public async Task GetImportedCountAsync_CountsTheImportsTheArrRecorded()
+    {
+        // Arrange: every fork names its import event differently
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            records = new[]
+            {
+                new { eventType = "grabbed" },
+                new { eventType = "downloadFolderImported" },
+                new { eventType = "movieFolderImported" },
+                new { eventType = "downloadIgnored" },
+            },
+        })));
+
+        // Act
+        int imported = await _client.GetImportedCountAsync(_arrInstance, "A1CF56E76FCD1CC7");
+
+        // Assert
+        imported.ShouldBe(2);
+
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/history");
+        request.RequestUri.Query.ShouldBe("?downloadId=A1CF56E76FCD1CC7&page=1&pageSize=200");
+    }
+
+    [Fact]
+    public async Task GetImportedCountAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetImportedCountAsync(_arrInstance, "HASH"));
+    }
+
+    [Fact]
     public async Task ForceImportAsync_TheArrRefused_Throws()
     {
         // Arrange

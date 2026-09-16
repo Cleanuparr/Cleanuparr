@@ -345,9 +345,11 @@ Cleanuparr asks the *arr to import, then waits for the answer.
 Each run spends at most one try, up to [Force Import Max Tries](#failed-import-force-import-max-tries).
 Waiting on a busy *arr costs you nothing, and so does an *arr Cleanuparr could not reach.
 An *arr that answers with an error spends the try, so a download can never sit outside the strike path forever.
-You get the notification after the download leaves the *arr queue.
+You get the notification after the download leaves the *arr queue and the *arr's own history records the import.
+Only an import recorded after Cleanuparr asked counts, so an earlier import of the same download proves nothing.
 Cleanuparr stays quiet about the removals it asked for itself.
-A download you delete in the *arr, or one the *arr drops itself, still reports as imported.
+A download you delete in the *arr, or one the *arr drops without importing it, reports nothing.
+Cleanuparr stops waiting on an import that never lands 6 hours after it asked.
 
 <Important>
 This feature is supported only for:

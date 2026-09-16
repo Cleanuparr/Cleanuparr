@@ -291,7 +291,7 @@ public sealed class QueueCleaner : GenericHandler
             }
         });
 
-        // A download the arr dropped from its queue is one it finished importing.
-        await _forceImportService.ReconcileAsync(instance, queuedDownloadIds);
+        // A download the arr dropped from its queue has landed only if the arr's history says so.
+        await _forceImportService.ReconcileAsync(arrClient, instance, queuedDownloadIds);
     }
 }

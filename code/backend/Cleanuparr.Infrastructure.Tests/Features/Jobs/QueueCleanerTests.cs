@@ -805,6 +805,7 @@ public class QueueCleanerTests : IDisposable
         await _fixture.ForceImportService
             .Received(1)
             .ReconcileAsync(
+                Arg.Any<IArrClient>(),
                 Arg.Any<ArrInstance>(),
                 Arg.Is<IReadOnlySet<string>>(ids => ids.Contains("first") && ids.Contains("second"))
             );
