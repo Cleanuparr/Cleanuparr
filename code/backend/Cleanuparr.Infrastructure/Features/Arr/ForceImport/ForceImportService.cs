@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
@@ -132,7 +133,7 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.NotApplicable;
         }
 
-        Dictionary<string, PendingForceImport> pending = GetPending(instance);
+        ConcurrentDictionary<string, PendingForceImport> pending = GetPending(instance);
         string triesKey = CacheKeys.ForceImportTries(record.DownloadId, instance.Url);
         int tries = _cache.TryGetValue(triesKey, out int spent) ? spent : 0;
 
@@ -141,7 +142,7 @@ public sealed class ForceImportService : IForceImportService
             // The arr kept the download blocked, so the strike path takes over.
             _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
             _cache.Remove(triesKey);
-            pending.Remove(record.DownloadId);
+            pending.TryRemove(record.DownloadId, out _);
 
             _logger.LogInformation("give up force import | {tries} tries spent | {title}", tries, record.Title);
 
@@ -195,7 +196,7 @@ public sealed class ForceImportService : IForceImportService
 
     public async Task ReconcileAsync(ArrInstance instance, IReadOnlySet<string> queuedDownloadIds)
     {
-        if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out Dictionary<string, PendingForceImport>? pending) ||
+        if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending) ||
             pending is null)
         {
             return;
@@ -207,8 +208,10 @@ public sealed class ForceImportService : IForceImportService
 
         foreach (string downloadId in gone)
         {
-            PendingForceImport attempt = pending[downloadId];
-            pending.Remove(downloadId);
+            if (!pending.TryGetValue(downloadId, out PendingForceImport? attempt))
+            {
+                continue;
+            }
 
             _logger.LogInformation("force imported {count} file(s) | {title}", attempt.FileCount, attempt.Record.Title);
 
@@ -217,24 +220,30 @@ public sealed class ForceImportService : IForceImportService
 
             await _striker.ResetStrikeAsync(downloadId, attempt.Record.Title, StrikeType.FailedImport);
             await _eventPublisher.PublishForceImported(attempt.Record.Title, downloadId, attempt.FileCount);
+
+            // A throw above leaves the entry for the next run, and both steps survive a repeat.
+            pending.TryRemove(downloadId, out _);
         }
     }
 
     public void Forget(ArrInstance instance, string downloadId)
     {
-        if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out Dictionary<string, PendingForceImport>? pending))
+        if (!_cache.TryGetValue(CacheKeys.ForceImportPending(instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending))
         {
             return;
         }
 
-        pending?.Remove(downloadId);
+        pending?.TryRemove(downloadId, out _);
     }
 
-    private Dictionary<string, PendingForceImport> GetPending(ArrInstance instance) =>
+    /// <remarks>
+    /// The queue cleaner reconciles while another job can forget an entry, so the map is shared.
+    /// </remarks>
+    private ConcurrentDictionary<string, PendingForceImport> GetPending(ArrInstance instance) =>
         _cache.GetOrCreate(CacheKeys.ForceImportPending(instance.Url), entry =>
         {
             entry.SlidingExpiration = PendingWindow;
-            return new Dictionary<string, PendingForceImport>(StringComparer.InvariantCultureIgnoreCase);
+            return new ConcurrentDictionary<string, PendingForceImport>(StringComparer.InvariantCultureIgnoreCase);
         })!;
 
     private static bool IsBlockedImport(QueueRecord record) =>

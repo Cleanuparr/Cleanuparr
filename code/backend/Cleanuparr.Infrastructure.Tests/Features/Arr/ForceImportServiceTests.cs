@@ -14,6 +14,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ClearExtensions;
 using Shouldly;
 using Xunit;
 
@@ -548,6 +549,28 @@ public class ForceImportServiceTests
 
         // Assert
         await _eventPublisher.Received(1).PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task ReconcileAsync_ThePublishFailed_ReportsItOnTheNextRun()
+    {
+        // Arrange
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _eventPublisher
+            .PublishForceImported(record.Title, record.DownloadId, 1)
+            .Returns(Task.FromException(new Exception("the event went nowhere")));
+
+        // Act
+        await Should.ThrowAsync<Exception>(() => _sut.ReconcileAsync(_instance, new HashSet<string>()));
+
+        _eventPublisher.ClearSubstitute(ClearOptions.ReturnValues);
+        await _sut.ReconcileAsync(_instance, new HashSet<string>());
+
+        // Assert
+        await _eventPublisher.Received(2).PublishForceImported(record.Title, record.DownloadId, 1);
     }
 
     [Fact]
