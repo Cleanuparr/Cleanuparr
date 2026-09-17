@@ -519,10 +519,10 @@ public class EventPublisherTests : IDisposable
     #region PublishForceImported Tests
 
     [Fact]
-    public async Task PublishForceImported_SavesEventWithTheImportedFileCount()
+    public async Task PublishForceImported_SavesTheEvent()
     {
         // Act
-        await _publisher.PublishForceImported("Show.S01E01", "abc123", fileCount: 2);
+        await _publisher.PublishForceImported("Show.S01E01", "abc123");
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -531,17 +531,17 @@ public class EventPublisherTests : IDisposable
         savedEvent.Severity.ShouldBe(EventSeverity.Important);
         savedEvent.ItemTitle.ShouldBe("Show.S01E01");
         savedEvent.ItemHash.ShouldBe("abc123");
-        savedEvent.Message.ShouldBe("Imported 2 file(s) the arr had blocked");
+        savedEvent.Message.ShouldBe("Imported a download the arr had blocked");
     }
 
     [Fact]
     public async Task PublishForceImported_SendsNotification()
     {
         // Act
-        await _publisher.PublishForceImported("Show.S01E01", "abc123", fileCount: 2);
+        await _publisher.PublishForceImported("Show.S01E01", "abc123");
 
         // Assert
-        await _notificationPublisher.Received(1).NotifyForceImported(2);
+        await _notificationPublisher.Received(1).NotifyForceImported();
     }
 
     #endregion

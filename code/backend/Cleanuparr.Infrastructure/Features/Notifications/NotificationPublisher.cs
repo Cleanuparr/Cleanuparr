@@ -63,11 +63,11 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
-    public virtual async Task NotifyForceImported(int fileCount)
+    public virtual async Task NotifyForceImported()
     {
         try
         {
-            NotificationContext context = BuildForceImportedContext(fileCount);
+            NotificationContext context = BuildForceImportedContext();
             await SendNotificationAsync(NotificationEventType.ForceImported, context);
         }
         catch (Exception ex)
@@ -245,7 +245,7 @@ public class NotificationPublisher : INotificationPublisher
         };
     }
 
-    private NotificationContext BuildForceImportedContext(int fileCount)
+    private NotificationContext BuildForceImportedContext()
     {
         (InstanceType instanceType, Uri instanceUrl, Uri? imageUrl, string itemTitle, string itemHash) = ReadQueueItemContext();
 
@@ -258,7 +258,6 @@ public class NotificationPublisher : INotificationPublisher
             Image = imageUrl,
             Data = new Dictionary<string, string>
             {
-                ["Files"] = fileCount.ToString(CultureInfo.InvariantCulture),
                 ["Hash"] = itemHash,
                 ["Instance type"] = instanceType.ToString(),
                 ["Url"] = instanceUrl.ToString(),

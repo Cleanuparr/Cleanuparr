@@ -87,7 +87,7 @@ public class ForceImportServiceTests
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Is<List<ManualImportFile>>(files => files.Count == 1));
         await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -349,7 +349,7 @@ public class ForceImportServiceTests
         // Assert
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -411,7 +411,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert: the refused try leaves try 1's file count untouched
-        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId);
     }
 
     [Fact]
@@ -530,7 +530,7 @@ public class ForceImportServiceTests
 
         // Assert
         await _striker.Received(1).ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
-        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId);
     }
 
     [Fact]
@@ -545,7 +545,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string> { record.DownloadId });
 
         // Assert
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -561,7 +561,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
-        await _eventPublisher.Received(1).PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.Received(1).PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -573,7 +573,7 @@ public class ForceImportServiceTests
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
         _eventPublisher
-            .PublishForceImported(record.Title, record.DownloadId, 1)
+            .PublishForceImported(record.Title, record.DownloadId)
             .Returns(Task.FromException(new Exception("the event went nowhere")));
 
         // Act
@@ -583,7 +583,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
-        await _eventPublisher.Received(2).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _eventPublisher.Received(2).PublishForceImported(record.Title, record.DownloadId);
     }
 
     [Fact]
@@ -606,7 +606,7 @@ public class ForceImportServiceTests
         // Assert
         gaveUp.ShouldBe(ForceImportOutcome.NotApplicable);
         await _striker.Received(1).ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
-        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId);
     }
 
     [Fact]
@@ -629,7 +629,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert: a baseline taken on the retry would have swallowed the first import
-        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId);
     }
 
     [Fact]
@@ -646,7 +646,7 @@ public class ForceImportServiceTests
 
         // Assert
         await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -663,7 +663,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -684,7 +684,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
-        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId);
     }
 
     [Fact]
@@ -705,7 +705,7 @@ public class ForceImportServiceTests
         // Assert: the entry is gone, so an import recorded later is not read as this one
         _importedByTheArr = 1;
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -751,7 +751,7 @@ public class ForceImportServiceTests
 
         // Assert
         await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -767,7 +767,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
@@ -777,7 +777,7 @@ public class ForceImportServiceTests
         await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
 
         // Assert
-        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]

@@ -242,11 +242,11 @@ public class EventPublisher : IEventPublisher
     /// <summary>
     /// Publishes a force imported event with notifications
     /// </summary>
-    public async Task PublishForceImported(string itemTitle, string hash, int fileCount)
+    public async Task PublishForceImported(string itemTitle, string hash)
     {
         await PublishAsync(
             EventType.ForceImported,
-            $"Imported {fileCount} file(s) the arr had blocked",
+            "Imported a download the arr had blocked",
             EventSeverity.Important,
             configure: e =>
             {
@@ -254,7 +254,7 @@ public class EventPublisher : IEventPublisher
                 e.ItemHash = hash;
             });
 
-        await _notificationPublisher.NotifyForceImported(fileCount);
+        await _notificationPublisher.NotifyForceImported();
     }
 
     /// <summary>

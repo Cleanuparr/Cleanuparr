@@ -192,14 +192,9 @@ public sealed class ForceImportService : IForceImportService
             SpendTry();
             pending.AddOrUpdate(
                 record.DownloadId,
-                _ => new PendingForceImport(record, files.Count, importedBefore, _timeProvider.GetUtcNow()),
+                _ => new PendingForceImport(record, importedBefore, _timeProvider.GetUtcNow()),
                 // A retry keeps the first baseline, so an import the arr has not recorded yet still counts.
-                (_, first) => first with
-                {
-                    Record = record,
-                    FileCount = files.Count,
-                    AskedAt = _timeProvider.GetUtcNow(),
-                }
+                (_, first) => first with { Record = record, AskedAt = _timeProvider.GetUtcNow() }
             );
 
             _logger.LogInformation(
@@ -247,13 +242,13 @@ public sealed class ForceImportService : IForceImportService
                 continue;
             }
 
-            _logger.LogInformation("force imported {Count} file(s) | {Title}", attempt.FileCount, attempt.Record.Title);
+            _logger.LogInformation("force imported | {Title}", attempt.Record.Title);
 
             // The notification reads the record for its title and its poster.
             ContextProvider.Set(nameof(QueueRecord), attempt.Record);
 
             await _striker.ResetStrikeAsync(downloadId, attempt.Record.Title, StrikeType.FailedImport);
-            await _eventPublisher.PublishForceImported(attempt.Record.Title, downloadId, attempt.FileCount);
+            await _eventPublisher.PublishForceImported(attempt.Record.Title, downloadId);
 
             // A throw above leaves the entry for the next run, and both steps survive a repeat.
             pending.TryRemove(downloadId, out _);

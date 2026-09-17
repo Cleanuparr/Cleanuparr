@@ -752,7 +752,7 @@ public class NotificationPublisherTests
             .Returns(provider);
 
         // Act
-        await _publisher.NotifyForceImported(2);
+        await _publisher.NotifyForceImported();
 
         // Assert
         await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
@@ -760,7 +760,6 @@ public class NotificationPublisherTests
                  c.Title == "Imported a download the arr had blocked" &&
                  c.Description == "Test Show" &&
                  c.Severity == EventSeverity.Important &&
-                 c.Data["Files"] == "2" &&
                  c.Data["Hash"] == "abcd1234" &&
                  c.Data["Instance type"] == "Sonarr" &&
                  c.Data["Url"] == "http://sonarr.local/"));
@@ -775,7 +774,7 @@ public class NotificationPublisherTests
             .Returns(new List<NotificationProviderDto>());
 
         // Act
-        await _publisher.NotifyForceImported(1);
+        await _publisher.NotifyForceImported();
 
         // Assert
         await _configService.Received(1).GetProvidersForEventAsync(NotificationEventType.ForceImported);
@@ -790,7 +789,7 @@ public class NotificationPublisherTests
             .ThrowsAsync(new Exception("Error"));
 
         // Act
-        await _publisher.NotifyForceImported(1);
+        await _publisher.NotifyForceImported();
 
         // Assert
         _logger.HasLogContaining(LogLevel.Error, "Failed to notify force imported").ShouldBeTrue();

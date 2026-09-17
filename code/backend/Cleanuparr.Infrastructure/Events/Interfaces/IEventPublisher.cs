@@ -33,7 +33,7 @@ public interface IEventPublisher
     /// <summary>
     /// Records that an arr was made to import a download it had blocked, and sends a notification.
     /// </summary>
-    Task PublishForceImported(string itemTitle, string hash, int fileCount);
+    Task PublishForceImported(string itemTitle, string hash);
 
     /// <summary>
     /// Records that a download was cleaned and sends a notification.

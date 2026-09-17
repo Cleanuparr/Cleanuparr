@@ -11,7 +11,7 @@ public interface INotificationPublisher
     /// <summary>
     /// Reports that an arr was made to import a download it had blocked.
     /// </summary>
-    Task NotifyForceImported(int fileCount);
+    Task NotifyForceImported();
     
     Task NotifyDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason);
 
