@@ -412,4 +412,92 @@ public class NotificationProvidersControllerTests : IDisposable
 
         provider.Events.OnDownloadStopped.ShouldBeFalse();
     }
+
+    #region Test notifications
+
+    [Fact]
+    public async Task TestNotifiarrProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestNotifiarrProvider(new TestNotifiarrProviderRequest
+        {
+            ApiKey = "0123456789abcdef",
+            ChannelId = "123456789",
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestAppriseProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestAppriseProvider(new TestAppriseProviderRequest
+        {
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "config-key",
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestNtfyProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestNtfyProvider(new TestNtfyProviderRequest
+        {
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestTelegramProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestTelegramProvider(new TestTelegramProviderRequest
+        {
+            BotToken = "0123456789:token",
+            ChatId = "-1001234567890",
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestDiscordProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestDiscordProvider(new TestDiscordProviderRequest
+        {
+            WebhookUrl = "https://discord.com/api/webhooks/1/token",
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestPushoverProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestPushoverProvider(new TestPushoverProviderRequest
+        {
+            ApiToken = "api-token",
+            UserKey = "user-key",
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestGotifyProvider_SendsTheTestNotification()
+    {
+        IActionResult result = await _controller.TestGotifyProvider(new TestGotifyProviderRequest
+        {
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        });
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    #endregion
 }
