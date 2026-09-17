@@ -343,6 +343,21 @@ describe('QueueCleanerComponent', () => {
     );
   });
 
+  it('falls back to three tries when the field is empty', () => {
+    const { fixture, component, api } = setup();
+
+    // An empty number input clears the field, and the save button is disabled until it is filled.
+    component.qcForm.failedForceImportMaxTries().value.set(null);
+    fixture.detectChanges();
+    component.save();
+
+    expect(api.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        failedImport: expect.objectContaining({ forceImportMaxTries: 3 }),
+      }),
+    );
+  });
+
   it('sends the force import try limit', () => {
     const { fixture, component, api } = setup();
 

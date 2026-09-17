@@ -654,6 +654,17 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public void MapCandidate_TheArrSentNoSeries_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
+        ManualImportCandidate candidate = new() { Episodes = [new ManualImportRef { Id = 9 }] };
+
+        // Act, Assert
+        _client.MapCandidate(record, candidate).ShouldBeNull();
+    }
+
+    [Fact]
     public void MapCandidate_TheArrSentNoEpisodeList_ReturnsNull()
     {
         // Arrange
