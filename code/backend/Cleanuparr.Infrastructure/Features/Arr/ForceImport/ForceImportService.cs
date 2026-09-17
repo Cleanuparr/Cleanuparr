@@ -241,6 +241,12 @@ public sealed class ForceImportService : IForceImportService
                 continue;
             }
 
+            // Another job can take the download out while the history answers, and that removal is not an import.
+            if (!pending.ContainsKey(downloadId))
+            {
+                continue;
+            }
+
             _logger.LogInformation("force imported {Count} file(s) | {Title}", attempt.FileCount, attempt.Record.Title);
 
             // The notification reads the record for its title and its poster.

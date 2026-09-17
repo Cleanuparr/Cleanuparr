@@ -732,6 +732,29 @@ public class ForceImportServiceTests
     }
 
     [Fact]
+    public async Task ReconcileAsync_CleanuparrRemovedTheDownloadMidRun_ReportsNothing()
+    {
+        // Arrange: another job takes the download out while the history call is in flight
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>())
+            .Returns(_ =>
+            {
+                _sut.Forget(_instance, record.DownloadId);
+                return _importedByTheArr;
+            });
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert
+        await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<int>());
+    }
+
+    [Fact]
     public async Task ReconcileAsync_CleanuparrRemovedTheDownload_ReportsNothing()
     {
         // Arrange: the download left the queue because Cleanuparr took it out
