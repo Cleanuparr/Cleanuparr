@@ -587,6 +587,52 @@ public class ForceImportServiceTests
     }
 
     [Fact]
+    public async Task ReconcileAsync_TheLastTryLandedAfterGivingUp_ReportsTheImport()
+    {
+        // Arrange: the tries run out while the arr is still importing what it was last asked for
+        SetConfig(maxTries: 1);
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        _importedByTheArr = 0;
+
+        ForceImportOutcome gaveUp = await _sut.TryImportAsync(_arrClient, _instance, record);
+        _importedByTheArr = 1;
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert
+        gaveUp.ShouldBe(ForceImportOutcome.NotApplicable);
+        await _striker.Received(1).ResetStrikeAsync(record.DownloadId, record.Title, StrikeType.FailedImport);
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+    }
+
+    [Fact]
+    public async Task TryImportAsync_AsksAgain_KeepsTheFirstBaseline()
+    {
+        // Arrange: the first request lands while the arr still reports the download as blocked
+        SetConfig(maxTries: 3);
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // The arr imports nothing more, because the first request already covered the files.
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
+            .Returns(Task.CompletedTask);
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert: a baseline taken on the retry would have swallowed the first import
+        await _eventPublisher.Received(1).PublishForceImported(record.Title, record.DownloadId, 1);
+    }
+
+    [Fact]
     public async Task ReconcileAsync_TheArrRecordedNoImport_ReportsNothing()
     {
         // Arrange: the download left the queue without the arr importing it

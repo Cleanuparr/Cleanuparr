@@ -144,9 +144,9 @@ public sealed class ForceImportService : IForceImportService
         if (tries >= config.ForceImportMaxTries)
         {
             // The arr kept the download blocked, so the strike path takes over.
+            // The pending import stays: the last request can still land, and reconciliation retires it otherwise.
             _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
             _cache.Remove(triesKey);
-            pending.TryRemove(record.DownloadId, out _);
 
             _logger.LogInformation("give up force import | {Tries} tries spent | {Title}", tries, record.Title);
 
@@ -190,7 +190,17 @@ public sealed class ForceImportService : IForceImportService
             await arrClient.ForceImportAsync(instance, files);
 
             SpendTry();
-            pending[record.DownloadId] = new PendingForceImport(record, files.Count, importedBefore, _timeProvider.GetUtcNow());
+            pending.AddOrUpdate(
+                record.DownloadId,
+                _ => new PendingForceImport(record, files.Count, importedBefore, _timeProvider.GetUtcNow()),
+                // A retry keeps the first baseline, so an import the arr has not recorded yet still counts.
+                (_, first) => first with
+                {
+                    Record = record,
+                    FileCount = files.Count,
+                    AskedAt = _timeProvider.GetUtcNow(),
+                }
+            );
 
             _logger.LogInformation(
                 "asked the arr to import {Count} file(s) | try {Try} | {Title}",
