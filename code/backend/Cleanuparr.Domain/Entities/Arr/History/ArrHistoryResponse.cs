@@ -1,12 +1,12 @@
 namespace Cleanuparr.Domain.Entities.Arr.History;
 
 /// <summary>
-/// One page of the history of an *arr application.
+/// What the history of an *arr application holds for one query.
 /// </summary>
 public sealed record ArrHistoryResponse
 {
     /// <summary>
-    /// The rows on this page.
+    /// How many rows match the query, on this page and on the other pages.
     /// </summary>
-    public IReadOnlyList<ArrHistoryRecord> Records { get; init; } = [];
+    public int TotalRecords { get; init; }
 }

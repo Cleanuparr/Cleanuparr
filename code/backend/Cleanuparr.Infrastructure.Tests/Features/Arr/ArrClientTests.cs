@@ -714,18 +714,15 @@ public class ArrClientTests
     }
 
     [Fact]
-    public async Task GetImportedCountAsync_CountsTheImportsTheArrRecorded()
+    public async Task GetImportedCountAsync_ReadsTheCountTheArrMatched()
     {
-        // Arrange: every fork names its import event differently
+        // Arrange: the arr counts the rows, so the page itself carries nothing
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
         {
-            records = new[]
-            {
-                new { eventType = "grabbed" },
-                new { eventType = "downloadFolderImported" },
-                new { eventType = "movieFolderImported" },
-                new { eventType = "downloadIgnored" },
-            },
+            page = 1,
+            pageSize = 1,
+            totalRecords = 2,
+            records = Array.Empty<object>(),
         })));
 
         // Act
@@ -736,7 +733,8 @@ public class ArrClientTests
 
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/history");
-        request.RequestUri.Query.ShouldBe("?downloadId=A1CF56E76FCD1CC7&page=1&pageSize=200");
+        // The download id and the import event are the arr's own filters, so the count is per download.
+        request.RequestUri.Query.ShouldBe("?downloadId=A1CF56E76FCD1CC7&eventType=3&page=1&pageSize=1");
     }
 
     [Fact]

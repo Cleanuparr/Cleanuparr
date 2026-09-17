@@ -139,6 +139,21 @@ async function importedFiles(target: ForceImportTarget): Promise<Array<{ id: num
   return target.arr.arr.get(target.filesPath);
 }
 
+/**
+ * The history query Cleanuparr confirms an import with, answered by the arr itself.
+ *
+ * `eventType=3` is `DownloadFolderImported` in both forks, and the arr filters on it,
+ * so `totalRecords` counts the imports of this one download.
+ */
+async function importedHistory(
+  target: ForceImportTarget,
+  downloadId: string,
+): Promise<{ totalRecords: number; records: Array<{ eventType?: string }> }> {
+  return target.arr.arr.get(
+    `/api/v3/history?downloadId=${downloadId}&eventType=3&page=1&pageSize=200`,
+  );
+}
+
 /** Cleanuparr announces an import only after the arr's own history records it. */
 async function forceImportedEvents(api: CleanuparrApi, downloadId: string): Promise<number> {
   const res = await api.events.list({ eventType: 'ForceImported', page: 1, pageSize: 500 });
@@ -264,6 +279,11 @@ for (const target of TARGETS) {
           { timeout: 120_000, intervals: [5_000] },
         )
         .toBe(1);
+
+      // A fork that writes its own import event would leave this at 0 and break every confirmation.
+      const history = await importedHistory(target, downloadId);
+      expect(history.totalRecords, 'the arr recorded no import under eventType 3').toBeGreaterThan(0);
+      expect(history.records.every((row) => row.eventType === 'downloadFolderImported')).toBe(true);
     });
 
     test('imports a download the arr blocked on matching the item by ID', async ({ api }) => {
@@ -322,6 +342,9 @@ for (const target of TARGETS) {
       expect(
         (await target.arr.arr.queue()).some((r) => r.downloadId?.toUpperCase() === downloadId),
       ).toBe(true);
+
+      // The grab itself wrote history, and the filter must not read that as an import.
+      expect((await importedHistory(target, downloadId)).totalRecords).toBe(0);
     });
   });
 }

@@ -21,6 +21,11 @@ namespace Cleanuparr.Infrastructure.Features.Arr;
 
 public abstract class ArrClient : IArrClient
 {
+    /// <summary>
+    /// What every arr calls importing a file it downloaded, as its history event id.
+    /// </summary>
+    private const int DownloadFolderImportedEvent = 3;
+
     protected readonly ILogger<ArrClient> _logger;
     protected readonly HttpClient _httpClient;
     protected readonly IStriker _striker;
@@ -227,8 +232,8 @@ public abstract class ArrClient : IArrClient
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/history";
-        // The import events are named differently per arr, so every row for the download comes back.
-        uriBuilder.Query = $"downloadId={Uri.EscapeDataString(downloadId)}&page=1&pageSize=200";
+        // The arr counts the rows it matched, so one download's imports come back as a number.
+        uriBuilder.Query = $"downloadId={Uri.EscapeDataString(downloadId)}&eventType={DownloadFolderImportedEvent}&page=1&pageSize=1";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -247,8 +252,7 @@ public abstract class ArrClient : IArrClient
 
         ArrHistoryResponse? history = await DeserializeStreamAsync<ArrHistoryResponse>(response);
 
-        return history?.Records
-            .Count(record => record.EventType?.EndsWith("Imported", StringComparison.InvariantCultureIgnoreCase) is true) ?? 0;
+        return history?.TotalRecords ?? 0;
     }
 
     /// <inheritdoc/>
