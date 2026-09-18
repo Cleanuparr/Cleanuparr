@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Responses;
+using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -82,15 +83,25 @@ public sealed class GeneralConfigController : ControllerBase
                         .Where(d => !d.Strikes.Any())
                         .ExecuteDeleteAsync();
 
+                    // An item with real strikes survives the purge, carrying whatever the dry run flagged on it.
+                    var clearedFlags = await eventsContext.DownloadItems
+                        .Where(d => d.IsMarkedForRemoval || d.IsRemoved || d.IsReturning)
+                        .ExecuteUpdateAsync(setter => setter
+                            .SetProperty(d => d.IsMarkedForRemoval, false)
+                            .SetProperty(d => d.IsRemoved, false)
+                            .SetProperty(d => d.IsReturning, false));
+
                     var deletedHistory = await eventsContext.SeekerHistory
                         .Where(h => h.IsDryRun)
                         .ExecuteDeleteAsync();
 
                     _logger.LogWarning(
-                        "Dry run disabled — purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed",
-                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory);
+                        "Dry run disabled, purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed, {Flags} download items reset",
+                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, clearedFlags);
 
                     await transaction.CommitAsync();
+
+                    Striker.RecurringHashes.Clear();
                 }
                 catch
                 {
