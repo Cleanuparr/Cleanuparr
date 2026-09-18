@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
@@ -85,13 +86,15 @@ public sealed class ForceImportService : IForceImportService
     private readonly IStriker _striker;
     private readonly IEventPublisher _eventPublisher;
     private readonly TimeProvider _timeProvider;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public ForceImportService(
         ILogger<ForceImportService> logger,
         IMemoryCache cache,
         IStriker striker,
         IEventPublisher eventPublisher,
-        TimeProvider timeProvider
+        TimeProvider timeProvider,
+        IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
@@ -99,6 +102,7 @@ public sealed class ForceImportService : IForceImportService
         _striker = striker;
         _eventPublisher = eventPublisher;
         _timeProvider = timeProvider;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     /// <inheritdoc/>
@@ -129,6 +133,9 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.NotApplicable;
         }
 
+        // A dry run asks the arr for nothing, so it must spend nothing a live run would need.
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
         string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
 
         if (_cache.TryGetValue(gaveUpKey, out DateTimeOffset gaveUpAt) && _timeProvider.GetUtcNow() - gaveUpAt < GaveUpWindow)
@@ -143,10 +150,13 @@ public sealed class ForceImportService : IForceImportService
 
         if (tries >= config.ForceImportMaxTries)
         {
-            // The arr kept the download blocked, so the strike path takes over.
-            // The pending import stays: the last request can still land, and reconciliation retires it otherwise.
-            _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
-            _cache.Remove(triesKey);
+            if (!isDryRun)
+            {
+                // The arr kept the download blocked, so the strike path takes over.
+                // The pending import stays: the last request can still land, and reconciliation retires it otherwise.
+                _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
+                _cache.Remove(triesKey);
+            }
 
             _logger.LogInformation("give up force import | {Tries} tries spent | {Title}", tries, record.Title);
 
@@ -163,7 +173,15 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.Deferred;
         }
 
-        void SpendTry() => _cache.Set(triesKey, tries + 1, TriesWindow);
+        void SpendTry()
+        {
+            if (isDryRun)
+            {
+                return;
+            }
+
+            _cache.Set(triesKey, tries + 1, TriesWindow);
+        }
 
         int importedBefore;
 
@@ -190,6 +208,17 @@ public sealed class ForceImportService : IForceImportService
             await arrClient.ForceImportAsync(instance, files);
 
             SpendTry();
+
+            if (isDryRun)
+            {
+                _logger.LogInformation(
+                    "[DRY RUN] would ask the arr to import {Count} file(s) | {Title}",
+                    files.Count, record.Title
+                );
+
+                return ForceImportOutcome.Deferred;
+            }
+
             pending.AddOrUpdate(
                 record.DownloadId,
                 _ => new PendingForceImport(record, importedBefore, _timeProvider.GetUtcNow()),
@@ -206,7 +235,15 @@ public sealed class ForceImportService : IForceImportService
         {
             // The arr answered, so the try is spent and the strike path stays reachable.
             SpendTry();
-            _logger.LogError(exception, "force import failed | try {Try} | {Title}", tries + 1, record.Title);
+
+            if (isDryRun)
+            {
+                _logger.LogError(exception, "[DRY RUN] force import failed | {Title}", record.Title);
+            }
+            else
+            {
+                _logger.LogError(exception, "force import failed | try {Try} | {Title}", tries + 1, record.Title);
+            }
         }
         catch (Exception exception)
         {
