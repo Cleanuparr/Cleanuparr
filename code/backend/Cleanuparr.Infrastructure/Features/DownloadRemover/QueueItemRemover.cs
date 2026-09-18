@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
@@ -29,6 +30,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
     private readonly ILazyLibrarianService _lazyLibrarianService;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
@@ -37,7 +39,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
         IEventPublisher eventPublisher,
         EventsContext eventsContext,
         DataContext dataContext,
-        ILazyLibrarianService lazyLibrarianService
+        ILazyLibrarianService lazyLibrarianService,
+        IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
@@ -47,6 +50,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _eventsContext = eventsContext;
         _dataContext = dataContext;
         _lazyLibrarianService = lazyLibrarianService;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task RemoveQueueItemAsync(QueueItemRemoveRequest request)
@@ -210,8 +214,17 @@ public sealed class QueueItemRemover : IQueueItemRemover
         }
     }
 
+    /// <remarks>
+    /// A dry run leaves the download queued.
+    /// Marking it removed would turn its next strike into a false return.
+    /// </remarks>
     private async Task MarkDownloadRemovedAsync(string downloadId)
     {
+        if (await _dryRunInterceptor.IsDryRunEnabled())
+        {
+            return;
+        }
+
         await _eventsContext.DownloadItems
             .Where(x => x.DownloadId == downloadId)
             .ExecuteUpdateAsync(setter =>
