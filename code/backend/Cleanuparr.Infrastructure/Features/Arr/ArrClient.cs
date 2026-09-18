@@ -293,18 +293,21 @@ public abstract class ArrClient : IArrClient
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
             response?.Dispose();
 
+            // A null response means the interceptor skipped the request.
+            string prefix = response is null ? "[DRY RUN] " : string.Empty;
+
             string logMessage;
             if (changeCategory)
             {
-                logMessage = "queue item category changed in arr with reason {reason} | {url} | {title}";
+                logMessage = prefix + "queue item category changed in arr with reason {reason} | {url} | {title}";
             }
             else if (removeFromClient)
             {
-                logMessage = "queue item deleted with reason {reason} | {url} | {title}";
+                logMessage = prefix + "queue item deleted with reason {reason} | {url} | {title}";
             }
             else
             {
-                logMessage = "queue item removed from arr with reason {reason} | {url} | {title}";
+                logMessage = prefix + "queue item removed from arr with reason {reason} | {url} | {title}";
             }
 
             _logger.LogInformation(
