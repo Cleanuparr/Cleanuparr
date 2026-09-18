@@ -2,9 +2,12 @@ using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Responses;
 using Cleanuparr.Api.Features.General.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
+using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -145,6 +148,66 @@ public class GeneralConfigControllerTests : IDisposable
 
         // Act / Assert
         await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request, _eventsContext));
+    }
+
+    [Fact]
+    public async Task UpdateGeneralConfig_DryRunDisabled_ClearsWhatTheDryRunLeftBehind()
+    {
+        // Arrange
+        var jobRun = new JobRun { Id = Guid.NewGuid(), Type = JobType.QueueCleaner };
+        _eventsContext.JobRuns.Add(jobRun);
+
+        var survivor = new DownloadItem
+        {
+            DownloadId = "kept",
+            Title = "Struck before the dry run",
+            IsMarkedForRemoval = true,
+            IsRemoved = true,
+            IsReturning = true,
+        };
+        var dryRunOnly = new DownloadItem
+        {
+            DownloadId = "purged",
+            Title = "Seen only during the dry run",
+            IsMarkedForRemoval = true,
+        };
+        _eventsContext.DownloadItems.AddRange(survivor, dryRunOnly);
+
+        _eventsContext.Strikes.AddRange(
+            new Strike { DownloadItemId = survivor.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport },
+            new Strike { DownloadItemId = survivor.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport, IsDryRun = true },
+            new Strike { DownloadItemId = dryRunOnly.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport, IsDryRun = true });
+        await _eventsContext.SaveChangesAsync();
+
+        Striker.RecurringHashes.TryAdd("kept", null);
+
+        var config = await _dataContext.GeneralConfigs.FirstAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        var request = new UpdateGeneralConfigRequest
+        {
+            DryRun = false,
+            HttpTimeout = 60,
+            StrikeInactivityWindowHours = 24,
+            Log = MatchingLogRequest(config.Log),
+            Auth = new UpdateAuthConfigRequest(),
+        };
+
+        // Act
+        await _controller.UpdateGeneralConfig(request, _eventsContext);
+
+        // Assert
+        _eventsContext.ChangeTracker.Clear();
+        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);
+        (await _eventsContext.DownloadItems.AnyAsync(x => x.DownloadId == "purged")).ShouldBeFalse();
+
+        // A flag the dry run set would otherwise outlive it and read as a real removal
+        DownloadItem kept = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "kept");
+        kept.IsMarkedForRemoval.ShouldBeFalse();
+        kept.IsRemoved.ShouldBeFalse();
+        kept.IsReturning.ShouldBeFalse();
+        Striker.RecurringHashes.ShouldBeEmpty();
     }
 
     [Fact]
