@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { JobInfo } from '@core/models/job.models';
 import { JobType } from '@shared/models/enums';
 
 @Injectable({ providedIn: 'root' })

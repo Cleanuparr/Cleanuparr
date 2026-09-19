@@ -103,11 +103,6 @@ export enum SelectionStrategy {
   Random = 'Random',
 }
 
-export enum SeriesSearchType {
-  Season = 'Season',
-  Series = 'Series',
-}
-
 export enum SearchCommandStatus {
   Pending = 'Pending',
   Started = 'Started',
@@ -127,12 +122,6 @@ export enum DeleteReason {
   AllFilesSkippedByQBit = 'AllFilesSkippedByQBit',
   AllFilesBlocked = 'AllFilesBlocked',
   AtLeastOneFileBlocked = 'AtLeastOneFileBlocked',
-}
-
-export enum CleanReason {
-  None = 'None',
-  MaxRatioReached = 'MaxRatioReached',
-  MaxSeedTimeReached = 'MaxSeedTimeReached',
 }
 
 export enum InstanceType {
