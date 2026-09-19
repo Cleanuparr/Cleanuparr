@@ -10,10 +10,3 @@ export interface JobInfo {
   previousRunTime?: Date;
   jobType: string;
 }
-
-export interface JobScheduleRequest {
-  schedule: {
-    every: number;
-    type: string;
-  };
-}
