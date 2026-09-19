@@ -16,7 +16,7 @@ using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 
-public partial class TransmissionService : DownloadService, ITransmissionService
+public partial class TransmissionService : DownloadService
 {
     private readonly ITransmissionClientWrapper _client;
     private bool? _altSpeedLimitActive;
