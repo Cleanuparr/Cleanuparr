@@ -324,12 +324,3 @@ export function resetDirectory(path: string): void {
   }
 }
 
-/**
- * Write a random extra file directly under a directory. Useful to seed an
- * unrelated file that the cleaner should classify as orphaned.
- */
-export function writeRandomFile(dir: string, name: string, sizeBytes = 1024): string {
-  const path = join(dir, name);
-  writeFileShared(path, randomBytes(sizeBytes));
-  return path;
-}

@@ -35,15 +35,7 @@ export class HealthApi {
     return this.client.get('/api/health');
   }
 
-  downloadClient(id: string): Promise<Response> {
-    return this.client.get(`/api/health/${id}`);
-  }
-
   triggerCheck(): Promise<Response> {
     return this.client.post('/api/health/check');
-  }
-
-  triggerCheckOne(id: string): Promise<Response> {
-    return this.client.post(`/api/health/check/${id}`);
   }
 }
