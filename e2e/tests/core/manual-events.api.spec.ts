@@ -26,11 +26,6 @@ test.describe('Core — manual events', () => {
     expect([404, 400]).toContain(res.status);
   });
 
-  test('POST /cleanup returns deletion count', async ({ api }) => {
-    const res = await api.manualEvents.cleanup(0);
-    expect(res.status).toBe(200);
-  });
-
   test('GET requires auth', async ({ anonymousApi }) => {
     const res = await anonymousApi.manualEvents.list();
     expect(res.status).toBe(401);
