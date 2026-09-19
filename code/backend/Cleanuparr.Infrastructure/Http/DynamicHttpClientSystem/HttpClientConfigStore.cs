@@ -8,7 +8,6 @@ namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 public class HttpClientConfigStore : IHttpClientConfigStore
 {
     private readonly ConcurrentDictionary<string, HttpClientConfig> _configurations = new();
-    private readonly ConcurrentDictionary<string, RetryConfig> _retryConfigurations = new();
 
     public bool TryGetConfiguration(string clientName, out HttpClientConfig config)
     {
@@ -23,17 +22,6 @@ public class HttpClientConfigStore : IHttpClientConfigStore
     public void RemoveConfiguration(string clientName)
     {
         _configurations.TryRemove(clientName, out _);
-        _retryConfigurations.TryRemove(clientName, out _);
-    }
-
-    public void AddRetryConfiguration(string clientName, RetryConfig retryConfig)
-    {
-        _retryConfigurations.AddOrUpdate(clientName, retryConfig, (key, oldValue) => retryConfig);
-    }
-
-    public bool TryGetRetryConfiguration(string clientName, out RetryConfig retryConfig)
-    {
-        return _retryConfigurations.TryGetValue(clientName, out retryConfig!);
     }
 
     public IEnumerable<KeyValuePair<string, HttpClientConfig>> GetAllConfigurations()
