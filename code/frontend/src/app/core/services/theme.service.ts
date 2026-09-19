@@ -88,20 +88,10 @@ export class ThemeService {
     localStorage.setItem(PERFORMANCE_MODE_KEY, String(next));
   }
 
-  setPerformanceMode(value: boolean): void {
-    this._performanceMode.set(value);
-    localStorage.setItem(PERFORMANCE_MODE_KEY, String(value));
-  }
-
   toggleFullWidth(): void {
     const next = !this._fullWidth();
     this._fullWidth.set(next);
     localStorage.setItem(FULL_WIDTH_KEY, String(next));
-  }
-
-  setFullWidth(value: boolean): void {
-    this._fullWidth.set(value);
-    localStorage.setItem(FULL_WIDTH_KEY, String(value));
   }
 
   setAccent(accent: Accent): void {

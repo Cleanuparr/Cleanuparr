@@ -17,23 +17,6 @@ export class ApplicationPathService {
     return 'https://cleanuparr.github.io';
   }
 
-  buildUrl(path: string): string {
-    const basePath = this.getBasePath();
-    const cleanPath = path.startsWith('/') ? path : '/' + path;
-    return basePath === '/' ? cleanPath : basePath + cleanPath;
-  }
-
-  buildApiUrl(apiPath: string): string {
-    const basePath = this.getBasePath();
-    const cleanApiPath = apiPath.startsWith('/') ? apiPath : '/' + apiPath;
-
-    if (isDevMode()) {
-      return basePath + '/api' + cleanApiPath;
-    }
-
-    return basePath === '/' ? '/api' + cleanApiPath : basePath + '/api' + cleanApiPath;
-  }
-
   buildHubUrl(hubPath: string): string {
     const basePath = this.getBasePath();
     const cleanPath = hubPath.startsWith('/') ? hubPath : '/' + hubPath;

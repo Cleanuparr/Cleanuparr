@@ -243,13 +243,4 @@ export class DocumentationService {
     const url = this.pathService.buildDocumentationUrl(section, anchor);
     window.open(url, '_blank', 'noopener,noreferrer');
   }
-
-  getFieldDocumentationUrl(section: string, fieldName: string): string {
-    const anchor = this.fieldMappings[section]?.[fieldName];
-    return this.pathService.buildDocumentationUrl(section, anchor);
-  }
-
-  hasFieldDocumentation(section: string, fieldName: string): boolean {
-    return !!this.fieldMappings[section]?.[fieldName];
-  }
 }

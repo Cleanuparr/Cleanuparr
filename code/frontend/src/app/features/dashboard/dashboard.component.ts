@@ -309,10 +309,6 @@ export class DashboardComponent {
     return details;
   }
 
-  navigateTo(path: string): void {
-    this.router.navigate([path]);
-  }
-
   private loadOrder(): DashboardRowId[] {
     try {
       const saved = localStorage.getItem(DASHBOARD_ROW_ORDER_KEY);

@@ -189,10 +189,6 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.currentPage.set(1);
   }
 
-  viewLogsForJobRun(runId: string): void {
-    this.router.navigate(['/logs'], { queryParams: { jobRunId: runId } });
-  }
-
   exportEvents(format: 'json' | 'csv' | 'text'): void {
     this.showExportMenu.set(false);
     const events = this.events();
