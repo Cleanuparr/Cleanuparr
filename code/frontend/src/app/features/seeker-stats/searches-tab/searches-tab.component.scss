@@ -253,48 +253,6 @@
 
 // Expanded row detail
 
-.event-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-
-  &__chips {
-    display: flex;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  &__section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  &__label {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  &__value {
-    font-size: var(--font-size-sm);
-    color: var(--text-primary);
-    overflow-wrap: anywhere;
-    word-break: normal;
-  }
-
-  &__cycle {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    background: var(--glass-bg);
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-  }
-}
-
 // List rows (legacy styles — kept for potential reuse)
 
 .list-row {
@@ -342,13 +300,6 @@
     color: var(--text-primary);
     padding: 0 var(--space-4) var(--space-2);
     word-break: break-word;
-  }
-
-  &__extra {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    margin-left: var(--space-1);
   }
 
   &__cycle {

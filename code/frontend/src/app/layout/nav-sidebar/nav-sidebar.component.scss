@@ -180,15 +180,6 @@
     font-size: 14px;
   }
 
-  &__section-label-text {
-    padding: var(--space-2) var(--space-3);
-    color: var(--sidebar-section-label);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
   &__logout {
     display: flex;
     align-items: center;
