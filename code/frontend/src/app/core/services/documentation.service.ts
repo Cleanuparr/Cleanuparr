@@ -137,9 +137,6 @@ export class DocumentationService {
       'blacklistPath': 'blacklist-path',
     },
     'notifications': {
-      'enabled': 'enabled',
-      'name': 'provider-name',
-      'eventTriggers': 'event-configuration',
       'onFailedImportStrike': 'event-configuration',
       'onStalledStrike': 'event-configuration',
       'onSlowStrike': 'event-configuration',
