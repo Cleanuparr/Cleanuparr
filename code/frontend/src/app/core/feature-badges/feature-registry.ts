@@ -6,7 +6,7 @@
  *   - Box sections (`app-card`, `app-accordion`) render a flame "NEW" corner ribbon in the
  *     top-right corner.
  *   - Field components (`app-toggle`, `app-input`, `app-select`, `app-number-input`,
- *     `app-chip-input`, `app-textarea`, `app-size-input`) render a small flame "NEW" pill next
+ *     `app-chip-input`, `app-size-input`) render a small flame "NEW" pill next
  *     to their label.
  * You can also drop `<app-new-badge featureId="…">` (ribbon) or
  * `<app-new-badge variant="inline" featureId="…">` (pill) anywhere manually.
