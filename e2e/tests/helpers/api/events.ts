@@ -35,10 +35,6 @@ export class EventsApi {
     return this.client.get(`/api/events/${id}`);
   }
 
-  byTracking(trackingId: string): Promise<Response> {
-    return this.client.get(`/api/events/tracking/${trackingId}`);
-  }
-
   types(): Promise<Response> {
     return this.client.get('/api/events/types');
   }
