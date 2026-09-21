@@ -1193,6 +1193,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("on_failed_import_strike");
 
+                    b.Property<bool>("OnForceImported")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_force_imported");
+
                     b.Property<bool>("OnQueueItemDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("on_queue_item_deleted");
@@ -1441,6 +1445,14 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.Property<bool>("DeletePrivate")
                                 .HasColumnType("boolean")
                                 .HasColumnName("failed_import_delete_private");
+
+                            b1.Property<bool>("ForceImport")
+                                .HasColumnType("boolean")
+                                .HasColumnName("failed_import_force_import");
+
+                            b1.Property<int>("ForceImportMaxTries")
+                                .HasColumnType("integer")
+                                .HasColumnName("failed_import_force_import_max_tries");
 
                             b1.Property<bool>("IgnorePrivate")
                                 .HasColumnType("boolean")

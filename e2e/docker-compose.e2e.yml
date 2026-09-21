@@ -225,6 +225,7 @@ services:
     volumes:
       - ./test-data/sonarr-config:/config
       - ./test-data/sonarr-tv:/tv
+      - ./test-data/downloads/qbittorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:8989/ping || exit 1"]
       interval: 5s
@@ -242,6 +243,7 @@ services:
     volumes:
       - ./test-data/radarr-config:/config
       - ./test-data/radarr-movies:/movies
+      - ./test-data/downloads/qbittorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:7878/ping || exit 1"]
       interval: 5s

@@ -312,6 +312,70 @@ Failures that a new release will not fix, because they are temporary or caused b
 
 </ConfigSection>
 
+<ConfigSection
+  title="Force Import"
+>
+
+An *arr sometimes refuses a completed download over a minor issue, and they could be imported just fine by hand.
+Cleanuparr recognises three such reasons:
+
+- `matched to series by ID`
+- `matched to movie by ID`
+- `Unable to determine if file is a sample`
+
+A reason counts when it contains one of those, whatever the casing.
+
+Turn this on if you want Cleanuparr to try importing a download blocked for those reasons instead of striking it.
+For a download to be imported it has to meet the following conditions:
+
+- every reason the *arr gave is one of the three above
+- the *arr resolved the series or movie the download was grabbed for
+- the *arr runs no import or scan right now, so files are left alone while they are being moved
+- every file the *arr found belongs to that series or movie
+- a series file maps to at least one episode
+- no file carries a rejection outside those three reasons
+
+A check that can pass later, after the *arr stops being busy, makes the download wait and does not collect strikes.
+A check that cannot, such as the *arr offering no file to import, hands the download straight back to the strike path on that same run.
+
+Cleanuparr acts on a settled block right away.
+A block the *arr may still clear on its own has to survive two runs first.
+
+Cleanuparr asks the *arr to import, then waits for the answer.
+Each run spends at most one try, up to [Force Import Max Tries](#failed-import-force-import-max-tries).
+Waiting on a busy *arr costs you nothing, and so does an *arr Cleanuparr could not reach.
+An *arr that answers with an error spends the try, so a download can never sit outside the strike path forever.
+You get the notification after the download leaves the *arr queue and the *arr's own history records the import.
+Only an import recorded after Cleanuparr asked counts, so an earlier import of the same download proves nothing.
+Cleanuparr stays quiet about the removals it asked for itself.
+A download you delete in the *arr, or one the *arr drops without importing it, reports nothing.
+Cleanuparr stops waiting on an import that never lands 6 hours after it asked.
+
+<Important>
+This feature is supported only for:
+- Sonarr
+- Radarr
+- Whisparr
+- Sportarr
+</Important>
+
+[Max Strikes](#failed-import-max-strikes) does not gate this, so you can rescue imports with striking switched off.
+Once the tries run out Cleanuparr hands the download back to the normal failed import path.
+It collects strikes if you have striking on, and sits there if you do not.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Force Import Max Tries"
+>
+
+The number of times Cleanuparr asks the *arr to import one download before giving up.
+Default 3, up to 5000.
+
+Each try costs one Queue Cleaner run, so a short run interval spends them faster. Cleanuparr gives the download another set of tries 6 hours later.
+
+</ConfigSection>
+
 </div>
 </PrefixedSection>
 

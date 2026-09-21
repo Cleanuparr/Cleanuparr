@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using NSubstitute;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 
@@ -35,6 +36,8 @@ public class JobHandlerFixture : IDisposable
     public IHardLinkFileService HardLinkFileService { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public ILazyLibrarianService LazyLibrarianService { get; private set; }
+    public IForceImportService ForceImportService { get; private set; }
+
     public ILazyLibrarianEvaluator LazyLibrarianServiceQC { get; private set; }
     public ILazyLibrarianEvaluator LazyLibrarianServiceCB { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
@@ -61,6 +64,7 @@ public class JobHandlerFixture : IDisposable
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         LazyLibrarianService = Substitute.For<ILazyLibrarianService>();
+        ForceImportService = Substitute.For<IForceImportService>();
         LazyLibrarianServiceQC = Substitute.For<ILazyLibrarianEvaluator>();
         LazyLibrarianServiceCB = Substitute.For<ILazyLibrarianEvaluator>();
         TimeProvider = new FakeTimeProvider();
@@ -164,6 +168,7 @@ public class JobHandlerFixture : IDisposable
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        ForceImportService = Substitute.For<IForceImportService>();
         Cache.Clear();
         TimeProvider = new FakeTimeProvider();
         RecreateCleanupServices();

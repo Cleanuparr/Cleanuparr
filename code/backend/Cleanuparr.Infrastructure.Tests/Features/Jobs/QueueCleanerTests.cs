@@ -1,4 +1,5 @@
 ﻿using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Domain.Entities.LazyLibrarian;
 using Cleanuparr.Domain.Entities;
@@ -60,6 +61,7 @@ public class QueueCleanerTests : IDisposable
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
             _connectivityChecker,
+            _fixture.ForceImportService,
             _fixture.LazyLibrarianServiceQC
         );
     }
@@ -686,6 +688,127 @@ public class QueueCleanerTests : IDisposable
             false,
             Arg.Any<short>()
         );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenForceImportDefers_SkipsTheFailedImportCheck()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        _fixture.ForceImportService
+            .TryImportAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>())
+            .Returns(ForceImportOutcome.Deferred);
+
+        QueueRecord queueRecord = new()
+        {
+            Id = 1,
+            DownloadId = "download-id",
+            Title = "Test Download",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                Func<IReadOnlyList<QueueRecord>, Task> callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        IDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        QueueCleanerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.DidNotReceive().ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_ReconcilesForceImportsWithEveryQueuedDownload()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        QueueRecord[] page = [
+            new() { Id = 1, DownloadId = "first", Title = "First", Protocol = "torrent", SeriesId = 1, EpisodeId = 1 },
+            new() { Id = 2, DownloadId = "second", Title = "Second", Protocol = "torrent", SeriesId = 1, EpisodeId = 2 },
+        ];
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                Func<IReadOnlyList<QueueRecord>, Task> callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([page[0]]);
+                await callback([page[1]]);
+            });
+
+        IDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        QueueCleanerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.ForceImportService
+            .Received(1)
+            .ReconcileAsync(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Is<IReadOnlySet<string>>(ids => ids.Contains("first") && ids.Contains("second"))
+            );
     }
 
     [Fact]

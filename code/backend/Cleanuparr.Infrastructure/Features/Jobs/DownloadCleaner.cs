@@ -2,6 +2,7 @@
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -45,10 +46,12 @@ public sealed class DownloadCleaner : GenericHandler
         IDeadTorrentService deadTorrentService,
         IOrphanedFilesCleanupService orphanedFilesService,
         IDryRunInterceptor dryRunInterceptor,
+        IForceImportService forceImportService,
         ILazyLibrarianService lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
+        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
+        forceImportService
     )
     {
         _timeProvider = timeProvider;

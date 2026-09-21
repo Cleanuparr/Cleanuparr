@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Sonarr;
 using Cleanuparr.Domain.Enums;
@@ -498,6 +499,200 @@ public class SonarrClientTests
         DownloadId = id.ToString(),
         Protocol = "torrent",
     };
+
+    #region Force import
+
+    [Fact]
+    public async Task GetManualImportCandidatesAsync_KeepsTheDownloadIdCasing()
+    {
+        // Arrange: the arr matches the download id exactly, so a lowercased one finds nothing
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
+            new[] { new { path = "/downloads/file.mkv" } })));
+
+        // Act
+        await _client.GetManualImportCandidatesAsync(_arrInstance, "A1CF56E76FCD1CC7");
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.Method.ShouldBe(HttpMethod.Get);
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/manualimport");
+        request.RequestUri.Query.ShouldBe("?downloadId=A1CF56E76FCD1CC7&filterExistingFiles=true");
+        request.Headers.GetValues("x-api-key").ShouldHaveSingleItem().ShouldBe("api-key");
+    }
+
+    [Fact]
+    public async Task GetManualImportCandidatesAsync_ReadsTheCandidateTheArrSent()
+    {
+        // Arrange
+        const string body = """
+            [
+              {
+                "path": "/downloads/show.mkv",
+                "relativePath": "show.mkv",
+                "folderName": null,
+                "downloadId": "HASH",
+                "indexerFlags": 0,
+                "releaseType": "singleEpisode",
+                "quality": { "quality": { "id": 3 } },
+                "languages": [ { "id": 1 } ],
+                "series": { "id": 7 },
+                "episodes": [ { "id": 9 } ],
+                "rejections": [ { "reason": "Unable to determine if file is a sample", "type": "permanent" } ]
+              }
+            ]
+            """;
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        }));
+
+        // Act
+        List<ManualImportCandidate> candidates = await _client.GetManualImportCandidatesAsync(_arrInstance, "HASH");
+
+        // Assert
+        ManualImportCandidate candidate = candidates.ShouldHaveSingleItem();
+        candidate.Path.ShouldBe("/downloads/show.mkv");
+        candidate.FolderName.ShouldBeNull();
+        candidate.Series!.Id.ShouldBe(7);
+        candidate.Episodes!.ShouldHaveSingleItem().Id.ShouldBe(9);
+        candidate.Rejections!.ShouldHaveSingleItem().Reason.ShouldBe("Unable to determine if file is a sample");
+        candidate.ReleaseType.ShouldBe("singleEpisode");
+    }
+
+    [Fact]
+    public async Task ForceImportAsync_PostsTheManualImportCommand()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
+        List<ManualImportFile> files =
+        [
+            new()
+            {
+                Path = "/downloads/show.mkv",
+                SeriesId = 7,
+                EpisodeIds = [9],
+                DownloadId = "HASH",
+                ReleaseType = "singleEpisode",
+            },
+        ];
+
+        // Act
+        await _client.ForceImportAsync(_arrInstance, files);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.Method.ShouldBe(HttpMethod.Post);
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command");
+
+        string body = _httpMessageHandler.CapturedRequestBodies.ShouldHaveSingleItem()!;
+        using JsonDocument document = JsonDocument.Parse(body);
+        JsonElement root = document.RootElement;
+        root.GetProperty("Name").GetString().ShouldBe("ManualImport");
+        root.GetProperty("ImportMode").GetString().ShouldBe("auto");
+
+        JsonElement file = root.GetProperty("Files").EnumerateArray().ShouldHaveSingleItem();
+        file.GetProperty("Path").GetString().ShouldBe("/downloads/show.mkv");
+        file.GetProperty("SeriesId").GetInt64().ShouldBe(7);
+        file.GetProperty("EpisodeIds").EnumerateArray().ShouldHaveSingleItem().GetInt64().ShouldBe(9);
+        file.TryGetProperty("MovieId", out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ForceImportAsync_DryRun_SendsNothing()
+    {
+        // Arrange
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .Returns(Task.FromResult<HttpResponseMessage?>(null));
+
+        // Act
+        await _client.ForceImportAsync(_arrInstance, [new ManualImportFile { Path = "/downloads/show.mkv" }]);
+
+        // Assert
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void MapCandidate_SeriesMatches_BuildsTheSeriesPayload()
+    {
+        // Arrange
+        QueueRecord record = new() { SeriesId = 7, EpisodeId = 9, DownloadId = "HASH", Title = "show" };
+        ManualImportCandidate candidate = new()
+        {
+            Path = "/downloads/show.mkv",
+            DownloadId = "HASH",
+            IndexerFlags = 2,
+            Series = new ManualImportRef { Id = 7 },
+            Episodes = [new ManualImportRef { Id = 9 }, new ManualImportRef { Id = 10 }],
+        };
+
+        // Act
+        ManualImportFile? file = _client.MapCandidate(record, candidate);
+
+        // Assert
+        file.ShouldNotBeNull();
+        file.SeriesId.ShouldBe(7);
+        file.EpisodeIds.ShouldBe([9, 10]);
+        file.MovieId.ShouldBeNull();
+        file.IndexerFlags.ShouldBe(2);
+        file.ReleaseType.ShouldBe("singleEpisode");
+    }
+
+    [Fact]
+    public void MapCandidate_OtherSeries_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
+        ManualImportCandidate candidate = new()
+        {
+            Series = new ManualImportRef { Id = 8 },
+            Episodes = [new ManualImportRef { Id = 9 }],
+        };
+
+        // Act, Assert
+        _client.MapCandidate(record, candidate).ShouldBeNull();
+    }
+
+    [Fact]
+    public void MapCandidate_TheArrSentNoSeries_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
+        ManualImportCandidate candidate = new() { Episodes = [new ManualImportRef { Id = 9 }] };
+
+        // Act, Assert
+        _client.MapCandidate(record, candidate).ShouldBeNull();
+    }
+
+    [Fact]
+    public void MapCandidate_TheArrSentNoEpisodeList_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
+        ManualImportCandidate candidate = new() { Series = new ManualImportRef { Id = 7 } };
+
+        // Act, Assert
+        _client.MapCandidate(record, candidate).ShouldBeNull();
+    }
+
+    [Fact]
+    public void MapCandidate_NoEpisode_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { SeriesId = 7, DownloadId = "HASH", Title = "show" };
+        ManualImportCandidate candidate = new() { Series = new ManualImportRef { Id = 7 }, Episodes = [] };
+
+        // Act, Assert
+        _client.MapCandidate(record, candidate).ShouldBeNull();
+    }
+
+    [Fact]
+    public void SupportsForceImport_IsTrue()
+    {
+        _client.SupportsForceImport.ShouldBeTrue();
+    }
+
+    #endregion
 
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {

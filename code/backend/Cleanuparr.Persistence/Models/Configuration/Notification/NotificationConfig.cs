@@ -37,6 +37,8 @@ public sealed record NotificationConfig
 
     public bool OnSearchItemGrabbed { get; init; }
 
+    public bool OnForceImported { get; init; }
+
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     
     public DateTimeOffset UpdatedAt { get; init; } = DateTimeOffset.UtcNow;
@@ -78,5 +80,6 @@ public sealed record NotificationConfig
         OnDownloadStopped ||
         OnCategoryChanged ||
         OnSearchTriggered ||
-        OnSearchItemGrabbed;
+        OnSearchItemGrabbed ||
+        OnForceImported;
 }

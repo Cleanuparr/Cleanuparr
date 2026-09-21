@@ -2,6 +2,7 @@
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -47,7 +48,8 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
-            _fixture.DryRunInterceptor);
+            _fixture.DryRunInterceptor,
+            _fixture.ForceImportService);
     }
 
     #region GetRecordSearchItem
@@ -425,6 +427,55 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         _fixture.Cache.TryGetValue(key, out bool _).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_Published_ForgetsThePendingForceImport()
+    {
+        // Arrange
+        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
+        ArrInstance instance = new()
+        {
+            Name = "s",
+            Url = new Uri("http://s"),
+            ApiKey = "k",
+            ArrConfig = arrConfig,
+            Version = 4f,
+        };
+        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
+
+        // Act
+        await _handler.PublicPublishQueueItemRemoveRequest(
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+
+        // Assert: the download leaving the queue is a removal, not an import
+        _fixture.ForceImportService.Received(1).Forget(instance, record.DownloadId);
+    }
+
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_PublishThrows_KeepsThePendingForceImport()
+    {
+        // Arrange
+        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
+        ArrInstance instance = new()
+        {
+            Name = "s",
+            Url = new Uri("http://s"),
+            ApiKey = "k",
+            ArrConfig = arrConfig,
+            Version = 4f,
+        };
+        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
+
+        _fixture.MessageBus
+            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new InvalidOperationException("bus is down")));
+
+        // Act & Assert: nothing was removed, so a pending import still stands
+        await Should.ThrowAsync<InvalidOperationException>(() => _handler.PublicPublishQueueItemRemoveRequest(
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
+
+        _fixture.ForceImportService.DidNotReceive().Forget(Arg.Any<ArrInstance>(), Arg.Any<string>());
+    }
+
     #endregion
 
     #region GetInitializedDownloadServicesAsync
@@ -635,8 +686,9 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             IArrQueueIterator arrQueueIterator,
             IDownloadServiceFactory downloadServiceFactory,
             IEventPublisher eventPublisher,
-            IDryRunInterceptor dryRunInterceptor)
-            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor)
+            IDryRunInterceptor dryRunInterceptor,
+            IForceImportService forceImportService)
+            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
         {
         }
 

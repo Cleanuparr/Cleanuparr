@@ -16,6 +16,7 @@ export interface NotificationEventFlags {
   onCategoryChanged: boolean;
   onSearchTriggered: boolean;
   onSearchItemGrabbed: boolean;
+  onForceImported: boolean;
 }
 
 export interface NotificationProviderDto {

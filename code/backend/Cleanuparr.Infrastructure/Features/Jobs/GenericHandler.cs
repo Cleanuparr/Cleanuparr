@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -35,6 +36,7 @@ public abstract class GenericHandler : IHandler
     protected readonly IDownloadServiceFactory _downloadServiceFactory;
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IEventPublisher _eventPublisher;
+    protected readonly IForceImportService _forceImportService;
 
     protected GenericHandler(
         ILogger<GenericHandler> logger,
@@ -45,9 +47,11 @@ public abstract class GenericHandler : IHandler
         IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
-        IDryRunInterceptor dryRunInterceptor
+        IDryRunInterceptor dryRunInterceptor,
+        IForceImportService forceImportService
     )
     {
+        _forceImportService = forceImportService;
         _logger = logger;
         _cache = cache;
         _messageBus = messageBus;
@@ -199,6 +203,9 @@ public abstract class GenericHandler : IHandler
             _cache.Remove(downloadRemovalKey);
             throw;
         }
+
+        // The mark above lives only while the removal is in flight, and its absence must not read as an import.
+        _forceImportService.Forget(instance, target.DownloadId);
 
         // Set context for event
         if (downloadClient is not null)

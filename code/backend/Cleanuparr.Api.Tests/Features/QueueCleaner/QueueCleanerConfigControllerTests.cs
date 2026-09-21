@@ -154,4 +154,28 @@ public class QueueCleanerConfigControllerTests : IDisposable
         saved.ProcessNoContentId.ShouldBeTrue();
         saved.IgnoredDownloads.ShouldContain("ignored");
     }
+
+    [Fact]
+    public async Task GetQueueCleanerConfig_ReturnsTheSavedForceImportSettings()
+    {
+        // Arrange
+        UpdateQueueCleanerConfigRequest request = new()
+        {
+            Enabled = true,
+            CronExpression = "0 0/5 * * * ?",
+            FailedImport = new FailedImportConfig { ForceImport = true, ForceImportMaxTries = 7 },
+            IgnoredDownloads = [],
+        };
+
+        await _controller.UpdateQueueCleanerConfig(request);
+
+        // Act
+        IActionResult result = await _controller.GetQueueCleanerConfig();
+
+        // Assert
+        OkObjectResult ok = result.ShouldBeOfType<OkObjectResult>();
+        QueueCleanerConfigResponse response = ok.Value.ShouldBeOfType<QueueCleanerConfigResponse>();
+        response.FailedImport.ForceImport.ShouldBeTrue();
+        response.FailedImport.ForceImportMaxTries.ShouldBe((ushort)7);
+    }
 }

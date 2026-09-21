@@ -21,6 +21,8 @@ const CONFIG: QueueCleanerConfig = {
     skipIfNotFoundInClient: true,
     patterns: ['unpack'],
     changeCategory: false,
+    forceImport: false,
+    forceImportMaxTries: 3,
   },
   downloadingMetadataMaxStrikes: 6,
 };
@@ -316,11 +318,91 @@ describe('QueueCleanerComponent', () => {
         patterns: ['unpack'],
         patternMode: PatternMode.Exclude,
         changeCategory: false,
+        forceImport: false,
+        forceImportMaxTries: 3,
       },
       downloadingMetadataMaxStrikes: 9,
     });
     expect(component.dirty()).toBe(false);
     expect(component.saved()).toBe(true);
+  });
+
+  it('sends the force import toggle', () => {
+    const { fixture, component, api } = setup();
+
+    component.qcForm.failedForceImport().value.set(true);
+    fixture.detectChanges();
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(api.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        failedImport: expect.objectContaining({ forceImport: true }),
+      }),
+    );
+  });
+
+  it('falls back to three tries when the field is empty', () => {
+    const { fixture, component, api } = setup();
+
+    // An empty number input clears the field, and the save button is disabled until it is filled.
+    component.qcForm.failedForceImportMaxTries().value.set(null);
+    fixture.detectChanges();
+    component.save();
+
+    expect(api.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        failedImport: expect.objectContaining({ forceImportMaxTries: 3 }),
+      }),
+    );
+  });
+
+  it('sends the force import try limit', () => {
+    const { fixture, component, api } = setup();
+
+    component.qcForm.failedForceImport().value.set(true);
+    component.qcForm.failedForceImportMaxTries().value.set(5);
+    fixture.detectChanges();
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(api.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        failedImport: expect.objectContaining({ forceImportMaxTries: 5 }),
+      }),
+    );
+  });
+
+  it('rejects a force import try limit of zero', () => {
+    const { fixture, component } = setup();
+
+    component.qcForm.failedForceImport().value.set(true);
+    component.qcForm.failedForceImportMaxTries().value.set(0);
+    fixture.detectChanges();
+
+    expect(component.qcForm.failedForceImportMaxTries().errors().length).toBeGreaterThan(0);
+  });
+
+  it('locks the try limit while force import is off', () => {
+    const { fixture, component } = setup();
+
+    expect(component.qcForm.failedForceImportMaxTries().disabled()).toBe(true);
+
+    component.qcForm.failedForceImport().value.set(true);
+    fixture.detectChanges();
+
+    expect(component.qcForm.failedForceImportMaxTries().disabled()).toBe(false);
+  });
+
+  it('leaves force import available when striking is off', () => {
+    const { fixture, component } = setup();
+
+    component.qcForm.failedMaxStrikes().value.set(0);
+    fixture.detectChanges();
+
+    expect(component.qcForm.failedForceImport().disabled()).toBe(false);
   });
 
   it('falls back to three strikes on empty inputs and never deletes private when changing category', () => {

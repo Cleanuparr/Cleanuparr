@@ -23,6 +23,7 @@ const DEFAULT_EVENTS = {
   onCategoryChanged: false,
   onSearchTriggered: false,
   onSearchItemGrabbed: false,
+  onForceImported: false,
 };
 
 const NTFY_PROVIDER: NotificationProviderDto = {
@@ -40,6 +41,7 @@ const NTFY_PROVIDER: NotificationProviderDto = {
     onCategoryChanged: true,
     onSearchTriggered: false,
     onSearchItemGrabbed: true,
+    onForceImported: false,
   },
   configuration: {
     serverUrl: 'https://ntfy.example.com',
@@ -218,6 +220,7 @@ describe('NotificationProviderModalComponent', () => {
       onStalledStrike: true,
       onCategoryChanged: true,
       onSearchItemGrabbed: true,
+      onForceImported: false,
     });
     expect(component.hasPendingChanges()).toBe(false);
     expect(component.modalForm().invalid()).toBe(false);
@@ -531,6 +534,7 @@ describe('NotificationProviderModalComponent', () => {
       webhookUrl: 'https://discord.com/hook',
       avatarUrl: 'https://example.com/a.png',
       onCategoryChanged: true,
+      onForceImported: true,
     }));
     fixture.detectChanges();
 
@@ -545,6 +549,7 @@ describe('NotificationProviderModalComponent', () => {
       isEnabled: true,
       ...DEFAULT_EVENTS,
       onCategoryChanged: true,
+      onForceImported: true,
     });
     expect(api.updateDiscord).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith('Provider added');

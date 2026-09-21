@@ -15,6 +15,7 @@ export function eventTypeSeverity(eventType: string): BadgeSeverity {
   switch (eventType) {
     case EventType.StrikeReset:
     case EventType.DownloadCleaned:
+    case EventType.ForceImported:
       return 'success';
     case EventType.FailedImportStrike:
     case EventType.QueueItemDeleted:
@@ -68,6 +69,7 @@ export function eventIcon(eventType: string): string {
   }
   switch (type) {
     case EventType.DownloadCleaned:
+    case EventType.ForceImported:
       return 'tablerDownload';
     case EventType.QueueItemDeleted:
       return 'tablerTrash';

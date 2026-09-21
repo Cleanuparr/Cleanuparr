@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Radarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -96,6 +97,15 @@ public class RadarrClient : ArrClient, IRadarrClient
     }
 
     public override bool HasContentId(QueueRecord record) => record.MovieId is not 0;
+
+    /// <inheritdoc/>
+    public override bool SupportsForceImport => true;
+
+    /// <inheritdoc/>
+    public override ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) =>
+        candidate.ResolvedMovieId is { } movieId && movieId == record.MovieId
+            ? ManualImportFile.FromMovieCandidate(candidate, movieId)
+            : null;
 
     private static string GetSearchLog(Uri instanceUrl, RadarrCommand command, bool success, string? logContext)
     {

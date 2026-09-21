@@ -1,6 +1,7 @@
 ﻿using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -38,10 +39,12 @@ public sealed class QueueCleaner : GenericHandler
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
         IConnectivityChecker connectivityChecker,
+        IForceImportService forceImportService,
         [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor
+        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
+        forceImportService
     )
     {
         _connectivityChecker = connectivityChecker;
@@ -135,6 +138,8 @@ public sealed class QueueCleaner : GenericHandler
             .Where(x => x.Type == DownloadClientType.Torrent)
             .Any(x => x.Enabled);
 
+        HashSet<string> queuedDownloadIds = new(StringComparer.InvariantCultureIgnoreCase);
+
         await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
         {
             var groups = items
@@ -144,6 +149,7 @@ public sealed class QueueCleaner : GenericHandler
             foreach (var group in groups)
             {
                 QueueRecord record = group.First();
+                queuedDownloadIds.Add(record.DownloadId);
 
                 if (!arrClient.IsRecordValid(record))
                 {
@@ -242,6 +248,15 @@ public sealed class QueueCleaner : GenericHandler
                     continue;
                 }
 
+                // Runs before the client check below: a torrent missing from the client can still be imported.
+                ForceImportOutcome forceImport = await _forceImportService.TryImportAsync(arrClient, instance, record);
+
+                // A deferred import must not collect strikes while the arr works.
+                if (forceImport is not ForceImportOutcome.NotApplicable)
+                {
+                    continue;
+                }
+
                 // Skip failed import check if torrent is not found in client and skipIfNotFoundInClient is enabled
                 if (isTorrent && hasEnabledTorrentClients && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
                 {
@@ -275,5 +290,8 @@ public sealed class QueueCleaner : GenericHandler
                 _logger.LogDebug("skip | {title}", record.Title);
             }
         });
+
+        // A download the arr dropped from its queue has landed only if the arr's history says so.
+        await _forceImportService.ReconcileAsync(arrClient, instance, queuedDownloadIds);
     }
 }

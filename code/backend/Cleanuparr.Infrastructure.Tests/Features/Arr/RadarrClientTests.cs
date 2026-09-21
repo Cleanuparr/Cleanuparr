@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -400,6 +401,108 @@ public class RadarrClientTests
         DownloadId = id.ToString(),
         Protocol = "torrent",
     };
+
+    #region Force import
+
+    [Fact]
+    public async Task GetManualImportCandidatesAsync_ReadsTheFlatMovieIdRadarrSends()
+    {
+        // Arrange: Radarr 6 puts the movie id on the candidate, with no nested movie
+        const string body = """
+            [
+              {
+                "path": "/downloads/movie.mkv",
+                "relativePath": "movie.mkv",
+                "downloadId": "HASH",
+                "movieId": 1,
+                "indexerFlags": 0,
+                "releaseGroup": "GROUP",
+                "quality": { "quality": { "id": 3 } },
+                "languages": [ { "id": 1 } ],
+                "rejections": [ { "reason": "Unable to determine if file is a sample", "type": "permanent" } ]
+              }
+            ]
+            """;
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        }));
+
+        // Act
+        List<ManualImportCandidate> candidates = await _client.GetManualImportCandidatesAsync(_arrInstance, "HASH");
+
+        // Assert
+        ManualImportCandidate candidate = candidates.ShouldHaveSingleItem();
+        candidate.Movie.ShouldBeNull();
+        candidate.ResolvedMovieId.ShouldBe(1);
+
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/manualimport");
+        request.RequestUri.Query.ShouldBe("?downloadId=HASH&filterExistingFiles=true");
+    }
+
+    [Fact]
+    public void MapCandidate_FlatMovieIdMatches_BuildsTheMoviePayload()
+    {
+        // Arrange
+        QueueRecord record = new() { MovieId = 1, DownloadId = "HASH", Title = "movie" };
+        ManualImportCandidate candidate = new()
+        {
+            Path = "/downloads/movie.mkv",
+            DownloadId = "HASH",
+            ReleaseGroup = "GROUP",
+            MovieId = 1,
+        };
+
+        // Act
+        ManualImportFile? file = _client.MapCandidate(record, candidate);
+
+        // Assert
+        file.ShouldNotBeNull();
+        file.MovieId.ShouldBe(1);
+        file.SeriesId.ShouldBeNull();
+        file.EpisodeIds.ShouldBeNull();
+        file.ReleaseGroup.ShouldBe("GROUP");
+    }
+
+    [Fact]
+    public void MapCandidate_NestedMovieMatches_BuildsTheMoviePayload()
+    {
+        // Arrange: an older build nests the movie
+        QueueRecord record = new() { MovieId = 1, DownloadId = "HASH", Title = "movie" };
+        ManualImportCandidate candidate = new() { Movie = new ManualImportRef { Id = 1 } };
+
+        // Act, Assert
+        _client.MapCandidate(record, candidate)!.MovieId.ShouldBe(1);
+    }
+
+    [Fact]
+    public void MapCandidate_OtherMovie_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { MovieId = 1, DownloadId = "HASH", Title = "movie" };
+
+        // Act, Assert
+        _client.MapCandidate(record, new ManualImportCandidate { MovieId = 2 }).ShouldBeNull();
+    }
+
+    [Fact]
+    public void MapCandidate_NoMovieId_ReturnsNull()
+    {
+        // Arrange
+        QueueRecord record = new() { MovieId = 1, DownloadId = "HASH", Title = "movie" };
+
+        // Act, Assert
+        _client.MapCandidate(record, new ManualImportCandidate()).ShouldBeNull();
+    }
+
+    [Fact]
+    public void SupportsForceImport_IsTrue()
+    {
+        _client.SupportsForceImport.ShouldBeTrue();
+    }
+
+    #endregion
 
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {

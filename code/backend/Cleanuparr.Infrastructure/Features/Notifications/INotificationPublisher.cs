@@ -7,6 +7,11 @@ public interface INotificationPublisher
     Task NotifyStrike(StrikeType strikeType, int strikeCount);
     
     Task NotifyQueueItemDeleted(bool removeFromClient, DeleteReason reason);
+
+    /// <summary>
+    /// Reports that an arr was made to import a download it had blocked.
+    /// </summary>
+    Task NotifyForceImported();
     
     Task NotifyDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason);
 

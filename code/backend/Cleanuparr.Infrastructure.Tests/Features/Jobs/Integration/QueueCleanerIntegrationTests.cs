@@ -49,6 +49,7 @@ public class QueueCleanerIntegrationTests : IDisposable
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
             connectivityChecker,
+            _fixture.ForceImportService,
             _fixture.LazyLibrarianServiceQC);
     }
 

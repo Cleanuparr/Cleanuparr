@@ -12,6 +12,8 @@ export interface FailedImportConfig {
   patterns: string[];
   patternMode?: PatternMode;
   changeCategory: boolean;
+  forceImport: boolean;
+  forceImportMaxTries: number;
 }
 
 export interface QueueCleanerConfig {

@@ -240,6 +240,24 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
+    /// Publishes a force imported event with notifications
+    /// </summary>
+    public async Task PublishForceImported(string itemTitle, string hash)
+    {
+        await PublishAsync(
+            EventType.ForceImported,
+            "Imported a download the arr had blocked",
+            EventSeverity.Important,
+            configure: e =>
+            {
+                e.ItemTitle = itemTitle;
+                e.ItemHash = hash;
+            });
+
+        await _notificationPublisher.NotifyForceImported();
+    }
+
+    /// <summary>
     /// Publishes a download cleaned event with context data and notifications
     /// </summary>
     public async Task PublishDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)

@@ -38,6 +38,8 @@ export interface TorznabRelease {
   category: number;
   /** Path segment the release's download link points at, under /dl. */
   file: string;
+  /** Extra torznab id attributes, e.g. tvdbid or tmdbid, for a by-ID match. */
+  attrs?: Record<string, string | number>;
 }
 
 function feed(releases: TorznabRelease[]): string {
@@ -53,7 +55,10 @@ function feed(releases: TorznabRelease[]): string {
       <enclosure url="${TEST_CONFIG.mocks.indexerUrl}/dl/${release.file}" length="${ADVERTISED_SIZE_BYTES}" type="application/x-bittorrent" />
       <torznab:attr name="category" value="${release.category}" />
       <torznab:attr name="seeders" value="20" />
-      <torznab:attr name="peers" value="25" />
+      <torznab:attr name="peers" value="25" />${Object.entries(release.attrs ?? {})
+        .map(([name, value]) => `
+      <torznab:attr name="${name}" value="${value}" />`)
+        .join('')}
     </item>`,
     )
     .join('');

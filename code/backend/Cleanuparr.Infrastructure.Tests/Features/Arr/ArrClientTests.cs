@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
@@ -682,6 +683,80 @@ public class ArrClientTests
 
         // Assert
         result.ShouldBeTrue();
+    }
+
+    #endregion
+
+    #region ForceImport
+
+    [Fact]
+    public void SupportsForceImport_IsFalseUnlessTheClientOptsIn()
+    {
+        _client.SupportsForceImport.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void MapCandidate_MapsNothingUnlessTheClientOptsIn()
+    {
+        _client.MapCandidate(new QueueRecord { DownloadId = "HASH", Title = "item" }, new ManualImportCandidate())
+            .ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetManualImportCandidatesAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetManualImportCandidatesAsync(_arrInstance, "HASH"));
+    }
+
+    [Fact]
+    public async Task GetImportedCountAsync_ReadsTheCountTheArrMatched()
+    {
+        // Arrange: the arr counts the rows, so the page itself carries nothing
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            page = 1,
+            pageSize = 1,
+            totalRecords = 2,
+            records = Array.Empty<object>(),
+        })));
+
+        // Act
+        int imported = await _client.GetImportedCountAsync(_arrInstance, "A1CF56E76FCD1CC7");
+
+        // Assert
+        imported.ShouldBe(2);
+
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/history");
+        // The download id and the import event are the arr's own filters, so the count is per download.
+        request.RequestUri.Query.ShouldBe("?downloadId=A1CF56E76FCD1CC7&eventType=3&page=1&pageSize=1");
+    }
+
+    [Fact]
+    public async Task GetImportedCountAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetImportedCountAsync(_arrInstance, "HASH"));
+    }
+
+    [Fact]
+    public async Task ForceImportAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.BadRequest);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.ForceImportAsync(_arrInstance, [new ManualImportFile { Path = "/downloads/item.mkv" }]));
     }
 
     #endregion
