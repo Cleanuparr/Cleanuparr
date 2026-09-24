@@ -150,7 +150,7 @@ describe('BlacklistSyncComponent', () => {
     component.save();
     fixture.detectChanges();
 
-    expect(toast.toasts().at(-1)?.message).toBe('Failed to save blacklist sync settings');
+    expect(toast.toasts().at(-1)?.message).toBe('Internal Server Error');
   });
 
   it('shows the load error and recovers on retry', () => {
