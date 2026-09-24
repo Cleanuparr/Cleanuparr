@@ -358,6 +358,28 @@ describe('ArrSettingsComponent', () => {
     expect(api.getConfig).toHaveBeenCalledTimes(2);
   });
 
+  it('reports pending changes only while the modal is open and edited', () => {
+    const { fixture, component } = setup('sonarr');
+
+    expect(component.hasPendingChanges()).toBe(false);
+
+    component.openAddModal();
+    fixture.detectChanges();
+    expect(component.hasPendingChanges()).toBe(false);
+
+    component.instanceForm.name().value.set('New');
+    fixture.detectChanges();
+    expect(component.hasPendingChanges()).toBe(true);
+
+    component.instanceForm.url().value.set('http://localhost:8989');
+    component.instanceForm.apiKey().value.set('key');
+    component.saveInstance();
+    fixture.detectChanges();
+
+    expect(component.modalVisible()).toBe(false);
+    expect(component.hasPendingChanges()).toBe(false);
+  });
+
   it('shows the connection error state when loading fails and recovers on retry', () => {
     const api = createApi();
     api.getConfig.mockReturnValue(throwError(() => new Error('offline')));

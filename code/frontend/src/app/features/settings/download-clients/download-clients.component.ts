@@ -90,6 +90,11 @@ export class DownloadClientsComponent implements HasPendingChanges {
 
   readonly hasModalErrors = computed(() => this.clientForm().invalid());
 
+  /** JSON snapshot of the model as loaded when the modal opened, for dirty tracking. */
+  private readonly openSnapshot = signal('');
+  private readonly modalDirty = computed(() =>
+    this.modalVisible() && JSON.stringify(this.clientModel()) !== this.openSnapshot());
+
   readonly showUsernameField = computed(() => {
     return this.clientModel().typeName !== DownloadClientTypeName.Deluge;
   });
@@ -147,6 +152,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
       host: '', username: '', password: '', urlBase: '', externalUrl: '',
       downloadDirectorySource: '', downloadDirectoryTarget: '',
     });
+    this.openSnapshot.set(JSON.stringify(this.clientModel()));
     this.modalVisible.set(true);
   }
 
@@ -164,6 +170,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
       downloadDirectorySource: client.downloadDirectorySource ?? '',
       downloadDirectoryTarget: client.downloadDirectoryTarget ?? '',
     });
+    this.openSnapshot.set(JSON.stringify(this.clientModel()));
     this.modalVisible.set(true);
   }
 
@@ -275,6 +282,6 @@ export class DownloadClientsComponent implements HasPendingChanges {
   }
 
   hasPendingChanges(): boolean {
-    return false;
+    return this.modalDirty();
   }
 }

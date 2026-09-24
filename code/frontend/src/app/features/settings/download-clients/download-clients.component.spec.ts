@@ -420,6 +420,27 @@ describe('DownloadClientsComponent', () => {
     expect(api.getConfig).toHaveBeenCalledTimes(2);
   });
 
+  it('reports pending changes only while the modal is open and edited', () => {
+    const { fixture, component } = setup();
+
+    expect(component.hasPendingChanges()).toBe(false);
+
+    component.openAddModal();
+    fixture.detectChanges();
+    expect(component.hasPendingChanges()).toBe(false);
+
+    component.clientForm.name().value.set('New client');
+    fixture.detectChanges();
+    expect(component.hasPendingChanges()).toBe(true);
+
+    component.clientForm.host().value.set('http://localhost:9091');
+    component.saveClient();
+    fixture.detectChanges();
+
+    expect(component.modalVisible()).toBe(false);
+    expect(component.hasPendingChanges()).toBe(false);
+  });
+
   it('shows the connection error state when loading fails and recovers on retry', () => {
     const api = createApi();
     api.getConfig.mockReturnValue(throwError(() => new Error('offline')));
