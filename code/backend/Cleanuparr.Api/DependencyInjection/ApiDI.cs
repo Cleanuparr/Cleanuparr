@@ -98,6 +98,13 @@ public static class ApiDI
         // Custom SPA fallback to inject base path
         app.MapFallback(async context =>
         {
+            // Serving the SPA here would mask unknown API routes as 200 + HTML
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                context.Response.StatusCode = 404;
+                return;
+            }
+
             var basePath = app.Configuration.GetValue<string>(ConfigurationKeys.BasePath) ?? "/";
             
             // Normalize the base path (remove trailing slash if not root)

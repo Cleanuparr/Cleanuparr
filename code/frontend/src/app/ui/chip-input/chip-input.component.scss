@@ -26,11 +26,6 @@
     border-color: var(--input-border-focus);
     box-shadow: 0 0 0 3px var(--color-primary-subtle);
   }
-
-  :host:focus-within .textarea-label {
-    color: var(--color-primary);
-    transition: color var(--duration-fast) var(--ease-default);
-  }
   
   &--disabled {
     opacity: 0.5;

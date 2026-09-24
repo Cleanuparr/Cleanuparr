@@ -16,7 +16,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 /// µTorrent download service implementation
 /// Provides business logic layer on top of UTorrentClient
 /// </summary>
-public partial class UTorrentService : DownloadService, IUTorrentService
+public partial class UTorrentService : DownloadService
 {
     private readonly IUTorrentClientWrapper _client;
 

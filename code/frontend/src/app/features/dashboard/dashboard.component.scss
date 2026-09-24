@@ -582,20 +582,6 @@ app-stats-card {
     flex-wrap: wrap;
   }
 
-  &__category {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-  }
-
-  &__instance-name {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   &__time {
     font-size: var(--font-size-xs);
     color: var(--text-tertiary);

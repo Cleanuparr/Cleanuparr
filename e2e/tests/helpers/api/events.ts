@@ -35,20 +35,12 @@ export class EventsApi {
     return this.client.get(`/api/events/${id}`);
   }
 
-  byTracking(trackingId: string): Promise<Response> {
-    return this.client.get(`/api/events/tracking/${trackingId}`);
-  }
-
   types(): Promise<Response> {
     return this.client.get('/api/events/types');
   }
 
   severities(): Promise<Response> {
     return this.client.get('/api/events/severities');
-  }
-
-  cleanup(retentionDays = 30): Promise<Response> {
-    return this.client.post(`/api/events/cleanup?retentionDays=${retentionDays}`);
   }
 }
 
@@ -73,10 +65,6 @@ export class ManualEventsApi {
 
   severities(): Promise<Response> {
     return this.client.get('/api/ManualEvents/severities');
-  }
-
-  cleanup(retentionDays = 30): Promise<Response> {
-    return this.client.post(`/api/ManualEvents/cleanup?retentionDays=${retentionDays}`);
   }
 }
 

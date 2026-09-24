@@ -82,15 +82,6 @@
     font-size: var(--font-size-xs);
   }
 
-  &__category {
-    color: var(--color-primary);
-    flex-shrink: 0;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   &__message {
     color: var(--text-secondary);
     padding: 0 var(--space-4) var(--space-2);
@@ -167,16 +158,6 @@
     span {
       color: var(--text-secondary);
     }
-  }
-
-  &__instance-name {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex-shrink: 0;
   }
 
   &__run-id {
@@ -274,10 +255,6 @@
   .log-entry__row {
     flex-wrap: wrap;
     padding: var(--space-2) var(--space-3);
-  }
-
-  .log-entry__category {
-    max-width: 100px;
   }
 
 }

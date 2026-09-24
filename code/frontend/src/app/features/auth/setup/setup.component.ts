@@ -48,7 +48,6 @@ export class SetupComponent {
   // Step 3 - Plex
   plexLinking = signal(false);
   plexLinked = signal(false);
-  plexUsername = signal('');
   plexPinId = signal(0);
 
   // Auto-focus refs

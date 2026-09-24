@@ -51,21 +51,6 @@ export interface ManualEvent {
   strikeCount?: number;
 }
 
-export interface EventStats {
-  totalEvents: number;
-  eventsBySeverity: { severity: string; count: number }[];
-  eventsByType: { eventType: string; count: number }[];
-  recentEventsCount: number;
-}
-
-export interface ManualEventStats {
-  totalEvents: number;
-  unresolvedEvents: number;
-  resolvedEvents: number;
-  eventsBySeverity: { severity: string; count: number }[];
-  unresolvedBySeverity: { severity: string; count: number }[];
-}
-
 export interface EventTypeTimelineBucket {
   date: string;
   counts: Record<string, number>;

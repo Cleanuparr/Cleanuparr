@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 
-public partial class RTorrentService : DownloadService, IRTorrentService
+public partial class RTorrentService : DownloadService
 {
     private readonly IRTorrentClientWrapper _client;
 

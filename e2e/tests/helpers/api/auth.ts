@@ -23,14 +23,6 @@ export class AuthApi {
     return this.client.post('/api/auth/setup/account', { username, password });
   }
 
-  setupGenerate2fa(): Promise<Response> {
-    return this.client.post('/api/auth/setup/2fa/generate');
-  }
-
-  setupVerify2fa(code: string): Promise<Response> {
-    return this.client.post('/api/auth/setup/2fa/verify', { code });
-  }
-
   setupComplete(): Promise<Response> {
     return this.client.post('/api/auth/setup/complete');
   }
@@ -49,22 +41,6 @@ export class AuthApi {
 
   logout(refreshToken: string): Promise<Response> {
     return this.client.post('/api/auth/logout', { refreshToken });
-  }
-
-  oidcStart(): Promise<Response> {
-    return this.client.post('/api/auth/oidc/start');
-  }
-
-  oidcExchange(oneTimeCode: string): Promise<Response> {
-    return this.client.post('/api/auth/oidc/exchange', { code: oneTimeCode });
-  }
-
-  plexPin(): Promise<Response> {
-    return this.client.post('/api/auth/login/plex/pin');
-  }
-
-  plexVerify(pinId: string): Promise<Response> {
-    return this.client.post('/api/auth/login/plex/verify', { pinId });
   }
 
   async loginAndCaptureTokens(username: string, password: string): Promise<TokenResponse> {

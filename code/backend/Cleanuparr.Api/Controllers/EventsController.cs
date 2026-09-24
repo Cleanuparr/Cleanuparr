@@ -154,21 +154,6 @@ public class EventsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets events by tracking ID
-    /// </summary>
-    [HttpGet("tracking/{trackingId}")]
-    public async Task<ActionResult<List<EventListItem>>> GetEventsByTracking(Guid trackingId)
-    {
-        List<EventListItem> events = await _context.Events
-            .Where(e => e.TrackingId == trackingId)
-            .OrderBy(e => e.Timestamp)
-            .Select(EventListItem.FromEvent)
-            .ToListAsync();
-
-        return Ok(events);
-    }
-
-    /// <summary>
     /// Gets unique event types
     /// </summary>
     [HttpGet("types")]

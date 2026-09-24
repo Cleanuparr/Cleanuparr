@@ -25,33 +25,6 @@ public sealed class OrphanedFilesConfigController : ControllerBase
         _dataContext = dataContext;
     }
 
-    [HttpGet("{downloadClientId}")]
-    public async Task<IActionResult> GetClientConfig(Guid downloadClientId)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var client = await _dataContext.DownloadClients
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == downloadClientId);
-
-            if (client is null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
-            }
-
-            var config = await _dataContext.OrphanedFilesConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.DownloadClientConfigId == downloadClientId);
-
-            return Ok(config is null ? null : OrphanedFilesConfigResponse.From(config));
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
     [HttpPut("{downloadClientId}")]
     public async Task<IActionResult> UpdateClientConfig(Guid downloadClientId, [FromBody] OrphanedFilesConfigRequest dto)
     {

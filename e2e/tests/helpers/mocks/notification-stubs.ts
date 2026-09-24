@@ -1,4 +1,4 @@
-import type { Mapping, WireMockClient } from './wiremock-client';
+import type { Mapping } from './wiremock-client';
 
 export function discordWebhookStub(): Mapping {
   return {
@@ -49,14 +49,3 @@ export function appriseStub(): Mapping {
   };
 }
 
-export async function applyNotificationDefaults(notify: WireMockClient): Promise<void> {
-  await notify.stubMany([
-    discordWebhookStub(),
-    telegramSendMessageStub(),
-    ntfyTopicStub(),
-    gotifyMessageStub(),
-    pushoverMessageStub(),
-    notifiarrStub(),
-    appriseStub(),
-  ]);
-}

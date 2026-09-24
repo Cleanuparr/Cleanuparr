@@ -5,7 +5,7 @@ using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 
-public abstract record QueueRule : IConfig, IQueueRule
+public abstract record QueueRule : IConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

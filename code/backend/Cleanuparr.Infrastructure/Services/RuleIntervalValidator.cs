@@ -35,22 +35,6 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return ValidateRuleIntervals(allRules, newRule.Name);
     }
 
-    public List<IntervalGap> FindGapsInCoverage<T>(List<T> rules) where T : QueueRule
-    {
-        _logger.LogDebug("Finding gaps in coverage for {rule} rules", rules.Count);
-        
-        var gaps = new List<IntervalGap>();
-        var enabledRules = rules.Where(r => r.Enabled).ToList();
-        
-        // Find gaps for each privacy type
-        gaps.AddRange(FindGapsForPrivacyType(enabledRules, TorrentPrivacyType.Public));
-        gaps.AddRange(FindGapsForPrivacyType(enabledRules, TorrentPrivacyType.Private));
-        
-        _logger.LogDebug("Found {GapCount} gaps in coverage", gaps.Count);
-        
-        return gaps;
-    }
-
     /// <summary>
     /// Validates that the provided rules do not create overlapping intervals.
     /// </summary>
@@ -202,75 +186,6 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         }
 
         return overlaps;
-    }
-
-    private static List<IntervalGap> FindGapsForPrivacyType<T>(List<T> rules, TorrentPrivacyType privacyType) where T : QueueRule
-    {
-        var gaps = new List<IntervalGap>();
-        
-        // Get relevant intervals for this privacy type
-        var relevantRules = rules.Where(r => 
-            r.PrivacyType == privacyType || 
-            r.PrivacyType == TorrentPrivacyType.Both).ToList();
-        
-        if (!relevantRules.Any())
-        {
-            gaps.Add(new IntervalGap
-            {
-                PrivacyType = privacyType,
-                Start = 0,
-                End = 100
-            });
-            return gaps;
-        }
-
-        var intervals = relevantRules
-            .Select(r => new
-            {
-                Start = Math.Max(0, Math.Min(100, (int)r.MinCompletionPercentage)),
-                End = Math.Max(0, Math.Min(100, (int)r.MaxCompletionPercentage))
-            })
-            .Where(i => i.End >= i.Start)
-            .OrderBy(i => i.Start)
-            .ThenBy(i => i.End)
-            .ToList();
-
-        double currentCoverageEnd = 0;
-
-        foreach (var interval in intervals)
-        {
-            if (interval.Start > currentCoverageEnd)
-            {
-                gaps.Add(new IntervalGap
-                {
-                    PrivacyType = privacyType,
-                    Start = currentCoverageEnd,
-                    End = interval.Start
-                });
-            }
-
-            if (interval.End > currentCoverageEnd)
-            {
-                currentCoverageEnd = interval.End;
-            }
-
-            if (currentCoverageEnd >= 100)
-            {
-                break;
-            }
-        }
-
-        if (currentCoverageEnd < 100)
-        {
-            gaps.Add(new IntervalGap
-            {
-                PrivacyType = privacyType,
-                Start = currentCoverageEnd,
-                End = 100
-            });
-        }
-
-        return gaps;
     }
 
     private class OverlapResult

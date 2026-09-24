@@ -29,28 +29,6 @@ export async function waitForApp(timeoutMs = 90_000): Promise<void> {
   throw new Error(`App did not become ready within ${timeoutMs}ms`);
 }
 
-export async function createAccountAndSetup(): Promise<void> {
-  const createRes = await fetch(`${API}/api/auth/setup/account`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username: TEST_CONFIG.adminUsername,
-      password: TEST_CONFIG.adminPassword,
-    }),
-  });
-  // 409 = controller says account exists; 403 = middleware says setup already completed
-  if (!createRes.ok && createRes.status !== 409 && createRes.status !== 403) {
-    throw new Error(`Failed to create account: ${createRes.status}`);
-  }
-
-  const completeRes = await fetch(`${API}/api/auth/setup/complete`, {
-    method: 'POST',
-  });
-  if (!completeRes.ok && completeRes.status !== 409 && completeRes.status !== 403) {
-    throw new Error(`Failed to complete setup: ${completeRes.status}`);
-  }
-}
-
 export async function loginAndGetToken(): Promise<string> {
   const res = await fetch(`${API}/api/auth/login`, {
     method: 'POST',
@@ -104,26 +82,6 @@ export async function updateOidcConfig(
 
 // --- Seeker API helpers ---
 
-export async function getSeekerConfig(accessToken: string): Promise<Response> {
-  return fetch(`${API}/api/configuration/seeker`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-}
-
-export async function updateSeekerConfig(
-  accessToken: string,
-  config: Record<string, unknown>,
-): Promise<Response> {
-  return fetch(`${API}/api/configuration/seeker`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(config),
-  });
-}
-
 export async function getSearchStatsSummary(accessToken: string): Promise<Response> {
   return fetch(`${API}/api/seeker/search-stats/summary`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -132,22 +90,6 @@ export async function getSearchStatsSummary(accessToken: string): Promise<Respon
 
 export async function getSearchEvents(accessToken: string): Promise<Response> {
   return fetch(`${API}/api/seeker/search-stats/events`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-}
-
-export async function getCfScores(
-  accessToken: string,
-  params?: Record<string, string>,
-): Promise<Response> {
-  const query = params ? '?' + new URLSearchParams(params).toString() : '';
-  return fetch(`${API}/api/seeker/cf-scores${query}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-}
-
-export async function getCfScoreStats(accessToken: string): Promise<Response> {
-  return fetch(`${API}/api/seeker/cf-scores/stats`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
@@ -199,12 +141,6 @@ export async function updateDownloadCleanerConfig(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(config),
-  });
-}
-
-export async function getSeedingRules(accessToken: string, downloadClientId: string): Promise<Response> {
-  return fetch(`${API}/api/seeding-rules/${downloadClientId}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
 
@@ -526,31 +462,3 @@ export async function getOidcConfig(accessToken: string): Promise<OidcConfigSnap
   return res.json();
 }
 
-export async function setOidcConfig(
-  accessToken: string,
-  config: OidcConfigSnapshot,
-): Promise<void> {
-  const res = await fetch(`${API}/api/account/oidc`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(config),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Failed to PUT OIDC config: ${res.status} ${body}`);
-  }
-}
-
-export async function clearOidcLink(accessToken: string): Promise<void> {
-  const res = await fetch(`${API}/api/account/oidc/link`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok && res.status !== 404) {
-    const body = await res.text();
-    throw new Error(`Failed to clear OIDC link: ${res.status} ${body}`);
-  }
-}

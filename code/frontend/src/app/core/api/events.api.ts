@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AppEvent, ManualEvent, EventStats, ManualEventStats, EventFilter, ManualEventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
+import { AppEvent, ManualEvent, EventFilter, ManualEventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 
 @Injectable({ providedIn: 'root' })
@@ -21,18 +21,6 @@ export class EventsApi {
       if (filter.jobRunId) params = params.set('jobRunId', filter.jobRunId);
     }
     return this.http.get<PaginatedResult<AppEvent>>('/api/events', { params });
-  }
-
-  getEvent(id: string): Observable<AppEvent> {
-    return this.http.get<AppEvent>(`/api/events/${id}`);
-  }
-
-  getEventsByTracking(trackingId: string): Observable<AppEvent[]> {
-    return this.http.get<AppEvent[]>(`/api/events/tracking/${trackingId}`);
-  }
-
-  getEventStats(): Observable<EventStats> {
-    return this.http.get<EventStats>('/api/events/stats');
   }
 
   getEventTypes(): Observable<string[]> {
@@ -64,23 +52,11 @@ export class EventsApi {
     return this.http.get<PaginatedResult<ManualEvent>>('/api/manualevents', { params });
   }
 
-  getManualEvent(id: string): Observable<ManualEvent> {
-    return this.http.get<ManualEvent>(`/api/manualevents/${id}`);
-  }
-
   resolveManualEvent(id: string): Observable<void> {
     return this.http.post<void>(`/api/manualevents/${id}/resolve`, {});
   }
 
   resolveAllManualEvents(): Observable<{ resolvedCount: number }> {
     return this.http.post<{ resolvedCount: number }>('/api/manualevents/resolve_all', {});
-  }
-
-  getManualEventStats(): Observable<ManualEventStats> {
-    return this.http.get<ManualEventStats>('/api/manualevents/stats');
-  }
-
-  getManualEventSeverities(): Observable<string[]> {
-    return this.http.get<string[]>('/api/manualevents/severities');
   }
 }

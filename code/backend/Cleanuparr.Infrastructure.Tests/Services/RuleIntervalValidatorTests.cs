@@ -143,59 +143,7 @@ public class RuleIntervalValidatorTests
         result.IsValid.ShouldBeTrue();
     }
 
-    [Fact]
-    public void FindGapsInCoverage_ReturnsFullGapWhenNoRules()
-    {
-        var gaps = _validator.FindGapsInCoverage(new List<StallRule>());
 
-        gaps.ShouldNotBeEmpty();
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Public).ShouldBe(1);
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Private).ShouldBe(1);
-
-        gaps.First(g => g.PrivacyType == TorrentPrivacyType.Public).ShouldSatisfyAllConditions(
-            gap => gap.Start.ShouldBe(0),
-            gap => gap.End.ShouldBe(100)
-        );
-    }
-
-    [Fact]
-    public void FindGapsInCoverage_UsesMinimumBoundaries()
-    {
-        var rules = new List<StallRule>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Partial",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 0,
-                MaxCompletionPercentage = 40
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Upper",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 60,
-                MaxCompletionPercentage = 90
-            }
-        };
-
-        var gaps = _validator.FindGapsInCoverage(rules);
-
-        var publicGap = gaps.FirstOrDefault(g => g.PrivacyType == TorrentPrivacyType.Public && g.Start >= 40 && g.End <= 60);
-        publicGap.ShouldNotBeNull();
-        publicGap!.Start.ShouldBe(40);
-        publicGap.End.ShouldBe(60);
-
-        var privateGap = gaps.First(g => g.PrivacyType == TorrentPrivacyType.Private);
-        privateGap.Start.ShouldBe(0);
-        privateGap.End.ShouldBe(100);
-    }
 
     [Fact]
     public void ValidateSlowRuleIntervals_AllowsTouchingRanges()
@@ -301,86 +249,8 @@ public class RuleIntervalValidatorTests
         result.Details.ShouldNotBeEmpty();
     }
 
-    [Fact]
-    public void FindGapsInCoverage_NoGapsWhenFullyCovered()
-    {
-        var rules = new List<StallRule>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Lower",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 0,
-                MaxCompletionPercentage = 50
-            },
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Upper",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 50,
-                MaxCompletionPercentage = 100
-            }
-        };
 
-        var gaps = _validator.FindGapsInCoverage(rules);
 
-        // No public gaps expected
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Public).ShouldBe(0);
-    }
-
-    [Fact]
-    public void FindGapsInCoverage_NoGapsWhenBothRuleCoversAll()
-    {
-        var rules = new List<StallRule>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "BothCoverage",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Both,
-                MinCompletionPercentage = 0,
-                MaxCompletionPercentage = 100
-            }
-        };
-
-        var gaps = _validator.FindGapsInCoverage(rules);
-
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Public).ShouldBe(0);
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Private).ShouldBe(0);
-    }
-
-    [Fact]
-    public void FindGapsInCoverage_ClampsBounds()
-    {
-        var rules = new List<StallRule>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "OutOfRange",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 20,
-                MaxCompletionPercentage = 150
-            }
-        };
-
-        var gaps = _validator.FindGapsInCoverage(rules);
-
-        var publicGap = gaps.FirstOrDefault(g => g.PrivacyType == TorrentPrivacyType.Public);
-        publicGap.ShouldNotBeNull();
-        publicGap!.Start.ShouldBe(0);
-        publicGap.End.ShouldBe(20);
-    }
 
     [Fact]
     public void ValidateStallRuleIntervals_IgnoresDisabledRules()
@@ -583,61 +453,7 @@ public class RuleIntervalValidatorTests
         result.IsValid.ShouldBeTrue();
     }
 
-    [Fact]
-    public void FindGapsInCoverage_IgnoresInvalidIntervalsWhereMaxLessThanMin()
-    {
-        var rules = new List<StallRule>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Invalid",
-                Enabled = true,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 80,
-                MaxCompletionPercentage = 20
-            }
-        };
 
-        // Invalid interval should be ignored, resulting in full gap
-        var gaps = _validator.FindGapsInCoverage(rules);
-
-        var publicGap = gaps.First(g => g.PrivacyType == TorrentPrivacyType.Public);
-        publicGap.Start.ShouldBe(0);
-        publicGap.End.ShouldBe(100);
-    }
-
-    [Fact]
-    public void FindGapsInCoverage_IgnoresDisabledRulesWhenCalculatingCoverage()
-    {
-        var rules = new List<StallRule>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(),
-                Name = "Disabled",
-                Enabled = false,
-                MaxStrikes = 3,
-                PrivacyType = TorrentPrivacyType.Public,
-                MinCompletionPercentage = 0,
-                MaxCompletionPercentage = 100
-            }
-        };
-
-        var gaps = _validator.FindGapsInCoverage(rules);
-
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Public).ShouldBe(1);
-        gaps.Count(g => g.PrivacyType == TorrentPrivacyType.Private).ShouldBe(1);
-
-        var publicGap = gaps.First(g => g.PrivacyType == TorrentPrivacyType.Public);
-        publicGap.Start.ShouldBe(0);
-        publicGap.End.ShouldBe(100);
-
-        var privateGap = gaps.First(g => g.PrivacyType == TorrentPrivacyType.Private);
-        privateGap.Start.ShouldBe(0);
-        privateGap.End.ShouldBe(100);
-    }
 
     [Fact]
     public void ValidateStallRuleIntervals_DoesNotReportSelfOverlapWhenEnablingDisabledRule()

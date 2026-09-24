@@ -1,4 +1,4 @@
-import type { Mapping, WireMockClient } from './wiremock-client';
+import type { Mapping } from './wiremock-client';
 
 const DEFAULT_BLOCKLIST = [
   '*.exe',
@@ -18,6 +18,3 @@ export function blocklistResponseStub(content: string = DEFAULT_BLOCKLIST, urlPa
   };
 }
 
-export async function applyBlocklistDefaults(blocklist: WireMockClient): Promise<void> {
-  await blocklist.stubMany([blocklistResponseStub()]);
-}

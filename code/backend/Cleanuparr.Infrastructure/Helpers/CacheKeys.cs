@@ -23,6 +23,5 @@ public static class CacheKeys
     public static class UTorrent
     {
         public static string GetAuthTokenKey(string clientId) => $"utorrent:auth:token:{clientId}";
-        public static string GetGuidCookieKey(string clientId) => $"utorrent:auth:cookie:{clientId}";
     }
 }

@@ -62,25 +62,6 @@ export interface DownloadCleanerConfig {
   clients: ClientCleanerConfig[];
 }
 
-export function createDefaultSeedingRule(): SeedingRule {
-  return {
-    name: '',
-    categories: [],
-    trackerPatterns: [],
-    tagsAny: [],
-    tagsAll: [],
-    priority: 0,
-    privacyType: TorrentPrivacyType.Public,
-    maxRatio: -1,
-    minSeedTime: 0,
-    maxSeedTime: -1,
-    minSeeders: 0,
-    maxInactiveDays: -1,
-    action: SeedingRuleAction.Delete,
-    deleteSourceFiles: true,
-  };
-}
-
 export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
   return {
     enabled: false,

@@ -89,37 +89,6 @@ public sealed class DelugeClient
 
         return id is { ValueKind: JsonValueKind.String } hostId ? hostId.GetString() : null;
     }
-
-    public async Task<List<DelugeTorrent>> ListTorrents(Dictionary<string, string>? filters = null)
-    {
-        filters ??= new Dictionary<string, string>();
-        var keys = typeof(DelugeTorrent).GetAllJsonPropertyFromType();
-        Dictionary<string, DelugeTorrent>? result =
-            await SendRequest<Dictionary<string, DelugeTorrent>>("core.get_torrents_status", filters, keys);
-        return result?.Values.ToList() ?? [];
-    }
-
-    public async Task<List<DelugeTorrentExtended>> ListTorrentsExtended(Dictionary<string, string>? filters = null)
-    {
-        filters ??= new Dictionary<string, string>();
-        var keys = typeof(DelugeTorrentExtended).GetAllJsonPropertyFromType();
-        Dictionary<string, DelugeTorrentExtended>? result =
-            await SendRequest<Dictionary<string, DelugeTorrentExtended>>("core.get_torrents_status", filters, keys);
-        return result?.Values.ToList() ?? [];
-    }
-
-    public async Task<DelugeTorrent?> GetTorrent(string hash)
-    {
-        List<DelugeTorrent> torrents = await ListTorrents(new Dictionary<string, string>() { { "hash", hash } });
-        return torrents.FirstOrDefault();
-    }
-
-    public async Task<DelugeTorrentExtended?> GetTorrentExtended(string hash)
-    {
-        List<DelugeTorrentExtended> torrents =
-            await ListTorrentsExtended(new Dictionary<string, string> { { "hash", hash } });
-        return torrents.FirstOrDefault();
-    }
     
     public async Task<DownloadStatus?> GetTorrentStatus(string hash)
     {

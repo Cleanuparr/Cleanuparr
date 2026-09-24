@@ -26,12 +26,6 @@ public sealed class DelugeClientWrapper : IDelugeClientWrapper
     public Task<DelugeContents?> GetTorrentFiles(string hash)
         => _client.GetTorrentFiles(hash);
 
-    public Task<DelugeTorrent?> GetTorrent(string hash)
-        => _client.GetTorrent(hash);
-
-    public Task<DelugeTorrentExtended?> GetTorrentExtended(string hash)
-        => _client.GetTorrentExtended(hash);
-
     public Task<List<DownloadStatus>?> GetStatusForAllTorrents()
         => _client.GetStatusForAllTorrents();
 

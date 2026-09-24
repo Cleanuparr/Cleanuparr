@@ -58,11 +58,6 @@ public class SetupGuardMiddleware
         await _next(context);
     }
 
-    public void ResetSetupState()
-    {
-        _setupCompleted = false;
-    }
-
     private async Task<bool> IsSetupCompleted()
     {
         if (_setupCompleted)

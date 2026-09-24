@@ -333,26 +333,6 @@ public abstract class DownloadService : IDownloadService
         return new();
     }
     
-    protected string? GetRootWithFirstDirectory(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return null;
-        }
-
-        string? root = Path.GetPathRoot(path);
-        
-        if (root is null)
-        {
-            return null;
-        }
-
-        string relativePath = path[root.Length..].TrimStart(Path.DirectorySeparatorChar);
-        string[] parts = relativePath.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-
-        return parts.Length > 0 ? Path.Combine(root, parts[0]) : root;
-    }
-    
     private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, ISeedingRule seedingRule)
     {
         if (seedingRule.MaxRatio < 0)

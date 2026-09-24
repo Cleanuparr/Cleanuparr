@@ -17,7 +17,7 @@ using QBittorrent.Client;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 
-public partial class QBitService : DownloadService, IQBitService
+public partial class QBitService : DownloadService, IDisposable
 {
     protected readonly IQBittorrentClientWrapper _client;
     private bool? _altSpeedLimitActive;

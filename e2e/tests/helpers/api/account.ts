@@ -39,28 +39,12 @@ export class AccountApi {
     return this.client.post('/api/account/api-key/regenerate');
   }
 
-  linkPlex(): Promise<Response> {
-    return this.client.post('/api/account/plex/link');
-  }
-
-  verifyPlexLink(pinId: string): Promise<Response> {
-    return this.client.post('/api/account/plex/link/verify', { pinId });
-  }
-
-  unlinkPlex(): Promise<Response> {
-    return this.client.delete('/api/account/plex/link');
-  }
-
   getOidcConfig(): Promise<Response> {
     return this.client.get('/api/account/oidc');
   }
 
   updateOidcConfig(config: Record<string, unknown>): Promise<Response> {
     return this.client.put('/api/account/oidc', config);
-  }
-
-  startOidcLink(): Promise<Response> {
-    return this.client.post('/api/account/oidc/link');
   }
 
   unlinkOidc(): Promise<Response> {

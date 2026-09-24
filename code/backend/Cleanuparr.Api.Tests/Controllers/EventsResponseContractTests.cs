@@ -99,16 +99,6 @@ public class EventsResponseContractTests : IDisposable
     }
 
     [Fact]
-    public async Task GetEventsByTracking_ReturnsTheDocumentedListItemKeys()
-    {
-        await SeedEventAsync();
-
-        ActionResult<List<EventListItem>> result = await _controller.GetEventsByTracking(_trackingId);
-
-        ResponseContract.FirstItemKeys(result.Result!).ShouldBe(ListItemKeys);
-    }
-
-    [Fact]
     public async Task SingleEventShape_MatchesTheListShape()
     {
         AppEvent seeded = await SeedEventAsync();

@@ -72,18 +72,6 @@ internal static class SeedingRuleHelper
     }
 
     /// <summary>
-    /// Loads the client by ID then queries its seeding rules.
-    /// </summary>
-    public static async Task<List<ISeedingRule>> GetForClientIdAsync(DataContext ctx, Guid clientId)
-    {
-        var client = await ctx.DownloadClients
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == clientId);
-
-        return client is null ? [] : await GetForClientAsync(ctx, client);
-    }
-
-    /// <summary>
     /// Filters seeding rules for a client from pre-loaded in-memory lists.
     /// Use this in bulk-load scenarios to avoid N+1 queries.
     /// </summary>

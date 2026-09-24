@@ -1,4 +1,4 @@
-import type { Mapping, WireMockClient } from './wiremock-client';
+import type { Mapping } from './wiremock-client';
 
 /**
  * Convenience stub bundles for qBittorrent / Transmission / Deluge / uTorrent / rTorrent.
@@ -23,71 +23,11 @@ export function qbitLoginOkStub(sid = 'test-sid'): Mapping {
   };
 }
 
-export function qbitLoginFailStub(): Mapping {
-  return {
-    request: { method: 'POST', urlPath: '/api/v2/auth/login' },
-    response: { status: 200, body: 'Fails.', headers: { 'Content-Type': 'text/plain' } },
-    priority: 10,
-  };
-}
-
 export function qbitTorrentsStub(torrents: Array<Record<string, unknown>> = []): Mapping {
   return {
     request: { method: 'GET', urlPath: '/api/v2/torrents/info' },
     response: { status: 200, jsonBody: torrents },
   };
-}
-
-/**
- * Transmission's real wire protocol: first POST to /transmission/rpc without an
- * X-Transmission-Session-Id header returns 409 + a fresh session id; the
- * client must replay the request with that header. We model both phases with
- * two stubs distinguished by request-header presence.
- */
-export function transmissionSessionStub(sessionId = 'test-session'): Mapping[] {
-  return [
-    // Phase 1: client has no session id yet → reject with 409 + session header.
-    {
-      request: {
-        method: 'POST',
-        urlPath: '/transmission/rpc',
-        headers: { 'X-Transmission-Session-Id': { absent: true } },
-      },
-      response: {
-        status: 409,
-        body: '<html><title>409: Conflict</title><body>Conflict</body></html>',
-        headers: {
-          'X-Transmission-Session-Id': sessionId,
-          'Content-Type': 'text/html; charset=ISO-8859-1',
-        },
-      },
-      priority: 1,
-    },
-    // Phase 2: client retries with the session header → success.
-    {
-      request: {
-        method: 'POST',
-        urlPath: '/transmission/rpc',
-        headers: { 'X-Transmission-Session-Id': { equalTo: sessionId } },
-      },
-      response: {
-        status: 200,
-        jsonBody: {
-          result: 'success',
-          arguments: {
-            version: '4.0.6',
-            'rpc-version': 17,
-            'rpc-version-minimum': 1,
-          },
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Transmission-Session-Id': sessionId,
-        },
-      },
-      priority: 5,
-    },
-  ];
 }
 
 export function delugeLoginStub(sessionCookie = 'test-deluge'): Mapping {
@@ -136,14 +76,6 @@ export function utorrentStubs(token = 'utorrent-token', guid = 'test-guid'): Map
   ];
 }
 
-/**
- * @deprecated Prefer {@link utorrentStubs} which also registers the list stub.
- * Kept for backwards-compatible imports.
- */
-export function utorrentTokenStub(token = 'utorrent-token'): Mapping {
-  return utorrentStubs(token)[0];
-}
-
 export function rtorrentXmlRpcStub(): Mapping {
   return {
     request: { method: 'POST', urlPath: '/RPC2' },
@@ -155,6 +87,3 @@ export function rtorrentXmlRpcStub(): Mapping {
   };
 }
 
-export async function applyQBitDefaults(dlc: WireMockClient): Promise<void> {
-  await dlc.stubMany([qbitVersionStub(), qbitLoginOkStub(), qbitTorrentsStub()]);
-}

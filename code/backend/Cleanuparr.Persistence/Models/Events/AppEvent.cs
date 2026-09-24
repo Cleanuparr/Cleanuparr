@@ -17,7 +17,7 @@ namespace Cleanuparr.Persistence.Models.Events;
 [Index(nameof(ArrInstanceId))]
 [Index(nameof(CycleId))]
 [Index(nameof(DeleteReason))]
-public class AppEvent : IEvent
+public class AppEvent
 {
     [Key]
     public Guid Id { get; set; } = Guid.CreateVersion7();
