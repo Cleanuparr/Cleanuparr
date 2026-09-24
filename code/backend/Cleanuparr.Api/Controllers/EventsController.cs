@@ -48,15 +48,7 @@ public class EventsController : ControllerBase
             page = 1;
         }
 
-        if (pageSize < 1)
-        {
-            pageSize = 50;
-        }
-
-        if (pageSize > 500)
-        {
-            pageSize = 500;
-        }
+        pageSize = Pagination.NormalizePageSize(pageSize);
 
         IQueryable<EventListItem> query = _context.Events
             .Select(EventListItem.FromEvent);
