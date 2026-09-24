@@ -83,62 +83,34 @@ public partial class QBitService
         return result;
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
+    /// <inheritdoc/>
+    protected override Func<Task<bool>>? GetAltSpeedLimitProbe() => IsAltSpeedLimitActiveAsync;
+
+    /// <summary>
+    /// qBittorrent can stall on metadata before any content arrives.
+    /// That stall gets its own strike before the shared stall check.
+    /// </summary>
+    protected override async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
     {
-        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) slowResult = await CheckIfSlow(wrapper);
-
-        if (slowResult.ShouldRemove)
+        if (!((QBitItemWrapper)wrapper).IsMetadataDownloading())
         {
-            return slowResult;
+            return await base.CheckIfStuck(wrapper);
         }
 
-        return await CheckIfStuck(wrapper);
-    }
+        QueueCleanerConfig queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfSlow(ITorrentItemWrapper wrapper)
-    {
-        if (!wrapper.IsDownloading())
+        if (queueCleanerConfig.DownloadingMetadataMaxStrikes <= 0)
         {
-            _logger.LogTrace("skip slow check | download is not in downloading state | {Name}", wrapper.Name);
             return (false, DeleteReason.None, false, false);
         }
 
-        if (wrapper.DownloadSpeed <= 0)
-        {
-            _logger.LogTrace("skip slow check | download speed is 0 | {Name}", wrapper.Name);
-            return (false, DeleteReason.None, false, false);
-        }
+        bool shouldRemove = await _striker.StrikeAndCheckLimit(
+            wrapper.Hash,
+            wrapper.Name,
+            queueCleanerConfig.DownloadingMetadataMaxStrikes,
+            StrikeType.DownloadingMetadata
+        );
 
-        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper, IsAltSpeedLimitActiveAsync);
-    }
-
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
-    {
-        if (((QBitItemWrapper)wrapper).IsMetadataDownloading())
-        {
-            var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-
-            if (queueCleanerConfig.DownloadingMetadataMaxStrikes > 0)
-            {
-                bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                    wrapper.Hash,
-                    wrapper.Name,
-                    queueCleanerConfig.DownloadingMetadataMaxStrikes,
-                    StrikeType.DownloadingMetadata
-                );
-
-                return (shouldRemove, DeleteReason.DownloadingMetadata, shouldRemove, false);
-            }
-
-            return (false, DeleteReason.None, false, false);
-        }
-
-        if (!wrapper.IsStalled())
-        {
-            _logger.LogTrace("skip stalled check | download is not in stalled state | {Name}", wrapper.Name);
-            return (false, DeleteReason.None, false, false);
-        }
-
-        return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
+        return (shouldRemove, DeleteReason.DownloadingMetadata, shouldRemove, false);
     }
 }

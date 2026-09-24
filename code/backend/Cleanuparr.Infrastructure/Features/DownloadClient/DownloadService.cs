@@ -72,6 +72,55 @@ public abstract class DownloadService : IDownloadService
         return Task.FromResult(false);
     }
 
+    /// <summary>
+    /// Runs the slow check, then the stall check; the first removal wins.
+    /// </summary>
+    protected async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
+    {
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result = await CheckIfSlow(wrapper);
+
+        if (result.ShouldRemove)
+        {
+            return result;
+        }
+
+        return await CheckIfStuck(wrapper);
+    }
+
+    /// <summary>
+    /// Alt-speed-limit probe for the slow rules.
+    /// Only qBittorrent and Transmission report that state.
+    /// </summary>
+    protected virtual Func<Task<bool>>? GetAltSpeedLimitProbe() => null;
+
+    protected virtual async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfSlow(ITorrentItemWrapper wrapper)
+    {
+        if (!wrapper.IsDownloading())
+        {
+            _logger.LogTrace("skip slow check | download is not in downloading state | {Name}", wrapper.Name);
+            return (false, DeleteReason.None, false, false);
+        }
+
+        if (wrapper.DownloadSpeed <= 0)
+        {
+            _logger.LogTrace("skip slow check | download speed is 0 | {Name}", wrapper.Name);
+            return (false, DeleteReason.None, false, false);
+        }
+
+        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper, GetAltSpeedLimitProbe());
+    }
+
+    protected virtual async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
+    {
+        if (!wrapper.IsStalled())
+        {
+            _logger.LogTrace("skip stalled check | download is not in stalled state | {Name}", wrapper.Name);
+            return (false, DeleteReason.None, false, false);
+        }
+
+        return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
+    }
+
     public abstract void Dispose();
 
     public abstract Task LoginAsync();
