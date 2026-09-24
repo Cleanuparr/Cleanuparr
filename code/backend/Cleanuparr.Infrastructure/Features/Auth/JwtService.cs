@@ -53,7 +53,7 @@ public sealed class JwtService : IJwtService
 
     public string GenerateRefreshToken()
     {
-        var bytes = new byte[32];
+        var bytes = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
         return Convert.ToBase64String(bytes);
@@ -89,7 +89,7 @@ public sealed class JwtService : IJwtService
             return File.ReadAllBytes(keyPath);
         }
 
-        var key = new byte[32];
+        var key = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(key);
 

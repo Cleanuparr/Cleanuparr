@@ -442,7 +442,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
     private static string GenerateRandomString()
     {
-        var bytes = new byte[32];
+        var bytes = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
         return Base64UrlEncode(bytes);
