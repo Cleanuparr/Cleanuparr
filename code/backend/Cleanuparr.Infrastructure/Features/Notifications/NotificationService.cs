@@ -32,7 +32,7 @@ public sealed class NotificationService
 
             if (!providers.Any())
             {
-                _logger.LogDebug("No providers configured for event type {eventType}", eventType);
+                _logger.LogDebug("No providers configured for event type {EventType}", eventType);
                 return;
             }
 
@@ -42,20 +42,20 @@ public sealed class NotificationService
                 {
                     var provider = _providerFactory.CreateProvider(providerConfig);
                     await provider.SendNotificationAsync(context);
-                    _logger.LogDebug("Notification sent successfully via {providerName}", provider.Name);
+                    _logger.LogDebug("Notification sent successfully via {ProviderName}", provider.Name);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to send notification via provider {providerName}", providerConfig.Name);
+                    _logger.LogWarning(ex, "Failed to send notification via provider {ProviderName}", providerConfig.Name);
                 }
             });
 
             await Task.WhenAll(tasks);
-            _logger.LogTrace("Notification sent to {count} providers for event {eventType}", providers.Count, eventType);
+            _logger.LogTrace("Notification sent to {Count} providers for event {EventType}", providers.Count, eventType);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send notifications for event type {eventType}", eventType);
+            _logger.LogError(ex, "Failed to send notifications for event type {EventType}", eventType);
         }
     }
 
@@ -81,11 +81,11 @@ public sealed class NotificationService
         {
             var provider = _providerFactory.CreateProvider(providerConfig);
             await provider.SendNotificationAsync(testContext);
-            _logger.LogInformation("Test notification sent successfully via {providerName}", providerConfig.Name);
+            _logger.LogInformation("Test notification sent successfully via {ProviderName}", providerConfig.Name);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send test notification via {providerName}", providerConfig.Name);
+            _logger.LogError(ex, "Failed to send test notification via {ProviderName}", providerConfig.Name);
             throw;
         }
     }
