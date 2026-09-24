@@ -198,7 +198,7 @@ public sealed class AuthController : ControllerBase
 
             _logger.LogInformation("2FA enabled for user {Username}", user.Username);
 
-            return Ok(new { message = "2FA verified and enabled" });
+            return Ok(new { Message = "2FA verified and enabled" });
         }
         finally
         {
@@ -229,7 +229,7 @@ public sealed class AuthController : ControllerBase
 
             _logger.LogInformation("Setup completed for user {Username}", user.Username);
 
-            return Ok(new { message = "Setup complete" });
+            return Ok(new { Message = "Setup complete" });
         }
         finally
         {
@@ -420,7 +420,7 @@ public sealed class AuthController : ControllerBase
                 await _usersContext.SaveChangesAsync();
             }
 
-            return Ok(new { message = "Logged out" });
+            return Ok(new { Message = "Logged out" });
         }
         finally
         {
