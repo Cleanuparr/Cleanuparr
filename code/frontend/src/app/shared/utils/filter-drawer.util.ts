@@ -22,8 +22,7 @@ export interface FilterDrawer<T> {
 
 /**
  * Applied/draft/drawer-open filter state shared by the seeker-stats tabs.
- * `activeCount` compares each field of `applied` against `empty`; pass a custom
- * comparator only if a filter's "unset" value isn't strictly equal to `empty`'s.
+ * `activeCount` compares each field of `applied` against `empty` by strict equality.
  */
 export function createFilterDrawer<T extends Record<string, unknown>>(empty: T): FilterDrawer<T> {
   const applied = signal<T>({ ...empty });

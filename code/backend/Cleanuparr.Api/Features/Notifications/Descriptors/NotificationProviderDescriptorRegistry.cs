@@ -6,8 +6,7 @@ using Cleanuparr.Persistence.Models.Configuration.Notification;
 namespace Cleanuparr.Api.Features.Notifications.Descriptors;
 
 /// <summary>
-/// Registry of <see cref="NotificationProviderDescriptor"/> instances, one per <see cref="NotificationProviderType"/>,
-/// extracted from the 21 hand-written actions in NotificationProvidersController.
+/// One <see cref="NotificationProviderDescriptor"/> per <see cref="NotificationProviderType"/>.
 /// </summary>
 public sealed class NotificationProviderDescriptorRegistry : INotificationProviderDescriptorRegistry
 {
