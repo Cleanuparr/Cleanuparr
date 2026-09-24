@@ -9,11 +9,10 @@ import {
   DrawerComponent,
 } from '@ui';
 import type { SelectOption } from '@ui';
-import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
-import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
+import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
@@ -22,6 +21,16 @@ import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagina
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 import { createFilterDrawer } from '@shared/utils/filter-drawer.util';
+import {
+  cycleProgress,
+  formatCycleDuration,
+  formatGrabbedItems,
+  formatSearchReason,
+  instanceHealthWarning,
+  searchReasonSeverity,
+  searchStatusSeverity,
+  searchTypeSeverity,
+} from '@shared/utils/search-display.util';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -77,7 +86,6 @@ const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchesTabComponent {
-
   private readonly api = inject(SearchStatsApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
@@ -112,7 +120,7 @@ export class SearchesTabComponent {
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
 
   // Applied filters drive the query; draft lives inside the open drawer.
-  private readonly filters = createFilterDrawer(EMPTY_FILTERS);
+  private readonly filters = createFilterDrawer<AdvancedFilters>(EMPTY_FILTERS);
   readonly applied = this.filters.applied;
   readonly draft = this.filters.draft;
   readonly drawerOpen = this.filters.drawerOpen;
@@ -198,6 +206,9 @@ export class SearchesTabComponent {
 
   readonly statusOptions = STATUS_OPTIONS;
 
+  // Not the composable's generic activeCount: `statuses` is an array field, and toggling
+  // a status on then off leaves a new-but-empty array that would still fail reference
+  // equality against EMPTY_FILTERS.statuses, so this counts it by length instead.
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
@@ -258,8 +269,7 @@ export class SearchesTabComponent {
 
   openFilters(): void {
     this.filters.open();
-    // Seed the drafted instance from the toolbar selector, not just the applied filters.
-    this.filters.draft.update(d => ({ ...d, instanceId: this.selectedInstanceId() }));
+    this.filters.updateDraft('instanceId', this.selectedInstanceId());
   }
 
   resetFilters(): void {
@@ -267,9 +277,8 @@ export class SearchesTabComponent {
   }
 
   applyFilters(): void {
-    const draft = this.draft();
     this.filters.apply();
-    this.selectedInstanceId.set(draft.instanceId);
+    this.selectedInstanceId.set(this.filters.applied().instanceId);
     this.eventsPage.set(1);
   }
 
@@ -301,72 +310,13 @@ export class SearchesTabComponent {
     this.eventsResource.reload();
   }
 
-  searchTypeSeverity(type: SeekerSearchType): 'info' | 'warning' {
-    return type === SeekerSearchType.Replacement ? 'warning' : 'info';
-  }
-
+  readonly searchTypeSeverity = searchTypeSeverity;
   readonly instanceTypeSeverity = instanceTypeSeverity;
-
-  searchStatusSeverity(status: string): BadgeSeverity {
-    switch (status) {
-      case SearchCommandStatus.Completed: return 'success';
-      case SearchCommandStatus.Failed: return 'error';
-      case SearchCommandStatus.TimedOut: return 'warning';
-      case SearchCommandStatus.Started: return 'info';
-      default: return 'default';
-    }
-  }
-
-  formatGrabbedItems(items: string[]): string {
-    return items.join(', ');
-  }
-
-  formatSearchReason(reason: string): string {
-    switch (reason) {
-      case SeekerSearchReason.Missing: return 'Missing';
-      case SeekerSearchReason.QualityCutoffNotMet: return 'Cutoff Unmet';
-      case SeekerSearchReason.CustomFormatScoreBelowCutoff: return 'CF Below Cutoff';
-      case SeekerSearchReason.Replacement: return 'Replacement';
-      default: return reason;
-    }
-  }
-
-  searchReasonSeverity(reason: string): BadgeSeverity {
-    switch (reason) {
-      case SeekerSearchReason.Missing: return 'error';
-      case SeekerSearchReason.QualityCutoffNotMet: return 'warning';
-      case SeekerSearchReason.CustomFormatScoreBelowCutoff: return 'warning';
-      case SeekerSearchReason.Replacement: return 'info';
-      default: return 'default';
-    }
-  }
-
-  cycleProgress(inst: InstanceSearchStat): number {
-    if (!inst.cycleItemsTotal) return 0;
-    return Math.min(100, Math.round((inst.cycleItemsSearched / inst.cycleItemsTotal) * 100));
-  }
-
-  instanceHealthWarning(stat: InstanceSearchStat): string | null {
-    if (!stat.lastSearchedAt && stat.totalSearchCount === 0) {
-      return 'Never searched';
-    }
-    return null;
-  }
-
-  formatCycleDuration(cycleStartedAt: string): string {
-    const start = new Date(cycleStartedAt);
-    const now = new Date();
-    const diffMs = now.getTime() - start.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    if (diffDays > 0) {
-      return `${diffDays}d ${diffHours}h`;
-    }
-    if (diffHours > 0) {
-      return `${diffHours}h`;
-    }
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${diffMinutes}m`;
-  }
+  readonly searchStatusSeverity = searchStatusSeverity;
+  readonly formatGrabbedItems = formatGrabbedItems;
+  readonly formatSearchReason = formatSearchReason;
+  readonly searchReasonSeverity = searchReasonSeverity;
+  readonly cycleProgress = cycleProgress;
+  readonly instanceHealthWarning = instanceHealthWarning;
+  readonly formatCycleDuration = formatCycleDuration;
 }

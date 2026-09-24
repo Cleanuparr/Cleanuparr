@@ -62,7 +62,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QualityTabComponent {
-
   private readonly api = inject(CfScoreApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
@@ -93,10 +92,11 @@ export class QualityTabComponent {
     { label: 'Descending', value: SortDirection.Desc },
   ];
 
-  private readonly filters = createFilterDrawer(EMPTY_FILTERS);
+  private readonly filters = createFilterDrawer<AdvancedFilters>(EMPTY_FILTERS);
   readonly applied = this.filters.applied;
   readonly draft = this.filters.draft;
   readonly drawerOpen = this.filters.drawerOpen;
+  readonly activeFilterCount = this.filters.activeCount;
 
   private readonly scoresParams = computed<CfScoresQuery>(() => {
     const a = this.applied();
@@ -182,8 +182,6 @@ export class QualityTabComponent {
     ];
   });
 
-  readonly activeFilterCount = this.filters.activeCount;
-
   constructor() {
     effect(() => {
       this.hub.cfScoresVersion();
@@ -237,8 +235,7 @@ export class QualityTabComponent {
 
   openFilters(): void {
     this.filters.open();
-    // Seed the drafted instance from the toolbar selector, not just the applied filters.
-    this.filters.draft.update(d => ({ ...d, instanceId: this.selectedInstanceId() }));
+    this.filters.updateDraft('instanceId', this.selectedInstanceId());
   }
 
   resetFilters(): void {
@@ -246,7 +243,7 @@ export class QualityTabComponent {
   }
 
   applyFilters(): void {
-    const draft = { ...this.draft() };
+    const draft = { ...this.filters.draft() };
     // Quality profile options narrow to the chosen instance — clear any stale
     // selection that no longer belongs to the drafted instance's profiles.
     if (draft.qualityProfile) {

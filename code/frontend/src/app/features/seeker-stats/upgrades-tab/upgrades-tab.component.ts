@@ -55,7 +55,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UpgradesTabComponent {
-
   private readonly api = inject(CfScoreApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
@@ -73,10 +72,11 @@ export class UpgradesTabComponent {
   readonly sortBy = signal<CfUpgradesSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
 
-  private readonly filters = createFilterDrawer(EMPTY_FILTERS);
+  private readonly filters = createFilterDrawer<AdvancedFilters>(EMPTY_FILTERS);
   readonly applied = this.filters.applied;
   readonly draft = this.filters.draft;
   readonly drawerOpen = this.filters.drawerOpen;
+  readonly activeFilterCount = this.filters.activeCount;
 
   private readonly upgradesParams = computed<CfScoreUpgradesQuery>(() => {
     const a = this.applied();
@@ -131,8 +131,6 @@ export class UpgradesTabComponent {
     { label: 'All Time', value: '0' },
   ];
 
-  readonly activeFilterCount = this.filters.activeCount;
-
   constructor() {
     effect(() => {
       this.hub.cfScoresVersion();
@@ -180,8 +178,7 @@ export class UpgradesTabComponent {
 
   openFilters(): void {
     this.filters.open();
-    // Seed the drafted instance from the toolbar selector, not just the applied filters.
-    this.filters.draft.update(d => ({ ...d, instanceId: this.selectedInstanceId() }));
+    this.filters.updateDraft('instanceId', this.selectedInstanceId());
   }
 
   resetFilters(): void {
@@ -189,9 +186,8 @@ export class UpgradesTabComponent {
   }
 
   applyFilters(): void {
-    const draft = this.draft();
     this.filters.apply();
-    this.selectedInstanceId.set(draft.instanceId);
+    this.selectedInstanceId.set(this.filters.applied().instanceId);
     this.currentPage.set(1);
   }
 
