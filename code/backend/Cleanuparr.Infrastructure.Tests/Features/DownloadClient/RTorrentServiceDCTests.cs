@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -346,6 +347,52 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Assert
             await _fixture.ClientWrapper.Received(1)
                 .DeleteTorrentAsync("LOWERCASE");
+        }
+
+        [Fact]
+        public async Task RemapsSavePathBeforeDeletingFiles()
+        {
+            // Arrange
+            string targetRoot = Directory.CreateTempSubdirectory().FullName;
+            string targetPath = Path.Combine(targetRoot, "seed-rule-tracker");
+            Directory.CreateDirectory(targetPath);
+            File.WriteAllText(Path.Combine(targetPath, "file.txt"), "content");
+
+            DownloadClientConfig config = new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test rTorrent Client",
+                TypeName = Domain.Enums.DownloadClientTypeName.rTorrent,
+                Type = Domain.Enums.DownloadClientType.Torrent,
+                Enabled = true,
+                Host = new Uri("http://localhost/RPC2"),
+                Username = "admin",
+                Password = "admin",
+                UrlBase = "",
+                DownloadDirectorySource = "/downloads",
+                DownloadDirectoryTarget = targetRoot,
+            };
+            var sut = _fixture.CreateSut(config);
+
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("hash");
+            mockTorrent.SavePath.Returns("/downloads/seed-rule-tracker");
+
+            try
+            {
+                // Act
+                await sut.DeleteDownload(mockTorrent, deleteSourceFiles: true);
+
+                // Assert
+                Directory.Exists(targetPath).ShouldBeFalse();
+            }
+            finally
+            {
+                if (Directory.Exists(targetRoot))
+                {
+                    Directory.Delete(targetRoot, true);
+                }
+            }
         }
     }
 

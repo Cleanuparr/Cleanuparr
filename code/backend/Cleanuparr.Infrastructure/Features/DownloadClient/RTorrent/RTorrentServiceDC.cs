@@ -85,7 +85,12 @@ public partial class RTorrentService
 
         if (deleteSourceFiles)
         {
-            if (!TryDeleteFiles(torrent.SavePath, true))
+            string savePath = PathHelper.NormalizeAndRemap(
+                torrent.SavePath,
+                _downloadClientConfig.DownloadDirectorySource,
+                _downloadClientConfig.DownloadDirectoryTarget);
+
+            if (!TryDeleteFiles(savePath, true))
             {
                 _logger.LogWarning("Failed to delete files | {name}", torrent.Name);
             }
