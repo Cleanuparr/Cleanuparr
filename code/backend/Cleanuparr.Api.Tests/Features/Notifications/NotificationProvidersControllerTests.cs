@@ -1,6 +1,9 @@
+using System.Text.Json;
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 using Cleanuparr.Api.Features.Notifications.Contracts.Responses;
 using Cleanuparr.Api.Features.Notifications.Controllers;
+using Cleanuparr.Api.Features.Notifications.Descriptors;
+using Cleanuparr.Api.Json;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
@@ -20,19 +23,26 @@ public class NotificationProvidersControllerTests : IDisposable
 {
     private readonly DataContext _dataContext;
     private readonly NotificationProvidersController _controller;
+    private readonly JsonSerializerOptions _jsonOptions;
 
     public NotificationProvidersControllerTests()
     {
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
 
+        _jsonOptions = new JsonSerializerOptions();
+        CleanuparrJsonConfiguration.ConfigureApiInbound(_jsonOptions);
+
         INotificationConfigurationService configurationService =
             Substitute.For<INotificationConfigurationService>();
 
-        // NotificationService is sealed; the endpoints under test never reach it.
+        INotificationProviderFactory providerFactory = Substitute.For<INotificationProviderFactory>();
+        providerFactory.CreateProvider(Arg.Any<Infrastructure.Features.Notifications.Models.NotificationProviderDto>())
+            .Returns(Substitute.For<INotificationProvider>());
+
         NotificationService notificationService = new(
             Substitute.For<ILogger<NotificationService>>(),
             configurationService,
-            Substitute.For<INotificationProviderFactory>(),
+            providerFactory,
             TimeProvider.System);
 
         _controller = new NotificationProvidersController(
@@ -41,7 +51,9 @@ public class NotificationProvidersControllerTests : IDisposable
             configurationService,
             notificationService,
             Substitute.For<IAppriseCliDetector>(),
-            TimeProvider.System);
+            TimeProvider.System,
+            new NotificationProviderDescriptorRegistry(),
+            _jsonOptions);
 
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
@@ -61,11 +73,17 @@ public class NotificationProvidersControllerTests : IDisposable
         stored.UpdatedAt.ShouldBe(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
     }
 
+    private JsonElement ToJson<T>(T request) where T : notnull =>
+        JsonSerializer.SerializeToElement(request, _jsonOptions);
+
     private static NotificationProviderResponse Created(IActionResult result) =>
         result.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<NotificationProviderResponse>();
 
     private static NotificationProviderResponse Updated(IActionResult result) =>
         result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<NotificationProviderResponse>();
+
+    private static ProblemDetails Problem(IActionResult result) =>
+        result.ShouldBeOfType<ObjectResult>().Value.ShouldBeOfType<ProblemDetails>();
 
     #region Notifiarr
 
@@ -80,7 +98,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreateNotifiarrProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Notifiarr, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Notifiarr);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -89,25 +108,95 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdateNotifiarrProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreateNotifiarrProvider(new CreateNotifiarrProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Notifiarr, ToJson(new CreateNotifiarrProviderRequest
         {
             Name = "Notifiarr",
             ApiKey = "0123456789abcdef",
             ChannelId = "123456789",
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdateNotifiarrProvider(id,
-            new UpdateNotifiarrProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Notifiarr, id,
+            ToJson(new UpdateNotifiarrProviderRequest
             {
                 Name = "Notifiarr",
                 ApiKey = "0123456789abcdef",
                 ChannelId = "123456789",
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task UpdateNotifiarrProvider_WithPlaceholderApiKey_PreservesTheExistingKey()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Notifiarr, ToJson(new CreateNotifiarrProviderRequest
+        {
+            Name = "Notifiarr",
+            ApiKey = "0123456789abcdef",
+            ChannelId = "123456789",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Notifiarr, id, ToJson(new UpdateNotifiarrProviderRequest
+        {
+            Name = "Notifiarr",
+            ApiKey = "••••••••",
+            ChannelId = "987654321",
+        }));
+
+        NotifiarrConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.NotifiarrConfiguration)
+            .FirstAsync(p => p.Id == id)).NotifiarrConfiguration!;
+
+        stored.ApiKey.ShouldBe("0123456789abcdef");
+        stored.ChannelId.ShouldBe("987654321");
+    }
+
+    [Fact]
+    public async Task TestNotifiarrProvider_WithPlaceholderApiKeyAndNoProviderId_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Notifiarr, ToJson(new TestNotifiarrProviderRequest
+        {
+            ApiKey = "••••••••",
+            ChannelId = "123456789",
+        }));
+
+        Problem(result).Detail.ShouldBe("API key cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task TestNotifiarrProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Notifiarr, ToJson(new TestNotifiarrProviderRequest
+        {
+            ApiKey = "0123456789abcdef",
+            ChannelId = "123456789",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestNotifiarrProvider_WithPlaceholderApiKeyAndProviderId_UsesTheStoredKey()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Notifiarr, ToJson(new CreateNotifiarrProviderRequest
+        {
+            Name = "Notifiarr",
+            ApiKey = "0123456789abcdef",
+            ChannelId = "123456789",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Notifiarr, ToJson(new TestNotifiarrProviderRequest
+        {
+            ApiKey = "••••••••",
+            ChannelId = "123456789",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
     }
 
     #endregion
@@ -126,7 +215,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreateAppriseProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Apprise, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Apprise);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -135,27 +225,68 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdateAppriseProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreateAppriseProvider(new CreateAppriseProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Apprise, ToJson(new CreateAppriseProviderRequest
         {
             Name = "Apprise",
             Mode = AppriseMode.Api,
             Url = "https://apprise.example.com",
             Key = "config-key",
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdateAppriseProvider(id,
-            new UpdateAppriseProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Apprise, id,
+            ToJson(new UpdateAppriseProviderRequest
             {
                 Name = "Apprise",
                 Mode = AppriseMode.Api,
                 Url = "https://apprise.example.com",
                 Key = "config-key",
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task TestAppriseProvider_WithPlaceholderKeyAndNoProviderId_ReturnsTheGenericMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Apprise, ToJson(new TestAppriseProviderRequest
+        {
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Sensitive fields cannot be placeholder values");
+    }
+
+    [Fact]
+    public async Task UpdateAppriseProvider_WithPlaceholderKey_PreservesTheExistingKeyButUpdatesServiceUrls()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Apprise, ToJson(new CreateAppriseProviderRequest
+        {
+            Name = "Apprise",
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "config-key",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Apprise, id, ToJson(new UpdateAppriseProviderRequest
+        {
+            Name = "Apprise",
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com/new",
+            Key = "••••••••",
+        }));
+
+        AppriseConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.AppriseConfiguration)
+            .FirstAsync(p => p.Id == id)).AppriseConfiguration!;
+
+        stored.Key.ShouldBe("config-key");
+        stored.Url.ShouldBe("https://apprise.example.com/new");
     }
 
     #endregion
@@ -173,7 +304,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreateNtfyProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Ntfy, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Ntfy);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -182,22 +314,22 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdateNtfyProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreateNtfyProvider(new CreateNtfyProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Ntfy, ToJson(new CreateNtfyProviderRequest
         {
             Name = "Ntfy",
             ServerUrl = "https://ntfy.sh",
             Topics = ["cleanuparr"],
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdateNtfyProvider(id,
-            new UpdateNtfyProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Ntfy, id,
+            ToJson(new UpdateNtfyProviderRequest
             {
                 Name = "Ntfy",
                 ServerUrl = "https://ntfy.sh",
                 Topics = ["cleanuparr"],
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
@@ -218,7 +350,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreateTelegramProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Telegram, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Telegram);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -227,25 +360,37 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdateTelegramProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreateTelegramProvider(new CreateTelegramProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Telegram, ToJson(new CreateTelegramProviderRequest
         {
             Name = "Telegram",
             BotToken = "0123456789:token",
             ChatId = "-1001234567890",
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdateTelegramProvider(id,
-            new UpdateTelegramProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Telegram, id,
+            ToJson(new UpdateTelegramProviderRequest
             {
                 Name = "Telegram",
                 BotToken = "0123456789:token",
                 ChatId = "-1001234567890",
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task TestTelegramProvider_WithPlaceholderBotTokenAndNoProviderId_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Telegram, ToJson(new TestTelegramProviderRequest
+        {
+            BotToken = "••••••••",
+            ChatId = "-1001234567890",
+        }));
+
+        Problem(result).Detail.ShouldBe("Bot token cannot be a placeholder value");
     }
 
     #endregion
@@ -262,7 +407,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreateDiscordProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Discord, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Discord);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -271,20 +417,20 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdateDiscordProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreateDiscordProvider(new CreateDiscordProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Discord, ToJson(new CreateDiscordProviderRequest
         {
             Name = "Discord",
             WebhookUrl = "https://discord.com/api/webhooks/1/token",
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdateDiscordProvider(id,
-            new UpdateDiscordProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Discord, id,
+            ToJson(new UpdateDiscordProviderRequest
             {
                 Name = "Discord",
                 WebhookUrl = "https://discord.com/api/webhooks/1/token",
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
@@ -305,7 +451,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreatePushoverProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Pushover, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Pushover);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -314,25 +461,37 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdatePushoverProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreatePushoverProvider(new CreatePushoverProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Pushover, ToJson(new CreatePushoverProviderRequest
         {
             Name = "Pushover",
             ApiToken = "api-token",
             UserKey = "user-key",
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdatePushoverProvider(id,
-            new UpdatePushoverProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Pushover, id,
+            ToJson(new UpdatePushoverProviderRequest
             {
                 Name = "Pushover",
                 ApiToken = "api-token",
                 UserKey = "user-key",
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task TestPushoverProvider_WithPlaceholderFieldsAndNoProviderId_ReturnsTheGenericMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Pushover, ToJson(new TestPushoverProviderRequest
+        {
+            ApiToken = "••••••••",
+            UserKey = "user-key",
+        }));
+
+        Problem(result).Detail.ShouldBe("Sensitive fields cannot be placeholder values");
     }
 
     #endregion
@@ -350,7 +509,8 @@ public class NotificationProvidersControllerTests : IDisposable
             OnDownloadStopped = true,
         };
 
-        NotificationProviderResponse provider = Created(await _controller.CreateGotifyProvider(request));
+        NotificationProviderResponse provider = Created(
+            await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(request)));
 
         provider.Type.ShouldBe(NotificationProviderType.Gotify);
         provider.Events.OnDownloadStopped.ShouldBeTrue();
@@ -359,22 +519,22 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task UpdateGotifyProvider_ChangesTheDownloadStoppedEvent()
     {
-        Guid id = Created(await _controller.CreateGotifyProvider(new CreateGotifyProviderRequest
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
         {
             Name = "Gotify",
             ServerUrl = "https://gotify.example.com",
             ApplicationToken = "app-token",
             OnDownloadStopped = false,
-        })).Id;
+        }))).Id;
 
-        NotificationProviderResponse provider = Updated(await _controller.UpdateGotifyProvider(id,
-            new UpdateGotifyProviderRequest
+        NotificationProviderResponse provider = Updated(await _controller.UpdateProvider(NotificationProviderType.Gotify, id,
+            ToJson(new UpdateGotifyProviderRequest
             {
                 Name = "Gotify",
                 ServerUrl = "https://gotify.example.com",
                 ApplicationToken = "app-token",
                 OnDownloadStopped = true,
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
@@ -385,13 +545,13 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task GetNotificationProviders_ReturnsTheDownloadStoppedEvent()
     {
-        await _controller.CreateGotifyProvider(new CreateGotifyProviderRequest
+        await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
         {
             Name = "Gotify",
             ServerUrl = "https://gotify.example.com",
             ApplicationToken = "app-token",
             OnDownloadStopped = true,
-        });
+        }));
 
         NotificationProvidersResponse response = (await _controller.GetNotificationProviders())
             .ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<NotificationProvidersResponse>();
@@ -402,102 +562,60 @@ public class NotificationProvidersControllerTests : IDisposable
     [Fact]
     public async Task CreateGotifyProvider_WithoutEvents_LeavesDownloadStoppedDisabled()
     {
-        NotificationProviderResponse provider = Created(await _controller.CreateGotifyProvider(
-            new CreateGotifyProviderRequest
+        NotificationProviderResponse provider = Created(await _controller.CreateProvider(NotificationProviderType.Gotify,
+            ToJson(new CreateGotifyProviderRequest
             {
                 Name = "Gotify",
                 ServerUrl = "https://gotify.example.com",
                 ApplicationToken = "app-token",
-            }));
+            })));
 
         provider.Events.OnDownloadStopped.ShouldBeFalse();
     }
 
-    #region Test notifications
-
     [Fact]
-    public async Task TestNotifiarrProvider_SendsTheTestNotification()
+    public async Task CreateProvider_DuplicateName_ReturnsBadRequest()
     {
-        IActionResult result = await _controller.TestNotifiarrProvider(new TestNotifiarrProviderRequest
+        await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
         {
-            ApiKey = "0123456789abcdef",
-            ChannelId = "123456789",
-        });
-
-        result.ShouldBeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task TestAppriseProvider_SendsTheTestNotification()
-    {
-        IActionResult result = await _controller.TestAppriseProvider(new TestAppriseProviderRequest
-        {
-            Mode = AppriseMode.Api,
-            Url = "https://apprise.example.com",
-            Key = "config-key",
-        });
-
-        result.ShouldBeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task TestNtfyProvider_SendsTheTestNotification()
-    {
-        IActionResult result = await _controller.TestNtfyProvider(new TestNtfyProviderRequest
-        {
-            ServerUrl = "https://ntfy.sh",
-            Topics = ["cleanuparr"],
-        });
-
-        result.ShouldBeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task TestTelegramProvider_SendsTheTestNotification()
-    {
-        IActionResult result = await _controller.TestTelegramProvider(new TestTelegramProviderRequest
-        {
-            BotToken = "0123456789:token",
-            ChatId = "-1001234567890",
-        });
-
-        result.ShouldBeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task TestDiscordProvider_SendsTheTestNotification()
-    {
-        IActionResult result = await _controller.TestDiscordProvider(new TestDiscordProviderRequest
-        {
-            WebhookUrl = "https://discord.com/api/webhooks/1/token",
-        });
-
-        result.ShouldBeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task TestPushoverProvider_SendsTheTestNotification()
-    {
-        IActionResult result = await _controller.TestPushoverProvider(new TestPushoverProviderRequest
-        {
-            ApiToken = "api-token",
-            UserKey = "user-key",
-        });
-
-        result.ShouldBeOfType<OkObjectResult>();
-    }
-
-    [Fact]
-    public async Task TestGotifyProvider_SendsTheTestNotification()
-    {
-        IActionResult result = await _controller.TestGotifyProvider(new TestGotifyProviderRequest
-        {
+            Name = "Gotify",
             ServerUrl = "https://gotify.example.com",
             ApplicationToken = "app-token",
-        });
+        }));
 
-        result.ShouldBeOfType<OkObjectResult>();
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token-2",
+        }));
+
+        Problem(result).Detail.ShouldBe("A provider with this name already exists");
     }
 
-    #endregion
+    [Fact]
+    public async Task CreateProvider_MissingName_ReturnsBadRequest()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        Problem(result).Detail.ShouldBe("Provider name is required");
+    }
+
+    [Fact]
+    public async Task CreateProvider_UnsupportedType_ReturnsNotFound()
+    {
+        IActionResult result = await _controller.CreateProvider((NotificationProviderType)999, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
+    }
 }

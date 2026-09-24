@@ -1,6 +1,6 @@
 namespace Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 
-public sealed record TestTelegramProviderRequest
+public sealed record TestTelegramProviderRequest : TestNotificationProviderRequestBase
 {
     public string BotToken { get; init; } = string.Empty;
 
@@ -9,6 +9,4 @@ public sealed record TestTelegramProviderRequest
     public string? TopicId { get; init; }
 
     public bool SendSilently { get; init; }
-
-    public Guid? ProviderId { get; init; }
 }

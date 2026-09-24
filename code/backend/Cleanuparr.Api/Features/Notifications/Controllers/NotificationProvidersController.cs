@@ -1,12 +1,15 @@
-﻿using Cleanuparr.Api.Extensions;
+using System.Text.Json;
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 using Cleanuparr.Api.Features.Notifications.Contracts.Responses;
+using Cleanuparr.Api.Features.Notifications.Descriptors;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -20,12 +23,19 @@ namespace Cleanuparr.Api.Features.Notifications.Controllers;
 [Authorize]
 public sealed class NotificationProvidersController : ControllerBase
 {
+    private const string ProviderNameRequiredMessage = "Provider name is required";
+    private const string DuplicateProviderNameMessage = "A provider with this name already exists";
+    private const string SensitiveFieldsPlaceholderMessage = "Sensitive fields cannot be placeholder values";
+    private const string TestNotificationSuccessMessage = "Test notification sent successfully";
+
     private readonly ILogger<NotificationProvidersController> _logger;
     private readonly DataContext _dataContext;
     private readonly INotificationConfigurationService _notificationConfigurationService;
     private readonly NotificationService _notificationService;
     private readonly IAppriseCliDetector _appriseCliDetector;
     private readonly TimeProvider _timeProvider;
+    private readonly INotificationProviderDescriptorRegistry _descriptorRegistry;
+    private readonly JsonSerializerOptions _jsonOptions;
 
     public NotificationProvidersController(
         ILogger<NotificationProvidersController> logger,
@@ -33,7 +43,9 @@ public sealed class NotificationProvidersController : ControllerBase
         INotificationConfigurationService notificationConfigurationService,
         NotificationService notificationService,
         IAppriseCliDetector appriseCliDetector,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        INotificationProviderDescriptorRegistry descriptorRegistry,
+        JsonSerializerOptions jsonOptions)
     {
         _logger = logger;
         _dataContext = dataContext;
@@ -41,6 +53,8 @@ public sealed class NotificationProvidersController : ControllerBase
         _notificationService = notificationService;
         _appriseCliDetector = appriseCliDetector;
         _timeProvider = timeProvider;
+        _descriptorRegistry = descriptorRegistry;
+        _jsonOptions = jsonOptions;
     }
 
     [HttpGet]
@@ -49,55 +63,18 @@ public sealed class NotificationProvidersController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var providers = await _dataContext.NotificationConfigs
-                .Include(p => p.NotifiarrConfiguration)
-                .Include(p => p.AppriseConfiguration)
-                .Include(p => p.NtfyConfiguration)
-                .Include(p => p.PushoverConfiguration)
-                .Include(p => p.TelegramConfiguration)
-                .Include(p => p.DiscordConfiguration)
-                .Include(p => p.GotifyConfiguration)
+            List<NotificationConfig> providers = await IncludeAllConfigurations(_dataContext.NotificationConfigs)
                 .AsNoTracking()
                 .ToListAsync();
 
-            var providerDtos = providers
+            List<NotificationProviderResponse> providerDtos = providers
                 .Where(p => !EnumSentinel.IsUnknown(p.Type))
-                .Select(p => new NotificationProviderResponse
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Type = p.Type,
-                    IsEnabled = p.IsEnabled,
-                    Events = new NotificationEventFlags
-                    {
-                        OnFailedImportStrike = p.OnFailedImportStrike,
-                        OnStalledStrike = p.OnStalledStrike,
-                        OnSlowStrike = p.OnSlowStrike,
-                        OnQueueItemDeleted = p.OnQueueItemDeleted,
-                        OnDownloadCleaned = p.OnDownloadCleaned,
-                        OnDownloadStopped = p.OnDownloadStopped,
-                        OnCategoryChanged = p.OnCategoryChanged,
-                        OnSearchTriggered = p.OnSearchTriggered,
-                        OnSearchItemGrabbed = p.OnSearchItemGrabbed,
-                        OnForceImported = p.OnForceImported
-                    },
-                    Configuration = p.Type switch
-                    {
-                        NotificationProviderType.Notifiarr => p.NotifiarrConfiguration ?? new object(),
-                        NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
-                        NotificationProviderType.Ntfy => p.NtfyConfiguration ?? new object(),
-                        NotificationProviderType.Pushover => p.PushoverConfiguration ?? new object(),
-                        NotificationProviderType.Telegram => p.TelegramConfiguration ?? new object(),
-                        NotificationProviderType.Discord => p.DiscordConfiguration ?? new object(),
-                        NotificationProviderType.Gotify => p.GotifyConfiguration ?? new object(),
-                        _ => new object()
-                    }
-                })
+                .Select(MapProvider)
                 .OrderBy(x => x.Type.ToString())
                 .ThenBy(x => x.Name)
                 .ToList();
 
-            var response = new NotificationProvidersResponse { Providers = providerDtos };
+            NotificationProvidersResponse response = new() { Providers = providerDtos };
             return Ok(response);
         }
         finally
@@ -118,59 +95,68 @@ public sealed class NotificationProvidersController : ControllerBase
         });
     }
 
-    [HttpPost("notifiarr")]
-    public async Task<IActionResult> CreateNotifiarrProvider([FromBody] CreateNotifiarrProviderRequest newProvider)
+    /// <summary>
+    /// Creates a notification provider of the given type.
+    /// </summary>
+    [HttpPost("{type}")]
+    public async Task<IActionResult> CreateProvider(NotificationProviderType type, [FromBody] JsonElement requestBody)
     {
+        if (!TryGetDescriptor(type, out NotificationProviderDescriptor descriptor, out IActionResult? notSupported))
+        {
+            return notSupported!;
+        }
+
+        CreateNotificationProviderRequestBase request =
+            (CreateNotificationProviderRequestBase)requestBody.Deserialize(descriptor.CreateRequestType, _jsonOptions)!;
+
         await DataContext.Lock.WaitAsync();
         try
         {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            if (string.IsNullOrWhiteSpace(request.Name))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, ProviderNameRequiredMessage);
             }
 
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+            int duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == request.Name);
             if (duplicateConfig > 0)
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, DuplicateProviderNameMessage);
             }
 
-            if (newProvider.ApiKey.IsPlaceholder())
+            foreach (NotificationProviderSensitiveField field in descriptor.SensitiveFields)
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "API key cannot be a placeholder value");
+                if (GetFieldValue(request, field.Name).IsPlaceholder())
+                {
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, field.PlaceholderErrorMessage);
+                }
             }
 
-            var notifiarrConfig = new NotifiarrConfig
-            {
-                ApiKey = newProvider.ApiKey,
-                ChannelId = newProvider.ChannelId
-            };
-            notifiarrConfig.Validate();
+            IConfig config = descriptor.BuildConfig(request);
+            config.Validate();
 
-            var provider = new NotificationConfig
+            NotificationConfig provider = descriptor.WithConfig(new NotificationConfig
             {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Notifiarr,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                NotifiarrConfiguration = notifiarrConfig
-            };
+                Name = request.Name,
+                Type = type,
+                IsEnabled = request.IsEnabled,
+                OnFailedImportStrike = request.OnFailedImportStrike,
+                OnStalledStrike = request.OnStalledStrike,
+                OnSlowStrike = request.OnSlowStrike,
+                OnQueueItemDeleted = request.OnQueueItemDeleted,
+                OnDownloadCleaned = request.OnDownloadCleaned,
+                OnDownloadStopped = request.OnDownloadStopped,
+                OnCategoryChanged = request.OnCategoryChanged,
+                OnSearchTriggered = request.OnSearchTriggered,
+                OnSearchItemGrabbed = request.OnSearchItemGrabbed,
+                OnForceImported = request.OnForceImported
+            }, config);
 
             _dataContext.NotificationConfigs.Add(provider);
             await _dataContext.SaveChangesAsync();
 
             await _notificationConfigurationService.InvalidateCacheAsync();
 
-            var providerDto = MapProvider(provider);
+            NotificationProviderResponse providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
         finally
@@ -179,270 +165,65 @@ public sealed class NotificationProvidersController : ControllerBase
         }
     }
 
-    [HttpPost("apprise")]
-    public async Task<IActionResult> CreateAppriseProvider([FromBody] CreateAppriseProviderRequest newProvider)
+    /// <summary>
+    /// Updates a notification provider of the given type.
+    /// </summary>
+    [HttpPut("{type}/{id:guid}")]
+    public async Task<IActionResult> UpdateProvider(NotificationProviderType type, Guid id, [FromBody] JsonElement requestBody)
     {
+        if (!TryGetDescriptor(type, out NotificationProviderDescriptor descriptor, out IActionResult? notSupported))
+        {
+            return notSupported!;
+        }
+
+        UpdateNotificationProviderRequestBase request =
+            (UpdateNotificationProviderRequestBase)requestBody.Deserialize(descriptor.UpdateRequestType, _jsonOptions)!;
+
         await DataContext.Lock.WaitAsync();
         try
         {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            NotificationConfig? existingProvider = await IncludeAllConfigurations(_dataContext.NotificationConfigs)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == type);
+
+            if (existingProvider is null)
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"{type} provider with ID {id} not found");
             }
 
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
-            if (duplicateConfig > 0)
+            if (string.IsNullOrWhiteSpace(request.Name))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, ProviderNameRequiredMessage);
             }
 
-            if (newProvider.Key.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Key cannot be a placeholder value");
-            }
-
-            if (newProvider.ServiceUrls.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Service URLs cannot be a placeholder value");
-            }
-
-            var appriseConfig = new AppriseConfig
-            {
-                Mode = newProvider.Mode,
-                Url = newProvider.Url,
-                Key = newProvider.Key,
-                Tags = newProvider.Tags,
-                ServiceUrls = newProvider.ServiceUrls
-            };
-            appriseConfig.Validate();
-
-            var provider = new NotificationConfig
-            {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Apprise,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                AppriseConfiguration = appriseConfig
-            };
-
-            _dataContext.NotificationConfigs.Add(provider);
-            await _dataContext.SaveChangesAsync();
-
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(provider);
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPost("ntfy")]
-    public async Task<IActionResult> CreateNtfyProvider([FromBody] CreateNtfyProviderRequest newProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            if (newProvider.Password.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Password cannot be a placeholder value");
-            }
-
-            if (newProvider.AccessToken.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Access token cannot be a placeholder value");
-            }
-
-            var ntfyConfig = new NtfyConfig
-            {
-                ServerUrl = newProvider.ServerUrl,
-                Topics = newProvider.Topics,
-                AuthenticationType = newProvider.AuthenticationType,
-                Username = newProvider.Username,
-                Password = newProvider.Password,
-                AccessToken = newProvider.AccessToken,
-                Priority = newProvider.Priority,
-                Tags = newProvider.Tags
-            };
-            ntfyConfig.Validate();
-
-            var provider = new NotificationConfig
-            {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Ntfy,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                NtfyConfiguration = ntfyConfig
-            };
-
-            _dataContext.NotificationConfigs.Add(provider);
-            await _dataContext.SaveChangesAsync();
-
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(provider);
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPost("telegram")]
-    public async Task<IActionResult> CreateTelegramProvider([FromBody] CreateTelegramProviderRequest newProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            if (newProvider.BotToken.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Bot token cannot be a placeholder value");
-            }
-
-            var telegramConfig = new TelegramConfig
-            {
-                BotToken = newProvider.BotToken,
-                ChatId = newProvider.ChatId,
-                TopicId = newProvider.TopicId,
-                SendSilently = newProvider.SendSilently
-            };
-            telegramConfig.Validate();
-
-            var provider = new NotificationConfig
-            {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Telegram,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                TelegramConfiguration = telegramConfig
-            };
-
-            _dataContext.NotificationConfigs.Add(provider);
-            await _dataContext.SaveChangesAsync();
-
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(provider);
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("notifiarr/{id:guid}")]
-    public async Task<IActionResult> UpdateNotifiarrProvider(Guid id, [FromBody] UpdateNotifiarrProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.NotifiarrConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Notifiarr);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Notifiarr provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
+            int duplicateConfig = await _dataContext.NotificationConfigs
                 .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
+                .Where(x => x.Name == request.Name)
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, DuplicateProviderNameMessage);
             }
 
-            var notifiarrConfig = new NotifiarrConfig
-            {
-                ApiKey = updatedProvider.ApiKey.IsPlaceholder()
-                    ? existingProvider.NotifiarrConfiguration!.ApiKey
-                    : updatedProvider.ApiKey,
-                ChannelId = updatedProvider.ChannelId
-            };
+            IConfig? existingConfig = descriptor.GetConfig(existingProvider);
+            IConfig newConfig = descriptor.BuildUpdateConfig(request, existingConfig);
+            newConfig.Validate();
 
-            if (existingProvider.NotifiarrConfiguration != null)
+            NotificationConfig newProvider = descriptor.WithConfig(existingProvider with
             {
-                notifiarrConfig = notifiarrConfig with { Id = existingProvider.NotifiarrConfiguration.Id };
-            }
-            notifiarrConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                NotifiarrConfiguration = notifiarrConfig,
+                Name = request.Name,
+                IsEnabled = request.IsEnabled,
+                OnFailedImportStrike = request.OnFailedImportStrike,
+                OnStalledStrike = request.OnStalledStrike,
+                OnSlowStrike = request.OnSlowStrike,
+                OnQueueItemDeleted = request.OnQueueItemDeleted,
+                OnDownloadCleaned = request.OnDownloadCleaned,
+                OnDownloadStopped = request.OnDownloadStopped,
+                OnCategoryChanged = request.OnCategoryChanged,
+                OnSearchTriggered = request.OnSearchTriggered,
+                OnSearchItemGrabbed = request.OnSearchItemGrabbed,
+                OnForceImported = request.OnForceImported,
                 UpdatedAt = _timeProvider.GetUtcNow()
-            };
+            }, newConfig);
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
             _dataContext.NotificationConfigs.Add(newProvider);
@@ -450,250 +231,7 @@ public sealed class NotificationProvidersController : ControllerBase
             await _dataContext.SaveChangesAsync();
             await _notificationConfigurationService.InvalidateCacheAsync();
 
-            var providerDto = MapProvider(newProvider);
-            return Ok(providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("apprise/{id:guid}")]
-    public async Task<IActionResult> UpdateAppriseProvider(Guid id, [FromBody] UpdateAppriseProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.AppriseConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Apprise);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Apprise provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
-                .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
-                .CountAsync();
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            var appriseConfig = new AppriseConfig
-            {
-                Mode = updatedProvider.Mode,
-                Url = updatedProvider.Url,
-                Key = updatedProvider.Key.IsPlaceholder()
-                    ? existingProvider.AppriseConfiguration!.Key
-                    : updatedProvider.Key,
-                Tags = updatedProvider.Tags,
-                ServiceUrls = updatedProvider.ServiceUrls.IsPlaceholder()
-                    ? existingProvider.AppriseConfiguration!.ServiceUrls
-                    : updatedProvider.ServiceUrls
-            };
-
-            if (existingProvider.AppriseConfiguration != null)
-            {
-                appriseConfig = appriseConfig with { Id = existingProvider.AppriseConfiguration.Id };
-            }
-            appriseConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                AppriseConfiguration = appriseConfig,
-                UpdatedAt = _timeProvider.GetUtcNow()
-            };
-
-            _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
-
-            await _dataContext.SaveChangesAsync();
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(newProvider);
-            return Ok(providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("ntfy/{id:guid}")]
-    public async Task<IActionResult> UpdateNtfyProvider(Guid id, [FromBody] UpdateNtfyProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.NtfyConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Ntfy);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Ntfy provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
-                .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
-                .CountAsync();
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            var ntfyConfig = new NtfyConfig
-            {
-                ServerUrl = updatedProvider.ServerUrl,
-                Topics = updatedProvider.Topics,
-                AuthenticationType = updatedProvider.AuthenticationType,
-                Username = updatedProvider.Username,
-                Password = updatedProvider.Password.IsPlaceholder()
-                    ? existingProvider.NtfyConfiguration!.Password
-                    : updatedProvider.Password,
-                AccessToken = updatedProvider.AccessToken.IsPlaceholder()
-                    ? existingProvider.NtfyConfiguration!.AccessToken
-                    : updatedProvider.AccessToken,
-                Priority = updatedProvider.Priority,
-                Tags = updatedProvider.Tags
-            };
-
-            if (existingProvider.NtfyConfiguration != null)
-            {
-                ntfyConfig = ntfyConfig with { Id = existingProvider.NtfyConfiguration.Id };
-            }
-            ntfyConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                NtfyConfiguration = ntfyConfig,
-                UpdatedAt = _timeProvider.GetUtcNow()
-            };
-
-            _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
-
-            await _dataContext.SaveChangesAsync();
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(newProvider);
-            return Ok(providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("telegram/{id:guid}")]
-    public async Task<IActionResult> UpdateTelegramProvider(Guid id, [FromBody] UpdateTelegramProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.TelegramConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Telegram);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Telegram provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
-                .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
-                .CountAsync();
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            var telegramConfig = new TelegramConfig
-            {
-                BotToken = updatedProvider.BotToken.IsPlaceholder()
-                    ? existingProvider.TelegramConfiguration!.BotToken
-                    : updatedProvider.BotToken,
-                ChatId = updatedProvider.ChatId,
-                TopicId = updatedProvider.TopicId,
-                SendSilently = updatedProvider.SendSilently
-            };
-
-            if (existingProvider.TelegramConfiguration != null)
-            {
-                telegramConfig = telegramConfig with { Id = existingProvider.TelegramConfiguration.Id };
-            }
-            telegramConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                TelegramConfiguration = telegramConfig,
-                UpdatedAt = _timeProvider.GetUtcNow()
-            };
-
-            _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
-
-            await _dataContext.SaveChangesAsync();
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(newProvider);
+            NotificationProviderResponse providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
         finally
@@ -708,14 +246,7 @@ public sealed class NotificationProvidersController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.NotifiarrConfiguration)
-                .Include(p => p.AppriseConfiguration)
-                .Include(p => p.NtfyConfiguration)
-                .Include(p => p.PushoverConfiguration)
-                .Include(p => p.TelegramConfiguration)
-                .Include(p => p.DiscordConfiguration)
-                .Include(p => p.GotifyConfiguration)
+            NotificationConfig? existingProvider = await IncludeAllConfigurations(_dataContext.NotificationConfigs)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (existingProvider == null)
@@ -739,38 +270,45 @@ public sealed class NotificationProvidersController : ControllerBase
         }
     }
 
-    [HttpPost("notifiarr/test")]
-    public async Task<IActionResult> TestNotifiarrProvider([FromBody] TestNotifiarrProviderRequest testRequest)
+    /// <summary>
+    /// Sends a test notification for the given provider type, without persisting anything.
+    /// </summary>
+    [HttpPost("{type}/test")]
+    public async Task<IActionResult> TestProvider(NotificationProviderType type, [FromBody] JsonElement requestBody)
     {
+        if (!TryGetDescriptor(type, out NotificationProviderDescriptor descriptor, out IActionResult? notSupported))
+        {
+            return notSupported!;
+        }
+
+        TestNotificationProviderRequestBase request =
+            (TestNotificationProviderRequestBase)requestBody.Deserialize(descriptor.TestRequestType, _jsonOptions)!;
+
         try
         {
-            var apiKey = testRequest.ApiKey;
+            bool needsExisting = descriptor.SensitiveFields.Any(field => GetFieldValue(request, field.Name).IsPlaceholder());
 
-            if (apiKey.IsPlaceholder())
+            IConfig? existingConfig = null;
+            if (needsExisting)
             {
-                var existing = await GetExistingProviderConfig<NotifiarrConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Notifiarr, p => p.NotifiarrConfiguration);
-
-                if (existing is null)
+                existingConfig = await GetExistingProviderConfig(request.ProviderId, type);
+                if (existingConfig is null)
                 {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "API key cannot be a placeholder value");
+                    string message = descriptor.SensitiveFields.Count == 1
+                        ? descriptor.SensitiveFields[0].PlaceholderErrorMessage
+                        : SensitiveFieldsPlaceholderMessage;
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, message);
                 }
-
-                apiKey = existing.ApiKey;
             }
 
-            var notifiarrConfig = new NotifiarrConfig
-            {
-                ApiKey = apiKey,
-                ChannelId = testRequest.ChannelId
-            };
-            notifiarrConfig.Validate();
+            IConfig config = descriptor.BuildTestConfig(request, existingConfig);
+            config.Validate();
 
-            var providerDto = new NotificationProviderDto
+            NotificationProviderDto providerDto = new()
             {
                 Id = Guid.NewGuid(),
                 Name = "Test Provider",
-                Type = NotificationProviderType.Notifiarr,
+                Type = type,
                 IsEnabled = true,
                 Events = new NotificationEventFlags
                 {
@@ -785,11 +323,11 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSearchItemGrabbed = false,
                     OnForceImported = false
                 },
-                Configuration = notifiarrConfig
+                Configuration = config
             };
 
             await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
+            return Ok(new { Message = TestNotificationSuccessMessage });
         }
         catch (Exception ex)
         {
@@ -797,211 +335,10 @@ public sealed class NotificationProvidersController : ControllerBase
         }
     }
 
-    [HttpPost("apprise/test")]
-    public async Task<IActionResult> TestAppriseProvider([FromBody] TestAppriseProviderRequest testRequest)
+    private NotificationProviderResponse MapProvider(NotificationConfig provider)
     {
-        try
-        {
-            var key = testRequest.Key;
-            var serviceUrls = testRequest.ServiceUrls;
+        NotificationProviderDescriptor descriptor = _descriptorRegistry.GetDescriptor(provider.Type);
 
-            if (key.IsPlaceholder() || serviceUrls.IsPlaceholder())
-            {
-                var existing = await GetExistingProviderConfig<AppriseConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Apprise, p => p.AppriseConfiguration);
-
-                if (existing is null)
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Sensitive fields cannot be placeholder values");
-                }
-
-                if (key.IsPlaceholder())
-                {
-                    key = existing.Key;
-                }
-
-                if (serviceUrls.IsPlaceholder())
-                {
-                    serviceUrls = existing.ServiceUrls;
-                }
-            }
-
-            var appriseConfig = new AppriseConfig
-            {
-                Mode = testRequest.Mode,
-                Url = testRequest.Url,
-                Key = key,
-                Tags = testRequest.Tags,
-                ServiceUrls = serviceUrls
-            };
-            appriseConfig.Validate();
-
-            var providerDto = new NotificationProviderDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Test Provider",
-                Type = NotificationProviderType.Apprise,
-                IsEnabled = true,
-                Events = new NotificationEventFlags
-                {
-                    OnFailedImportStrike = true,
-                    OnStalledStrike = false,
-                    OnSlowStrike = false,
-                    OnQueueItemDeleted = false,
-                    OnDownloadCleaned = false,
-                    OnDownloadStopped = false,
-                    OnCategoryChanged = false,
-                    OnSearchTriggered = false,
-                    OnSearchItemGrabbed = false,
-                    OnForceImported = false
-                },
-                Configuration = appriseConfig
-            };
-
-            await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
-        }
-        catch (Exception ex)
-        {
-            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
-        }
-    }
-
-    [HttpPost("ntfy/test")]
-    public async Task<IActionResult> TestNtfyProvider([FromBody] TestNtfyProviderRequest testRequest)
-    {
-        try
-        {
-            var password = testRequest.Password;
-            var accessToken = testRequest.AccessToken;
-
-            if (password.IsPlaceholder() || accessToken.IsPlaceholder())
-            {
-                var existing = await GetExistingProviderConfig<NtfyConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Ntfy, p => p.NtfyConfiguration);
-
-                if (existing is null)
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Sensitive fields cannot be placeholder values");
-                }
-
-                if (password.IsPlaceholder())
-                {
-                    password = existing.Password;
-                }
-
-                if (accessToken.IsPlaceholder())
-                {
-                    accessToken = existing.AccessToken;
-                }
-            }
-
-            var ntfyConfig = new NtfyConfig
-            {
-                ServerUrl = testRequest.ServerUrl,
-                Topics = testRequest.Topics,
-                AuthenticationType = testRequest.AuthenticationType,
-                Username = testRequest.Username,
-                Password = password,
-                AccessToken = accessToken,
-                Priority = testRequest.Priority,
-                Tags = testRequest.Tags
-            };
-            ntfyConfig.Validate();
-
-            var providerDto = new NotificationProviderDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Test Provider",
-                Type = NotificationProviderType.Ntfy,
-                IsEnabled = true,
-                Events = new NotificationEventFlags
-                {
-                    OnFailedImportStrike = true,
-                    OnStalledStrike = false,
-                    OnSlowStrike = false,
-                    OnQueueItemDeleted = false,
-                    OnDownloadCleaned = false,
-                    OnDownloadStopped = false,
-                    OnCategoryChanged = false,
-                    OnSearchTriggered = false,
-                    OnSearchItemGrabbed = false,
-                    OnForceImported = false
-                },
-                Configuration = ntfyConfig
-            };
-
-            await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
-        }
-        catch (Exception ex)
-        {
-            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
-        }
-    }
-
-    [HttpPost("telegram/test")]
-    public async Task<IActionResult> TestTelegramProvider([FromBody] TestTelegramProviderRequest testRequest)
-    {
-        try
-        {
-            var botToken = testRequest.BotToken;
-
-            if (botToken.IsPlaceholder())
-            {
-                var existing = await GetExistingProviderConfig<TelegramConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Telegram, p => p.TelegramConfiguration);
-
-                if (existing is null)
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Bot token cannot be a placeholder value");
-                }
-
-                botToken = existing.BotToken;
-            }
-
-            var telegramConfig = new TelegramConfig
-            {
-                BotToken = botToken,
-                ChatId = testRequest.ChatId,
-                TopicId = testRequest.TopicId,
-                SendSilently = testRequest.SendSilently
-            };
-            telegramConfig.Validate();
-
-            var providerDto = new NotificationProviderDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Test Provider",
-                Type = NotificationProviderType.Telegram,
-                IsEnabled = true,
-                Events = new NotificationEventFlags
-                {
-                    OnFailedImportStrike = true,
-                    OnStalledStrike = false,
-                    OnSlowStrike = false,
-                    OnQueueItemDeleted = false,
-                    OnDownloadCleaned = false,
-                    OnDownloadStopped = false,
-                    OnCategoryChanged = false,
-                    OnSearchTriggered = false,
-                    OnSearchItemGrabbed = false,
-                    OnForceImported = false
-                },
-                Configuration = telegramConfig
-            };
-
-            await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
-        }
-        catch (Exception ex)
-        {
-            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
-        }
-    }
-
-    private static NotificationProviderResponse MapProvider(NotificationConfig provider)
-    {
         return new NotificationProviderResponse
         {
             Id = provider.Id,
@@ -1021,672 +358,54 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchItemGrabbed = provider.OnSearchItemGrabbed,
                 OnForceImported = provider.OnForceImported
             },
-            Configuration = provider.Type switch
-            {
-                NotificationProviderType.Notifiarr => provider.NotifiarrConfiguration ?? new object(),
-                NotificationProviderType.Apprise => provider.AppriseConfiguration ?? new object(),
-                NotificationProviderType.Ntfy => provider.NtfyConfiguration ?? new object(),
-                NotificationProviderType.Pushover => provider.PushoverConfiguration ?? new object(),
-                NotificationProviderType.Telegram => provider.TelegramConfiguration ?? new object(),
-                NotificationProviderType.Discord => provider.DiscordConfiguration ?? new object(),
-                NotificationProviderType.Gotify => provider.GotifyConfiguration ?? new object(),
-                _ => new object()
-            }
+            Configuration = (object?)descriptor.GetConfig(provider) ?? new object()
         };
     }
 
-    [HttpPost("discord")]
-    public async Task<IActionResult> CreateDiscordProvider([FromBody] CreateDiscordProviderRequest newProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            if (newProvider.WebhookUrl.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Webhook URL cannot be a placeholder value");
-            }
-
-            var discordConfig = new DiscordConfig
-            {
-                WebhookUrl = newProvider.WebhookUrl,
-                Username = newProvider.Username,
-                AvatarUrl = newProvider.AvatarUrl
-            };
-            discordConfig.Validate();
-
-            var provider = new NotificationConfig
-            {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Discord,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                DiscordConfiguration = discordConfig
-            };
-
-            _dataContext.NotificationConfigs.Add(provider);
-            await _dataContext.SaveChangesAsync();
-
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(provider);
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("discord/{id:guid}")]
-    public async Task<IActionResult> UpdateDiscordProvider(Guid id, [FromBody] UpdateDiscordProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.DiscordConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Discord);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Discord provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
-                .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
-                .CountAsync();
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            var discordConfig = new DiscordConfig
-            {
-                WebhookUrl = updatedProvider.WebhookUrl.IsPlaceholder()
-                    ? existingProvider.DiscordConfiguration!.WebhookUrl
-                    : updatedProvider.WebhookUrl,
-                Username = updatedProvider.Username,
-                AvatarUrl = updatedProvider.AvatarUrl
-            };
-
-            if (existingProvider.DiscordConfiguration != null)
-            {
-                discordConfig = discordConfig with { Id = existingProvider.DiscordConfiguration.Id };
-            }
-            discordConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                DiscordConfiguration = discordConfig,
-                UpdatedAt = _timeProvider.GetUtcNow()
-            };
-
-            _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
-
-            await _dataContext.SaveChangesAsync();
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(newProvider);
-            return Ok(providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPost("discord/test")]
-    public async Task<IActionResult> TestDiscordProvider([FromBody] TestDiscordProviderRequest testRequest)
+    private bool TryGetDescriptor(
+        NotificationProviderType type,
+        out NotificationProviderDescriptor descriptor,
+        out IActionResult? notSupportedResult)
     {
         try
         {
-            var webhookUrl = testRequest.WebhookUrl;
-
-            if (webhookUrl.IsPlaceholder())
-            {
-                var existing = await GetExistingProviderConfig<DiscordConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Discord, p => p.DiscordConfiguration);
-
-                if (existing is null)
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Webhook URL cannot be a placeholder value");
-                }
-
-                webhookUrl = existing.WebhookUrl;
-            }
-
-            var discordConfig = new DiscordConfig
-            {
-                WebhookUrl = webhookUrl,
-                Username = testRequest.Username,
-                AvatarUrl = testRequest.AvatarUrl
-            };
-            discordConfig.Validate();
-
-            var providerDto = new NotificationProviderDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Test Provider",
-                Type = NotificationProviderType.Discord,
-                IsEnabled = true,
-                Events = new NotificationEventFlags
-                {
-                    OnFailedImportStrike = true,
-                    OnStalledStrike = false,
-                    OnSlowStrike = false,
-                    OnQueueItemDeleted = false,
-                    OnDownloadCleaned = false,
-                    OnDownloadStopped = false,
-                    OnCategoryChanged = false,
-                    OnSearchTriggered = false,
-                    OnSearchItemGrabbed = false,
-                    OnForceImported = false
-                },
-                Configuration = discordConfig
-            };
-
-            await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
+            descriptor = _descriptorRegistry.GetDescriptor(type);
+            notSupportedResult = null;
+            return true;
         }
-        catch (Exception ex)
+        catch (NotSupportedException)
         {
-            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
+            descriptor = null!;
+            notSupportedResult = this.ProblemResult(
+                StatusCodes.Status404NotFound, $"Notification provider type {type} is not supported");
+            return false;
         }
     }
 
-    [HttpPost("pushover")]
-    public async Task<IActionResult> CreatePushoverProvider([FromBody] CreatePushoverProviderRequest newProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            if (newProvider.ApiToken.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "API token cannot be a placeholder value");
-            }
-
-            if (newProvider.UserKey.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "User key cannot be a placeholder value");
-            }
-
-            var pushoverConfig = new PushoverConfig
-            {
-                ApiToken = newProvider.ApiToken,
-                UserKey = newProvider.UserKey,
-                Devices = newProvider.Devices,
-                Priority = newProvider.Priority,
-                Sound = newProvider.Sound,
-                Retry = newProvider.Retry,
-                Expire = newProvider.Expire,
-                Tags = newProvider.Tags
-            };
-            pushoverConfig.Validate();
-
-            var provider = new NotificationConfig
-            {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Pushover,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                PushoverConfiguration = pushoverConfig
-            };
-
-            _dataContext.NotificationConfigs.Add(provider);
-            await _dataContext.SaveChangesAsync();
-
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(provider);
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("pushover/{id:guid}")]
-    public async Task<IActionResult> UpdatePushoverProvider(Guid id, [FromBody] UpdatePushoverProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.PushoverConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Pushover);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Pushover provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
-                .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
-                .CountAsync();
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            var pushoverConfig = new PushoverConfig
-            {
-                ApiToken = updatedProvider.ApiToken.IsPlaceholder()
-                    ? existingProvider.PushoverConfiguration!.ApiToken
-                    : updatedProvider.ApiToken,
-                UserKey = updatedProvider.UserKey.IsPlaceholder()
-                    ? existingProvider.PushoverConfiguration!.UserKey
-                    : updatedProvider.UserKey,
-                Devices = updatedProvider.Devices,
-                Priority = updatedProvider.Priority,
-                Sound = updatedProvider.Sound,
-                Retry = updatedProvider.Retry,
-                Expire = updatedProvider.Expire,
-                Tags = updatedProvider.Tags
-            };
-
-            if (existingProvider.PushoverConfiguration != null)
-            {
-                pushoverConfig = pushoverConfig with { Id = existingProvider.PushoverConfiguration.Id };
-            }
-            pushoverConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                PushoverConfiguration = pushoverConfig,
-                UpdatedAt = _timeProvider.GetUtcNow()
-            };
-
-            _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
-
-            await _dataContext.SaveChangesAsync();
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(newProvider);
-            return Ok(providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPost("pushover/test")]
-    public async Task<IActionResult> TestPushoverProvider([FromBody] TestPushoverProviderRequest testRequest)
-    {
-        try
-        {
-            var apiToken = testRequest.ApiToken;
-            var userKey = testRequest.UserKey;
-
-            if (apiToken.IsPlaceholder() || userKey.IsPlaceholder())
-            {
-                var existing = await GetExistingProviderConfig<PushoverConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Pushover, p => p.PushoverConfiguration);
-
-                if (existing is null)
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Sensitive fields cannot be placeholder values");
-                }
-
-                if (apiToken.IsPlaceholder())
-                {
-                    apiToken = existing.ApiToken;
-                }
-
-                if (userKey.IsPlaceholder())
-                {
-                    userKey = existing.UserKey;
-                }
-            }
-
-            var pushoverConfig = new PushoverConfig
-            {
-                ApiToken = apiToken,
-                UserKey = userKey,
-                Devices = testRequest.Devices,
-                Priority = testRequest.Priority,
-                Sound = testRequest.Sound,
-                Retry = testRequest.Retry,
-                Expire = testRequest.Expire,
-                Tags = testRequest.Tags
-            };
-            pushoverConfig.Validate();
-
-            var providerDto = new NotificationProviderDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Test Provider",
-                Type = NotificationProviderType.Pushover,
-                IsEnabled = true,
-                Events = new NotificationEventFlags
-                {
-                    OnFailedImportStrike = true,
-                    OnStalledStrike = false,
-                    OnSlowStrike = false,
-                    OnQueueItemDeleted = false,
-                    OnDownloadCleaned = false,
-                    OnDownloadStopped = false,
-                    OnCategoryChanged = false,
-                    OnSearchTriggered = false,
-                    OnSearchItemGrabbed = false,
-                    OnForceImported = false
-                },
-                Configuration = pushoverConfig
-            };
-
-            await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
-        }
-        catch (Exception ex)
-        {
-            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
-        }
-    }
-
-    [HttpPost("gotify")]
-    public async Task<IActionResult> CreateGotifyProvider([FromBody] CreateGotifyProviderRequest newProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            if (string.IsNullOrWhiteSpace(newProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            if (newProvider.ApplicationToken.IsPlaceholder())
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Application token cannot be a placeholder value");
-            }
-
-            var gotifyConfig = new GotifyConfig
-            {
-                ServerUrl = newProvider.ServerUrl,
-                ApplicationToken = newProvider.ApplicationToken,
-                Priority = newProvider.Priority
-            };
-            gotifyConfig.Validate();
-
-            var provider = new NotificationConfig
-            {
-                Name = newProvider.Name,
-                Type = NotificationProviderType.Gotify,
-                IsEnabled = newProvider.IsEnabled,
-                OnFailedImportStrike = newProvider.OnFailedImportStrike,
-                OnStalledStrike = newProvider.OnStalledStrike,
-                OnSlowStrike = newProvider.OnSlowStrike,
-                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = newProvider.OnDownloadCleaned,
-                OnDownloadStopped = newProvider.OnDownloadStopped,
-                OnCategoryChanged = newProvider.OnCategoryChanged,
-                OnSearchTriggered = newProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
-                OnForceImported = newProvider.OnForceImported,
-                GotifyConfiguration = gotifyConfig
-            };
-
-            _dataContext.NotificationConfigs.Add(provider);
-            await _dataContext.SaveChangesAsync();
-
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(provider);
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPut("gotify/{id:guid}")]
-    public async Task<IActionResult> UpdateGotifyProvider(Guid id, [FromBody] UpdateGotifyProviderRequest updatedProvider)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var existingProvider = await _dataContext.NotificationConfigs
-                .Include(p => p.GotifyConfiguration)
-                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Gotify);
-
-            if (existingProvider == null)
-            {
-                return this.ProblemResult(StatusCodes.Status404NotFound, $"Gotify provider with ID {id} not found");
-            }
-
-            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
-            }
-
-            var duplicateConfig = await _dataContext.NotificationConfigs
-                .Where(x => x.Id != id)
-                .Where(x => x.Name == updatedProvider.Name)
-                .CountAsync();
-            if (duplicateConfig > 0)
-            {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
-            }
-
-            var gotifyConfig = new GotifyConfig
-            {
-                ServerUrl = updatedProvider.ServerUrl,
-                ApplicationToken = updatedProvider.ApplicationToken.IsPlaceholder()
-                    ? existingProvider.GotifyConfiguration!.ApplicationToken
-                    : updatedProvider.ApplicationToken,
-                Priority = updatedProvider.Priority
-            };
-
-            if (existingProvider.GotifyConfiguration != null)
-            {
-                gotifyConfig = gotifyConfig with { Id = existingProvider.GotifyConfiguration.Id };
-            }
-            gotifyConfig.Validate();
-
-            var newProvider = existingProvider with
-            {
-                Name = updatedProvider.Name,
-                IsEnabled = updatedProvider.IsEnabled,
-                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
-                OnStalledStrike = updatedProvider.OnStalledStrike,
-                OnSlowStrike = updatedProvider.OnSlowStrike,
-                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
-                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
-                OnDownloadStopped = updatedProvider.OnDownloadStopped,
-                OnCategoryChanged = updatedProvider.OnCategoryChanged,
-                OnSearchTriggered = updatedProvider.OnSearchTriggered,
-                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
-                OnForceImported = updatedProvider.OnForceImported,
-                GotifyConfiguration = gotifyConfig,
-                UpdatedAt = _timeProvider.GetUtcNow()
-            };
-
-            _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
-
-            await _dataContext.SaveChangesAsync();
-            await _notificationConfigurationService.InvalidateCacheAsync();
-
-            var providerDto = MapProvider(newProvider);
-            return Ok(providerDto);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    [HttpPost("gotify/test")]
-    public async Task<IActionResult> TestGotifyProvider([FromBody] TestGotifyProviderRequest testRequest)
-    {
-        try
-        {
-            var applicationToken = testRequest.ApplicationToken;
-
-            if (applicationToken.IsPlaceholder())
-            {
-                var existing = await GetExistingProviderConfig<GotifyConfig>(
-                    testRequest.ProviderId, NotificationProviderType.Gotify, p => p.GotifyConfiguration);
-
-                if (existing is null)
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Application token cannot be a placeholder value");
-                }
-
-                applicationToken = existing.ApplicationToken;
-            }
-
-            var gotifyConfig = new GotifyConfig
-            {
-                ServerUrl = testRequest.ServerUrl,
-                ApplicationToken = applicationToken,
-                Priority = testRequest.Priority
-            };
-            gotifyConfig.Validate();
-
-            var providerDto = new NotificationProviderDto
-            {
-                Id = Guid.NewGuid(),
-                Name = "Test Provider",
-                Type = NotificationProviderType.Gotify,
-                IsEnabled = true,
-                Events = new NotificationEventFlags
-                {
-                    OnFailedImportStrike = true,
-                    OnStalledStrike = false,
-                    OnSlowStrike = false,
-                    OnQueueItemDeleted = false,
-                    OnDownloadCleaned = false,
-                    OnDownloadStopped = false,
-                    OnCategoryChanged = false,
-                    OnSearchTriggered = false,
-                    OnSearchItemGrabbed = false,
-                    OnForceImported = false
-                },
-                Configuration = gotifyConfig
-            };
-
-            await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully" });
-        }
-        catch (Exception ex)
-        {
-            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
-        }
-    }
-
-    private async Task<T?> GetExistingProviderConfig<T>(
-        Guid? providerId,
-        NotificationProviderType expectedType,
-        Func<NotificationConfig, T?> configSelector) where T : class
+    private async Task<IConfig?> GetExistingProviderConfig(Guid? providerId, NotificationProviderType type)
     {
         if (!providerId.HasValue)
         {
             return null;
         }
 
-        IQueryable<NotificationConfig> query = _dataContext.NotificationConfigs.AsNoTracking();
+        NotificationConfig? provider = await IncludeAllConfigurations(_dataContext.NotificationConfigs)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == providerId.Value && p.Type == type);
 
-        query = expectedType switch
-        {
-            NotificationProviderType.Notifiarr => query.Include(p => p.NotifiarrConfiguration),
-            NotificationProviderType.Apprise => query.Include(p => p.AppriseConfiguration),
-            NotificationProviderType.Ntfy => query.Include(p => p.NtfyConfiguration),
-            NotificationProviderType.Pushover => query.Include(p => p.PushoverConfiguration),
-            NotificationProviderType.Telegram => query.Include(p => p.TelegramConfiguration),
-            NotificationProviderType.Discord => query.Include(p => p.DiscordConfiguration),
-            NotificationProviderType.Gotify => query.Include(p => p.GotifyConfiguration),
-            _ => query
-        };
-
-        var provider = await query
-            .FirstOrDefaultAsync(p => p.Id == providerId.Value && p.Type == expectedType);
-
-        return provider is null ? null : configSelector(provider);
+        return provider is null ? null : _descriptorRegistry.GetDescriptor(type).GetConfig(provider);
     }
+
+    private static string? GetFieldValue(object request, string propertyName) =>
+        (string?)request.GetType().GetProperty(propertyName)!.GetValue(request);
+
+    private static IQueryable<NotificationConfig> IncludeAllConfigurations(IQueryable<NotificationConfig> query) =>
+        query
+            .Include(p => p.NotifiarrConfiguration)
+            .Include(p => p.AppriseConfiguration)
+            .Include(p => p.NtfyConfiguration)
+            .Include(p => p.PushoverConfiguration)
+            .Include(p => p.TelegramConfiguration)
+            .Include(p => p.DiscordConfiguration)
+            .Include(p => p.GotifyConfiguration);
 }
