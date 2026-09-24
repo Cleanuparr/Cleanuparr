@@ -86,6 +86,7 @@ function eventFlags(m: NotificationProviderFormModel): NotificationEventFlags {
     onCategoryChanged: m.onCategoryChanged,
     onSearchTriggered: m.onSearchTriggered,
     onSearchItemGrabbed: m.onSearchItemGrabbed,
+    onForceImported: m.onForceImported,
   };
 }
 

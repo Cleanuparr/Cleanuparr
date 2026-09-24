@@ -79,31 +79,19 @@ const GOTIFY_PROVIDER: NotificationProviderDto = {
   },
 };
 
+const TEST_MESSAGES: Record<string, string> = {
+  discord: 'Discord test sent',
+  telegram: 'Telegram test sent',
+  gotify: 'Gotify test sent',
+};
+
 function createApi(cliStatus: Observable<AppriseCliStatus> = of({ available: true, version: '1.9.0' })) {
   const created: NotificationProviderDto = DISCORD_PROVIDER;
   return {
     getAppriseCliStatus: vi.fn(() => cliStatus),
-    createDiscord: vi.fn(() => of(created)),
-    createTelegram: vi.fn(() => of(created)),
-    createNotifiarr: vi.fn(() => of(created)),
-    createApprise: vi.fn(() => of(created)),
-    createNtfy: vi.fn(() => of(created)),
-    createPushover: vi.fn(() => of(created)),
-    createGotify: vi.fn(() => of(created)),
-    updateDiscord: vi.fn(() => of(created)),
-    updateTelegram: vi.fn(() => of(created)),
-    updateNotifiarr: vi.fn(() => of(created)),
-    updateApprise: vi.fn(() => of(created)),
-    updateNtfy: vi.fn(() => of(created)),
-    updatePushover: vi.fn(() => of(created)),
-    updateGotify: vi.fn(() => of(created)),
-    testDiscord: vi.fn(() => of({ message: 'Discord test sent' })),
-    testTelegram: vi.fn(() => of({ message: 'Telegram test sent' })),
-    testNotifiarr: vi.fn(() => of({ message: '' })),
-    testApprise: vi.fn(() => of({ message: '' })),
-    testNtfy: vi.fn(() => of({ message: '' })),
-    testPushover: vi.fn(() => of({ message: '' })),
-    testGotify: vi.fn(() => of({ message: 'Gotify test sent' })),
+    create: vi.fn(() => of(created)),
+    update: vi.fn(() => of(created)),
+    test: vi.fn((urlSegment: string) => of({ message: TEST_MESSAGES[urlSegment] ?? '' })),
   };
 }
 
@@ -463,7 +451,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(api.updateGotify).toHaveBeenCalledWith('gotify-1', {
+    expect(api.update).toHaveBeenCalledWith('gotify', 'gotify-1', {
       name: 'My gotify',
       serverUrl: 'https://gotify.example.com',
       applicationToken: 'token',
@@ -476,7 +464,7 @@ describe('NotificationProviderModalComponent', () => {
     fixture.detectChanges();
     component.saveProvider();
 
-    expect(api.updateGotify).toHaveBeenLastCalledWith('gotify-1', expect.objectContaining({ priority: 5 }));
+    expect(api.update).toHaveBeenLastCalledWith('gotify', 'gotify-1', expect.objectContaining({ priority: 5 }));
   });
 
   it('sends a test notification with the current values and toasts the server message', () => {
@@ -485,7 +473,7 @@ describe('NotificationProviderModalComponent', () => {
     (fixture.nativeElement.querySelector('.modal__footer button') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(api.testDiscord).toHaveBeenCalledWith({
+    expect(api.test).toHaveBeenCalledWith('discord', {
       webhookUrl: 'https://discord.com/api/webhooks/abc',
       username: 'Cleanuparr',
       avatarUrl: undefined,
@@ -504,7 +492,7 @@ describe('NotificationProviderModalComponent', () => {
     component.testNotification();
     fixture.detectChanges();
 
-    expect(api.testNtfy).toHaveBeenCalledWith({
+    expect(api.test).toHaveBeenCalledWith('ntfy', {
       serverUrl: 'https://ntfy.sh',
       topics: ['topic'],
       authenticationType: NtfyAuthenticationType.None,
@@ -517,7 +505,7 @@ describe('NotificationProviderModalComponent', () => {
     });
     expect(toast.success).toHaveBeenCalledWith('Test sent');
 
-    api.testNtfy.mockReturnValue(throwError(() => new Error('offline')));
+    api.test.mockReturnValue(throwError(() => new Error('offline')));
     component.testNotification();
     fixture.detectChanges();
 
@@ -541,7 +529,7 @@ describe('NotificationProviderModalComponent', () => {
     (footerButtons(fixture)[1]).click();
     fixture.detectChanges();
 
-    expect(api.createDiscord).toHaveBeenCalledWith({
+    expect(api.create).toHaveBeenCalledWith('discord', {
       name: 'Alerts',
       webhookUrl: 'https://discord.com/hook',
       username: undefined,
@@ -551,7 +539,7 @@ describe('NotificationProviderModalComponent', () => {
       onCategoryChanged: true,
       onForceImported: true,
     });
-    expect(api.updateDiscord).not.toHaveBeenCalled();
+    expect(api.update).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith('Provider added');
     expect(component.visible()).toBe(false);
     expect(component.saving()).toBe(false);
@@ -568,7 +556,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(api.updateNtfy).toHaveBeenCalledWith('ntfy-1', {
+    expect(api.update).toHaveBeenCalledWith('ntfy', 'ntfy-1', {
       name: 'My ntfy',
       serverUrl: 'https://ntfy.example.com',
       topics: ['alpha'],
@@ -602,7 +590,7 @@ describe('NotificationProviderModalComponent', () => {
 
     component.saveProvider();
 
-    expect(api.createPushover).toHaveBeenCalledWith({
+    expect(api.create).toHaveBeenCalledWith('pushover', {
       name: 'Phone',
       apiToken: 'token',
       userKey: 'key',
@@ -624,7 +612,8 @@ describe('NotificationProviderModalComponent', () => {
     fixture.detectChanges();
     component.saveProvider();
 
-    expect(api.createPushover).toHaveBeenLastCalledWith(
+    expect(api.create).toHaveBeenLastCalledWith(
+      'pushover',
       expect.objectContaining({ sound: 'siren', retry: 30, expire: 3600 }),
     );
   });
@@ -635,7 +624,7 @@ describe('NotificationProviderModalComponent', () => {
     component.modalModel.update((m) => ({ ...m, name: 'Provider', apiKey: 'key' }));
     fixture.detectChanges();
 
-    api.createNotifiarr.mockReturnValue(throwError(() => new Error('boom')));
+    api.create.mockReturnValue(throwError(() => new Error('boom')));
     component.saveProvider();
     fixture.detectChanges();
 

@@ -7,17 +7,7 @@ import {
 } from '@ui';
 import { NotificationApi } from '@core/api/notification.api';
 import { ToastService } from '@core/services/toast.service';
-import {
-  NotificationProviderDto,
-  CreateDiscordProviderRequest,
-  CreateTelegramProviderRequest,
-  CreateNotifiarrProviderRequest,
-  CreateAppriseProviderRequest,
-  CreateNtfyProviderRequest,
-  CreatePushoverProviderRequest,
-  CreateGotifyProviderRequest,
-  AppriseCliStatus,
-} from '@shared/models/notification-provider.model';
+import { NotificationProviderDto, AppriseCliStatus } from '@shared/models/notification-provider.model';
 import {
   NotificationProviderType,
   AppriseMode,
@@ -25,6 +15,7 @@ import {
   NtfyPriority,
   PushoverPriority,
 } from '@shared/models/enums';
+import { NOTIFICATION_PROVIDER_DESCRIPTORS, NotificationProviderFormModel } from '@shared/utils/notification-provider.descriptors';
 
 interface ProviderConfiguration {
   webhookUrl?: string;
@@ -57,64 +48,7 @@ interface ProviderConfiguration {
   applicationToken?: string;
 }
 
-interface NotificationModalModel {
-  name: string;
-  enabled: boolean;
-  // Discord
-  webhookUrl: string;
-  username: string;
-  avatarUrl: string;
-  // Telegram
-  botToken: string;
-  chatId: string;
-  topicId: string;
-  sendSilently: boolean;
-  // Notifiarr
-  apiKey: string;
-  channelId: string;
-  // Apprise
-  appriseMode: AppriseMode;
-  appriseUrl: string;
-  appriseKey: string;
-  appriseTags: string;
-  appriseServiceUrls: string[];
-  // Ntfy
-  ntfyServerUrl: string;
-  ntfyTopics: string[];
-  ntfyAuthType: NtfyAuthenticationType;
-  ntfyUsername: string;
-  ntfyPassword: string;
-  ntfyAccessToken: string;
-  ntfyPriority: NtfyPriority;
-  ntfyTags: string[];
-  // Gotify
-  gotifyServerUrl: string;
-  gotifyApplicationToken: string;
-  gotifyPriority: string;
-  // Pushover
-  pushoverApiToken: string;
-  pushoverUserKey: string;
-  pushoverDevices: string[];
-  pushoverPriority: PushoverPriority;
-  pushoverRetry: number | null;
-  pushoverExpire: number | null;
-  pushoverSound: string;
-  pushoverCustomSound: string;
-  pushoverTags: string[];
-  // Events
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onDownloadStopped: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
-  onSearchItemGrabbed: boolean;
-  onForceImported: boolean;
-}
-
-function createDefaultModalModel(): NotificationModalModel {
+function createDefaultModalModel(): NotificationProviderFormModel {
   return {
     name: '',
     enabled: true,
@@ -130,11 +64,6 @@ function createDefaultModalModel(): NotificationModalModel {
     onFailedImportStrike: false, onStalledStrike: false, onSlowStrike: false, onQueueItemDeleted: false,
     onDownloadCleaned: false, onDownloadStopped: false, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false, onForceImported: false,
   };
-}
-
-function parseGotifyPriority(value: string): number {
-  const priority = Number.parseInt(value, 10);
-  return Number.isNaN(priority) ? 5 : priority;
 }
 
 const APPRISE_MODE_OPTIONS: SelectOption[] = [
@@ -234,78 +163,53 @@ export class NotificationProviderModalComponent {
   readonly appriseCliStatus = signal<AppriseCliStatus | null>(null);
   private appriseCliChecked = false;
 
-  readonly modalModel = signal<NotificationModalModel>(createDefaultModalModel());
+  readonly modalModel = signal<NotificationProviderFormModel>(createDefaultModalModel());
 
   /** JSON snapshot of the model as loaded when the modal opened, for dirty tracking. */
   private readonly openSnapshot = signal('');
   readonly hasPendingChanges = computed(() =>
     this.visible() && JSON.stringify(this.modalModel()) !== this.openSnapshot());
 
+  /** A required-field validator body driven by the active provider's descriptor. */
+  private requiredError(field: keyof NotificationProviderFormModel, message: string) {
+    return () => {
+      const m = this.modalModel();
+      if (!NOTIFICATION_PROVIDER_DESCRIPTORS[this.modalType()].requiredFields(m).includes(field)) {
+        return undefined;
+      }
+      const value = m[field];
+      const empty = Array.isArray(value) ? value.length === 0 : !String(value ?? '').trim();
+      return empty ? { kind: 'required', message } : undefined;
+    };
+  }
+
   readonly modalForm = form(this.modalModel, (p) => {
     validate(p.name, () =>
       !this.modalModel().name.trim() ? { kind: 'required', message: 'Name is required' } : undefined);
 
-    // Discord
-    validate(p.webhookUrl, () =>
-      this.modalType() === NotificationProviderType.Discord && !this.modalModel().webhookUrl.trim()
-        ? { kind: 'required', message: 'Webhook URL is required' } : undefined);
+    validate(p.webhookUrl, this.requiredError('webhookUrl', 'Webhook URL is required'));
+    validate(p.botToken, this.requiredError('botToken', 'Bot token is required'));
+    validate(p.chatId, this.requiredError('chatId', 'Chat ID is required'));
+    validate(p.apiKey, this.requiredError('apiKey', 'API key is required'));
+    validate(p.appriseUrl, this.requiredError('appriseUrl', 'Server URL is required'));
+    validate(p.appriseKey, this.requiredError('appriseKey', 'Config key is required'));
+    validate(p.ntfyServerUrl, this.requiredError('ntfyServerUrl', 'Server URL is required'));
+    validate(p.ntfyTopics, this.requiredError('ntfyTopics', 'At least one topic is required'));
+    validate(p.ntfyUsername, this.requiredError('ntfyUsername', 'Username is required'));
+    validate(p.ntfyPassword, this.requiredError('ntfyPassword', 'Password is required'));
+    validate(p.ntfyAccessToken, this.requiredError('ntfyAccessToken', 'Access token is required'));
+    validate(p.pushoverApiToken, this.requiredError('pushoverApiToken', 'API token is required'));
+    validate(p.pushoverUserKey, this.requiredError('pushoverUserKey', 'User key is required'));
+    validate(p.gotifyServerUrl, this.requiredError('gotifyServerUrl', 'Server URL is required'));
+    validate(p.gotifyApplicationToken, this.requiredError('gotifyApplicationToken', 'Application token is required'));
 
-    // Telegram
-    validate(p.botToken, () =>
-      this.modalType() === NotificationProviderType.Telegram && !this.modalModel().botToken.trim()
-        ? { kind: 'required', message: 'Bot token is required' } : undefined);
-    validate(p.chatId, () =>
-      this.modalType() === NotificationProviderType.Telegram && !this.modalModel().chatId.trim()
-        ? { kind: 'required', message: 'Chat ID is required' } : undefined);
-
-    // Notifiarr
-    validate(p.apiKey, () =>
-      this.modalType() === NotificationProviderType.Notifiarr && !this.modalModel().apiKey.trim()
-        ? { kind: 'required', message: 'API key is required' } : undefined);
-
-    // Apprise
-    validate(p.appriseUrl, () =>
-      this.modalType() === NotificationProviderType.Apprise && this.modalModel().appriseMode === AppriseMode.Api && !this.modalModel().appriseUrl.trim()
-        ? { kind: 'required', message: 'Server URL is required' } : undefined);
-    validate(p.appriseKey, () =>
-      this.modalType() === NotificationProviderType.Apprise && this.modalModel().appriseMode === AppriseMode.Api && !this.modalModel().appriseKey.trim()
-        ? { kind: 'required', message: 'Config key is required' } : undefined);
+    // Apprise: CLI mode needs at least one service URL instead of a server URL + config key.
     validate(p.appriseServiceUrls, () =>
       this.modalType() === NotificationProviderType.Apprise && this.modalModel().appriseMode === AppriseMode.Cli && this.modalModel().appriseServiceUrls.length === 0
         ? { kind: 'required', message: 'At least one service URL is required' } : undefined);
 
-    // Ntfy
-    validate(p.ntfyServerUrl, () =>
-      this.modalType() === NotificationProviderType.Ntfy && !this.modalModel().ntfyServerUrl.trim()
-        ? { kind: 'required', message: 'Server URL is required' } : undefined);
-    validate(p.ntfyTopics, () =>
-      this.modalType() === NotificationProviderType.Ntfy && this.modalModel().ntfyTopics.length === 0
-        ? { kind: 'required', message: 'At least one topic is required' } : undefined);
-    validate(p.ntfyUsername, () =>
-      this.modalType() === NotificationProviderType.Ntfy
-        && this.modalModel().ntfyAuthType === NtfyAuthenticationType.BasicAuth
-        && !this.modalModel().ntfyUsername.trim()
-        ? { kind: 'required', message: 'Username is required' } : undefined);
-    validate(p.ntfyPassword, () =>
-      this.modalType() === NotificationProviderType.Ntfy
-        && this.modalModel().ntfyAuthType === NtfyAuthenticationType.BasicAuth
-        && !this.modalModel().ntfyPassword.trim()
-        ? { kind: 'required', message: 'Password is required' } : undefined);
-    validate(p.ntfyAccessToken, () =>
-      this.modalType() === NotificationProviderType.Ntfy
-        && this.modalModel().ntfyAuthType === NtfyAuthenticationType.AccessToken
-        && !this.modalModel().ntfyAccessToken.trim()
-        ? { kind: 'required', message: 'Access token is required' } : undefined);
-
-    // Pushover
-    validate(p.pushoverApiToken, () =>
-      this.modalType() === NotificationProviderType.Pushover && !this.modalModel().pushoverApiToken.trim()
-        ? { kind: 'required', message: 'API token is required' } : undefined);
-    validate(p.pushoverUserKey, () =>
-      this.modalType() === NotificationProviderType.Pushover && !this.modalModel().pushoverUserKey.trim()
-        ? { kind: 'required', message: 'User key is required' } : undefined);
-    // Retry/expire only apply to Emergency priority; skip otherwise so stale
-    // values from a hidden field can't keep the modal Save disabled.
+    // Pushover: retry/expire only apply (and are only bounded) at Emergency priority; skip
+    // otherwise so stale values from a hidden field can't keep the modal Save disabled.
     validate(p.pushoverRetry, () => {
       if (this.modalType() !== NotificationProviderType.Pushover
         || this.modalModel().pushoverPriority !== PushoverPriority.Emergency) {
@@ -324,14 +228,6 @@ export class NotificationProviderModalComponent {
       if (expire > 10800) return { kind: 'max', message: 'Maximum 10800 seconds' };
       return undefined;
     });
-
-    // Gotify
-    validate(p.gotifyServerUrl, () =>
-      this.modalType() === NotificationProviderType.Gotify && !this.modalModel().gotifyServerUrl.trim()
-        ? { kind: 'required', message: 'Server URL is required' } : undefined);
-    validate(p.gotifyApplicationToken, () =>
-      this.modalType() === NotificationProviderType.Gotify && !this.modalModel().gotifyApplicationToken.trim()
-        ? { kind: 'required', message: 'Application token is required' } : undefined);
   });
 
   // Options (exposed for template)
@@ -388,7 +284,7 @@ export class NotificationProviderModalComponent {
     });
   }
 
-  private buildModelFromProvider(provider: NotificationProviderDto): NotificationModalModel {
+  private buildModelFromProvider(provider: NotificationProviderDto): NotificationProviderFormModel {
     const config = provider.configuration as ProviderConfiguration;
     const model = createDefaultModalModel();
     model.name = provider.name;
@@ -463,244 +359,26 @@ export class NotificationProviderModalComponent {
     return model;
   }
 
-  private getEventFlags() {
-    const m = this.modalModel();
-    return {
-      onFailedImportStrike: m.onFailedImportStrike,
-      onStalledStrike: m.onStalledStrike,
-      onSlowStrike: m.onSlowStrike,
-      onQueueItemDeleted: m.onQueueItemDeleted,
-      onDownloadCleaned: m.onDownloadCleaned,
-      onDownloadStopped: m.onDownloadStopped,
-      onCategoryChanged: m.onCategoryChanged,
-      onSearchTriggered: m.onSearchTriggered,
-      onSearchItemGrabbed: m.onSearchItemGrabbed,
-      onForceImported: m.onForceImported,
-    };
-  }
-
   testNotification(): void {
-    const type = this.modalType();
-    const m = this.modalModel();
-    this.testing.set(true);
+    const descriptor = NOTIFICATION_PROVIDER_DESCRIPTORS[this.modalType()];
     const providerId = this.editingProvider()?.id;
-
-    switch (type) {
-      case NotificationProviderType.Discord:
-        this.api.testDiscord({
-          webhookUrl: m.webhookUrl,
-          username: m.username || undefined,
-          avatarUrl: m.avatarUrl || undefined,
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      case NotificationProviderType.Telegram:
-        this.api.testTelegram({
-          botToken: m.botToken,
-          chatId: m.chatId,
-          topicId: m.topicId || undefined,
-          sendSilently: m.sendSilently,
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      case NotificationProviderType.Notifiarr:
-        this.api.testNotifiarr({
-          apiKey: m.apiKey,
-          channelId: m.channelId,
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      case NotificationProviderType.Apprise:
-        this.api.testApprise({
-          mode: m.appriseMode,
-          url: m.appriseUrl || undefined,
-          key: m.appriseKey || undefined,
-          tags: m.appriseTags || undefined,
-          serviceUrls: m.appriseServiceUrls.join('\n') || undefined,
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      case NotificationProviderType.Ntfy:
-        this.api.testNtfy({
-          serverUrl: m.ntfyServerUrl,
-          topics: m.ntfyTopics,
-          authenticationType: m.ntfyAuthType,
-          username: m.ntfyUsername || undefined,
-          password: m.ntfyPassword || undefined,
-          accessToken: m.ntfyAccessToken || undefined,
-          priority: m.ntfyPriority,
-          tags: m.ntfyTags.length > 0 ? m.ntfyTags : undefined,
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      case NotificationProviderType.Pushover: {
-        const sound = m.pushoverSound;
-        this.api.testPushover({
-          apiToken: m.pushoverApiToken,
-          userKey: m.pushoverUserKey,
-          devices: m.pushoverDevices.length > 0 ? m.pushoverDevices : undefined,
-          priority: m.pushoverPriority,
-          sound: sound === '__custom__' ? m.pushoverCustomSound : (sound || undefined),
-          retry: m.pushoverPriority === PushoverPriority.Emergency ? (m.pushoverRetry ?? 30) : undefined,
-          expire: m.pushoverPriority === PushoverPriority.Emergency ? (m.pushoverExpire ?? 3600) : undefined,
-          tags: m.pushoverTags.length > 0 ? m.pushoverTags : undefined,
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      }
-      case NotificationProviderType.Gotify:
-        this.api.testGotify({
-          serverUrl: m.gotifyServerUrl,
-          applicationToken: m.gotifyApplicationToken,
-          priority: parseGotifyPriority(m.gotifyPriority),
-          providerId,
-        }).subscribe({
-          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
-        });
-        break;
-      default:
-        this.toast.error('Test failed');
-        this.testing.set(false);
-        break;
-    }
+    this.testing.set(true);
+    this.api.test(descriptor.urlSegment, descriptor.buildTestRequest(this.modalModel(), providerId)).subscribe({
+      next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
+      error: () => { this.toast.error('Test failed'); this.testing.set(false); },
+    });
   }
 
   saveProvider(): void {
     if (this.modalForm().invalid()) return;
-    const type = this.modalType();
-    const m = this.modalModel();
+    const descriptor = NOTIFICATION_PROVIDER_DESCRIPTORS[this.modalType()];
     const editing = this.editingProvider();
+    const request = descriptor.buildRequest(this.modalModel());
     this.saving.set(true);
-    const eventFlags = this.getEventFlags();
-
-    switch (type) {
-      case NotificationProviderType.Discord: {
-        const request: CreateDiscordProviderRequest = {
-          name: m.name,
-          webhookUrl: m.webhookUrl,
-          username: m.username || undefined,
-          avatarUrl: m.avatarUrl || undefined,
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updateDiscord(editing.id, request) : this.api.createDiscord(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      case NotificationProviderType.Telegram: {
-        const request: CreateTelegramProviderRequest = {
-          name: m.name,
-          botToken: m.botToken,
-          chatId: m.chatId,
-          topicId: m.topicId || undefined,
-          sendSilently: m.sendSilently,
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updateTelegram(editing.id, request) : this.api.createTelegram(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      case NotificationProviderType.Notifiarr: {
-        const request: CreateNotifiarrProviderRequest = {
-          name: m.name,
-          apiKey: m.apiKey,
-          channelId: m.channelId,
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updateNotifiarr(editing.id, request) : this.api.createNotifiarr(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      case NotificationProviderType.Apprise: {
-        const request: CreateAppriseProviderRequest = {
-          name: m.name,
-          mode: m.appriseMode,
-          url: m.appriseUrl || undefined,
-          key: m.appriseKey || undefined,
-          tags: m.appriseTags || undefined,
-          serviceUrls: m.appriseServiceUrls.join('\n') || undefined,
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updateApprise(editing.id, request) : this.api.createApprise(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      case NotificationProviderType.Ntfy: {
-        const request: CreateNtfyProviderRequest = {
-          name: m.name,
-          serverUrl: m.ntfyServerUrl,
-          topics: m.ntfyTopics,
-          authenticationType: m.ntfyAuthType,
-          username: m.ntfyUsername || undefined,
-          password: m.ntfyPassword || undefined,
-          accessToken: m.ntfyAccessToken || undefined,
-          priority: m.ntfyPriority,
-          tags: m.ntfyTags.length > 0 ? m.ntfyTags : undefined,
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updateNtfy(editing.id, request) : this.api.createNtfy(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      case NotificationProviderType.Pushover: {
-        const sound = m.pushoverSound;
-        const request: CreatePushoverProviderRequest = {
-          name: m.name,
-          apiToken: m.pushoverApiToken,
-          userKey: m.pushoverUserKey,
-          devices: m.pushoverDevices.length > 0 ? m.pushoverDevices : undefined,
-          priority: m.pushoverPriority,
-          sound: sound === '__custom__' ? m.pushoverCustomSound : (sound || undefined),
-          retry: m.pushoverPriority === PushoverPriority.Emergency ? (m.pushoverRetry ?? 30) : undefined,
-          expire: m.pushoverPriority === PushoverPriority.Emergency ? (m.pushoverExpire ?? 3600) : undefined,
-          tags: m.pushoverTags.length > 0 ? m.pushoverTags : undefined,
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updatePushover(editing.id, request) : this.api.createPushover(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      case NotificationProviderType.Gotify: {
-        const request: CreateGotifyProviderRequest = {
-          name: m.name,
-          serverUrl: m.gotifyServerUrl,
-          applicationToken: m.gotifyApplicationToken,
-          priority: parseGotifyPriority(m.gotifyPriority),
-          isEnabled: m.enabled,
-          ...eventFlags,
-        };
-        const obs = editing ? this.api.updateGotify(editing.id, request) : this.api.createGotify(request);
-        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
-        break;
-      }
-      default:
-        this.onSaveError();
-        break;
-    }
+    const obs = editing
+      ? this.api.update(descriptor.urlSegment, editing.id, request)
+      : this.api.create(descriptor.urlSegment, request);
+    obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
   }
 
   private onSaveSuccess(editing: NotificationProviderDto | null): void {

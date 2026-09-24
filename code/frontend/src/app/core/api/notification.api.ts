@@ -6,20 +6,6 @@ import {
   NotificationProviderDto,
   AppriseCliStatus,
   TestNotificationResult,
-  CreateNotifiarrProviderRequest,
-  CreateAppriseProviderRequest,
-  CreateNtfyProviderRequest,
-  CreateTelegramProviderRequest,
-  CreateDiscordProviderRequest,
-  CreatePushoverProviderRequest,
-  CreateGotifyProviderRequest,
-  TestNotifiarrRequest,
-  TestAppriseRequest,
-  TestNtfyRequest,
-  TestTelegramRequest,
-  TestDiscordRequest,
-  TestPushoverRequest,
-  TestGotifyRequest,
 } from '@shared/models/notification-provider.model';
 
 const BASE = '/api/configuration/notification_providers';
@@ -40,90 +26,15 @@ export class NotificationApi {
     return this.http.delete<void>(`${BASE}/${id}`);
   }
 
-  // Create providers
-  createNotifiarr(data: CreateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/notifiarr`, data);
+  create<TRequest>(urlSegment: string, data: TRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${BASE}/${urlSegment}`, data);
   }
 
-  createApprise(data: CreateAppriseProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/apprise`, data);
+  update<TRequest>(urlSegment: string, id: string, data: TRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${BASE}/${urlSegment}/${id}`, data);
   }
 
-  createNtfy(data: CreateNtfyProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/ntfy`, data);
-  }
-
-  createTelegram(data: CreateTelegramProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/telegram`, data);
-  }
-
-  createDiscord(data: CreateDiscordProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/discord`, data);
-  }
-
-  createPushover(data: CreatePushoverProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/pushover`, data);
-  }
-
-  createGotify(data: CreateGotifyProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/gotify`, data);
-  }
-
-  // Update providers (same request types, with id in URL)
-  updateNotifiarr(id: string, data: CreateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/notifiarr/${id}`, data);
-  }
-
-  updateApprise(id: string, data: CreateAppriseProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/apprise/${id}`, data);
-  }
-
-  updateNtfy(id: string, data: CreateNtfyProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/ntfy/${id}`, data);
-  }
-
-  updateTelegram(id: string, data: CreateTelegramProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/telegram/${id}`, data);
-  }
-
-  updateDiscord(id: string, data: CreateDiscordProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/discord/${id}`, data);
-  }
-
-  updatePushover(id: string, data: CreatePushoverProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/pushover/${id}`, data);
-  }
-
-  updateGotify(id: string, data: CreateGotifyProviderRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/gotify/${id}`, data);
-  }
-
-  // Test providers
-  testNotifiarr(data: TestNotifiarrRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/notifiarr/test`, data);
-  }
-
-  testApprise(data: TestAppriseRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/apprise/test`, data);
-  }
-
-  testNtfy(data: TestNtfyRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/ntfy/test`, data);
-  }
-
-  testTelegram(data: TestTelegramRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/telegram/test`, data);
-  }
-
-  testDiscord(data: TestDiscordRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/discord/test`, data);
-  }
-
-  testPushover(data: TestPushoverRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/pushover/test`, data);
-  }
-
-  testGotify(data: TestGotifyRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/gotify/test`, data);
+  test<TRequest>(urlSegment: string, data: TRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${BASE}/${urlSegment}/test`, data);
   }
 }
