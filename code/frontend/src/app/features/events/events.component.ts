@@ -11,7 +11,7 @@ import {
 } from '@ui';
 import { EventsApi } from '@core/api/events.api';
 import { ToastService } from '@core/services/toast.service';
-import { PaginationService } from '@core/services/pagination.service';
+import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
@@ -48,7 +48,6 @@ import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsComponent implements OnInit, OnDestroy {
-  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-events';
 
   private readonly eventsApi = inject(EventsApi);
   private readonly toast = inject(ToastService);
@@ -61,7 +60,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   readonly selectedJobRunId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(EventsComponent.PAGE_SIZE_KEY, 50));
+  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.events, 50));
   readonly selectedSeverity = signal<unknown>('');
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
@@ -155,7 +154,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
-    EventsComponent.PAGE_SIZE_KEY,
+    PAGE_SIZE_STORAGE_KEYS.events,
     this.pageSize,
     this.currentPage,
   );

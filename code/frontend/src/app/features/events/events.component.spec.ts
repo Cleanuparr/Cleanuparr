@@ -6,10 +6,11 @@ import { of } from 'rxjs';
 import { EventsApi } from '@core/api/events.api';
 import { AppEvent, EventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
+import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { EventsComponent } from './events.component';
 import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
-const PAGE_SIZE_KEY = 'cleanuparr-page-size-events';
+const PAGE_SIZE_KEY = PAGE_SIZE_STORAGE_KEYS.events;
 
 const EMPTY_TIMELINE: EventTypeTimelineResponse = { types: [], buckets: [] };
 

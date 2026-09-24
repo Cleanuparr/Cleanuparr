@@ -1,3 +1,4 @@
+import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
@@ -7,7 +8,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { UpgradesTabComponent } from './upgrades-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
-const PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-upgrades';
+const PAGE_SIZE_KEY = PAGE_SIZE_STORAGE_KEYS.seekerUpgrades;
 
 const INSTANCES: CfScoreInstance[] = [
   { id: 'sonarr-1', name: 'Sonarr Main', itemType: 'Sonarr' },

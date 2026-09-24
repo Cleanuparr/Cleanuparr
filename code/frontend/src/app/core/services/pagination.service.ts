@@ -1,5 +1,14 @@
 import { Injectable, WritableSignal } from '@angular/core';
 
+/** localStorage keys for each paginated page's saved page-size preference. */
+export const PAGE_SIZE_STORAGE_KEYS = {
+  strikes: 'cleanuparr-page-size-strikes',
+  events: 'cleanuparr-page-size-events',
+  seekerQuality: 'cleanuparr-page-size-seeker-quality',
+  seekerUpgrades: 'cleanuparr-page-size-seeker-upgrades',
+  seekerSearches: 'cleanuparr-page-size-seeker-searches',
+} as const;
+
 @Injectable({ providedIn: 'root' })
 export class PaginationService {
   getPageSize(key: string, defaultValue: number): number {

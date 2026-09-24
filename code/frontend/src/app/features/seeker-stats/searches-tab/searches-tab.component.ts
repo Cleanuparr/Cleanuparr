@@ -18,7 +18,7 @@ import type { PaginatedResult } from '@core/models/pagination.model';
 import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
-import { PaginationService } from '@core/services/pagination.service';
+import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
@@ -76,7 +76,6 @@ const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] =
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchesTabComponent {
-  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-searches';
 
   private readonly api = inject(SearchStatsApi);
   private readonly hub = inject(AppHubService);
@@ -117,7 +116,7 @@ export class SearchesTabComponent {
   readonly drawerOpen = signal(false);
 
   readonly eventsPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
+  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerSearches, 50));
 
   private readonly eventsParams = computed<SearchEventsQuery>(() => {
     const instanceId = this.selectedInstanceId() || undefined;
@@ -248,7 +247,7 @@ export class SearchesTabComponent {
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
-    SearchesTabComponent.PAGE_SIZE_KEY,
+    PAGE_SIZE_STORAGE_KEYS.seekerSearches,
     this.pageSize,
     this.eventsPage,
   );
