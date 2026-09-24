@@ -64,6 +64,23 @@ public class SeedingRuleEvaluatorTests
         };
     }
 
+    private static RTorrentSeedingRule CreateRTorrentRule(
+        int priority = 1,
+        List<string>? categories = null,
+        List<string>? trackerPatterns = null,
+        TorrentPrivacyType privacyType = TorrentPrivacyType.Both)
+    {
+        return new RTorrentSeedingRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Rule",
+            Priority = priority,
+            Categories = categories ?? ["movies"],
+            TrackerPatterns = trackerPatterns ?? [],
+            PrivacyType = privacyType,
+        };
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // Empty / null rules
     // ──────────────────────────────────────────────────────────────────────
@@ -268,6 +285,19 @@ public class SeedingRuleEvaluatorTests
         // Deluge doesn't implement ITagFilterable, so tag properties on the rule are not checked
         var torrent = CreateTorrent(tags: []);
         var rule = CreateDelugeRule(); // no tag support
+
+        _sut.GetMatchingRule(torrent, [rule]).ShouldBe(rule);
+    }
+
+    [Fact]
+    public void GetMatchingRule_RTorrentRule_TrackerPatternMatches()
+    {
+        var torrent = CreateTorrent(
+            category: "movies",
+            trackerDomains: ["tracker.example.com"]);
+        var rule = CreateRTorrentRule(
+            categories: ["movies"],
+            trackerPatterns: ["example.com"]);
 
         _sut.GetMatchingRule(torrent, [rule]).ShouldBe(rule);
     }
