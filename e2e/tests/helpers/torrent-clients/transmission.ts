@@ -138,4 +138,12 @@ export class TransmissionDriver implements TorrentClientDriver {
     const args = await this.call('torrent-get', { fields: ['hashString', 'name'] });
     return (args.torrents ?? []).map((t: { hashString: string; name: string }) => ({ hash: t.hashString, name: t.name }));
   }
+
+  /** Maps fileStats.wanted to 0/1 like the other drivers. */
+  async getFilePriorities(infoHash: string): Promise<number[]> {
+    const args = await this.call('torrent-get', { ids: [infoHash], fields: ['hashString', 'fileStats'] });
+    const t = (args.torrents ?? [])[0];
+    const stats: Array<{ wanted: boolean }> = t?.fileStats ?? [];
+    return stats.map((f) => (f.wanted ? 1 : 0));
+  }
 }

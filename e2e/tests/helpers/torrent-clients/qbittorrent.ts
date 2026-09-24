@@ -217,4 +217,15 @@ export class QBittorrentDriver implements TorrentClientDriver {
     const items: Array<{ hash: string; name: string }> = await res.json();
     return items.map((t) => ({ hash: t.hash, name: t.name }));
   }
+
+  async getFilePriorities(infoHash: string): Promise<number[]> {
+    const res = await fetch(`${this.directHost}/api/v2/torrents/files?hash=${infoHash.toLowerCase()}`, {
+      headers: this.cookie ? { Cookie: this.cookie } : undefined,
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent files failed: ${res.status}`);
+    }
+    const items: Array<{ priority: number }> = await res.json();
+    return items.map((f) => f.priority);
+  }
 }

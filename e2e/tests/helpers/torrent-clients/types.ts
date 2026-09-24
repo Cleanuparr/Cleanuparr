@@ -34,6 +34,11 @@ export interface TorrentClientDriver {
    */
   isStopped(infoHash: string): Promise<boolean>;
   /**
+   * Per-file priority in file order.
+   * 0 means the client skips the file.
+   */
+  getFilePriorities(infoHash: string): Promise<number[]>;
+  /**
    * Remove every torrent currently registered with the client without deleting
    * data on disk. Called at the start of each test to make the spec
    * idempotent across re-runs (the torrent client's state persists in its

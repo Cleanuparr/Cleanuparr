@@ -175,4 +175,12 @@ export class DelugeDriver implements TorrentClientDriver {
     const result = await this.call<Record<string, { name: string }>>('core.get_torrents_status', [{}, ['name']]);
     return Object.entries(result ?? {}).map(([hash, info]) => ({ hash, name: info.name }));
   }
+
+  async getFilePriorities(infoHash: string): Promise<number[]> {
+    const result = await this.call<Record<string, { file_priorities: number[] }>>(
+      'core.get_torrents_status',
+      [{ id: [infoHash] }, ['file_priorities']],
+    );
+    return result?.[infoHash]?.file_priorities ?? [];
+  }
 }

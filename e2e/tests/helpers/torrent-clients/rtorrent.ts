@@ -125,6 +125,12 @@ export class RTorrentDriver implements TorrentClientDriver {
       return { hash: String(arr[0]).toLowerCase(), name: String(arr[1]) };
     });
   }
+
+  async getFilePriorities(infoHash: string): Promise<number[]> {
+    const result = await this.call('f.multicall', [infoHash.toUpperCase(), '', 'f.priority=']);
+    if (!Array.isArray(result)) return [];
+    return result.map((row: unknown) => Number((row as unknown[])[0]));
+  }
 }
 
 type XmlRpcValue = string | number | boolean | { type: 'base64'; value: string };
