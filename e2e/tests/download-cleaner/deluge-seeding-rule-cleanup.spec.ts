@@ -197,7 +197,19 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
     }
 
     // Delivery happens off the message bus, after the removal response returns.
-    const delivered = await notify.waitForRequest({ method: 'POST' }, 30_000);
-    expect(delivered.body ?? '').toContain('cleanuparr-e2e-download-cleaned');
+    await expect
+      .poll(
+        async () => {
+          const bodies = (await notify.findRequests({ method: 'POST' })).map((r) => r.body ?? '');
+          return hashes.map((hash) => bodies.filter((body) => body.includes(`Hash: ${hash}`)).length);
+        },
+        { message: 'expected one download-cleaned notification per torrent', timeout: 30_000, intervals: [500] },
+      )
+      .toEqual(hashes.map(() => 1));
+    const posts = await notify.findRequests({ method: 'POST' });
+    expect(posts).toHaveLength(hashes.length);
+    for (const post of posts) {
+      expect(post.body ?? '').toContain('cleanuparr-e2e-download-cleaned');
+    }
   });
 });
