@@ -11,6 +11,9 @@ export const PAGE_SIZE_STORAGE_KEYS = {
 
 @Injectable({ providedIn: 'root' })
 export class PaginationService {
+  /** Default page size used by every paginated page unless a saved preference overrides it. */
+  static readonly DEFAULT_PAGE_SIZE = 50;
+
   getPageSize(key: string, defaultValue: number): number {
     try {
       const raw = localStorage.getItem(key);
