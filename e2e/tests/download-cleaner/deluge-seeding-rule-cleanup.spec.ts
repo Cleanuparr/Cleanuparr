@@ -10,10 +10,15 @@ import {
   getDownloadCleanerConfig,
   createSeedingRule,
   triggerJob,
+  createNotificationProvider,
+  deleteNotificationProvider,
 } from '../helpers/app-api';
 import { DelugeDriver } from '../helpers/torrent-clients/deluge';
 import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
 import { mkdirShared } from '../helpers/shared-volume';
+import { WireMockClient } from '../helpers/mocks/wiremock-client';
+import { ntfyTopicStub } from '../helpers/mocks/notification-stubs';
+import { TEST_CONFIG } from '../helpers/test-config';
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const DELUGE_DOWNLOADS = join(HOST_DOWNLOADS, 'deluge');
@@ -59,12 +64,19 @@ async function stillPresent(infoHashes: string[]): Promise<string[]> {
  * `CleanDownloadsAsync`. Each torrent that remains stays in the client, and no
  * `DownloadCleaned` event happens. Two torrents and one cleanup cycle show this
  * behavior.
+ *
+ * A DownloadCleaned removal also publishes a notification to the message bus
+ * (NotificationPublisher -> MassTransit -> NotificationConsumer), so the same
+ * cycle doubles as e2e coverage for that async dispatch: a provider subscribed
+ * to OnDownloadCleaned must receive a real delivery when the rule fires.
  */
 test.describe.serial('Deluge seeding rule cleanup', () => {
   let token: string;
   let clientId: string;
+  let notificationProviderId: string;
   const hashes: string[] = [];
   const contentPaths: string[] = [];
+  const notify = new WireMockClient(TEST_CONFIG.mocks.notifyAdminUrl);
 
   test.beforeAll(async () => {
     test.setTimeout(120_000);
@@ -86,12 +98,29 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
     resetDirectory(DELUGE_DOWNLOADS);
     await deluge.ready();
     await deluge.clearAllTorrents();
+
+    await notify.resetAll();
+    await notify.stub(ntfyTopicStub());
+    const providerRes = await createNotificationProvider(token, 'ntfy', {
+      name: 'ntfy-seeding-rule-cleanup-e2e',
+      isEnabled: true,
+      onDownloadCleaned: true,
+      serverUrl: TEST_CONFIG.mocks.notifyUrl,
+      topics: ['cleanuparr-e2e-download-cleaned'],
+      authenticationType: 'None',
+      priority: 'Default',
+    });
+    expect(providerRes.status).toBe(201);
+    notificationProviderId = (await providerRes.json()).id;
   });
 
   test.afterAll(async () => {
     await deluge.clearAllTorrents().catch(() => {});
     if (clientId) {
       await deleteDownloadClient(token, clientId).catch(() => {});
+    }
+    if (notificationProviderId) {
+      await deleteNotificationProvider(token, notificationProviderId).catch(() => {});
     }
   });
 
@@ -148,7 +177,7 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
     expect(await stillPresent(hashes)).toHaveLength(2);
   });
 
-  test('removes every matching torrent and its files in a single cycle', async () => {
+  test('removes every matching torrent and its files in a single cycle, and notifies', async () => {
     test.setTimeout(180_000);
 
     const trig = await triggerJob(token, 'DownloadCleaner');
@@ -165,6 +194,22 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
       .toEqual([]);
     for (const path of contentPaths) {
       expect(existsSync(path), `torrent data was not deleted: ${path}`).toBe(false);
+    }
+
+    // Delivery happens off the message bus, after the removal response returns.
+    await expect
+      .poll(
+        async () => {
+          const bodies = (await notify.findRequests({ method: 'POST' })).map((r) => r.body ?? '');
+          return hashes.map((hash) => bodies.filter((body) => body.includes(`Hash: ${hash}`)).length);
+        },
+        { message: 'expected one download-cleaned notification per torrent', timeout: 30_000, intervals: [500] },
+      )
+      .toEqual(hashes.map(() => 1));
+    const posts = await notify.findRequests({ method: 'POST' });
+    expect(posts).toHaveLength(hashes.length);
+    for (const post of posts) {
+      expect(post.body ?? '').toContain('cleanuparr-e2e-download-cleaned');
     }
   });
 });

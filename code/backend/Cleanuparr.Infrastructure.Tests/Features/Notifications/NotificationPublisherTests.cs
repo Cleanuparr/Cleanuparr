@@ -1,12 +1,12 @@
-﻿using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
-using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -19,16 +19,14 @@ public class NotificationPublisherTests
 {
     private readonly ILogger<NotificationPublisher> _logger;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly INotificationConfigurationService _configService;
-    private readonly INotificationProviderFactory _providerFactory;
+    private readonly IBus _messageBus;
     private readonly NotificationPublisher _publisher;
 
     public NotificationPublisherTests()
     {
         _logger = Substitute.For<ILogger<NotificationPublisher>>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        _configService = Substitute.For<INotificationConfigurationService>();
-        _providerFactory = Substitute.For<INotificationProviderFactory>();
+        _messageBus = Substitute.For<IBus>();
 
         _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ReturnsForAnyArgs(ci => ci.ArgAt<Func<Task>>(0).Invoke());
@@ -36,8 +34,7 @@ public class NotificationPublisherTests
         _publisher = new NotificationPublisher(
             _logger,
             _dryRunInterceptor,
-            _configService,
-            _providerFactory);
+            _messageBus);
     }
 
     private void SetupContext(InstanceType instanceType = InstanceType.Sonarr)
@@ -78,29 +75,21 @@ public class NotificationPublisherTests
     #region NotifyStrike Tests
 
     [Fact]
-    public async Task NotifyStrike_WithStalledStrike_SendsNotification()
+    public async Task NotifyStrike_WithStalledStrike_PublishesNotification()
     {
         // Arrange
         SetupContext();
         var rule = new StallRule { Name = "Test Rule" };
         ContextProvider.Set<QueueRule>(rule);
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.StalledStrike)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyStrike(StrikeType.Stalled, 1);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.StalledStrike &&
-                 c.Data.ContainsKey("Strike type") &&
-                 c.Data["Strike type"] == "Stalled"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.StalledStrike &&
+                 m.Context.Data.ContainsKey("Strike type") &&
+                 m.Context.Data["Strike type"] == "Stalled"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -109,21 +98,13 @@ public class NotificationPublisherTests
         // Arrange
         SetupContext();
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 2);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.FailedImportStrike &&
-                 c.Data["Strike count"] == "2"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.FailedImportStrike &&
+                 m.Context.Data["Strike count"] == "2"), Arg.Any<CancellationToken>());
     }
 
     [Theory]
@@ -142,19 +123,12 @@ public class NotificationPublisherTests
             ContextProvider.Set<QueueRule>(rule);
         }
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(expectedEventType)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyStrike(strikeType, 1);
 
         // Assert
-        await _configService.Received(1).GetProvidersForEventAsync(expectedEventType);
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == expectedEventType), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -163,42 +137,7 @@ public class NotificationPublisherTests
         // Act & Assert
         await _publisher.NotifyStrike(StrikeType.DeadTorrent, 3);
 
-        await _configService.DidNotReceive().GetProvidersForEventAsync(Arg.Any<NotificationEventType>());
-    }
-
-    [Fact]
-    public async Task NotifyStrike_WhenNoProviders_DoesNotThrow()
-    {
-        // Arrange
-        SetupContext();
-        _configService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
-            .Returns(new List<NotificationProviderDto>());
-
-        // Act & Assert - Should not throw
-        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
-    }
-
-    [Fact]
-    public async Task NotifyStrike_WhenProviderThrows_LogsWarningAndContinues()
-    {
-        // Arrange
-        SetupContext();
-
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
-            .ThrowsAsync(new Exception("Provider failed"));
-
-        _configService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
-        // Act - Should not throw
-        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
-
-        // Assert
-        _logger.HasLogContaining(LogLevel.Warning, "Failed to send notification").ShouldBeTrue();
+        await _messageBus.DidNotReceive().Publish(Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -207,20 +146,12 @@ public class NotificationPublisherTests
         // Arrange
         SetupContext();
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Data["Url"] == "http://sonarr.local/"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Data["Url"] == "http://sonarr.local/"), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -228,28 +159,20 @@ public class NotificationPublisherTests
     #region NotifyQueueItemDeleted Tests
 
     [Fact]
-    public async Task NotifyQueueItemDeleted_SendsNotificationWithCorrectContext()
+    public async Task NotifyQueueItemDeleted_PublishesNotificationWithCorrectContext()
     {
         // Arrange
         SetupContext();
-
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
 
         // Act
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.QueueItemDeleted &&
-                 c.Data["Reason"] == "Stalled" &&
-                 c.Data["Removed from client?"] == "True" &&
-                 c.Severity == EventSeverity.Important));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.QueueItemDeleted &&
+                 m.Context.Data["Reason"] == "Stalled" &&
+                 m.Context.Data["Removed from client?"] == "True" &&
+                 m.Context.Severity == EventSeverity.Important), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -258,21 +181,13 @@ public class NotificationPublisherTests
         // Arrange
         SetupContext();
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyQueueItemDeleted(false, DeleteReason.AllFilesBlocked);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Data["Removed from client?"] == "False" &&
-                 c.Data["Reason"] == "AllFilesBlocked"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Data["Removed from client?"] == "False" &&
+                 m.Context.Data["Reason"] == "AllFilesBlocked"), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -280,29 +195,21 @@ public class NotificationPublisherTests
     #region NotifyDownloadCleaned Tests
 
     [Fact]
-    public async Task NotifyDownloadCleaned_SendsNotificationWithCorrectContext()
+    public async Task NotifyDownloadCleaned_PublishesNotificationWithCorrectContext()
     {
         // Arrange
         SetupDownloadCleanerContext();
-
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
 
         // Act
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.DownloadCleaned &&
-                 c.Description == "Test Download" &&
-                 c.Data["Category"] == "movies" &&
-                 c.Data["Ratio"] == "2.5" &&
-                 c.Data["Seeding hours"] == "48"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.DownloadCleaned &&
+                 m.Context.Description == "Test Download" &&
+                 m.Context.Data["Category"] == "movies" &&
+                 m.Context.Data["Ratio"] == "2.5" &&
+                 m.Context.Data["Seeding hours"] == "48"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -310,25 +217,16 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupDownloadCleanerContext();
-
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-        NotificationContext? capturedContext = null;
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
-            .Returns(Task.CompletedTask)
-            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
+        NotificationMessage? captured = null;
+        _messageBus.Publish(Arg.Do<NotificationMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
 
         // Act
         await _publisher.NotifyDownloadCleaned(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
 
         // Assert
-        capturedContext.ShouldNotBeNull();
-        capturedContext.Data["Seeding hours"].ShouldBe("25");
+        captured.ShouldNotBeNull();
+        captured.Context.Data["Seeding hours"].ShouldBe("25");
     }
 
     [Fact]
@@ -338,21 +236,13 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
         ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("https://qbit.external.com"));
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Data.ContainsKey("Url") &&
-                 c.Data["Url"] == "https://qbit.external.com/"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Data.ContainsKey("Url") &&
+                 m.Context.Data["Url"] == "https://qbit.external.com/"), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -360,29 +250,21 @@ public class NotificationPublisherTests
     #region NotifyDownloadStopped Tests
 
     [Fact]
-    public async Task NotifyDownloadStopped_SendsNotificationWithCorrectContext()
+    public async Task NotifyDownloadStopped_PublishesNotificationWithCorrectContext()
     {
         // Arrange
         SetupDownloadCleanerContext();
-
-        NotificationProviderDto providerDto = CreateProviderDto();
-        INotificationProvider provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadStopped)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
 
         // Act
         await _publisher.NotifyDownloadStopped(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.DownloadStopped &&
-                 c.Description == "Test Download is no longer seeding. It stays in the download client and its files stay on disk." &&
-                 c.Data["Category"] == "movies" &&
-                 c.Data["Ratio"] == "2.5" &&
-                 c.Data["Seeding hours"] == "48"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.DownloadStopped &&
+                 m.Context.Description == "Test Download is no longer seeding. It stays in the download client and its files stay on disk." &&
+                 m.Context.Data["Category"] == "movies" &&
+                 m.Context.Data["Ratio"] == "2.5" &&
+                 m.Context.Data["Seeding hours"] == "48"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -390,25 +272,16 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupDownloadCleanerContext();
-
-        NotificationProviderDto providerDto = CreateProviderDto();
-        INotificationProvider provider = Substitute.For<INotificationProvider>();
-        NotificationContext? capturedContext = null;
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadStopped)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
-            .Returns(Task.CompletedTask)
-            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
+        NotificationMessage? captured = null;
+        _messageBus.Publish(Arg.Do<NotificationMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
 
         // Act
         await _publisher.NotifyDownloadStopped(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
 
         // Assert
-        capturedContext.ShouldNotBeNull();
-        capturedContext.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
+        captured.ShouldNotBeNull();
+        captured.Context.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
     }
 
     [Fact]
@@ -418,21 +291,13 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
         ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("https://qbit.external.com"));
 
-        NotificationProviderDto providerDto = CreateProviderDto();
-        INotificationProvider provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadStopped)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyDownloadStopped(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Data.ContainsKey("Url") &&
-                 c.Data["Url"] == "https://qbit.external.com/"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Data.ContainsKey("Url") &&
+                 m.Context.Data["Url"] == "https://qbit.external.com/"), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -445,23 +310,15 @@ public class NotificationPublisherTests
         // Arrange
         SetupDownloadCleanerContext();
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.CategoryChanged)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyCategoryChanged("tv-sonarr", "seeding", false);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.CategoryChanged &&
-                 c.Title == "Category changed" &&
-                 c.Data["Old category"] == "tv-sonarr" &&
-                 c.Data["New category"] == "seeding"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.CategoryChanged &&
+                 m.Context.Title == "Category changed" &&
+                 m.Context.Data["Old category"] == "tv-sonarr" &&
+                 m.Context.Data["New category"] == "seeding"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -469,29 +326,20 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupDownloadCleanerContext();
-
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-        NotificationContext? capturedContext = null;
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.CategoryChanged)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
-            .Returns(Task.CompletedTask)
-            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
+        NotificationMessage? captured = null;
+        _messageBus.Publish(Arg.Do<NotificationMessage>(m => captured = m), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
 
         // Act
         await _publisher.NotifyCategoryChanged("", "seeded", true);
 
         // Assert
-        capturedContext.ShouldNotBeNull();
-        capturedContext.Title.ShouldBe("Tag added");
-        capturedContext.Data.ContainsKey("Tag").ShouldBeTrue();
-        capturedContext.Data["Tag"].ShouldBe("seeded");
-        capturedContext.Data.ContainsKey("Old category").ShouldBeFalse();
-        capturedContext.Data.ContainsKey("New category").ShouldBeFalse();
+        captured.ShouldNotBeNull();
+        captured.Context.Title.ShouldBe("Tag added");
+        captured.Context.Data.ContainsKey("Tag").ShouldBeTrue();
+        captured.Context.Data["Tag"].ShouldBe("seeded");
+        captured.Context.Data.ContainsKey("Old category").ShouldBeFalse();
+        captured.Context.Data.ContainsKey("New category").ShouldBeFalse();
     }
 
     [Fact]
@@ -500,20 +348,12 @@ public class NotificationPublisherTests
         // Arrange
         SetupDownloadCleanerContext();
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.CategoryChanged)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         // Act
         await _publisher.NotifyCategoryChanged("old", "new", false);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Severity == EventSeverity.Information));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Severity == EventSeverity.Information), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -521,66 +361,10 @@ public class NotificationPublisherTests
     #region SendNotificationAsync Tests (through notify methods)
 
     [Fact]
-    public async Task SendNotificationAsync_WhenMultipleProviders_SendsToAll()
-    {
-        // Arrange
-        SetupContext();
-
-        var providerDto1 = CreateProviderDto("Provider1");
-        var providerDto2 = CreateProviderDto("Provider2");
-        var provider1 = Substitute.For<INotificationProvider>();
-        var provider2 = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
-            .Returns(new List<NotificationProviderDto> { providerDto1, providerDto2 });
-        _providerFactory.CreateProvider(providerDto1)
-            .Returns(provider1);
-        _providerFactory.CreateProvider(providerDto2)
-            .Returns(provider2);
-
-        // Act
-        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
-
-        // Assert
-        await provider1.Received(1).SendNotificationAsync(Arg.Any<NotificationContext>());
-        await provider2.Received(1).SendNotificationAsync(Arg.Any<NotificationContext>());
-    }
-
-    [Fact]
-    public async Task SendNotificationAsync_WhenOneProviderFails_OthersStillSend()
-    {
-        // Arrange
-        SetupContext();
-
-        var providerDto1 = CreateProviderDto("Provider1");
-        var providerDto2 = CreateProviderDto("Provider2");
-        var provider1 = Substitute.For<INotificationProvider>();
-        var provider2 = Substitute.For<INotificationProvider>();
-
-        provider1.SendNotificationAsync(Arg.Any<NotificationContext>())
-            .ThrowsAsync(new Exception("Failed"));
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
-            .Returns(new List<NotificationProviderDto> { providerDto1, providerDto2 });
-        _providerFactory.CreateProvider(providerDto1)
-            .Returns(provider1);
-        _providerFactory.CreateProvider(providerDto2)
-            .Returns(provider2);
-
-        // Act
-        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
-
-        // Assert - Provider2 should still be called
-        await provider2.Received(1).SendNotificationAsync(Arg.Any<NotificationContext>());
-    }
-
-    [Fact]
     public async Task SendNotificationAsync_UsesDryRunInterceptor()
     {
         // Arrange
         SetupContext();
-        _configService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
-            .Returns(new List<NotificationProviderDto>());
 
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
@@ -589,6 +373,21 @@ public class NotificationPublisherTests
         await _dryRunInterceptor.Received(1).InterceptAsync(
             Arg.Any<Func<Task>>(),
             Arg.Any<string?>());
+    }
+
+    [Fact]
+    public async Task SendNotificationAsync_WhenDryRun_DoesNotPublish()
+    {
+        // Arrange
+        SetupContext();
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
+
+        // Assert
+        await _messageBus.DidNotReceive().Publish(Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -681,43 +480,24 @@ public class NotificationPublisherTests
     #region NotifySearchItemGrabbed Tests
 
     [Fact]
-    public async Task NotifySearchItemGrabbed_SendsNotificationWithCorrectContext()
+    public async Task NotifySearchItemGrabbed_PublishesNotificationWithCorrectContext()
     {
         // Arrange
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
-
         var grabbedItems = new List<string> { "Movie.A.2024.1080p", "Movie.A.2024.720p" };
 
         // Act
         await _publisher.NotifySearchItemGrabbed("Movie A", grabbedItems, InstanceType.Radarr, "http://radarr.local:7878");
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.SearchItemGrabbed &&
-                 c.Title == "Download grabbed" &&
-                 c.Description == "Movie A" &&
-                 c.Severity == EventSeverity.Information &&
-                 c.Data["Item"] == "Movie A" &&
-                 c.Data["Grabbed"] == "Movie.A.2024.1080p, Movie.A.2024.720p" &&
-                 c.Data["Instance type"] == "Radarr" &&
-                 c.Data["Url"] == "http://radarr.local:7878"));
-    }
-
-    [Fact]
-    public async Task NotifySearchItemGrabbed_WhenNoProviders_DoesNotThrow()
-    {
-        // Arrange
-        _configService.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed)
-            .Returns(new List<NotificationProviderDto>());
-
-        // Act & Assert - Should not throw
-        await _publisher.NotifySearchItemGrabbed("Movie A", ["Movie.A.2024"], InstanceType.Radarr, "http://localhost:7878");
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.SearchItemGrabbed &&
+                 m.Context.Title == "Download grabbed" &&
+                 m.Context.Description == "Movie A" &&
+                 m.Context.Severity == EventSeverity.Information &&
+                 m.Context.Data["Item"] == "Movie A" &&
+                 m.Context.Data["Grabbed"] == "Movie.A.2024.1080p, Movie.A.2024.720p" &&
+                 m.Context.Data["Instance type"] == "Radarr" &&
+                 m.Context.Data["Url"] == "http://radarr.local:7878"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -739,45 +519,23 @@ public class NotificationPublisherTests
     #region NotifyForceImported Tests
 
     [Fact]
-    public async Task NotifyForceImported_SendsNotificationWithCorrectContext()
+    public async Task NotifyForceImported_PublishesNotificationWithCorrectContext()
     {
         // Arrange
         SetupContext();
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.ForceImported)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto)
-            .Returns(provider);
 
         // Act
         await _publisher.NotifyForceImported();
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.EventType == NotificationEventType.ForceImported &&
-                 c.Title == "Imported a download the arr had blocked" &&
-                 c.Description == "Test Show" &&
-                 c.Severity == EventSeverity.Important &&
-                 c.Data["Hash"] == "abcd1234" &&
-                 c.Data["Instance type"] == "Sonarr" &&
-                 c.Data["Url"] == "http://sonarr.local/"));
-    }
-
-    [Fact]
-    public async Task NotifyForceImported_WhenNoProviders_DoesNotThrow()
-    {
-        // Arrange
-        SetupContext();
-        _configService.GetProvidersForEventAsync(NotificationEventType.ForceImported)
-            .Returns(new List<NotificationProviderDto>());
-
-        // Act
-        await _publisher.NotifyForceImported();
-
-        // Assert
-        await _configService.Received(1).GetProvidersForEventAsync(NotificationEventType.ForceImported);
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.EventType == NotificationEventType.ForceImported &&
+                 m.Context.Title == "Imported a download the arr had blocked" &&
+                 m.Context.Description == "Test Show" &&
+                 m.Context.Severity == EventSeverity.Important &&
+                 m.Context.Data["Hash"] == "abcd1234" &&
+                 m.Context.Data["Instance type"] == "Sonarr" &&
+                 m.Context.Data["Url"] == "http://sonarr.local/"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -793,35 +551,6 @@ public class NotificationPublisherTests
 
         // Assert
         _logger.HasLogContaining(LogLevel.Error, "Failed to notify force imported").ShouldBeTrue();
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private static NotificationProviderDto CreateProviderDto(string name = "TestProvider")
-    {
-        return new NotificationProviderDto
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            Type = NotificationProviderType.Notifiarr,
-            IsEnabled = true,
-            Events = new NotificationEventFlags
-            {
-                OnFailedImportStrike = true,
-                OnStalledStrike = true,
-                OnSlowStrike = true,
-                OnQueueItemDeleted = true,
-                OnDownloadCleaned = true,
-                OnDownloadStopped = true,
-                OnCategoryChanged = true,
-                OnSearchTriggered = true,
-                OnSearchItemGrabbed = true,
-                OnForceImported = true
-            },
-            Configuration = new { ApiKey = "test", ChannelId = "123" }
-        };
     }
 
     #endregion
@@ -844,19 +573,12 @@ public class NotificationPublisherTests
         // Arrange
         SetupLazyLibrarianContext();
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto).Returns(provider);
-
         // Act
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Description == "Frankenstein" && c.Data["Hash"] == "bookhash1"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Description == "Frankenstein" && m.Context.Data["Hash"] == "bookhash1"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -866,19 +588,12 @@ public class NotificationPublisherTests
         SetupLazyLibrarianContext();
         ContextProvider.Set<QueueRule>(new StallRule { Name = "Test Rule" });
 
-        var providerDto = CreateProviderDto();
-        var provider = Substitute.For<INotificationProvider>();
-
-        _configService.GetProvidersForEventAsync(NotificationEventType.StalledStrike)
-            .Returns(new List<NotificationProviderDto> { providerDto });
-        _providerFactory.CreateProvider(providerDto).Returns(provider);
-
         // Act
         await _publisher.NotifyStrike(StrikeType.Stalled, 1);
 
         // Assert
-        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
-            c => c.Description == "Frankenstein" && c.Data["Hash"] == "bookhash1"));
+        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
+            m => m.Context.Description == "Frankenstein" && m.Context.Data["Hash"] == "bookhash1"), Arg.Any<CancellationToken>());
     }
 
     #endregion
