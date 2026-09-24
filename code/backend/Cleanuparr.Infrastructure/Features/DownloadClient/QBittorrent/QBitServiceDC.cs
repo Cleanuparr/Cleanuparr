@@ -150,44 +150,30 @@ public partial class QBitService
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             SetDownloadClientContext();
-            bool hasHardlinks = false;
-            bool hasErrors = false;
 
-            foreach (TorrentContent file in files)
+            IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
             {
-                if (!file.Index.HasValue)
+                foreach (TorrentContent file in files)
                 {
-                    _logger.LogDebug("skip | file index is null for {Name}", torrent.Name);
-                    hasHardlinks = true;
-                    break;
-                }
+                    if (!file.Index.HasValue)
+                    {
+                        _logger.LogDebug("skip | file index is null for {Name}", torrent.Name);
+                        yield return (string.Empty, HardLinkScanAction.TreatAsLinked);
+                        yield break;
+                    }
 
-                string filePath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.Info.SavePath, file.Name),
-                    _downloadClientConfig.DownloadDirectorySource,
-                    _downloadClientConfig.DownloadDirectoryTarget);
+                    string filePath = PathHelper.NormalizeAndRemap(
+                        Path.Combine(torrent.Info.SavePath, file.Name),
+                        _downloadClientConfig.DownloadDirectorySource,
+                        _downloadClientConfig.DownloadDirectoryTarget);
 
-                if (file.Priority is TorrentContentPriority.Skip)
-                {
-                    _logger.LogDebug("skip | file is not downloaded | {File}", filePath);
-                    continue;
-                }
-
-                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-                if (hardlinkCount < 0)
-                {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {File}", filePath);
-                    hasErrors = true;
-                    break;
-                }
-
-                if (hardlinkCount > 0)
-                {
-                    hasHardlinks = true;
-                    break;
+                    yield return (filePath, file.Priority is TorrentContentPriority.Skip
+                        ? HardLinkScanAction.SkipUnwanted
+                        : HardLinkScanAction.CheckHardLinks);
                 }
             }
+
+            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(BuildScanItems(), unlinkedConfig.IgnoredRootDirs.Count > 0);
 
             if (hasErrors)
             {

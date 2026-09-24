@@ -122,39 +122,29 @@ public partial class TransmissionService
                 continue;
             }
 
-            bool hasHardlinks = false;
-            bool hasErrors = false;
-
-            for (int i = 0; i < torrent.Info.Files.Length; i++)
+            IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
             {
-                TransmissionTorrentFiles file = torrent.Info.Files[i];
-                TransmissionTorrentFileStats stats = torrent.Info.FileStats[i];
-
-                if (stats.Wanted is null or false || string.IsNullOrEmpty(file.Name))
+                for (int i = 0; i < torrent.Info.Files.Length; i++)
                 {
-                    continue;
-                }
+                    TransmissionTorrentFiles file = torrent.Info.Files[i];
+                    TransmissionTorrentFileStats stats = torrent.Info.FileStats[i];
 
-                string filePath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.Info.DownloadDir, file.Name),
-                    _downloadClientConfig.DownloadDirectorySource,
-                    _downloadClientConfig.DownloadDirectoryTarget);
+                    if (stats.Wanted is null or false || string.IsNullOrEmpty(file.Name))
+                    {
+                        // Transmission skips unwanted files without the skip log
+                        continue;
+                    }
 
-                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
+                    string filePath = PathHelper.NormalizeAndRemap(
+                        Path.Combine(torrent.Info.DownloadDir, file.Name),
+                        _downloadClientConfig.DownloadDirectorySource,
+                        _downloadClientConfig.DownloadDirectoryTarget);
 
-                if (hardlinkCount < 0)
-                {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
-                    hasErrors = true;
-                    break;
-                }
-
-                if (hardlinkCount > 0)
-                {
-                    hasHardlinks = true;
-                    break;
+                    yield return (filePath, HardLinkScanAction.CheckHardLinks);
                 }
             }
+
+            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(BuildScanItems(), unlinkedConfig.IgnoredRootDirs.Count > 0);
 
             if (hasErrors)
             {

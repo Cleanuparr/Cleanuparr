@@ -142,38 +142,22 @@ public partial class RTorrentService
                 continue;
             }
 
-            bool hasHardlinks = false;
-            bool hasErrors = false;
-
-            foreach (var file in files)
+            IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
             {
-                string filePath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path),
-                    _downloadClientConfig.DownloadDirectorySource,
-                    _downloadClientConfig.DownloadDirectoryTarget);
-
-                if (file.Priority <= 0)
+                foreach (RTorrentFile file in files)
                 {
-                    _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
-                    continue;
-                }
+                    string filePath = PathHelper.NormalizeAndRemap(
+                        Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path),
+                        _downloadClientConfig.DownloadDirectorySource,
+                        _downloadClientConfig.DownloadDirectoryTarget);
 
-                long hardlinkCount = _hardLinkFileService
-                    .GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-                if (hardlinkCount < 0)
-                {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
-                    hasErrors = true;
-                    continue;
-                }
-
-                if (hardlinkCount > 0)
-                {
-                    hasHardlinks = true;
-                    break;
+                    yield return (filePath, file.Priority <= 0
+                        ? HardLinkScanAction.SkipUnwanted
+                        : HardLinkScanAction.CheckHardLinks);
                 }
             }
+
+            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(BuildScanItems(), unlinkedConfig.IgnoredRootDirs.Count > 0);
 
             if (hasErrors)
             {

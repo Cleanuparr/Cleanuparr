@@ -136,8 +136,7 @@ public partial class DelugeService
                 continue;
             }
 
-            bool hasHardlinks = false;
-            bool hasErrors = false;
+            List<(string FilePath, HardLinkScanAction Action)> scanItems = [];
 
             ProcessFiles(contents?.Contents, (_, file) =>
             {
@@ -146,27 +145,14 @@ public partial class DelugeService
                     _downloadClientConfig.DownloadDirectorySource,
                     _downloadClientConfig.DownloadDirectoryTarget);
 
-                if (file.Priority <= 0)
-                {
-                    _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
-                    return;
-                }
+                HardLinkScanAction action = file.Priority <= 0
+                    ? HardLinkScanAction.SkipUnwanted
+                    : HardLinkScanAction.CheckHardLinks;
 
-                long hardlinkCount = _hardLinkFileService
-                    .GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-                if (hardlinkCount < 0)
-                {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
-                    hasErrors = true;
-                    return;
-                }
-
-                if (hardlinkCount > 0)
-                {
-                    hasHardlinks = true;
-                }
+                scanItems.Add((filePath, action));
             });
+
+            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(scanItems, unlinkedConfig.IgnoredRootDirs.Count > 0);
 
             if (hasErrors)
             {

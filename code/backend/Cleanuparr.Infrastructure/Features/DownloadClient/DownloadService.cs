@@ -323,6 +323,44 @@ public abstract class DownloadService : IDownloadService
     /// <inheritdoc/>
     public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
 
+    /// <summary>
+    /// Stops at the first hardlink or unreadable file.
+    /// Each client maps its files to (path, <see cref="HardLinkScanAction"/>) pairs.
+    /// </summary>
+    protected (bool HasHardlinks, bool HasErrors) ScanForHardLinks(
+        IEnumerable<(string FilePath, HardLinkScanAction Action)> files,
+        bool ignoreRootDirs)
+    {
+        foreach ((string filePath, HardLinkScanAction action) in files)
+        {
+            if (action is HardLinkScanAction.TreatAsLinked)
+            {
+                return (true, false);
+            }
+
+            if (action is HardLinkScanAction.SkipUnwanted)
+            {
+                _logger.LogDebug("skip | file is not downloaded | {File}", filePath);
+                continue;
+            }
+
+            long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, ignoreRootDirs);
+
+            if (hardlinkCount < 0)
+            {
+                _logger.LogError("skip | file does not exist or insufficient permissions | {File}", filePath);
+                return (false, true);
+            }
+
+            if (hardlinkCount > 0)
+            {
+                return (true, false);
+            }
+        }
+
+        return (false, false);
+    }
+
     /// <inheritdoc/>
     public abstract Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag);
 
