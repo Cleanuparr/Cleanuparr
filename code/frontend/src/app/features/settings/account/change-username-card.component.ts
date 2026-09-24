@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, input, signal, effect, untr
 import { form, required, validate, FormField } from '@angular/forms/signals';
 import { CardComponent, InputComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { AccountApi } from '@core/api/account.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 
@@ -69,8 +70,8 @@ export class ChangeUsernameCardComponent {
         this.changingUsername.set(false);
         this.auth.logout();
       },
-      error: () => {
-        this.toast.error('Failed to change username');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.changingUsername.set(false);
       },
     });

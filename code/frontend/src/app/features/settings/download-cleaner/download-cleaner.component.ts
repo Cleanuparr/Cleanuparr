@@ -534,7 +534,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         }
       },
       error: (err: ApiError) => {
-        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save unlinked config');
+        this.toast.error(err.message);
         this.unlinkedSaving.set(false);
       },
     });
@@ -570,7 +570,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         }
       },
       error: (err: ApiError) => {
-        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save dead torrent config');
+        this.toast.error(err.message);
         this.deadTorrentSaving.set(false);
       },
     });
@@ -607,7 +607,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         }
       },
       error: (err: ApiError) => {
-        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files settings');
+        this.toast.error(err.message);
         this.orphanedFilesSaving.set(false);
       },
     });
@@ -643,9 +643,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.dirtyTracker.markSaved(m);
       },
       error: (err: ApiError) => {
-        this.toast.error(err.statusCode === 400
-          ? err.message
-          : 'Failed to save download cleaner settings');
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });

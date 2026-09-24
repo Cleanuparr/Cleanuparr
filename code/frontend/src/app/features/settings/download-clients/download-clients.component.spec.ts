@@ -338,7 +338,7 @@ describe('DownloadClientsComponent', () => {
 
   it('keeps the modal open and reports the failure when the update fails', () => {
     const api = createApi();
-    api.update.mockReturnValue(throwError(() => new Error('boom')));
+    api.update.mockReturnValue(throwError(() => ({ message: 'Invalid host address' })));
     const { fixture, component, toast } = setup(api);
 
     component.openEditModal(QBIT);
@@ -347,7 +347,7 @@ describe('DownloadClientsComponent', () => {
     component.saveClient();
     fixture.detectChanges();
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to update client');
+    expect(toast.error).toHaveBeenCalledWith('Invalid host address');
     expect(component.modalVisible()).toBe(true);
     expect(component.saving()).toBe(false);
   });
@@ -376,7 +376,7 @@ describe('DownloadClientsComponent', () => {
 
   it('reports a failed connection test and stops the testing spinner', () => {
     const api = createApi();
-    api.test.mockReturnValue(throwError(() => new Error('refused')));
+    api.test.mockReturnValue(throwError(() => ({ message: 'Connection refused' })));
     const { fixture, component, toast } = setup(api);
 
     component.openAddModal();
@@ -391,7 +391,7 @@ describe('DownloadClientsComponent', () => {
         clientId: undefined,
       }),
     );
-    expect(toast.error).toHaveBeenCalledWith('Connection test failed');
+    expect(toast.error).toHaveBeenCalledWith('Connection refused');
     expect(component.testing()).toBe(false);
   });
 

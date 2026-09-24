@@ -337,14 +337,14 @@ describe('SeedingRuleModalComponent', () => {
 
   it('reports a generic failure for a non-validation error', () => {
     const { fixture, modal, api, toast } = setup(RULE);
-    const error = new ApiError('boom');
+    const error = new ApiError('An unexpected error occurred');
     error.statusCode = 500;
     api.updateSeedingRule.mockReturnValue(throwError(() => error));
 
     modal.save();
     fixture.detectChanges();
 
-    expect(toast.toasts()[0]).toMatchObject({ severity: 'error', message: 'Failed to save seeding rule' });
+    expect(toast.toasts()[0]).toMatchObject({ severity: 'error', message: 'An unexpected error occurred' });
   });
 
   it('refuses to save an incomplete form or one without a client', () => {

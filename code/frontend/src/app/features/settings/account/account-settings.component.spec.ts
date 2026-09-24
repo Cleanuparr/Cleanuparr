@@ -84,11 +84,11 @@ describe('AccountSettingsComponent', () => {
             getOidcConfig: () => of(options.oidc ?? OIDC),
             updateOidcConfig: (config: Partial<OidcConfig>) => {
               savedConfigs.push(config);
-              return options.saveFails ? throwError(() => new Error('boom')) : of(undefined);
+              return options.saveFails ? throwError(() => ({ message: 'Invalid issuer URL' })) : of(undefined);
             },
             unlinkOidc: () => {
               unlinkCalls++;
-              return options.unlinkFails ? throwError(() => new Error('boom')) : of(undefined);
+              return options.unlinkFails ? throwError(() => ({ message: 'Unlink failed' })) : of(undefined);
             },
             getApiKey: () => of({ apiKey: 'live-key-1234' }),
             regenerateApiKey: () => of({ apiKey: 'fresh-key-9999' }),
@@ -106,7 +106,7 @@ describe('AccountSettingsComponent', () => {
         {
           provide: AuthService,
           useValue: {
-            startOidcLink: () => throwError(() => new Error('boom')),
+            startOidcLink: () => throwError(() => ({ message: 'OIDC configuration invalid' })),
             logout: () => undefined,
           },
         },
@@ -354,7 +354,7 @@ describe('AccountSettingsComponent', () => {
     await fixture.componentInstance.saveOidcConfig();
     fixture.detectChanges();
 
-    expect(toasts).toEqual(['error:Failed to save OIDC settings']);
+    expect(toasts).toEqual(['error:Invalid issuer URL']);
     expect(fixture.componentInstance.oidcSaving()).toBe(false);
     expect(fixture.componentInstance.oidcSaved()).toBe(false);
   });
@@ -408,7 +408,7 @@ describe('AccountSettingsComponent', () => {
     button(fixture, 'Re-link').click();
     fixture.detectChanges();
 
-    expect(toasts).toEqual(['error:Failed to start OIDC account linking']);
+    expect(toasts).toEqual(['error:OIDC configuration invalid']);
     expect(fixture.componentInstance.oidcLinking()).toBe(false);
   });
 });

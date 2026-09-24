@@ -69,8 +69,8 @@ export class TwoFactorCardComponent {
         this.twoFaCode.set('');
         this.regenerating2fa.set(false);
       },
-      error: (err) => {
-        this.toast.error(this.rateLimitMessage(err) ?? 'Failed to regenerate 2FA. Check your password and code.');
+      error: (err: ApiError) => {
+        this.toast.error(this.rateLimitMessage(err) ?? err.message);
         this.regenerating2fa.set(false);
       },
     });
@@ -100,8 +100,8 @@ export class TwoFactorCardComponent {
         this.enableSetup.set(true);
         this.enabling2fa.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to start 2FA setup. Check your password.');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.enabling2fa.set(false);
       },
     });
@@ -120,8 +120,8 @@ export class TwoFactorCardComponent {
         this.enabling2fa.set(false);
         this.changed.emit();
       },
-      error: () => {
-        this.toast.error('Invalid verification code');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.enabling2fa.set(false);
       },
     });

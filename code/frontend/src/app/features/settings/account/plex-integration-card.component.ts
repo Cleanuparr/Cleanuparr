@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, input, output, signal, DestroyRef } from '@angular/core';
 import { CardComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { AccountApi } from '@core/api/account.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { pollPlexPin } from '@shared/utils/plex-pin-poller';
@@ -43,9 +44,9 @@ export class PlexIntegrationCardComponent {
         }
         this.pollPlexLink(result.pinId);
       },
-      error: () => {
+      error: (err: ApiError) => {
         authWindow?.close();
-        this.toast.error('Failed to start Plex linking');
+        this.toast.error(err.message);
         this.plexLinking.set(false);
       },
     });
@@ -87,8 +88,8 @@ export class PlexIntegrationCardComponent {
         this.plexUnlinking.set(false);
         this.changed.emit();
       },
-      error: () => {
-        this.toast.error('Failed to unlink Plex account');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.plexUnlinking.set(false);
       },
     });

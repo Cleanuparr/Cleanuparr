@@ -217,12 +217,12 @@ describe('NotificationsComponent', () => {
   it('toasts and keeps the list when the delete request fails', async () => {
     const { component, api, toast, confirm } = setup();
 
-    api.deleteProvider.mockReturnValue(throwError(() => new Error('boom')));
+    api.deleteProvider.mockReturnValue(throwError(() => ({ message: 'Provider is in use' })));
     const pending = component.deleteProvider(TELEGRAM_PROVIDER);
     confirm.accept();
     await pending;
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to delete provider');
+    expect(toast.error).toHaveBeenCalledWith('Provider is in use');
     expect(toast.success).not.toHaveBeenCalled();
     expect(api.getProviders).toHaveBeenCalledTimes(1);
   });

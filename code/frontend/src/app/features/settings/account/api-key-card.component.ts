@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, input, signal } from '@angular/core';
 import { CardComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { AccountApi } from '@core/api/account.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 
@@ -35,7 +36,7 @@ export class ApiKeyCardComponent {
         this.apiKey.set(result.apiKey);
         this.apiKeyRevealed.set(true);
       },
-      error: () => this.toast.error('Failed to load API key'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -63,8 +64,8 @@ export class ApiKeyCardComponent {
         this.toast.success('API key regenerated');
         this.regeneratingApiKey.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to regenerate API key');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.regeneratingApiKey.set(false);
       },
     });

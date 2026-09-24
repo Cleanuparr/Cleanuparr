@@ -6,6 +6,7 @@ import {
   BadgeComponent, LoadingStateComponent,
 } from '@ui';
 import { NotificationApi } from '@core/api/notification.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ThemeService } from '@core/services/theme.service';
@@ -117,7 +118,7 @@ export class NotificationsComponent implements HasPendingChanges {
         this.toast.success('Provider deleted');
         this.providersResource.reload();
       },
-      error: () => this.toast.error('Failed to delete provider'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 

@@ -10,6 +10,7 @@ import {
 } from '@ui';
 import { NgIcon } from '@ng-icons/core';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { QueueCleanerConfig, ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
@@ -315,7 +316,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.toast.success('Stall rule deleted');
         this.stallRulesResource.reload();
       },
-      error: () => this.toast.error('Failed to delete stall rule'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -342,7 +343,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.toast.success('Slow rule deleted');
         this.slowRulesResource.reload();
       },
-      error: () => this.toast.error('Failed to delete slow rule'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -384,8 +385,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
         setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
         this.dirtyTracker.markSaved(m);
       },
-      error: () => {
-        this.toast.error('Failed to save queue cleaner settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });

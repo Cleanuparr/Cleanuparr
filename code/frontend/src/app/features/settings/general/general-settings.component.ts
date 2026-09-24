@@ -8,6 +8,7 @@ import {
   type SelectOption,
 } from '@ui';
 import { GeneralConfigApi } from '@core/api/general-config.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { GeneralConfig } from '@shared/models/general-config.model';
@@ -257,8 +258,8 @@ export class GeneralSettingsComponent implements HasPendingChanges {
         setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
         this.dirtyTracker.markSaved(m);
       },
-      error: () => {
-        this.toast.error('Failed to save general settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });
@@ -287,8 +288,8 @@ export class GeneralSettingsComponent implements HasPendingChanges {
         this.toast.success(`Purged ${result.deletedStrikes} strikes`);
         this.purgingStrikes.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to purge strikes');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.purgingStrikes.set(false);
       },
     });

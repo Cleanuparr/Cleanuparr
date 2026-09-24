@@ -276,7 +276,7 @@ describe('ArrSettingsComponent', () => {
 
   it('keeps the modal open and reports the failure when saving fails', () => {
     const api = createApi();
-    api.createInstance.mockReturnValue(throwError(() => new Error('boom')));
+    api.createInstance.mockReturnValue(throwError(() => ({ message: 'Name already exists' })));
     const { fixture, component, toast } = setup('sonarr', api);
 
     component.openAddModal();
@@ -288,7 +288,7 @@ describe('ArrSettingsComponent', () => {
     component.saveInstance();
     fixture.detectChanges();
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to save instance');
+    expect(toast.error).toHaveBeenCalledWith('Name already exists');
     expect(component.modalVisible()).toBe(true);
     expect(component.saving()).toBe(false);
   });
@@ -314,7 +314,7 @@ describe('ArrSettingsComponent', () => {
 
   it('reports a failed connection test and stops the testing spinner', () => {
     const api = createApi();
-    api.testInstance.mockReturnValue(throwError(() => new Error('refused')));
+    api.testInstance.mockReturnValue(throwError(() => ({ message: 'Connection refused' })));
     const { fixture, component, toast } = setup('sonarr', api);
 
     component.openAddModal();
@@ -329,7 +329,7 @@ describe('ArrSettingsComponent', () => {
       version: 4,
       instanceId: undefined,
     });
-    expect(toast.error).toHaveBeenCalledWith('Connection test failed');
+    expect(toast.error).toHaveBeenCalledWith('Connection refused');
     expect(component.testing()).toBe(false);
   });
 

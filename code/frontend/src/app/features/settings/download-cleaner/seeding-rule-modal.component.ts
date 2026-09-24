@@ -179,8 +179,8 @@ export class SeedingRuleModalComponent {
         this.visible.set(false);
         this.saved.emit();
       },
-      error: (e: ApiError) => {
-        this.toast.error(e.statusCode === 400 ? e.message : 'Failed to save seeding rule');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });

@@ -10,6 +10,7 @@ import {
 } from '@ui';
 import { forkJoin } from 'rxjs';
 import { AccountApi } from '@core/api/account.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
@@ -190,8 +191,8 @@ export class AccountSettingsComponent implements OnInit {
         this.oidcSaved.set(true);
         setTimeout(() => this.oidcSaved.set(false), 1500);
       },
-      error: () => {
-        this.toast.error('Failed to save OIDC settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.oidcSaving.set(false);
       },
     });
@@ -203,8 +204,8 @@ export class AccountSettingsComponent implements OnInit {
       next: (result) => {
         window.location.href = result.authorizationUrl;
       },
-      error: () => {
-        this.toast.error('Failed to start OIDC account linking');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.oidcLinking.set(false);
       },
     });
@@ -226,8 +227,8 @@ export class AccountSettingsComponent implements OnInit {
         this.toast.success('OIDC account unlinked');
         this.oidcUnlinking.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to unlink OIDC account');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.oidcUnlinking.set(false);
       },
     });

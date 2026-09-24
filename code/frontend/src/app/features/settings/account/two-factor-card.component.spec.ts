@@ -40,7 +40,7 @@ describe('TwoFactorCardComponent', () => {
     const failure = () =>
       options.rateLimitedSeconds
         ? { message: 'Account is locked', retryAfterSeconds: options.rateLimitedSeconds }
-        : new Error('boom');
+        : { message: '2FA operation failed' };
     const toasts: string[] = [];
     const confirmations: ConfirmOptions[] = [];
     const enablePasswords: string[] = [];
@@ -55,11 +55,11 @@ describe('TwoFactorCardComponent', () => {
           useValue: {
             enable2fa: (password: string) => {
               enablePasswords.push(password);
-              return options.enableFails ? throwError(() => new Error('boom')) : of(SETUP);
+              return options.enableFails ? throwError(() => ({ message: 'Wrong password' })) : of(SETUP);
             },
             verifyEnable2fa: (code: string) => {
               verifiedCodes.push(code);
-              return options.verifyFails ? throwError(() => new Error('boom')) : of(undefined);
+              return options.verifyFails ? throwError(() => ({ message: 'Invalid verification code' })) : of(undefined);
             },
             disable2fa: (password: string, totpCode: string) => {
               disableCalls.push([password, totpCode]);
@@ -167,7 +167,7 @@ describe('TwoFactorCardComponent', () => {
 
     expect(card(fixture).enableSetup()).toBe(false);
     expect(secret(fixture)).toBeNull();
-    expect(toasts).toEqual(['error:Failed to start 2FA setup. Check your password.']);
+    expect(toasts).toEqual(['error:Wrong password']);
   });
 
   it('rejects an invalid verification code without enabling 2FA', () => {
@@ -429,7 +429,7 @@ describe('TwoFactorCardComponent', () => {
     await card(fixture).confirmRegenerate2fa();
     fixture.detectChanges();
 
-    expect(toasts).toEqual(['error:Failed to regenerate 2FA. Check your password and code.']);
+    expect(toasts).toEqual(['error:2FA operation failed']);
     expect(secret(fixture)).toBeNull();
     expect(recoveryCodes(fixture)).toEqual([]);
     expect(card(fixture).twoFaPassword()).toBe('my-password');

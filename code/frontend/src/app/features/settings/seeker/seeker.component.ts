@@ -256,9 +256,7 @@ export class SeekerComponent implements HasPendingChanges {
         this.dirtyTracker.markSaved(snapshot);
       },
       error: (err: ApiError) => {
-        this.toast.error(err.statusCode === 400
-          ? err.message
-          : 'Failed to save seeker settings');
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });

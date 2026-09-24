@@ -38,7 +38,7 @@ describe('ChangeUsernameCardComponent', () => {
             changeUsername: (request: ChangeUsernameRequest) => {
               requests.push(request);
               if (options.fails) {
-                return throwError(() => new Error('boom'));
+                return throwError(() => ({ message: 'boom' }));
               }
               return options.pending ? pending : of(undefined);
             },
@@ -162,7 +162,7 @@ describe('ChangeUsernameCardComponent', () => {
     fixture.detectChanges();
 
     expect(requests).toEqual([{ currentPassword: 'wrong-one', newUsername: 'renamed' }]);
-    expect(toasts).toEqual(['error:Failed to change username']);
+    expect(toasts).toEqual(['error:boom']);
     expect(fixture.componentInstance.usernameForm.newUsername().value()).toBe('renamed');
     expect(fixture.componentInstance.changingUsername()).toBe(false);
     expect(logoutCount()).toBe(0);

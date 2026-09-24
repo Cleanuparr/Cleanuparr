@@ -556,7 +556,7 @@ describe('SeekerComponent', () => {
     component.patchInstance(0, { ignoreStruckDownloads: true });
     component.save();
 
-    expect(toasts).toContain('error:Failed to save seeker settings');
+    expect(toasts).toContain('error:Internal Server Error');
   });
 
   it('maps the instance type to an icon and a badge severity', () => {

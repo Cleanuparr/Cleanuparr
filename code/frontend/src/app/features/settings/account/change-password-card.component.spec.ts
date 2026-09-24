@@ -18,7 +18,7 @@ describe('ChangePasswordCardComponent', () => {
             changePassword: (request: ChangePasswordRequest) => {
               requests.push(request);
               if (options.fails) {
-                return throwError(() => new Error('boom'));
+                return throwError(() => ({ message: 'Current password is incorrect' }));
               }
               return options.pending ? pending : of(undefined);
             },
@@ -161,7 +161,7 @@ describe('ChangePasswordCardComponent', () => {
     fixture.detectChanges();
 
     expect(requests).toEqual([{ currentPassword: 'wrong-one', newPassword: 'Str0ng-passw0rd' }]);
-    expect(toasts).toEqual(['error:Failed to change password']);
+    expect(toasts).toEqual(['error:Current password is incorrect']);
     expect(fixture.componentInstance.passwordForm.currentPassword().value()).toBe('wrong-one');
     expect(fixture.componentInstance.changingPassword()).toBe(false);
   });
