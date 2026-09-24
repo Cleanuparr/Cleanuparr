@@ -50,53 +50,39 @@ public partial class TransmissionService
             return result;
         }
 
-        List<long> unwantedFiles = [];
-        long totalFiles = 0;
-        long totalUnwantedFiles = 0;
-        
         InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
 
-        for (int i = 0; i < download.Files.Length; i++)
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
-            if (download.FileStats?[i].Wanted == null)
+            for (int i = 0; i < download.Files.Length; i++)
             {
-                _logger.LogTrace("Skipping file with no stats | {file}", download.Files[i].Name);
-                continue;
+                if (download.FileStats?[i].Wanted == null)
+                {
+                    _logger.LogTrace("Skipping file with no stats | {file}", download.Files[i].Name);
+                    continue;
+                }
+
+                yield return (i, download.Files[i].Name, download.Files[i].Name, download.FileStats[i].Wanted!.Value
+                    ? FileBlockAction.CheckBlocklist
+                    : FileBlockAction.AlreadySkipped);
             }
-
-            totalFiles++;
-
-            if (!download.FileStats[i].Wanted.Value)
-            {
-                _logger.LogTrace("File is already skipped | {file}", download.Files[i].Name);
-                totalUnwantedFiles++;
-                continue;
-            }
-
-            if (_filenameEvaluator.IsValid(download.Files[i].Name, blocklistType, patterns, regexes))
-            {
-                _logger.LogTrace("File is valid | {file}", download.Files[i].Name);
-                continue;
-            }
-            
-            _logger.LogInformation("unwanted file found | {file}", download.Files[i].Name);
-
-            if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-            {
-                _logger.LogDebug("at least one file is blocked for {name}", download.Name);
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                return result;
-            }
-
-            unwantedFiles.Add(i);
-            totalUnwantedFiles++;
         }
 
-        if (unwantedFiles.Count is 0)
+        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
+            ScanFilesForBlocking(BuildScanItems(), blocklistType, patterns, regexes, malwareBlockerConfig.DeleteIfAnyFileBlocked);
+
+        if (deleteImmediately)
+        {
+            _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+            result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
+            return result;
+        }
+
+        if (unwantedIndices.Count is 0)
         {
             _logger.LogDebug("No unwanted files found for {name}", download.Name);
             return result;
@@ -108,10 +94,10 @@ public partial class TransmissionService
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
-        
+
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
-        await _dryRunInterceptor.InterceptAsync(() => SetUnwantedFiles(download.Id, unwantedFiles.ToArray()));
+        await _dryRunInterceptor.InterceptAsync(() => SetUnwantedFiles(download.Id, unwantedIndices.Select(i => (long)i).ToArray()));
 
         return result;
     }

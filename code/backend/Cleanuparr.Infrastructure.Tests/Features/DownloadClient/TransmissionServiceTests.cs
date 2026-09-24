@@ -592,6 +592,10 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .TorrentSetAsync(Arg.Any<TorrentSettings>());
         }
 
         [Fact]

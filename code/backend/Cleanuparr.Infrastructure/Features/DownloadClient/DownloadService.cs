@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Domain.Enums;
@@ -359,6 +361,54 @@ public abstract class DownloadService : IDownloadService
         }
 
         return (false, false);
+    }
+
+    /// <summary>
+    /// Counts unwanted files and collects the indices to block.
+    /// Don't yield a file the client excludes from the count, such as one with no index.
+    /// Deluge and rTorrent validate the bare filename but log the relative path.
+    /// With <paramref name="deleteIfAnyFileBlocked"/> on, the first unwanted file sets <c>DeleteImmediately</c> and ends the scan.
+    /// </summary>
+    protected (List<int> UnwantedIndices, long TotalFiles, long TotalUnwantedFiles, bool DeleteImmediately) ScanFilesForBlocking(
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> files,
+        BlocklistType blocklistType,
+        ConcurrentBag<string> patterns,
+        ConcurrentBag<Regex> regexes,
+        bool deleteIfAnyFileBlocked)
+    {
+        List<int> unwantedIndices = [];
+        long totalFiles = 0;
+        long totalUnwantedFiles = 0;
+
+        foreach ((int index, string validationName, string logName, FileBlockAction action) in files)
+        {
+            totalFiles++;
+
+            if (action is FileBlockAction.AlreadySkipped)
+            {
+                _logger.LogTrace("File is already skipped | {File}", logName);
+                totalUnwantedFiles++;
+                continue;
+            }
+
+            if (_filenameEvaluator.IsValid(validationName, blocklistType, patterns, regexes))
+            {
+                _logger.LogTrace("File is valid | {File}", logName);
+                continue;
+            }
+
+            _logger.LogInformation("unwanted file found | {File}", logName);
+            totalUnwantedFiles++;
+
+            if (deleteIfAnyFileBlocked)
+            {
+                return (unwantedIndices, totalFiles, totalUnwantedFiles, true);
+            }
+
+            unwantedIndices.Add(index);
+        }
+
+        return (unwantedIndices, totalFiles, totalUnwantedFiles, false);
     }
 
     /// <inheritdoc/>

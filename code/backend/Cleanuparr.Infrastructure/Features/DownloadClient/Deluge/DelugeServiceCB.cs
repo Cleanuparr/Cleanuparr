@@ -60,79 +60,55 @@ public partial class DelugeService
         {
             return result;
         }
-        
-        Dictionary<int, int> priorities = [];
-        bool hasPriorityUpdates = false;
-        long totalFiles = 0;
-        long totalUnwantedFiles = 0;
-        
+
         InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
 
+        // Deluge's priority API takes the full per-file vector, so keep every original priority
+        Dictionary<int, int> originalPriorities = [];
+        List<(int Index, string ValidationName, string LogName, FileBlockAction Action)> scanItems = [];
+
         ProcessFiles(contents.Contents, (name, file) =>
         {
-            totalFiles++;
-            int priority = file.Priority;
-
-            if (result.ShouldRemove)
-            {
-                return;
-            }
-
-            if (file.Priority is 0)
-            {
-                _logger.LogTrace("File is already skipped | {file}", file.Path);
-                totalUnwantedFiles++;
-            }
-
-            if (file.Priority is not 0 && !_filenameEvaluator.IsValid(name, blocklistType, patterns, regexes))
-            {
-                totalUnwantedFiles++;
-                priority = 0;
-                hasPriorityUpdates = true;
-                _logger.LogInformation("unwanted file found | {file}", file.Path);
-
-                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-                {
-                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
-                    result.ShouldRemove = true;
-                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                    return;
-                }
-            }
-            
-            _logger.LogTrace("File is valid | {file}", file.Path);
-            priorities.Add(file.Index, priority);
+            originalPriorities[file.Index] = file.Priority;
+            scanItems.Add((file.Index, name, file.Path, file.Priority is 0
+                ? FileBlockAction.AlreadySkipped
+                : FileBlockAction.CheckBlocklist));
         });
 
-        if (result.ShouldRemove)
+        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
+            ScanFilesForBlocking(scanItems, blocklistType, patterns, regexes, malwareBlockerConfig.DeleteIfAnyFileBlocked);
+
+        if (deleteImmediately)
         {
+            _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+            result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
             return result;
         }
 
-        if (!hasPriorityUpdates)
+        if (unwantedIndices.Count is 0)
         {
             return result;
         }
-        
-        _logger.LogDebug("changing priorities | torrent {hash}", hash);
-
-        List<int> sortedPriorities = priorities
-            .OrderBy(x => x.Key)
-            .Select(x => x.Value)
-            .ToList();
 
         if (totalUnwantedFiles == totalFiles)
         {
             _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
-            return result;
         }
 
+        _logger.LogDebug("changing priorities | torrent {hash}", hash);
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
+
+        HashSet<int> unwantedLookup = [..unwantedIndices];
+        List<int> sortedPriorities = originalPriorities
+            .OrderBy(x => x.Key)
+            .Select(x => unwantedLookup.Contains(x.Key) ? 0 : x.Value)
+            .ToList();
 
         await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, sortedPriorities));
 

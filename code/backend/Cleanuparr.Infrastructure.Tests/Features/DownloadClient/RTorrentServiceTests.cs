@@ -833,6 +833,10 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilePriorityAsync(hash, 0, 0);
         }
 
         [Fact]

@@ -799,6 +799,10 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilesPriorityAsync(hash, Arg.Is<List<int>>(idx => idx.Count == 1 && idx[0] == 0), 0);
         }
 
         [Fact]

@@ -624,7 +624,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
         };
 
         [Fact]
-        public async Task AllFilesAreMalware_DoesNotCallChangeFilesPriority_AndMarksForRemoval()
+        public async Task AllFilesAreMalware_CallsChangeFilesPriority_AndMarksForRemoval()
         {
             const string hash = "all-malware-hash";
             var sut = _fixture.CreateSut();
@@ -655,8 +655,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
 
             await _fixture.ClientWrapper
-                .DidNotReceive()
-                .ChangeFilesPriority(Arg.Any<string>(), Arg.Any<List<int>>());
+                .Received(1)
+                .ChangeFilesPriority(hash, Arg.Is<List<int>>(p => p.Count == 1 && p[0] == 0));
         }
 
         [Fact]

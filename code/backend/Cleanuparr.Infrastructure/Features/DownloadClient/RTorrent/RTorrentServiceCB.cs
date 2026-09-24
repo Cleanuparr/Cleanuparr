@@ -65,61 +65,33 @@ public partial class RTorrentService
             return result;
         }
 
-        bool hasPriorityUpdates = false;
-        long totalFiles = 0;
-        long totalUnwantedFiles = 0;
-
         InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
 
-        List<(int Index, int Priority)> priorityUpdates = [];
-
-        foreach (var file in files)
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
-            totalFiles++;
-            string fileName = Path.GetFileName(file.Path);
-
-            if (result.ShouldRemove)
+            foreach (RTorrentFile file in files)
             {
-                continue;
+                yield return (file.Index, Path.GetFileName(file.Path), file.Path, file.Priority == 0
+                    ? FileBlockAction.AlreadySkipped
+                    : FileBlockAction.CheckBlocklist);
             }
-
-            if (file.Priority == 0)
-            {
-                _logger.LogTrace("File is already skipped | {file}", file.Path);
-                totalUnwantedFiles++;
-                continue;
-            }
-
-            if (!_filenameEvaluator.IsValid(fileName, blocklistType, patterns, regexes))
-            {
-                totalUnwantedFiles++;
-                hasPriorityUpdates = true;
-                priorityUpdates.Add((file.Index, 0));
-                _logger.LogInformation("unwanted file found | {file}", file.Path);
-
-                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-                {
-                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
-                    result.ShouldRemove = true;
-                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                    return result;
-                }
-
-                continue;
-            }
-
-            _logger.LogTrace("File is valid | {file}", file.Path);
         }
 
-        if (result.ShouldRemove)
+        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
+            ScanFilesForBlocking(BuildScanItems(), blocklistType, patterns, regexes, malwareBlockerConfig.DeleteIfAnyFileBlocked);
+
+        if (deleteImmediately)
         {
+            _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+            result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
             return result;
         }
 
-        if (!hasPriorityUpdates)
+        if (unwantedIndices.Count is 0)
         {
             return result;
         }
@@ -131,11 +103,11 @@ public partial class RTorrentService
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
-        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", priorityUpdates.Count, download.Name);
+        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", unwantedIndices.Count, download.Name);
 
-        foreach (var (index, priority) in priorityUpdates)
+        foreach (int index in unwantedIndices)
         {
-            await _dryRunInterceptor.InterceptAsync(() => SetFilePriority(hash, index, priority));
+            await _dryRunInterceptor.InterceptAsync(() => SetFilePriority(hash, index, 0));
         }
 
         return result;
