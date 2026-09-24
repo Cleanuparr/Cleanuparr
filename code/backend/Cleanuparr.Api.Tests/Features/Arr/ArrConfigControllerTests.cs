@@ -4,7 +4,7 @@ using Cleanuparr.Api.Features.Arr.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Features.Arr.Dtos;
+using Cleanuparr.Api.Features.Arr.Contracts.Responses;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -60,7 +60,7 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var dto = ok.Value.ShouldBeOfType<ArrConfigDto>();
+        var dto = ok.Value.ShouldBeOfType<ArrConfigResponse>();
         dto.Type.ShouldBe(type);
     }
 
@@ -79,7 +79,7 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var dto = ok.Value.ShouldBeOfType<ArrConfigDto>();
+        var dto = ok.Value.ShouldBeOfType<ArrConfigResponse>();
         dto.Instances[0].Name.ShouldBe("a");
         dto.Instances[1].Name.ShouldBe("z");
     }
@@ -137,7 +137,7 @@ public class ArrConfigControllerTests : IDisposable
 
         // Assert
         var created = result.ShouldBeOfType<CreatedAtActionResult>();
-        var dto = created.Value.ShouldBeOfType<ArrInstanceDto>();
+        var dto = created.Value.ShouldBeOfType<ArrInstanceResponse>();
         dto.Name.ShouldBe("test");
         var sonarrConfig = await _dataContext.ArrConfigs
             .Include(c => c.Instances)
@@ -427,12 +427,12 @@ public class ArrConfigControllerTests : IDisposable
 
         // Act + Assert: create
         IActionResult created = await DispatchCreate(type, request);
-        ArrInstanceDto dto = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<ArrInstanceDto>();
+        ArrInstanceResponse dto = created.ShouldBeOfType<CreatedAtActionResult>().Value.ShouldBeOfType<ArrInstanceResponse>();
 
         // Act + Assert: update
         Guid id = dto.Id.ShouldNotBeNull();
         IActionResult updated = await DispatchUpdate(type, id, request with { Name = "rewired" });
-        updated.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<ArrInstanceDto>().Name.ShouldBe("rewired");
+        updated.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<ArrInstanceResponse>().Name.ShouldBe("rewired");
 
         // Act + Assert: connection test
         IActionResult tested = await DispatchTest(type, new TestArrInstanceRequest
