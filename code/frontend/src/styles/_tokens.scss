@@ -28,13 +28,17 @@
   // Semantic colors
   --color-success:     #{$color-success};
   --color-success-dim: #{$color-success-dim};
+  --color-success-rgb: 34, 197, 94;
   --color-warning:     #{$color-warning};
   --color-warning-dim: #{$color-warning-dim};
   --color-warning-bg:  color-mix(in srgb, #{$color-warning} 10%, transparent);
+  --color-warning-rgb: 245, 158, 11;
   --color-error:       #{$color-error};
   --color-error-dim:   #{$color-error-dim};
+  --color-error-rgb:   239, 68, 68;
   --color-info:        #{$color-info};
   --color-info-dim:    #{$color-info-dim};
+  --color-info-rgb:    59, 130, 246;
 
   // "NEW" feature badge flame palette
   --new-badge-flame-start: #{$new-badge-flame-start};

@@ -36,27 +36,27 @@
   }
 
   &--success {
-    background: rgba(34, 197, 94, 0.12);
+    background: rgba(var(--color-success-rgb), 0.12);
     color: var(--color-success);
-    border: 1px solid rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(var(--color-success-rgb), 0.2);
   }
 
   &--warning {
-    background: rgba(245, 158, 11, 0.12);
+    background: rgba(var(--color-warning-rgb), 0.12);
     color: var(--color-warning);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    border: 1px solid rgba(var(--color-warning-rgb), 0.2);
   }
 
   &--error {
-    background: rgba(239, 68, 68, 0.12);
+    background: rgba(var(--color-error-rgb), 0.12);
     color: var(--color-error);
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(var(--color-error-rgb), 0.2);
   }
 
   &--info {
-    background: rgba(59, 130, 246, 0.12);
+    background: rgba(var(--color-info-rgb), 0.12);
     color: var(--color-info);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(var(--color-info-rgb), 0.2);
   }
 
   &--accent {

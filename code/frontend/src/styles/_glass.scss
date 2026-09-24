@@ -75,6 +75,25 @@ $_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http:
   cursor: pointer;
 }
 
+// Hover glow rail effect - subtle gradient sweep on hover
+// Used on list rows and similar interactive list items
+@mixin glow-rail {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.06), transparent);
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-default);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  &:hover::before {
+    transform: translateX(100%);
+  }
+}
+
 // Glass input field style
 @mixin glass-input {
   background: var(--input-bg);
