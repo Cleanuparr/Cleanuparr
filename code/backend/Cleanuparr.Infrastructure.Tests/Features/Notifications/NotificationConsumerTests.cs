@@ -6,24 +6,28 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotificationConsumerTests
 {
-    private readonly ILogger<NotificationConsumer> _logger;
     private readonly INotificationConfigurationService _configurationService;
     private readonly INotificationProviderFactory _providerFactory;
     private readonly NotificationConsumer _consumer;
 
     public NotificationConsumerTests()
     {
-        _logger = Substitute.For<ILogger<NotificationConsumer>>();
         _configurationService = Substitute.For<INotificationConfigurationService>();
         _providerFactory = Substitute.For<INotificationProviderFactory>();
 
-        _consumer = new NotificationConsumer(_logger, _configurationService, _providerFactory);
+        NotificationService notificationService = new(
+            Substitute.For<ILogger<NotificationService>>(),
+            _configurationService,
+            _providerFactory,
+            TimeProvider.System);
+        _consumer = new NotificationConsumer(notificationService);
     }
 
     private static NotificationContext CreateContext(NotificationEventType eventType)
@@ -109,6 +113,21 @@ public class NotificationConsumerTests
             .Returns(new List<NotificationProviderDto>());
 
         await _consumer.Consume(CreateConsumeContext(message));
+
+        _providerFactory.DidNotReceive().CreateProvider(Arg.Any<NotificationProviderDto>());
+    }
+
+    [Fact]
+    public async Task Consume_WhenProviderLookupThrows_DoesNotThrow()
+    {
+        NotificationMessage message = new(NotificationEventType.QueueItemDeleted, CreateContext(NotificationEventType.QueueItemDeleted));
+
+        _configurationService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .ThrowsAsync(new InvalidOperationException("db locked"));
+
+        ConsumeContext<NotificationMessage> ctx = CreateConsumeContext(message);
+
+        await Should.NotThrowAsync(() => _consumer.Consume(ctx));
 
         _providerFactory.DidNotReceive().CreateProvider(Arg.Any<NotificationProviderDto>());
     }
