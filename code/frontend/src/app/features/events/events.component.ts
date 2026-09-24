@@ -23,6 +23,8 @@ import {
 } from '@shared/utils/event-display.util';
 import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.component';
 
+const POLL_INTERVAL_MS = 10_000;
+
 @Component({
   selector: 'app-events',
   standalone: true,
@@ -136,7 +138,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.pollTimer = setInterval(() => this.eventsResource.reload(), 10_000);
+    this.pollTimer = setInterval(() => this.eventsResource.reload(), POLL_INTERVAL_MS);
   }
 
   ngOnDestroy(): void {

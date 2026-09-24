@@ -17,6 +17,8 @@ import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-display.util';
 
+const POLL_INTERVAL_MS = 10_000;
+
 @Component({
   selector: 'app-strikes',
   standalone: true,
@@ -96,7 +98,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.pollTimer = setInterval(() => this.strikesResource.reload(), 10_000);
+    this.pollTimer = setInterval(() => this.strikesResource.reload(), POLL_INTERVAL_MS);
   }
 
   ngOnDestroy(): void {
