@@ -5,6 +5,7 @@ import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { createRetryCountdown } from '@shared/utils/retry-countdown';
+import { ROUTES } from '@shared/routes';
 
 type LoginView = 'credentials' | '2fa' | 'recovery';
 
@@ -97,7 +98,7 @@ export class LoginComponent implements OnInit {
           this.view.set('2fa');
         } else if (!result.requiresTwoFactor) {
           // 2FA not enabled — tokens already handled by AuthService
-          this.router.navigate(['/dashboard']);
+          this.router.navigate([ROUTES.dashboard]);
         }
         this.loading.set(false);
       },
@@ -119,7 +120,7 @@ export class LoginComponent implements OnInit {
 
     this.auth.verify2fa(this.loginToken(), this.totpCode().trim()).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate([ROUTES.dashboard]);
       },
       error: (err) => {
         this.error.set(err.message || 'Invalid code');
@@ -139,7 +140,7 @@ export class LoginComponent implements OnInit {
 
     this.auth.verify2fa(this.loginToken(), this.recoveryCode().trim(), true).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate([ROUTES.dashboard]);
       },
       error: (err) => {
         this.error.set(err.message || 'Invalid recovery code');

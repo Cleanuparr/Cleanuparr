@@ -5,6 +5,7 @@ import { LogoComponent } from '@ui';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ThemeService } from '@core/services/theme.service';
+import { ROUTES } from '@shared/routes';
 
 interface NavItem {
   label: string;
@@ -45,7 +46,7 @@ export class NavSidebarComponent {
   });
 
   mainNavItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'tablerLayoutDashboard', route: '/dashboard' },
+    { label: 'Dashboard', icon: 'tablerLayoutDashboard', route: ROUTES.dashboard },
     { label: 'Logs', icon: 'tablerFileText', route: '/logs' },
     { label: 'Events', icon: 'tablerBell', route: '/events' },
     { label: 'Strikes', icon: 'tablerBolt', route: '/strikes' },

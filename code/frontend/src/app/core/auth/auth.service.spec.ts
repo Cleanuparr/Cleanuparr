@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ACCESS_TOKEN_KEY, AuthService, AuthStatus, REFRESH_TOKEN_KEY, TokenResponse } from './auth.service';
+import { ROUTES } from '@shared/routes';
 
 const NOW_MS = Date.UTC(2026, 6, 31, 12, 0, 0);
 const NOW_SEC = Math.floor(NOW_MS / 1000);
@@ -442,7 +443,7 @@ describe('AuthService', () => {
 
       expect(service.isAuthenticated()).toBe(false);
       expect(service.isLoading()).toBe(false);
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
 
     it('flags a connection error and emits an empty status when the request fails', () => {
@@ -695,7 +696,7 @@ describe('AuthService', () => {
       expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
       expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
       expect(service.isAuthenticated()).toBe(false);
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
 
     it('skips the revocation call when no refresh token is stored', () => {
@@ -704,7 +705,7 @@ describe('AuthService', () => {
       service.logout();
 
       expect(posts).toHaveLength(0);
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
 
     it('clears the session even when the revocation call fails', () => {
@@ -716,7 +717,7 @@ describe('AuthService', () => {
       service.logout();
 
       expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
   });
 
@@ -753,7 +754,7 @@ describe('AuthService', () => {
       vi.setSystemTime(NOW_MS + 990_000);
       becomeVisible();
 
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
       expect(service.isAuthenticated()).toBe(false);
     });
 

@@ -5,6 +5,7 @@ import { ButtonComponent, InputComponent, SpinnerComponent, EmptyStateComponent 
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { pollPlexPin } from '@shared/utils/plex-pin-poller';
+import { ROUTES } from '@shared/routes';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerCopy, tablerShieldLock } from '@ng-icons/tabler-icons';
 import { QRCodeComponent } from 'angularx-qrcode';
@@ -97,7 +98,7 @@ export class SetupComponent {
     forkJoin([this.auth.retryConnection(), timer(500)]).subscribe(() => {
       this.retrying.set(false);
       if (this.auth.isSetupComplete()) {
-        this.router.navigate(['/auth/login']);
+        this.router.navigate([ROUTES.login]);
       }
     });
   }
@@ -232,7 +233,7 @@ export class SetupComponent {
 
     this.auth.completeSetup().subscribe({
       next: () => {
-        this.router.navigate(['/auth/login']);
+        this.router.navigate([ROUTES.login]);
       },
       error: (err) => {
         this.error.set(err.message || 'Failed to complete setup');

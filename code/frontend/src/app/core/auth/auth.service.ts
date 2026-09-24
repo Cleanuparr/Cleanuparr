@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, of, catchError, finalize, shareReplay } from 'rxjs';
 import { Router } from '@angular/router';
 import { ApiError } from '@core/interceptors/error.interceptor';
+import { ROUTES } from '@shared/routes';
 export const ACCESS_TOKEN_KEY = 'access_token';
 export const REFRESH_TOKEN_KEY = 'refresh_token';
 
@@ -97,7 +98,7 @@ export class AuthService {
                 this.setupVisibilityListener();
               } else {
                 this._isAuthenticated.set(false);
-                this.router.navigate(['/auth/login']);
+                this.router.navigate([ROUTES.login]);
               }
               this._isLoading.set(false);
             });
@@ -242,7 +243,7 @@ export class AuthService {
         .subscribe();
     }
     this.clearAuth();
-    this.router.navigate(['/auth/login']);
+    this.router.navigate([ROUTES.login]);
   }
 
   getAccessToken(): string | null {
@@ -337,7 +338,7 @@ export class AuthService {
         // Token expired during sleep — refresh immediately
         this.refreshToken().subscribe((result) => {
           if (!result) {
-            this.router.navigate(['/auth/login']);
+            this.router.navigate([ROUTES.login]);
           }
         });
       } else {

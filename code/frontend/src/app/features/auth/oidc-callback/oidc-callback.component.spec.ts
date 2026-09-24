@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService, TokenResponse } from '@core/auth/auth.service';
 import { OidcCallbackComponent } from './oidc-callback.component';
+import { ROUTES } from '@shared/routes';
 
 const TOKENS: TokenResponse = { accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 };
 
@@ -63,7 +64,7 @@ describe('OidcCallbackComponent', () => {
     const { fixture, navigations, exchangedCodes } = setup({ queryParams: { code: 'auth-code' } });
 
     expect(exchangedCodes).toEqual(['auth-code']);
-    expect(navigations).toEqual([['/dashboard']]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
     expect(errorText(fixture)).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Completing sign in...');
   });
@@ -77,7 +78,7 @@ describe('OidcCallbackComponent', () => {
     expect(navigations).toEqual([]);
 
     vi.advanceTimersByTime(3000);
-    expect(navigations).toEqual([['/auth/login']]);
+    expect(navigations).toEqual([[ROUTES.login]]);
   });
 
   it('shows the provider error instead of exchanging the code', () => {
