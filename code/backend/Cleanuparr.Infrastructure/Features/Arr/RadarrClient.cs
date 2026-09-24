@@ -25,14 +25,16 @@ public class RadarrClient : ArrClient, IRadarrClient
     {
     }
     
+    protected override string ApiVersion => "v3";
+
     protected override string GetSystemStatusUrlPath()
     {
-        return "/api/v3/system/status";
+        return $"/api/{ApiVersion}/system/status";
     }
 
     protected override string GetQueueUrlPath()
     {
-        return "/api/v3/queue";
+        return $"/api/{ApiVersion}/queue";
     }
 
     protected override string GetQueueUrlQuery(int page)
@@ -42,7 +44,7 @@ public class RadarrClient : ArrClient, IRadarrClient
 
     protected override string GetQueueDeleteUrlPath(long recordId)
     {
-        return $"/api/v3/queue/{recordId}";
+        return $"/api/{ApiVersion}/queue/{recordId}";
     }
 
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
@@ -55,7 +57,7 @@ public class RadarrClient : ArrClient, IRadarrClient
         List<long> ids = items.Select(item => item.Id).ToList();
 
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
 
         RadarrCommand command = new()
         {
@@ -148,7 +150,7 @@ public class RadarrClient : ArrClient, IRadarrClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/movie";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -169,7 +171,7 @@ public class RadarrClient : ArrClient, IRadarrClient
     public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/tag";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/tag";
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
         
@@ -182,7 +184,7 @@ public class RadarrClient : ArrClient, IRadarrClient
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/qualityprofile";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/qualityprofile";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -201,7 +203,7 @@ public class RadarrClient : ArrClient, IRadarrClient
         foreach (long[] batch in movieFileIds.Chunk(100))
         {
             UriBuilder uriBuilder = new(arrInstance.Url);
-            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/moviefile";
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/moviefile";
             uriBuilder.Query = string.Join('&', batch.Select(id => $"movieFileIds={id}"));
 
             using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
@@ -224,7 +226,7 @@ public class RadarrClient : ArrClient, IRadarrClient
     private async Task<Movie?> GetMovie(ArrInstance arrInstance, long movieId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie/{movieId}";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/movie/{movieId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);

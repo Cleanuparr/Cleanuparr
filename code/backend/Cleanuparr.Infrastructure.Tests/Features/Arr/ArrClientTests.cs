@@ -814,6 +814,8 @@ public class ArrClientTests
         {
         }
 
+        protected override string ApiVersion => "v1";
+
         protected override string GetSystemStatusUrlPath() => "/api/v1/system/status";
 
         protected override string GetQueueUrlPath() => "/api/v1/queue";

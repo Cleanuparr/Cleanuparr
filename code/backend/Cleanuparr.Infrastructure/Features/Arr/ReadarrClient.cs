@@ -23,14 +23,16 @@ public class ReadarrClient : ArrClient, IReadarrClient
     {
     }
     
+    protected override string ApiVersion => "v1";
+
     protected override string GetSystemStatusUrlPath()
     {
-        return "/api/v1/system/status";
+        return $"/api/{ApiVersion}/system/status";
     }
 
     protected override string GetQueueUrlPath()
     {
-        return "/api/v1/queue";
+        return $"/api/{ApiVersion}/queue";
     }
 
     protected override string GetQueueUrlQuery(int page)
@@ -40,7 +42,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
 
     protected override string GetQueueDeleteUrlPath(long recordId)
     {
-        return $"/api/v1/queue/{recordId}";
+        return $"/api/{ApiVersion}/queue/{recordId}";
     }
 
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
@@ -53,7 +55,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
         List<long> ids = items.Select(item => item.Id).ToList();
         
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v1/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/command";
         
         ReadarrCommand command = new()
         {
@@ -128,7 +130,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
     private async Task<Book?> GetBookAsync(ArrInstance arrInstance, long bookId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v1/book/{bookId}";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/book/{bookId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);

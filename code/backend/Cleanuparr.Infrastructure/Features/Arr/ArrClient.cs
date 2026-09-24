@@ -31,6 +31,16 @@ public abstract class ArrClient : IArrClient
     /// </summary>
     protected const int QueuePageSize = 200;
 
+    /// <summary>
+    /// Command API path shared by all *arr apps.
+    /// </summary>
+    protected const string CommandUrlPath = "/api/v3/command";
+
+    /// <summary>
+    /// REST API version segment for this app, e.g. "v3".
+    /// </summary>
+    protected abstract string ApiVersion { get; }
+
     protected readonly ILogger<ArrClient> _logger;
     protected readonly HttpClient _httpClient;
     protected readonly IStriker _striker;
@@ -358,7 +368,7 @@ public abstract class ArrClient : IArrClient
     public virtual async Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command/{commandId}";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}/{commandId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -375,7 +385,7 @@ public abstract class ArrClient : IArrClient
     public async Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
