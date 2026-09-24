@@ -7,7 +7,7 @@ import { JobInfo } from '@core/models/job.models';
 import { AppStatus } from '@core/models/app-status.model';
 import { RecentStrike } from '@core/models/strike.models';
 import { ApplicationPathService } from '@core/services/base-path.service';
-import { AuthService } from '@core/auth/auth.service';
+import { AuthService, REFRESH_TOKEN_KEY } from '@core/auth/auth.service';
 
 const MAX_BUFFER = 1000;
 const HUB_URL = '/api/hubs/app';
@@ -49,7 +49,7 @@ export class AppHubService implements OnDestroy {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: async () => {
-          if (!this.authService.getAccessToken() && !localStorage.getItem('refresh_token')) {
+          if (!this.authService.getAccessToken() && !localStorage.getItem(REFRESH_TOKEN_KEY)) {
             return '';
           }
           if (this.authService.isTokenExpired(30)) {
