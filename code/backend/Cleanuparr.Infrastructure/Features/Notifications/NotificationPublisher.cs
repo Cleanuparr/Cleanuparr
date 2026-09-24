@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
@@ -13,19 +14,16 @@ public class NotificationPublisher : INotificationPublisher
 {
     private readonly ILogger<NotificationPublisher> _logger;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly INotificationConfigurationService _configurationService;
-    private readonly INotificationProviderFactory _providerFactory;
+    private readonly IBus _messageBus;
 
     public NotificationPublisher(
         ILogger<NotificationPublisher> logger,
         IDryRunInterceptor dryRunInterceptor,
-        INotificationConfigurationService configurationService,
-        INotificationProviderFactory providerFactory)
+        IBus messageBus)
     {
         _logger = logger;
         _dryRunInterceptor = dryRunInterceptor;
-        _configurationService = configurationService;
-        _providerFactory = providerFactory;
+        _messageBus = messageBus;
     }
 
     public virtual async Task NotifyStrike(StrikeType strikeType, int strikeCount)
@@ -149,29 +147,7 @@ public class NotificationPublisher : INotificationPublisher
     private async Task SendNotificationInternalAsync((NotificationEventType eventType, NotificationContext context) parameters)
     {
         var (eventType, context) = parameters;
-        var providers = await _configurationService.GetProvidersForEventAsync(eventType);
-
-        if (!providers.Any())
-        {
-            _logger.LogDebug("No providers configured for event type {eventType}", eventType);
-            return;
-        }
-
-        var tasks = providers.Select(async providerConfig =>
-        {
-            try
-            {
-                var provider = _providerFactory.CreateProvider(providerConfig);
-                await provider.SendNotificationAsync(context);
-                _logger.LogDebug("Notification sent successfully via {providerName}", provider.Name);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to send notification via provider {providerName}", providerConfig.Name);
-            }
-        });
-
-        await Task.WhenAll(tasks);
+        await _messageBus.Publish(new NotificationMessage(eventType, context));
     }
 
     /// <summary>

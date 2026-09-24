@@ -2,7 +2,6 @@
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
-using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
@@ -28,14 +27,7 @@ public static class MainDI
                 config.DisableUsageTelemetry();
                 
                 config.AddConsumer<DownloadRemoverConsumer>();
-                config.AddConsumer<NotificationConsumer<FailedImportStrikeNotification>>();
-                config.AddConsumer<NotificationConsumer<StalledStrikeNotification>>();
-                config.AddConsumer<NotificationConsumer<SlowSpeedStrikeNotification>>();
-                config.AddConsumer<NotificationConsumer<SlowTimeStrikeNotification>>();
-                config.AddConsumer<NotificationConsumer<QueueItemDeletedNotification>>();
-                config.AddConsumer<NotificationConsumer<DownloadCleanedNotification>>();
-                config.AddConsumer<NotificationConsumer<DownloadStoppedNotification>>();
-                config.AddConsumer<NotificationConsumer<CategoryChangedNotification>>();
+                config.AddConsumer<NotificationConsumer>();
 
                 config.UsingInMemory((context, cfg) =>
                 {
@@ -55,14 +47,7 @@ public static class MainDI
                     
                     cfg.ReceiveEndpoint("notification-queue", e =>
                     {
-                        e.ConfigureConsumer<NotificationConsumer<FailedImportStrikeNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<StalledStrikeNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<SlowSpeedStrikeNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<SlowTimeStrikeNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<QueueItemDeletedNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<DownloadCleanedNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<DownloadStoppedNotification>>(context);
-                        e.ConfigureConsumer<NotificationConsumer<CategoryChangedNotification>>(context);
+                        e.ConfigureConsumer<NotificationConsumer>(context);
                         e.ConcurrentMessageLimit = 1;
                         e.PrefetchCount = 1;
                     });
