@@ -1,5 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -15,7 +14,7 @@ import {
 } from '@shared/models/download-client-config.model';
 import { DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { DeferredLoader } from '@shared/utils/loading.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
 
 const TYPE_OPTIONS: SelectOption[] = [
   { label: 'qBittorrent', value: DownloadClientTypeName.qBittorrent },
@@ -60,13 +59,15 @@ export class DownloadClientsComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
-  private readonly clientsResource = rxResource({
-    stream: () => this.api.getConfig(),
+  private readonly settings = createSettingsResource({
+    load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load download clients',
   });
+  private readonly clientsResource = this.settings.resource;
 
   readonly typeOptions = TYPE_OPTIONS;
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.clientsResource.error());
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly clients = computed(() =>
     this.clientsResource.hasValue() ? (this.clientsResource.value().clients ?? []) : [],
@@ -135,24 +136,8 @@ export class DownloadClientsComponent implements HasPendingChanges {
     }
   }
 
-  constructor() {
-    effect(() => {
-      if (this.clientsResource.error()) {
-        this.toast.error('Failed to load download clients');
-      }
-    });
-
-    effect(() => {
-      if (this.clientsResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
-    });
-  }
-
   retry(): void {
-    this.clientsResource.reload();
+    this.settings.retry();
   }
 
   openAddModal(): void {
