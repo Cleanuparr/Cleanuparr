@@ -35,7 +35,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownAuthorItems=true&includeAuthor=true&includeBook=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownAuthorItems=true&includeAuthor=true&includeBook=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)

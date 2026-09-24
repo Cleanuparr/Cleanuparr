@@ -35,7 +35,7 @@ public class LidarrClient : ArrClient, ILidarrClient
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownArtistItems=true&includeArtist=true&includeAlbum=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownArtistItems=true&includeArtist=true&includeAlbum=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)

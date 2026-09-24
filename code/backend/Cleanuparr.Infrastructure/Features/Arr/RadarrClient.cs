@@ -37,7 +37,7 @@ public class RadarrClient : ArrClient, IRadarrClient
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownMovieItems=true&includeMovie=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownMovieItems=true&includeMovie=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)

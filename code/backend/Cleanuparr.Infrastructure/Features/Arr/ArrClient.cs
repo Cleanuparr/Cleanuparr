@@ -26,6 +26,11 @@ public abstract class ArrClient : IArrClient
     /// </summary>
     private const int DownloadFolderImportedEvent = 3;
 
+    /// <summary>
+    /// Page size used when paging through an *arr instance's queue.
+    /// </summary>
+    protected const int QueuePageSize = 200;
+
     protected readonly ILogger<ArrClient> _logger;
     protected readonly HttpClient _httpClient;
     protected readonly IStriker _striker;

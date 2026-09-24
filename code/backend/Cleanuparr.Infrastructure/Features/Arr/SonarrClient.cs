@@ -39,7 +39,7 @@ public class SonarrClient : ArrClient, ISonarrClient
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)
