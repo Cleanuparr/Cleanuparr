@@ -69,6 +69,32 @@ export class RTorrentDriver implements TorrentClientDriver {
     void infoHash;
   }
 
+  /** Like addTorrent, but sets d.custom1 (Category) to `category`, not `name`. */
+  async addSeedingTorrent({ metainfo, savePath, category, name }: { metainfo: Buffer; savePath: string; category: string; name: string; infoHash: string }): Promise<void> {
+    await this.call('load.raw_start_verbose', [
+      '',
+      { type: 'base64', value: metainfo.toString('base64') },
+      `d.directory.set="${savePath}"`,
+      `d.custom1.set="${category}"`,
+    ]);
+    void name;
+  }
+
+  /** d.state: 0 = stopped, 1 = started. */
+  async getState(infoHash: string): Promise<number> {
+    return Number(await this.call('d.state', [infoHash.toUpperCase()]));
+  }
+
+  /** d.complete: 1 once the hash check confirms all pieces are present. */
+  async getComplete(infoHash: string): Promise<number> {
+    return Number(await this.call('d.complete', [infoHash.toUpperCase()]));
+  }
+
+  /** d.custom1: the label/category field Cleanuparr reads as Category. */
+  async getLabel(infoHash: string): Promise<string> {
+    return String(await this.call('d.custom1', [infoHash.toUpperCase()]));
+  }
+
   /** rTorrent reports d.state 0 for a stopped torrent and 1 for a started one. */
   async isStopped(infoHash: string): Promise<boolean> {
     return (await this.call('d.state', [infoHash.toUpperCase()])) === 0;
