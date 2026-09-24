@@ -245,6 +245,28 @@ export async function deleteSeedingRule(accessToken: string, ruleId: string): Pr
   });
 }
 
+export async function createNotificationProvider(
+  accessToken: string,
+  type: string,
+  provider: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/notification_providers/${type}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(provider),
+  });
+}
+
+export async function deleteNotificationProvider(accessToken: string, providerId: string): Promise<Response> {
+  return fetch(`${API}/api/configuration/notification_providers/${providerId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 export async function getUnlinkedConfig(accessToken: string, downloadClientId: string): Promise<Response> {
   return fetch(`${API}/api/unlinked-config/${downloadClientId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
