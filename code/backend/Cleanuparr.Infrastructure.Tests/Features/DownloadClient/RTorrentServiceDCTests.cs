@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -43,6 +44,14 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 .GetAllTorrentsAsync()
                 .Returns(downloads);
 
+            _fixture.ClientWrapper
+                .GetTrackersAsync("HASH1")
+                .Returns(new List<string>());
+
+            _fixture.ClientWrapper
+                .GetTrackersAsync("HASH3")
+                .Returns(new List<string>());
+
             // Act
             var result = await sut.GetSeedingDownloads();
 
@@ -84,12 +93,54 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 .GetAllTorrentsAsync()
                 .Returns(downloads);
 
+            _fixture.ClientWrapper
+                .GetTrackersAsync("HASH1")
+                .Returns(new List<string>());
+
             // Act
             var result = await sut.GetSeedingDownloads();
 
             // Assert
             result.ShouldHaveSingleItem();
             result[0].Hash.ShouldBe("HASH1");
+        }
+
+        [Fact]
+        public async Task FetchesTrackerDataForSeedingTorrents()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<RTorrentTorrent>
+            {
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1, Complete = 1, IsPrivate = 0, Label = "" }
+            };
+
+            var trackers = new List<string>
+            {
+                "http://tracker.example.com:6969/announce",
+                "http://tracker.other.org:8080/announce"
+            };
+
+            _fixture.ClientWrapper
+                .GetAllTorrentsAsync()
+                .Returns(downloads);
+
+            _fixture.ClientWrapper
+                .GetTrackersAsync("HASH1")
+                .Returns(trackers);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            var wrapper = result[0];
+            wrapper.TrackerDomains.ShouldContain("tracker.example.com");
+            wrapper.TrackerDomains.ShouldContain("tracker.other.org");
+
+            await _fixture.ClientWrapper.Received(1)
+                .GetTrackersAsync("HASH1");
         }
     }
 
@@ -296,6 +347,52 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Assert
             await _fixture.ClientWrapper.Received(1)
                 .DeleteTorrentAsync("LOWERCASE");
+        }
+
+        [Fact]
+        public async Task RemapsSavePathBeforeDeletingFiles()
+        {
+            // Arrange
+            string targetRoot = Directory.CreateTempSubdirectory().FullName;
+            string targetPath = Path.Combine(targetRoot, "seed-rule-tracker");
+            Directory.CreateDirectory(targetPath);
+            File.WriteAllText(Path.Combine(targetPath, "file.txt"), "content");
+
+            DownloadClientConfig config = new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test rTorrent Client",
+                TypeName = Domain.Enums.DownloadClientTypeName.rTorrent,
+                Type = Domain.Enums.DownloadClientType.Torrent,
+                Enabled = true,
+                Host = new Uri("http://localhost/RPC2"),
+                Username = "admin",
+                Password = "admin",
+                UrlBase = "",
+                DownloadDirectorySource = "/downloads",
+                DownloadDirectoryTarget = targetRoot,
+            };
+            var sut = _fixture.CreateSut(config);
+
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns("hash");
+            mockTorrent.SavePath.Returns("/downloads/seed-rule-tracker");
+
+            try
+            {
+                // Act
+                await sut.DeleteDownload(mockTorrent, deleteSourceFiles: true);
+
+                // Assert
+                Directory.Exists(targetPath).ShouldBeFalse();
+            }
+            finally
+            {
+                if (Directory.Exists(targetRoot))
+                {
+                    Directory.Delete(targetRoot, true);
+                }
+            }
         }
     }
 

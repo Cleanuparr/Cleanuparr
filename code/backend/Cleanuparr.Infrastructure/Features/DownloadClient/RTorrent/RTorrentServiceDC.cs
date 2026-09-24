@@ -13,12 +13,16 @@ public partial class RTorrentService
     {
         var downloads = await _client.GetAllTorrentsAsync();
 
-        return downloads
+        var result = new List<ITorrentItemWrapper>();
+        foreach (var torrent in downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            // Seeding: complete=1 (finished) and state=1 (started)
-            .Where(x => x is { Complete: 1, State: 1 })
-            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x, null, _timeProvider))
-            .ToList();
+            .Where(x => x is { Complete: 1, State: 1 }))
+        {
+            var trackers = await _client.GetTrackersAsync(torrent.Hash);
+            result.Add(new RTorrentItemWrapper(torrent, trackers, _timeProvider));
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>
@@ -81,7 +85,12 @@ public partial class RTorrentService
 
         if (deleteSourceFiles)
         {
-            if (!TryDeleteFiles(torrent.SavePath, true))
+            string savePath = PathHelper.NormalizeAndRemap(
+                torrent.SavePath,
+                _downloadClientConfig.DownloadDirectorySource,
+                _downloadClientConfig.DownloadDirectoryTarget);
+
+            if (!TryDeleteFiles(savePath, true))
             {
                 _logger.LogWarning("Failed to delete files | {name}", torrent.Name);
             }
