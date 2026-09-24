@@ -1,5 +1,8 @@
 import { computed, Signal, signal } from '@angular/core';
 
+/** How long the "saved" flash stays true after a successful save, shared by every settings page. */
+export const SAVED_FLASH_MS = 1500;
+
 /** Result of {@link createDirtyTracker}. */
 export interface DirtyTracker {
   /** JSON snapshot of the model as of the last `markSaved()` call, or `''` before the first one. */

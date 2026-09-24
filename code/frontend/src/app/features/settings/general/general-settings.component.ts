@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, viewChildren } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { form, required, min, max, validate, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -14,8 +13,8 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { GeneralConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { DeferredLoader } from '@shared/utils/loading.util';
-import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
 
 const CERT_OPTIONS: SelectOption[] = [
   { label: 'Enabled', value: CertificateValidationType.Enabled },
@@ -75,14 +74,16 @@ export class GeneralSettingsComponent implements HasPendingChanges {
   private readonly confirmService = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
-  private readonly configResource = rxResource({
-    stream: () => this.api.get(),
+  private readonly settings = createSettingsResource({
+    load: () => this.api.get(),
+    errorMessage: 'Failed to load general settings',
   });
+  private readonly configResource = this.settings.resource;
 
   readonly certOptions = CERT_OPTIONS;
   readonly logLevelOptions = LOG_LEVEL_OPTIONS;
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.configResource.error());
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -114,8 +115,6 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     logArchiveRetainedCount: 3,
     logArchiveTimeLimitHours: 720,
   });
-
-  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly genForm = form(this.model, (p) => {
     required(p.httpMaxRetries, { message: 'This field is required' });
@@ -175,6 +174,9 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     this.genForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
   );
 
+  private readonly dirtyTracker = createDirtyTracker(this.model);
+  readonly dirty = this.dirtyTracker.dirty;
+
   constructor() {
     effect(() => {
       const config = this.configResource.hasValue() ? this.configResource.value() : undefined;
@@ -209,24 +211,10 @@ export class GeneralSettingsComponent implements HasPendingChanges {
         this.dirtyTracker.markSaved();
       });
     });
-
-    effect(() => {
-      if (this.configResource.error()) {
-        this.toast.error('Failed to load general settings');
-      }
-    });
-
-    effect(() => {
-      if (this.configResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
-    });
   }
 
   retry(): void {
-    this.configResource.reload();
+    this.settings.retry();
   }
 
   save(): void {
@@ -266,7 +254,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
         this.toast.success('General settings saved');
         this.saving.set(false);
         this.saved.set(true);
-        setTimeout(() => this.saved.set(false), 1500);
+        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
         this.dirtyTracker.markSaved();
       },
       error: () => {
@@ -275,8 +263,6 @@ export class GeneralSettingsComponent implements HasPendingChanges {
       },
     });
   }
-
-  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty();
