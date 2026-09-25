@@ -75,14 +75,13 @@ public class ReadarrClient : ArrClient, IReadarrClient
 
         try
         {
-            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
+            using HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
 
             long? commandId = null;
 
             if (response is not null)
             {
                 commandId = await ReadCommandIdAsync(response);
-                response.Dispose();
             }
 
             _logger.LogInformation("{Log}", GetSearchLog(arrInstance.Url, command, true, logContext));

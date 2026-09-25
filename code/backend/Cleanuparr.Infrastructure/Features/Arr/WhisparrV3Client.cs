@@ -77,8 +77,7 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
 
         try
         {
-            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-            response?.Dispose();
+            using HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
             
             _logger.LogInformation("{Log}", GetSearchLog(arrInstance.Url, command, true, logContext));
         }

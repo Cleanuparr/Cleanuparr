@@ -77,7 +77,7 @@ public class RadarrClient : ArrClient, IRadarrClient
 
         try
         {
-            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
+            using HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
 
             if (response is null)
             {
@@ -85,7 +85,6 @@ public class RadarrClient : ArrClient, IRadarrClient
             }
 
             long? commandId = await ReadCommandIdAsync(response);
-            response.Dispose();
 
             _logger.LogInformation("{Log}", GetSearchLog(arrInstance.Url, command, true, logContext));
 

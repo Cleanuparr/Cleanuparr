@@ -75,12 +75,11 @@ public class SonarrClient : ArrClient, ISonarrClient
 
             try
             {
-                HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
+                using HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
 
                 if (response is not null)
                 {
                     long? commandId = await ReadCommandIdAsync(response);
-                    response.Dispose();
 
                     if (commandId.HasValue)
                     {
