@@ -11,11 +11,13 @@ import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.
 import { StrikesApi } from '@core/api/strikes.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
-import { PaginationService } from '@core/services/pagination.service';
+import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-display.util';
+
+const POLL_INTERVAL_MS = 10_000;
 
 @Component({
   selector: 'app-strikes',
@@ -39,7 +41,6 @@ import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-displ
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StrikesComponent implements OnInit, OnDestroy {
-  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-strikes';
 
   private readonly strikesApi = inject(StrikesApi);
   private readonly toast = inject(ToastService);
@@ -50,7 +51,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
   readonly expandedId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(StrikesComponent.PAGE_SIZE_KEY, 50));
+  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.strikes, 50));
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
 
@@ -97,7 +98,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.pollTimer = setInterval(() => this.strikesResource.reload(), 10_000);
+    this.pollTimer = setInterval(() => this.strikesResource.reload(), POLL_INTERVAL_MS);
   }
 
   ngOnDestroy(): void {
@@ -115,7 +116,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
-    StrikesComponent.PAGE_SIZE_KEY,
+    PAGE_SIZE_STORAGE_KEYS.strikes,
     this.pageSize,
     this.currentPage,
   );

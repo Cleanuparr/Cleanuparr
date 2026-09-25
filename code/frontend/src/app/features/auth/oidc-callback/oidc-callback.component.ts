@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@ang
 import { ActivatedRoute, Router } from '@angular/router';
 import { SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
+import { ROUTES } from '@shared/routes';
 
 @Component({
   selector: 'app-oidc-callback',
@@ -70,7 +71,7 @@ export class OidcCallbackComponent implements OnInit {
 
     this.auth.exchangeOidcCode(code).subscribe({
       next: () => {
-        this.router.navigate(['/dashboard']);
+        this.router.navigate([ROUTES.dashboard]);
       },
       error: () => {
         this.handleError('exchange_failed');
@@ -92,7 +93,7 @@ export class OidcCallbackComponent implements OnInit {
     this.error.set(messages[errorCode] || 'An unknown error occurred');
 
     setTimeout(() => {
-      this.router.navigate(['/auth/login']);
+      this.router.navigate([ROUTES.login]);
     }, 3000);
   }
 }

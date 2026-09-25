@@ -25,24 +25,26 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     {
     }
     
+    protected override string ApiVersion => "v3";
+
     protected override string GetSystemStatusUrlPath()
     {
-        return "/api/v3/system/status";
+        return $"/api/{ApiVersion}/system/status";
     }
     
     protected override string GetQueueUrlPath()
     {
-        return "/api/v3/queue";
+        return $"/api/{ApiVersion}/queue";
     }
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownMovieItems=true&includeMovie=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownMovieItems=true&includeMovie=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)
     {
-        return $"/api/v3/queue/{recordId}";
+        return $"/api/{ApiVersion}/queue/{recordId}";
     }
 
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
@@ -55,7 +57,7 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
         List<long> ids = items.Select(item => item.Id).ToList();
         
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
         
         WhisparrV3Command command = new()
         {
@@ -139,7 +141,7 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     private async Task<Movie?> GetMovie(ArrInstance arrInstance, long movieId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie/{movieId}";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/movie/{movieId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);

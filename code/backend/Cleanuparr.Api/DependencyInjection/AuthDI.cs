@@ -52,7 +52,7 @@ public static class AuthDI
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(signingKey),
-                    ClockSkew = TimeSpan.FromSeconds(30)
+                    ClockSkew = JwtService.ClockSkew
                 };
 
                 // Support SignalR token via query string

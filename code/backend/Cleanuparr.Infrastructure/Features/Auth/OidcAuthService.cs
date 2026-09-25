@@ -358,6 +358,7 @@ public sealed class OidcAuthService : IOidcAuthService
             // Bypass lifetime validation
             IssuerSigningKeyValidator = (_, _, _) => true,
             IssuerSigningKeys = discovery.SigningKeys,
+            // Wider than JwtService.ClockSkew: the IdP runs its own clock.
             ClockSkew = TimeSpan.FromMinutes(2)
         };
 
@@ -441,7 +442,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
     private static string GenerateRandomString()
     {
-        var bytes = new byte[32];
+        var bytes = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
         return Base64UrlEncode(bytes);

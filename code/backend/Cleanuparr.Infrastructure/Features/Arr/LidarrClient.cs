@@ -23,24 +23,26 @@ public class LidarrClient : ArrClient, ILidarrClient
     {
     }
 
+    protected override string ApiVersion => "v1";
+
     protected override string GetSystemStatusUrlPath()
     {
-        return "/api/v1/system/status";
+        return $"/api/{ApiVersion}/system/status";
     }
 
     protected override string GetQueueUrlPath()
     {
-        return "/api/v1/queue";
+        return $"/api/{ApiVersion}/queue";
     }
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownArtistItems=true&includeArtist=true&includeAlbum=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownArtistItems=true&includeArtist=true&includeAlbum=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)
     {
-        return $"/api/v1/queue/{recordId}";
+        return $"/api/{ApiVersion}/queue/{recordId}";
     }
 
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
@@ -51,7 +53,7 @@ public class LidarrClient : ArrClient, ILidarrClient
         }
 
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v1/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/command";
 
         foreach (var command in GetSearchCommands(items))
         {
@@ -130,7 +132,7 @@ public class LidarrClient : ArrClient, ILidarrClient
     private async Task<List<Album>?> GetAlbumsAsync(ArrInstance arrInstance, List<long> albumIds)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v1/album";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/album";
         uriBuilder.Query = string.Join('&', albumIds.Select(x => $"albumIds={x}"));
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);

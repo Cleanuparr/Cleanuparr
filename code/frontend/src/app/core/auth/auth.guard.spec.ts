@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, CanActivateFn, provideRouter, RouterStateSnapshot, UrlTree } from '@angular/router';
 import { firstValueFrom, isObservable, Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { ROUTES } from '@shared/routes';
 import { authGuard, loginGuard, setupIncompleteGuard } from './auth.guard';
 
 describe('auth guards', () => {
@@ -55,7 +56,7 @@ describe('auth guards', () => {
     it('redirects to login when setup is complete but the user is signed out', () => {
       setup({ authenticated: false });
 
-      expect(target(authGuard)).toBe('/auth/login');
+      expect(target(authGuard)).toBe(ROUTES.login);
     });
 
     it('allows an authenticated user through', () => {
@@ -69,7 +70,7 @@ describe('auth guards', () => {
     it('redirects to login once setup is complete', () => {
       setup();
 
-      expect(target(setupIncompleteGuard)).toBe('/auth/login');
+      expect(target(setupIncompleteGuard)).toBe(ROUTES.login);
     });
 
     it('allows access while setup is incomplete', () => {
@@ -89,7 +90,7 @@ describe('auth guards', () => {
     it('redirects an already authenticated user to the dashboard', () => {
       setup();
 
-      expect(target(loginGuard)).toBe('/dashboard');
+      expect(target(loginGuard)).toBe(ROUTES.dashboard);
     });
 
     it('allows a signed out user to reach the login page', () => {
@@ -128,7 +129,7 @@ describe('auth guards', () => {
       auth.isLoading.set(false);
       TestBed.tick();
 
-      expect(String(await decision)).toBe('/auth/login');
+      expect(String(await decision)).toBe(ROUTES.login);
     });
   });
 });

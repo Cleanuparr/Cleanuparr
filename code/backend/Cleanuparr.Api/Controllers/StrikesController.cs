@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Common;
 using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Api.Features.Strikes.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
@@ -36,15 +37,7 @@ public class StrikesController : ControllerBase
             page = 1;
         }
 
-        if (pageSize < 1)
-        {
-            pageSize = 50;
-        }
-
-        if (pageSize > 500)
-        {
-            pageSize = 500;
-        }
+        pageSize = Pagination.NormalizePageSize(pageSize);
 
         var query = _context.DownloadItems
             .Include(d => d.Strikes)

@@ -1,3 +1,4 @@
+import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
@@ -10,7 +11,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { SearchesTabComponent } from './searches-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
-const PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-searches';
+const PAGE_SIZE_KEY = PAGE_SIZE_STORAGE_KEYS.seekerSearches;
 
 function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat {
   return {

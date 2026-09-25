@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Common;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
@@ -48,15 +49,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             page = 1;
         }
 
-        if (pageSize < 1)
-        {
-            pageSize = 50;
-        }
-
-        if (pageSize > 500)
-        {
-            pageSize = 500;
-        }
+        pageSize = Pagination.NormalizePageSize(pageSize);
 
         var query = _eventsContext.CustomFormatScoreEntries
             .AsNoTracking()
@@ -199,8 +192,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] SortDirection? sortDirection = null)
     {
         if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 50;
-        if (pageSize > 500) pageSize = 500;
+        pageSize = Pagination.NormalizePageSize(pageSize);
 
         bool ascending = sortDirection.HasValue
             ? sortDirection.Value == SortDirection.Asc

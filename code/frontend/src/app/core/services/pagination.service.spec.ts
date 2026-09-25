@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { PaginationService } from './pagination.service';
+import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from './pagination.service';
 
 describe('PaginationService', () => {
   const KEY = 'test-page-size';
@@ -82,6 +82,16 @@ describe('PaginationService', () => {
 
       expect(pageSize()).toBe(50);
       expect(currentPage()).toBe(1);
+    });
+  });
+
+  it('keeps the persisted page size keys stable', () => {
+    expect(PAGE_SIZE_STORAGE_KEYS).toEqual({
+      strikes: 'cleanuparr-page-size-strikes',
+      events: 'cleanuparr-page-size-events',
+      seekerQuality: 'cleanuparr-page-size-seeker-quality',
+      seekerUpgrades: 'cleanuparr-page-size-seeker-upgrades',
+      seekerSearches: 'cleanuparr-page-size-seeker-searches',
     });
   });
 });

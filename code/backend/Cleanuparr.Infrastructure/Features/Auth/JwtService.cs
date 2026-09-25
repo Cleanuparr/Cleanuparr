@@ -14,6 +14,11 @@ public sealed class JwtService : IJwtService
     private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
     private static readonly TimeSpan LoginTokenLifetime = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// Tight tolerance: the issuing server also validates the token.
+    /// </summary>
+    public static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
+
     private readonly byte[] _signingKey;
     private readonly TimeProvider _timeProvider;
 
@@ -48,7 +53,7 @@ public sealed class JwtService : IJwtService
 
     public string GenerateRefreshToken()
     {
-        var bytes = new byte[32];
+        var bytes = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
         return Convert.ToBase64String(bytes);
@@ -84,7 +89,7 @@ public sealed class JwtService : IJwtService
             return File.ReadAllBytes(keyPath);
         }
 
-        var key = new byte[32];
+        var key = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(key);
 
@@ -129,7 +134,7 @@ public sealed class JwtService : IJwtService
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = key,
-                ClockSkew = TimeSpan.FromSeconds(30)
+                ClockSkew = ClockSkew
             }, out _);
         }
         catch

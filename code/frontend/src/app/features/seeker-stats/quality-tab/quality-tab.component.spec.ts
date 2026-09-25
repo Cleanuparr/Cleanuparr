@@ -1,3 +1,4 @@
+import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
@@ -12,7 +13,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { QualityTabComponent } from './quality-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
-const PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-quality';
+const PAGE_SIZE_KEY = PAGE_SIZE_STORAGE_KEYS.seekerQuality;
 
 const INSTANCES: CfScoreInstance[] = [
   { id: 'sonarr-1', name: 'Sonarr Main', itemType: 'Sonarr', qualityProfiles: ['HD-1080p', 'Standard'] },

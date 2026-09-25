@@ -4,10 +4,11 @@ import { StrikesApi } from '@core/api/strikes.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 import { PaginatedResult } from '@core/models/pagination.model';
+import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StrikesComponent } from './strikes.component';
 import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
-const PAGE_SIZE_KEY = 'cleanuparr-page-size-strikes';
+const PAGE_SIZE_KEY = PAGE_SIZE_STORAGE_KEYS.strikes;
 
 const ITEMS: DownloadItemStrikes[] = [
   {

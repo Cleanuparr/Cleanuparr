@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { filter, map, take } from 'rxjs';
 import { AuthService } from './auth.service';
+import { ROUTES } from '@shared/routes';
 
 /**
  * Waits for the initial auth status check to complete,
@@ -33,14 +34,14 @@ export const authGuard: CanActivateFn = waitForAuth((auth, router) => {
     return router.createUrlTree(['/auth/setup']);
   }
   if (!auth.isAuthenticated()) {
-    return router.createUrlTree(['/auth/login']);
+    return router.createUrlTree([ROUTES.login]);
   }
   return true;
 });
 
 export const setupIncompleteGuard: CanActivateFn = waitForAuth((auth, router) => {
   if (auth.isSetupComplete()) {
-    return router.createUrlTree(['/auth/login']);
+    return router.createUrlTree([ROUTES.login]);
   }
   return true;
 });
@@ -50,7 +51,7 @@ export const loginGuard: CanActivateFn = waitForAuth((auth, router) => {
     return router.createUrlTree(['/auth/setup']);
   }
   if (auth.isAuthenticated()) {
-    return router.createUrlTree(['/dashboard']);
+    return router.createUrlTree([ROUTES.dashboard]);
   }
   return true;
 });

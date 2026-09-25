@@ -406,7 +406,7 @@ public sealed class AccountController : ControllerBase
             return Unauthorized();
         }
 
-        var bytes = new byte[32];
+        var bytes = new byte[Constants.TokenByteLength];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(bytes);
 

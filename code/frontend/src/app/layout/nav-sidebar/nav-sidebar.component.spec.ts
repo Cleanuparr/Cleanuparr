@@ -5,6 +5,7 @@ import { AppStatus } from '@core/models/app-status.model';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { AuthService } from '@core/auth/auth.service';
 import { NavSidebarComponent } from './nav-sidebar.component';
+import { ROUTES } from '@shared/routes';
 
 interface Harness {
   fixture: ComponentFixture<NavSidebarComponent>;
@@ -47,12 +48,12 @@ describe('NavSidebarComponent', () => {
     fixture.detectChanges();
 
     expect(link(fixture, '/settings/general').classList).toContain('sidebar__item--active');
-    expect(link(fixture, '/dashboard').classList).not.toContain('sidebar__item--active');
+    expect(link(fixture, ROUTES.dashboard).classList).not.toContain('sidebar__item--active');
 
-    await router.navigateByUrl('/dashboard');
+    await router.navigateByUrl(ROUTES.dashboard);
     fixture.detectChanges();
 
-    expect(link(fixture, '/dashboard').classList).toContain('sidebar__item--active');
+    expect(link(fixture, ROUTES.dashboard).classList).toContain('sidebar__item--active');
     expect(link(fixture, '/settings/general').classList).not.toContain('sidebar__item--active');
   });
 
@@ -118,7 +119,7 @@ describe('NavSidebarComponent', () => {
 
     expect(component.settingsExpanded()).toBe(false);
     expect(link(fixture, '/settings/general')).toBeNull();
-    expect(link(fixture, '/dashboard')).not.toBeNull();
+    expect(link(fixture, ROUTES.dashboard)).not.toBeNull();
   });
 
   it('announces a nav click only on mobile and signs the user out on request', () => {

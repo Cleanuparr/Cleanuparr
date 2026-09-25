@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService, LoginResponse, PlexPinResponse, TokenResponse } from '@core/auth/auth.service';
 import { LoginComponent } from './login.component';
+import { ROUTES } from '@shared/routes';
 
 const TOKENS: TokenResponse = { accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 };
 const PIN: PlexPinResponse = { pinId: 42, authUrl: 'https://plex.tv/link' };
@@ -110,7 +111,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
 
     expect(loginCalls).toEqual([['admin', 'hunter2']]);
-    expect(navigations).toEqual([['/dashboard']]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
     expect(component.loading()).toBe(false);
     expect(errorText(fixture)).toBeNull();
   });
@@ -182,7 +183,7 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
 
     expect(verify2faCalls).toEqual([['login-token', '123456', undefined]]);
-    expect(navigations).toEqual([['/dashboard']]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
   });
 
   it('accepts a pasted code that carries surrounding whitespace', () => {
@@ -223,6 +224,25 @@ describe('LoginComponent', () => {
     expect(verify2faCalls).toEqual([['login-token', 'ABCD-1234', true]]);
     expect(errorText(fixture)).toBe('Invalid recovery code');
     expect(navigations).toEqual([]);
+  });
+
+  it('verifies an accepted recovery code and lands on the dashboard', () => {
+    const { fixture, verify2faCalls, navigations } = setup({
+      login: of({ requiresTwoFactor: true, loginToken: 'login-token' }),
+      verify2fa: of(TOKENS),
+    });
+    const component = fixture.componentInstance;
+
+    component.submitLogin();
+    component.useRecoveryCode();
+    component.recoveryCode.set('ABCD-1234');
+    fixture.detectChanges();
+
+    submitButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(verify2faCalls).toEqual([['login-token', 'ABCD-1234', true]]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
   });
 
   it('counts down when the server rate limits the second factor step', () => {

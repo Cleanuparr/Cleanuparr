@@ -3,7 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiError } from '@core/interceptors/error.interceptor';
-import { AuthService, AuthStatus, TokenResponse } from './auth.service';
+import { ACCESS_TOKEN_KEY, AuthService, AuthStatus, REFRESH_TOKEN_KEY, TokenResponse } from './auth.service';
+import { ROUTES } from '@shared/routes';
 
 const NOW_MS = Date.UTC(2026, 6, 31, 12, 0, 0);
 const NOW_SEC = Math.floor(NOW_MS / 1000);
@@ -100,14 +101,14 @@ describe('AuthService', () => {
     });
 
     it('reports a token living well beyond the buffer as valid', () => {
-      localStorage.setItem('access_token', jwt(600));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(600));
       const { service } = setup();
 
       expect(service.isTokenExpired(60)).toBe(false);
     });
 
     it('reports a token expiring inside the buffer window as expired', () => {
-      localStorage.setItem('access_token', jwt(45));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(45));
       const { service } = setup();
 
       expect(service.isTokenExpired(60)).toBe(true);
@@ -115,14 +116,14 @@ describe('AuthService', () => {
     });
 
     it('defaults to a thirty second buffer', () => {
-      localStorage.setItem('access_token', jwt(29));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(29));
       const { service } = setup();
 
       expect(service.isTokenExpired()).toBe(true);
     });
 
     it('treats the exact buffer boundary as expired', () => {
-      localStorage.setItem('access_token', jwt(30));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(30));
       const { service } = setup();
 
       expect(service.isTokenExpired(30)).toBe(true);
@@ -132,35 +133,35 @@ describe('AuthService', () => {
       const token = base64UrlJwt(600);
       expect(token).toContain('_');
 
-      localStorage.setItem('access_token', token);
+      localStorage.setItem(ACCESS_TOKEN_KEY, token);
       const { service } = setup();
 
       expect(service.isTokenExpired(60)).toBe(false);
     });
 
     it('treats a token without a payload segment as expired', () => {
-      localStorage.setItem('access_token', 'garbage');
+      localStorage.setItem(ACCESS_TOKEN_KEY, 'garbage');
       const { service } = setup();
 
       expect(service.isTokenExpired()).toBe(true);
     });
 
     it('treats an undecodable payload as expired', () => {
-      localStorage.setItem('access_token', 'header.!!!not-base64!!!.signature');
+      localStorage.setItem(ACCESS_TOKEN_KEY, 'header.!!!not-base64!!!.signature');
       const { service } = setup();
 
       expect(service.isTokenExpired()).toBe(true);
     });
 
     it('treats a payload that is not json as expired', () => {
-      localStorage.setItem('access_token', `header.${btoa('plain text')}.signature`);
+      localStorage.setItem(ACCESS_TOKEN_KEY, `header.${btoa('plain text')}.signature`);
       const { service } = setup();
 
       expect(service.isTokenExpired()).toBe(true);
     });
 
     it('treats a non numeric exp claim as expired', () => {
-      localStorage.setItem('access_token', `header.${btoa(JSON.stringify({ exp: 'soon' }))}.sig`);
+      localStorage.setItem(ACCESS_TOKEN_KEY, `header.${btoa(JSON.stringify({ exp: 'soon' }))}.sig`);
       const { service } = setup();
 
       expect(service.isTokenExpired()).toBe(true);
@@ -169,7 +170,7 @@ describe('AuthService', () => {
 
   describe('token storage', () => {
     it('reads back the stored access token', () => {
-      localStorage.setItem('access_token', 'stored');
+      localStorage.setItem(ACCESS_TOKEN_KEY, 'stored');
       const { service } = setup();
 
       expect(service.getAccessToken()).toBe('stored');
@@ -186,9 +187,14 @@ describe('AuthService', () => {
 
       expect(service.hasRefreshToken()).toBe(false);
 
-      localStorage.setItem('refresh_token', 'refresh');
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'refresh');
 
       expect(service.hasRefreshToken()).toBe(true);
+    });
+
+    it('keeps the persisted token keys stable', () => {
+      expect(ACCESS_TOKEN_KEY).toBe('access_token');
+      expect(REFRESH_TOKEN_KEY).toBe('refresh_token');
     });
   });
 
@@ -202,8 +208,8 @@ describe('AuthService', () => {
 
       service.login('user', 'pass').subscribe();
 
-      expect(localStorage.getItem('access_token')).toBe(jwt(600));
-      expect(localStorage.getItem('refresh_token')).toBe('r1');
+      expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBe(jwt(600));
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('r1');
       expect(service.isAuthenticated()).toBe(true);
     });
 
@@ -216,7 +222,7 @@ describe('AuthService', () => {
 
       service.login('user', 'pass').subscribe();
 
-      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
       expect(service.isAuthenticated()).toBe(false);
     });
 
@@ -233,7 +239,7 @@ describe('AuthService', () => {
         isRecoveryCode: false,
       });
       expect(service.isAuthenticated()).toBe(true);
-      expect(localStorage.getItem('refresh_token')).toBe('r2');
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('r2');
     });
 
     it('forwards the recovery code flag', () => {
@@ -270,7 +276,7 @@ describe('AuthService', () => {
       service.verifyPlexPin(42).subscribe();
 
       expect(service.isAuthenticated()).toBe(false);
-      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     });
 
     it('authenticates when the oidc code is exchanged', () => {
@@ -281,7 +287,7 @@ describe('AuthService', () => {
       service.exchangeOidcCode('code').subscribe();
 
       expect(service.isAuthenticated()).toBe(true);
-      expect(localStorage.getItem('refresh_token')).toBe('r3');
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('r3');
     });
   });
 
@@ -388,7 +394,7 @@ describe('AuthService', () => {
     });
 
     it('authenticates from a still valid stored token', () => {
-      localStorage.setItem('access_token', jwt(600));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(600));
       const { service, postsTo } = setup({ status: of(status()) });
 
       service.checkStatus().subscribe();
@@ -399,7 +405,7 @@ describe('AuthService', () => {
     });
 
     it('stays unauthenticated when setup is incomplete even with a stored token', () => {
-      localStorage.setItem('access_token', jwt(600));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(600));
       const { service } = setup({ status: of(status({ setupCompleted: false })) });
 
       service.checkStatus().subscribe();
@@ -418,8 +424,8 @@ describe('AuthService', () => {
     });
 
     it('refreshes a nearly expired stored token and authenticates on success', () => {
-      localStorage.setItem('access_token', jwt(30));
-      localStorage.setItem('refresh_token', 'stored-refresh');
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(30));
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'stored-refresh');
       const { service, postsTo, navigations } = setup({
         status: of(status()),
         responses: { '/api/auth/refresh': of(tokens(jwt(900), 'rotated')) },
@@ -430,19 +436,19 @@ describe('AuthService', () => {
       expect(postsTo('/api/auth/refresh')).toHaveLength(1);
       expect(service.isAuthenticated()).toBe(true);
       expect(service.isLoading()).toBe(false);
-      expect(localStorage.getItem('refresh_token')).toBe('rotated');
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('rotated');
       expect(navigations).toHaveLength(0);
     });
 
     it('redirects to login when the stored token is expired and cannot be refreshed', () => {
-      localStorage.setItem('access_token', jwt(30));
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(30));
       const { service, navigations } = setup({ status: of(status()) });
 
       service.checkStatus().subscribe();
 
       expect(service.isAuthenticated()).toBe(false);
       expect(service.isLoading()).toBe(false);
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
 
     it('flags a connection error and emits an empty status when the request fails', () => {
@@ -504,7 +510,7 @@ describe('AuthService', () => {
     });
 
     it('stores the rotated tokens and authenticates', () => {
-      localStorage.setItem('refresh_token', 'old-refresh');
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'old-refresh');
       const { service, posts } = setup({
         responses: { '/api/auth/refresh': of(tokens(jwt(900), 'new-refresh')) },
       });
@@ -515,13 +521,13 @@ describe('AuthService', () => {
         url: '/api/auth/refresh',
         body: { refreshToken: 'old-refresh' },
       });
-      expect(localStorage.getItem('access_token')).toBe(jwt(900));
-      expect(localStorage.getItem('refresh_token')).toBe('new-refresh');
+      expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBe(jwt(900));
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('new-refresh');
       expect(service.isAuthenticated()).toBe(true);
     });
 
     it('shares a single in-flight request between concurrent callers', () => {
-      localStorage.setItem('refresh_token', 'old-refresh');
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'old-refresh');
       const { service, postsTo } = setup({
         responses: { '/api/auth/refresh': of(tokens(jwt(900))) },
       });
@@ -541,7 +547,7 @@ describe('AuthService', () => {
     });
 
     it('starts a new request once the previous refresh has settled', () => {
-      localStorage.setItem('refresh_token', 'old-refresh');
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'old-refresh');
       const { service, postsTo } = setup({
         responses: { '/api/auth/refresh': of(tokens(jwt(900))) },
       });
@@ -553,8 +559,8 @@ describe('AuthService', () => {
     });
 
     it('clears the session when the server definitively rejects the refresh token', () => {
-      localStorage.setItem('access_token', jwt(600));
-      localStorage.setItem('refresh_token', 'revoked');
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(600));
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'revoked');
       const { service } = setup({
         responses: { '/api/auth/refresh': throwError(() => apiError(401)) },
       });
@@ -565,14 +571,14 @@ describe('AuthService', () => {
       });
 
       expect(result).toBeNull();
-      expect(localStorage.getItem('access_token')).toBeNull();
-      expect(localStorage.getItem('refresh_token')).toBeNull();
+      expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
       expect(service.isAuthenticated()).toBe(false);
     });
 
     it('keeps the stored tokens when the refresh fails for a transient reason', () => {
-      localStorage.setItem('access_token', jwt(600));
-      localStorage.setItem('refresh_token', 'still-good');
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(600));
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'still-good');
       const { service } = setup({
         responses: { '/api/auth/refresh': throwError(() => apiError(503)) },
       });
@@ -583,7 +589,7 @@ describe('AuthService', () => {
       });
 
       expect(result).toBeNull();
-      expect(localStorage.getItem('refresh_token')).toBe('still-good');
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe('still-good');
     });
   });
 
@@ -684,18 +690,18 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('revokes the refresh token server side and clears the local session', () => {
-      localStorage.setItem('access_token', jwt(600));
-      localStorage.setItem('refresh_token', 'to-revoke');
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwt(600));
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'to-revoke');
       const { service, posts, navigations } = setup();
       service.checkStatus().subscribe();
 
       service.logout();
 
       expect(posts).toEqual([{ url: '/api/auth/logout', body: { refreshToken: 'to-revoke' } }]);
-      expect(localStorage.getItem('access_token')).toBeNull();
-      expect(localStorage.getItem('refresh_token')).toBeNull();
+      expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
       expect(service.isAuthenticated()).toBe(false);
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
 
     it('skips the revocation call when no refresh token is stored', () => {
@@ -704,19 +710,19 @@ describe('AuthService', () => {
       service.logout();
 
       expect(posts).toHaveLength(0);
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
 
     it('clears the session even when the revocation call fails', () => {
-      localStorage.setItem('refresh_token', 'to-revoke');
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'to-revoke');
       const { service, navigations } = setup({
         responses: { '/api/auth/logout': throwError(() => apiError(500)) },
       });
 
       service.logout();
 
-      expect(localStorage.getItem('refresh_token')).toBeNull();
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+      expect(navigations).toEqual([[ROUTES.login]]);
     });
   });
 
@@ -753,7 +759,7 @@ describe('AuthService', () => {
       vi.setSystemTime(NOW_MS + 990_000);
       becomeVisible();
 
-      expect(navigations).toEqual([['/auth/login']]);
+      expect(navigations).toEqual([[ROUTES.login]]);
       expect(service.isAuthenticated()).toBe(false);
     });
 

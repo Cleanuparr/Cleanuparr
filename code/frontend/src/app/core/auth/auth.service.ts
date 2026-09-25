@@ -3,6 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap, of, catchError, finalize, shareReplay } from 'rxjs';
 import { Router } from '@angular/router';
 import { ApiError } from '@core/interceptors/error.interceptor';
+import { ROUTES } from '@shared/routes';
+export const ACCESS_TOKEN_KEY = 'access_token';
+export const REFRESH_TOKEN_KEY = 'refresh_token';
 
 export interface AuthStatus {
   setupCompleted: boolean;
@@ -85,7 +88,7 @@ export class AuthService {
           return;
         }
 
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem(ACCESS_TOKEN_KEY);
         if (token && status.setupCompleted) {
           if (this.isTokenExpired(60)) {
             // Access token expired — try to refresh before marking as authenticated
@@ -95,7 +98,7 @@ export class AuthService {
                 this.setupVisibilityListener();
               } else {
                 this._isAuthenticated.set(false);
-                this.router.navigate(['/auth/login']);
+                this.router.navigate([ROUTES.login]);
               }
               this._isLoading.set(false);
             });
@@ -205,7 +208,7 @@ export class AuthService {
       return this.refreshInFlight$;
     }
 
-    const storedRefreshToken = localStorage.getItem('refresh_token');
+    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!storedRefreshToken) {
       return of(null);
     }
@@ -230,7 +233,7 @@ export class AuthService {
   }
 
   logout(): void {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (refreshToken) {
       // Best-effort server-side token revocation; the local session is cleared
       // regardless, so a failed call must not surface as an unhandled error.
@@ -240,21 +243,21 @@ export class AuthService {
         .subscribe();
     }
     this.clearAuth();
-    this.router.navigate(['/auth/login']);
+    this.router.navigate([ROUTES.login]);
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
   }
 
   /** True while a refresh token is stored. Cleared only on a definitive refresh rejection. */
   hasRefreshToken(): boolean {
-    return localStorage.getItem('refresh_token') !== null;
+    return localStorage.getItem(REFRESH_TOKEN_KEY) !== null;
   }
 
   /** Returns true if the access token is expired or will expire within the buffer period. */
   isTokenExpired(bufferSeconds = 30): boolean {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) return true;
 
     const exp = this.getTokenExpiry(token);
@@ -264,8 +267,8 @@ export class AuthService {
   }
 
   private handleTokens(tokens: TokenResponse): void {
-    localStorage.setItem('access_token', tokens.accessToken);
-    localStorage.setItem('refresh_token', tokens.refreshToken);
+    localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
     this._isAuthenticated.set(true);
     this.scheduleRefresh();
     this.setupVisibilityListener();
@@ -277,7 +280,7 @@ export class AuthService {
     }
 
     // Always derive from the JWT's actual exp claim — never trust ExpiresIn from response
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (!token) return;
 
     const exp = this.getTokenExpiry(token);
@@ -297,8 +300,8 @@ export class AuthService {
   }
 
   private clearAuth(): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     this._isAuthenticated.set(false);
     this.refreshInFlight$ = null;
 
@@ -335,7 +338,7 @@ export class AuthService {
         // Token expired during sleep — refresh immediately
         this.refreshToken().subscribe((result) => {
           if (!result) {
-            this.router.navigate(['/auth/login']);
+            this.router.navigate([ROUTES.login]);
           }
         });
       } else {

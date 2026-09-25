@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal }
 import { Router } from '@angular/router';
 import { SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
+import { ROUTES } from '@shared/routes';
 
 @Component({
   selector: 'app-plex-callback',
@@ -82,7 +83,7 @@ export class PlexCallbackComponent implements OnInit, OnDestroy {
             return;
           }
           if (result.completed) {
-            this.router.navigate(['/dashboard']);
+            this.router.navigate([ROUTES.dashboard]);
           } else if (Date.now() >= deadline) {
             this.handleError('Plex authorization timed out');
           } else {
@@ -110,6 +111,6 @@ export class PlexCallbackComponent implements OnInit, OnDestroy {
 
   private handleError(message: string): void {
     this.error.set(message);
-    setTimeout(() => this.router.navigate(['/auth/login']), 3000);
+    setTimeout(() => this.router.navigate([ROUTES.login]), 3000);
   }
 }

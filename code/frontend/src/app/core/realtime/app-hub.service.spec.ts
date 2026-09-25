@@ -92,7 +92,7 @@ vi.mock('@microsoft/signalr', () => ({
 
 import { TestBed } from '@angular/core/testing';
 import { Observable, of } from 'rxjs';
-import { AuthService, TokenResponse } from '@core/auth/auth.service';
+import { AuthService, REFRESH_TOKEN_KEY, TokenResponse } from '@core/auth/auth.service';
 import { AppEvent, ManualEvent } from '@core/models/event.models';
 import { JobInfo } from '@core/models/job.models';
 import { LogEntry } from '@core/models/signalr.models';
@@ -389,7 +389,7 @@ describe('AppHubService', () => {
     });
 
     it('still attempts a refresh when only a refresh token remains', async () => {
-      localStorage.setItem('refresh_token', 'stored');
+      localStorage.setItem(REFRESH_TOKEN_KEY, 'stored');
       const rotated: TokenResponse = { accessToken: 'rotated', refreshToken: 'r', expiresIn: 900 };
 
       expect(await token({ accessToken: null, expired: true, refreshResult: rotated })).toBe(

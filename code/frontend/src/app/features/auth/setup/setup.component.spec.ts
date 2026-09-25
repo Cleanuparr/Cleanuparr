@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthStatus, AuthService, TotpSetupResponse } from '@core/auth/auth.service';
 import { SetupComponent } from './setup.component';
+import { ROUTES } from '@shared/routes';
 
 const TOTP: TotpSetupResponse = {
   secret: 'JBSWY3DPEHPK3PXP',
@@ -256,7 +257,7 @@ describe('SetupComponent', () => {
     submitButton(fixture).click();
     fixture.detectChanges();
 
-    expect(navigations).toEqual([['/auth/login']]);
+    expect(navigations).toEqual([[ROUTES.login]]);
   });
 
   it('keeps the user on step three when completing the setup fails', () => {
@@ -290,6 +291,6 @@ describe('SetupComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.retrying()).toBe(false);
-    expect(navigations).toEqual([['/auth/login']]);
+    expect(navigations).toEqual([[ROUTES.login]]);
   });
 });

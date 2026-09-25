@@ -32,4 +32,9 @@ public static class Constants
     public const string AppriseTestImageUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr/Logo/256.png";
 
     public const string CustomFormatScoreSyncerCron = "0 0/30 * * * ?";
+
+    /// <summary>
+    /// Byte length for random refresh tokens, signing keys and API keys.
+    /// </summary>
+    public const int TokenByteLength = 32;
 }

@@ -17,7 +17,7 @@ import {
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
-import { PaginationService } from '@core/services/pagination.service';
+import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeHighlight } from '@shared/utils/instance-display.util';
 
@@ -61,7 +61,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QualityTabComponent {
-  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-quality';
 
   private readonly api = inject(CfScoreApi);
   private readonly hub = inject(AppHubService);
@@ -70,7 +69,7 @@ export class QualityTabComponent {
   private initialLoad = true;
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(QualityTabComponent.PAGE_SIZE_KEY, 50));
+  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerQuality, 50));
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
 
@@ -235,7 +234,7 @@ export class QualityTabComponent {
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
-    QualityTabComponent.PAGE_SIZE_KEY,
+    PAGE_SIZE_STORAGE_KEYS.seekerQuality,
     this.pageSize,
     this.currentPage,
   );

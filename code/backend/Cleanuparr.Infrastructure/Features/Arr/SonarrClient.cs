@@ -27,24 +27,26 @@ public class SonarrClient : ArrClient, ISonarrClient
     {
     }
     
+    protected override string ApiVersion => "v3";
+
     protected override string GetSystemStatusUrlPath()
     {
-        return "/api/v3/system/status";
+        return $"/api/{ApiVersion}/system/status";
     }
     
     protected override string GetQueueUrlPath()
     {
-        return "/api/v3/queue";
+        return $"/api/{ApiVersion}/queue";
     }
 
     protected override string GetQueueUrlQuery(int page)
     {
-        return $"page={page}&pageSize=200&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
+        return $"page={page}&pageSize={QueuePageSize}&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)
     {
-        return $"/api/v3/queue/{recordId}";
+        return $"/api/{ApiVersion}/queue/{recordId}";
     }
 
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
@@ -57,7 +59,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         List<long> commandIds = [];
 
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
 
         foreach (SonarrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
         {
@@ -234,7 +236,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/series";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -255,7 +257,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/tag";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/tag";
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
         
@@ -268,7 +270,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/episode";
         uriBuilder.Query = $"seriesId={seriesId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
@@ -283,7 +285,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     public async Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/episodefile";
         uriBuilder.Query = $"seriesId={seriesId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
@@ -298,7 +300,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/qualityprofile";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/qualityprofile";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -317,7 +319,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         foreach (long[] batch in episodeFileIds.Chunk(100))
         {
             UriBuilder uriBuilder = new(arrInstance.Url);
-            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/episodefile";
             uriBuilder.Query = string.Join('&', batch.Select(id => $"episodeFileIds={id}"));
 
             using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
@@ -340,7 +342,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/episode";
         uriBuilder.Query = string.Join('&', episodeIds.Select(x => $"episodeIds={x}"));
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
@@ -355,7 +357,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     private async Task<Series?> GetSeriesAsync(ArrInstance arrInstance, long seriesId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series/{seriesId}";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/series/{seriesId}";
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);

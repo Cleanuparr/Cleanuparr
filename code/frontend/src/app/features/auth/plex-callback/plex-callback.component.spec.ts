@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthService, PlexVerifyResponse } from '@core/auth/auth.service';
 import { PlexCallbackComponent } from './plex-callback.component';
+import { ROUTES } from '@shared/routes';
 
 const PIN_KEY = 'plex_login_pin_id';
 const TOKENS = { accessToken: 'access', refreshToken: 'refresh', expiresIn: 900 };
@@ -70,7 +71,7 @@ describe('PlexCallbackComponent', () => {
 
     expect(verifiedPins).toEqual([4242]);
     expect(sessionStorage.getItem(PIN_KEY)).toBeNull();
-    expect(navigations).toEqual([['/dashboard']]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
     expect(errorText(fixture)).toBeNull();
   });
 
@@ -87,7 +88,7 @@ describe('PlexCallbackComponent', () => {
     vi.advanceTimersByTime(1000);
 
     expect(verifiedPins).toEqual([4242, 4242]);
-    expect(navigations).toEqual([['/dashboard']]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
   });
 
   it('reports an invalid sign in session when no pin was stored', () => {
@@ -99,7 +100,7 @@ describe('PlexCallbackComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Redirecting to login...');
 
     vi.advanceTimersByTime(3000);
-    expect(navigations).toEqual([['/auth/login']]);
+    expect(navigations).toEqual([[ROUTES.login]]);
   });
 
   it('reports a rejected verification', () => {
@@ -123,7 +124,7 @@ describe('PlexCallbackComponent', () => {
     expect(errorText(fixture)).toBe('Plex authorization timed out');
 
     vi.advanceTimersByTime(3000);
-    expect(navigations).toEqual([['/auth/login']]);
+    expect(navigations).toEqual([[ROUTES.login]]);
   });
 
   it('stops polling once the page is destroyed', () => {
