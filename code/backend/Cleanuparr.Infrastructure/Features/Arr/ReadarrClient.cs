@@ -53,16 +53,16 @@ public class ReadarrClient : ArrClient, IReadarrClient
         }
 
         List<long> ids = items.Select(item => item.Id).ToList();
-        
+
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/command";
-        
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
+
         ReadarrCommand command = new()
         {
             Name = "BookSearch",
             BookIds = ids,
         };
-        
+
         using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
         request.Content = new StringContent(
             JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
@@ -76,17 +76,24 @@ public class ReadarrClient : ArrClient, IReadarrClient
         try
         {
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-            response?.Dispose();
-            
+
+            long? commandId = null;
+
+            if (response is not null)
+            {
+                commandId = await ReadCommandIdAsync(response);
+                response.Dispose();
+            }
+
             _logger.LogInformation("{log}", GetSearchLog(arrInstance.Url, command, true, logContext));
+
+            return commandId.HasValue ? [commandId.Value] : [];
         }
         catch
         {
             _logger.LogError("{log}", GetSearchLog(arrInstance.Url, command, false, logContext));
             throw;
         }
-
-        return [];
     }
 
     public override bool HasContentId(QueueRecord record) => record.AuthorId is not 0 && record.BookId is not 0;

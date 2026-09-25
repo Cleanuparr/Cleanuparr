@@ -52,8 +52,10 @@ public class LidarrClient : ArrClient, ILidarrClient
             return [];
         }
 
+        List<long> commandIds = [];
+
         UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/command";
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
 
         foreach (var command in GetSearchCommands(items))
         {
@@ -70,8 +72,18 @@ public class LidarrClient : ArrClient, ILidarrClient
             try
             {
                 HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-                response?.Dispose();
-                
+
+                if (response is not null)
+                {
+                    long? commandId = await ReadCommandIdAsync(response);
+                    response.Dispose();
+
+                    if (commandId.HasValue)
+                    {
+                        commandIds.Add(commandId.Value);
+                    }
+                }
+
                 _logger.LogInformation("{log}", GetSearchLog(arrInstance.Url, command, true, logContext));
             }
             catch
@@ -81,7 +93,7 @@ public class LidarrClient : ArrClient, ILidarrClient
             }
         }
 
-        return [];
+        return commandIds;
     }
 
     public override bool HasContentId(QueueRecord record) => record.ArtistId is not 0 && record.AlbumId is not 0;
