@@ -32,7 +32,8 @@ public abstract class ArrClient : IArrClient
     protected const int QueuePageSize = 200;
 
     /// <summary>
-    /// Command API path shared by all *arr apps.
+    /// Command API path.
+    /// Every client uses v3 here, whatever its ApiVersion.
     /// </summary>
     protected const string CommandUrlPath = "/api/v3/command";
 
