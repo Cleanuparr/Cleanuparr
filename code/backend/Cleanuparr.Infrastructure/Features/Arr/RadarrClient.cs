@@ -87,13 +87,13 @@ public class RadarrClient : ArrClient, IRadarrClient
             long? commandId = await ReadCommandIdAsync(response);
             response.Dispose();
 
-            _logger.LogInformation("{log}", GetSearchLog(arrInstance.Url, command, true, logContext));
+            _logger.LogInformation("{Log}", GetSearchLog(arrInstance.Url, command, true, logContext));
 
             return commandId.HasValue ? [commandId.Value] : [];
         }
         catch
         {
-            _logger.LogError("{log}", GetSearchLog(arrInstance.Url, command, false, logContext));
+            _logger.LogError("{Log}", GetSearchLog(arrInstance.Url, command, false, logContext));
             throw;
         }
     }
