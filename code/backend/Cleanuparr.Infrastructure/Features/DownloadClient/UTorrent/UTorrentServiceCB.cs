@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
@@ -63,11 +61,6 @@ public partial class UTorrentService
             return result;
         }
 
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-
         IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
             for (int i = 0; i < files.Count; i++)
@@ -79,45 +72,11 @@ public partial class UTorrentService
             }
         }
 
-        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
-            ScanFilesForBlocking(BuildScanItems(), blocklistType, patterns, regexes, malwareBlockerConfig.DeleteIfAnyFileBlocked);
-
-        if (deleteImmediately)
+        await ApplyFileBlockingAsync(result, download.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-            return result;
-        }
-
-        if (unwantedIndices.Count is 0)
-        {
-            return result;
-        }
-
-        _logger.LogDebug("changing priorities | torrent {Hash}", hash);
-
-        if (totalUnwantedFiles == totalFiles)
-        {
-            _logger.LogDebug("All files are blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-        }
-
-        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, unwantedIndices));
+            await _client.SetFilesPriorityAsync(hash, unwantedIndices, 0);
+        });
 
         return result;
     }
-    
-    private async Task MarkFilesAsSkipped(string name, string hash, List<int> fileIndexes)
-    {
-        try
-        {
-            await _client.SetFilesPriorityAsync(hash, fileIndexes, 0);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
-        }
-    }
-} 
+}

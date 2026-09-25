@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Entities.Deluge.Response;
+﻿using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -61,11 +59,6 @@ public partial class DelugeService
             return result;
         }
 
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-
         // Deluge's priority API takes the full per-file vector, so keep every original priority
         Dictionary<int, int> originalPriorities = [];
         List<(int Index, string ValidationName, string LogName, FileBlockAction Action)> scanItems = [];
@@ -78,51 +71,17 @@ public partial class DelugeService
                 : FileBlockAction.CheckBlocklist));
         });
 
-        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
-            ScanFilesForBlocking(scanItems, blocklistType, patterns, regexes, malwareBlockerConfig.DeleteIfAnyFileBlocked);
-
-        if (deleteImmediately)
+        await ApplyFileBlockingAsync(result, download.Name, scanItems, malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-            return result;
-        }
+            HashSet<int> unwantedLookup = [..unwantedIndices];
+            List<int> sortedPriorities = originalPriorities
+                .OrderBy(x => x.Key)
+                .Select(x => unwantedLookup.Contains(x.Key) ? 0 : x.Value)
+                .ToList();
 
-        if (unwantedIndices.Count is 0)
-        {
-            return result;
-        }
-
-        if (totalUnwantedFiles == totalFiles)
-        {
-            _logger.LogDebug("All files are blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-        }
-
-        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", totalUnwantedFiles, download.Name);
-
-        HashSet<int> unwantedLookup = [..unwantedIndices];
-        List<int> sortedPriorities = originalPriorities
-            .OrderBy(x => x.Key)
-            .Select(x => unwantedLookup.Contains(x.Key) ? 0 : x.Value)
-            .ToList();
-
-        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, sortedPriorities));
+            await _client.ChangeFilesPriority(hash, sortedPriorities);
+        });
 
         return result;
-    }
-    
-    private async Task MarkFilesAsSkipped(string name, string hash, List<int> sortedPriorities)
-    {
-        try
-        {
-            await _client.ChangeFilesPriority(hash, sortedPriorities);
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
-        }
     }
 }

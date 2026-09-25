@@ -545,8 +545,8 @@ public class DownloadCleanerIntegrationTests : IDisposable
         public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(
             List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig) => [];
 
-        public override Task ChangeCategoryForNoHardLinksAsync(
-            List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig) => Task.CompletedTask;
+        protected override Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(
+            ITorrentItemWrapper torrent) => throw new NotSupportedException();
 
         public override Task<List<ITorrentItemWrapper>> GetAllTorrentsLite() => Task.FromResult(_seedingDownloads);
 
@@ -564,7 +564,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         public override Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(
             string hash, IReadOnlyList<string> ignoredDownloads) => throw new NotSupportedException();
 
-        public override Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
+        protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
             throw new NotSupportedException();
 
         public override Task CreateCategoryAsync(string name) => throw new NotSupportedException();

@@ -3,8 +3,6 @@ using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Extensions;
-using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -67,17 +65,6 @@ public partial class DelugeService
             return relativePaths;
         });
 
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
-        downloads
-            ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
-            .ToList();
-
-    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig) =>
-        downloads
-            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
-            .ToList();
-
     /// <inheritdoc/>
     public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
@@ -107,89 +94,44 @@ public partial class DelugeService
         await _dryRunInterceptor.InterceptAsync(() => CreateLabel(name));
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
+    /// <inheritdoc/>
+    protected override async Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
     {
-        if (downloads?.Count is null or 0)
+        DelugeItemWrapper delugeTorrent = (DelugeItemWrapper)torrent;
+        DelugeContents? contents;
+
+        try
         {
-            return;
+            contents = await _client.GetTorrentFiles(delugeTorrent.Hash);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "failed to find torrent files for {Name}", delugeTorrent.Name);
+            return null;
         }
 
-        foreach (DelugeItemWrapper torrent in downloads.Cast<DelugeItemWrapper>())
+        List<(string FilePath, HardLinkScanAction Action)> scanItems = [];
+
+        ProcessFiles(contents?.Contents, (_, file) =>
         {
-            if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Category))
-            {
-                continue;
-            }
+            string filePath = PathHelper.NormalizeAndRemap(
+                Path.Combine(delugeTorrent.Info.DownloadLocation, file.Path),
+                _downloadClientConfig.DownloadDirectorySource,
+                _downloadClientConfig.DownloadDirectoryTarget);
 
-            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-            SetDownloadClientContext();
+            HardLinkScanAction action = file.Priority <= 0
+                ? HardLinkScanAction.SkipUnwanted
+                : HardLinkScanAction.CheckHardLinks;
 
-            DelugeContents? contents;
-            try
-            {
-                contents = await _client.GetTorrentFiles(torrent.Hash);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning(exception, "failed to find torrent files for {name}", torrent.Name);
-                continue;
-            }
+            scanItems.Add((filePath, action));
+        });
 
-            List<(string FilePath, HardLinkScanAction Action)> scanItems = [];
-
-            ProcessFiles(contents?.Contents, (_, file) =>
-            {
-                string filePath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.Info.DownloadLocation, file.Path),
-                    _downloadClientConfig.DownloadDirectorySource,
-                    _downloadClientConfig.DownloadDirectoryTarget);
-
-                HardLinkScanAction action = file.Priority <= 0
-                    ? HardLinkScanAction.SkipUnwanted
-                    : HardLinkScanAction.CheckHardLinks;
-
-                scanItems.Add((filePath, action));
-            });
-
-            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(scanItems, unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-            if (hasErrors)
-            {
-                continue;
-            }
-
-            if (hasHardlinks)
-            {
-                _logger.LogDebug("skip | download has hardlinks | {name}", torrent.Name);
-                continue;
-            }
-
-            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
-
-            _logger.LogInformation("category changed for {name}", torrent.Name);
-
-            await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory);
-
-            torrent.Category = unlinkedConfig.TargetCategory;
-        }
+        return scanItems;
     }
 
     /// <inheritdoc/>
-    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
-    {
-        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-        SetDownloadClientContext();
-
-        string currentCategory = torrent.Category ?? string.Empty;
-
-        await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, targetCategory));
-
-        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory);
-
-        torrent.Category = targetCategory;
-    }
+    protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
+        ChangeLabel(torrent.Hash, targetCategory);
 
     protected async Task CreateLabel(string name)
     {

@@ -1,6 +1,5 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Infrastructure.Extensions;
-using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
@@ -54,13 +53,6 @@ public partial class TransmissionService
         });
 
     /// <inheritdoc/>
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules)
-    {
-        return downloads
-            ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
-            .ToList();
-    }
-
     public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
     {
         return downloads
@@ -98,127 +90,69 @@ public partial class TransmissionService
         await Task.CompletedTask;
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
+    /// <inheritdoc/>
+    protected override Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
     {
-        if (downloads?.Count is null or 0)
+        TransmissionItemWrapper transmissionTorrent = (TransmissionItemWrapper)torrent;
+
+        if (string.IsNullOrEmpty(transmissionTorrent.Info.DownloadDir))
         {
-            return;
+            return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(null);
         }
 
-        foreach (TransmissionItemWrapper torrent in downloads.Cast<TransmissionItemWrapper>())
+        if (transmissionTorrent.Info.Files is null || transmissionTorrent.Info.FileStats is null)
         {
-            if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Info.DownloadDir))
-            {
-                continue;
-            }
+            _logger.LogDebug("skip | download has no files | {name}", transmissionTorrent.Name);
+            return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(null);
+        }
 
-            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-            SetDownloadClientContext();
-
-            if (torrent.Info.Files is null || torrent.Info.FileStats is null)
+        IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
+        {
+            for (int i = 0; i < transmissionTorrent.Info.Files.Length; i++)
             {
-                _logger.LogDebug("skip | download has no files | {name}", torrent.Name);
-                continue;
-            }
+                TransmissionTorrentFiles file = transmissionTorrent.Info.Files[i];
+                TransmissionTorrentFileStats stats = transmissionTorrent.Info.FileStats[i];
 
-            IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
-            {
-                for (int i = 0; i < torrent.Info.Files.Length; i++)
+                if (stats.Wanted is null or false || string.IsNullOrEmpty(file.Name))
                 {
-                    TransmissionTorrentFiles file = torrent.Info.Files[i];
-                    TransmissionTorrentFileStats stats = torrent.Info.FileStats[i];
-
-                    if (stats.Wanted is null or false || string.IsNullOrEmpty(file.Name))
-                    {
-                        // Transmission skips unwanted files without the skip log
-                        continue;
-                    }
-
-                    string filePath = PathHelper.NormalizeAndRemap(
-                        Path.Combine(torrent.Info.DownloadDir, file.Name),
-                        _downloadClientConfig.DownloadDirectorySource,
-                        _downloadClientConfig.DownloadDirectoryTarget);
-
-                    yield return (filePath, HardLinkScanAction.CheckHardLinks);
+                    continue;
                 }
+
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(transmissionTorrent.Info.DownloadDir, file.Name),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
+
+                yield return (filePath, HardLinkScanAction.CheckHardLinks);
             }
-
-            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(BuildScanItems(), unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-            if (hasErrors)
-            {
-                continue;
-            }
-
-            if (hasHardlinks)
-            {
-                _logger.LogDebug("skip | download has hardlinks | {name}", torrent.Name);
-                continue;
-            }
-
-            string currentCategory = torrent.Category ?? string.Empty;
-
-            if (unlinkedConfig.UseTag)
-            {
-                string[] newLabels = torrent.Tags
-                    .Append(unlinkedConfig.TargetCategory)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-
-                await _dryRunInterceptor.InterceptAsync(() => ChangeLabels(torrent.Info.Id, newLabels));
-
-                _logger.LogInformation("label added for {name}", torrent.Name);
-
-                await _eventPublisher.PublishCategoryChanged(currentCategory, unlinkedConfig.TargetCategory, isTag: true);
-
-                continue;
-            }
-
-            string newLocation = torrent.Info.GetNewLocationByAppend(unlinkedConfig.TargetCategory);
-
-            await _dryRunInterceptor.InterceptAsync(() => ChangeDownloadLocation(torrent.Info.Id, newLocation));
-
-            _logger.LogInformation("category changed for {name}", torrent.Name);
-
-            await _eventPublisher.PublishCategoryChanged(currentCategory, unlinkedConfig.TargetCategory);
-
-            torrent.Category = unlinkedConfig.TargetCategory;
         }
+
+        return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(BuildScanItems());
     }
 
     /// <inheritdoc/>
-    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
+    protected override bool SupportsTags => true;
+
+    /// <inheritdoc/>
+    protected override async Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
     {
-        var transmissionTorrent = (TransmissionItemWrapper)torrent;
-
-        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-        SetDownloadClientContext();
-
-        string currentCategory = torrent.Category ?? string.Empty;
+        TransmissionItemWrapper transmissionTorrent = (TransmissionItemWrapper)torrent;
 
         if (useTag)
         {
-            string[] newLabels = torrent.Tags
+            string[] newLabels = transmissionTorrent.Tags
                 .Append(targetCategory)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            await _dryRunInterceptor.InterceptAsync(() => ChangeLabels(transmissionTorrent.Info.Id, newLabels));
-
-            await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory, isTag: true);
+            await ChangeLabels(transmissionTorrent.Info.Id, newLabels);
 
             return;
         }
 
         string newLocation = transmissionTorrent.Info.GetNewLocationByAppend(targetCategory);
 
-        await _dryRunInterceptor.InterceptAsync(() => ChangeDownloadLocation(transmissionTorrent.Info.Id, newLocation));
-
-        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory);
-
-        torrent.Category = targetCategory;
+        await ChangeDownloadLocation(transmissionTorrent.Info.Id, newLocation);
     }
 
     protected virtual async Task ChangeDownloadLocation(long downloadId, string newLocation)

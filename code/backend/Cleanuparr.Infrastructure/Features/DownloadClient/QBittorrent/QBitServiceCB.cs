@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
@@ -73,11 +71,6 @@ public partial class QBitService
             return result;
         }
 
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-
         IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
             foreach (TorrentContent file in files)
@@ -94,48 +87,14 @@ public partial class QBitService
             }
         }
 
-        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
-            ScanFilesForBlocking(BuildScanItems(), blocklistType, patterns, regexes, malwareBlockerConfig.DeleteIfAnyFileBlocked);
-
-        if (deleteImmediately)
-        {
-            _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-            return result;
-        }
-
-        if (unwantedIndices.Count is 0)
-        {
-            _logger.LogDebug("No unwanted files found for {Name}", download.Name);
-            return result;
-        }
-
-        if (totalUnwantedFiles == totalFiles)
-        {
-            _logger.LogDebug("All files are blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-        }
-
-        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", totalUnwantedFiles, download.Name);
-        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, unwantedIndices));
-        
-        return result;
-    }
-
-    private async Task MarkFilesAsSkipped(string name, string hash, List<int> unwantedIndices)
-    {
-        try
+        await ApplyFileBlockingAsync(result, download.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
             foreach (int fileIndex in unwantedIndices)
             {
                 await _client.SetFilePriorityAsync(hash, fileIndex, TorrentContentPriority.Skip);
             }
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
-        }
+        });
+
+        return result;
     }
 }
