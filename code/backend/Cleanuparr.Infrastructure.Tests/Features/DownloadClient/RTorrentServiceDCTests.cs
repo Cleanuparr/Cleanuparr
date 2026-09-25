@@ -528,6 +528,71 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
         }
     }
 
+    public class ChangeTorrentCategoryAsync_Tests : RTorrentServiceDCTests
+    {
+        public ChangeTorrentCategoryAsync_Tests(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task UseTagFalse_ChangesLabel_PublishesEvent_UpdatesCategory()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" }, null, TimeProvider.System);
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(wrapper, "target", useTag: false);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .SetLabelAsync("HASH1", "target");
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "target", false);
+            wrapper.Category.ShouldBe("target");
+        }
+
+        [Fact]
+        public async Task UseTagTrue_BehavesLikeUseTagFalse_BecauseRTorrentDoesNotSupportTags()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" }, null, TimeProvider.System);
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(wrapper, "target", useTag: true);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .SetLabelAsync("HASH1", "target");
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "target", false);
+            wrapper.Category.ShouldBe("target");
+        }
+
+        [Fact]
+        public async Task DryRun_SkipsLabelCall_ButPublishesEventAndUpdatesCategory()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies" }, null, TimeProvider.System);
+
+            _fixture.DryRunInterceptor
+                .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(wrapper, "target", useTag: false);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "target", false);
+            wrapper.Category.ShouldBe("target");
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : RTorrentServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(RTorrentServiceFixture fixture) : base(fixture)
@@ -857,6 +922,44 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Assert
             _fixture.EventPublisher.Received(1)
                 .PublishCategoryChanged("movies", "unlinked", false);
+        }
+
+        [Fact]
+        public async Task UseTagTrue_ChangesLabel_PublishesEventWithIsTagFalse_UpdatesCategory()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+
+            UnlinkedConfig unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked",
+                UseTag = true
+            };
+
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" }, null, TimeProvider.System);
+            List<ITorrentItemWrapper> downloads = new List<ITorrentItemWrapper> { wrapper };
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert - rTorrent does not support tags, so useTag falls back to a category change
+            await _fixture.ClientWrapper.Received(1)
+                .SetLabelAsync("HASH1", "unlinked");
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "unlinked", false);
+            wrapper.Category.ShouldBe("unlinked");
         }
 
         [Fact]

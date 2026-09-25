@@ -976,5 +976,107 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
         }
+
+        [Fact]
+        public async Task PrivateTorrent_WithIgnorePrivate_SkipsFileCheck_NeverEvaluatesFilenames()
+        {
+            const string hash = "IGNORE-PRIVATE-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { IgnorePrivate = true });
+
+            StubClient(hash, [new RTorrentFile { Index = 0, Path = "installer.exe", Priority = 1 }], isPrivate: true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+
+            _fixture.FilenameEvaluator
+                .DidNotReceive()
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>());
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<int>());
+        }
+
+        [Fact]
+        public async Task DryRun_AllFilesMalware_StillMarksForRemoval_SkipsPriorityCall()
+        {
+            const string hash = "DRY-RUN-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new RTorrentFile { Index = 0, Path = "malware.exe", Priority = 1 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            _fixture.DryRunInterceptor
+                .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                .Returns(Task.CompletedTask);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<int>());
+        }
+
+        [Fact]
+        public async Task PartialMalware_MultipleUnwantedFiles_CallsSetFilePriorityForExactIndicesOnly()
+        {
+            const string hash = "MULTI-PARTIAL-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 },
+                new RTorrentFile { Index = 1, Path = "malware1.exe", Priority = 1 },
+                new RTorrentFile { Index = 2, Path = "malware2.exe", Priority = 1 },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.StartsWith("malware")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeFalse();
+
+            await _fixture.ClientWrapper.Received(1).SetFilePriorityAsync(hash, 1, 0);
+            await _fixture.ClientWrapper.Received(1).SetFilePriorityAsync(hash, 2, 0);
+            await _fixture.ClientWrapper.DidNotReceive().SetFilePriorityAsync(hash, 0, 0);
+        }
+
+        [Fact]
+        public async Task NestedFilePath_ValidatesBareFilename()
+        {
+            const string hash = "NESTED-PATH-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new RTorrentFile { Index = 0, Path = "Season 01/Episode.01.mkv", Priority = 1 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            _fixture.FilenameEvaluator
+                .Received(1)
+                .IsValid("Episode.01.mkv", Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>());
+        }
     }
 }

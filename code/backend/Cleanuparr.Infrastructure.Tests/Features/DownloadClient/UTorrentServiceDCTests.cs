@@ -515,6 +515,77 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
         }
     }
 
+    public class ChangeTorrentCategoryAsync_Tests : UTorrentServiceDCTests
+    {
+        public ChangeTorrentCategoryAsync_Tests(UTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task UseTagFalse_ChangesLabel_PublishesEvent_UpdatesCategory()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies" },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(wrapper, "target", useTag: false);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabelAsync("hash1", "target");
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "target", false);
+            wrapper.Category.ShouldBe("target");
+        }
+
+        [Fact]
+        public async Task UseTagTrue_BehavesLikeUseTagFalse_BecauseUTorrentDoesNotSupportTags()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies" },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(wrapper, "target", useTag: true);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabelAsync("hash1", "target");
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "target", false);
+            wrapper.Category.ShouldBe("target");
+        }
+
+        [Fact]
+        public async Task DryRun_SkipsLabelCall_ButPublishesEventAndUpdatesCategory()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies" },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
+
+            _fixture.DryRunInterceptor
+                .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(wrapper, "target", useTag: false);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "target", false);
+            wrapper.Category.ShouldBe("target");
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : UTorrentServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(UTorrentServiceFixture fixture) : base(fixture)
@@ -824,6 +895,46 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Assert - EventPublisher is not mocked, so we just verify the method completed
             await _fixture.ClientWrapper.Received(1)
                 .SetTorrentLabelAsync("hash1", "unlinked");
+        }
+
+        [Fact]
+        public async Task UseTagTrue_ChangesLabel_PublishesEventWithIsTagFalse_UpdatesCategory()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+
+            UnlinkedConfig unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked",
+                UseTag = true
+            };
+
+            UTorrentItemWrapper wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Name = "Test", Label = "movies", SavePath = "/downloads" },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" }, TimeProvider.System);
+            List<Domain.Entities.ITorrentItemWrapper> downloads = new List<Domain.Entities.ITorrentItemWrapper> { wrapper };
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
+                {
+                    new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
+                });
+
+            _fixture.HardLinkFileService
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert - uTorrent does not support tags, so useTag falls back to a category change
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabelAsync("hash1", "unlinked");
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "unlinked", false);
+            wrapper.Category.ShouldBe("unlinked");
         }
 
         [Fact]

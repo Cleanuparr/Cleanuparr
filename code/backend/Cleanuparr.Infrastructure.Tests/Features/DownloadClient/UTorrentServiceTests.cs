@@ -1041,5 +1041,89 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             await _fixture.ClientWrapper.DidNotReceive()
                 .SetFilesPriorityAsync(Arg.Any<string>(), Arg.Any<List<int>>(), Arg.Any<int>());
         }
+
+        [Fact]
+        public async Task PrivateTorrent_WithIgnorePrivate_NeverEvaluatesFilenames()
+        {
+            const string hash = "ignore-private-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { IgnorePrivate = true });
+
+            StubClient(hash,
+            [
+                new UTorrentFile { Name = "installer.exe", Index = 0, Priority = 2, Size = 1024, Downloaded = 1024 },
+            ], isPrivate: true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.IsPrivate.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+
+            _fixture.FilenameEvaluator
+                .DidNotReceive()
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>());
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilesPriorityAsync(Arg.Any<string>(), Arg.Any<List<int>>(), Arg.Any<int>());
+        }
+
+        [Fact]
+        public async Task DryRun_AllFilesMalware_StillMarksForRemoval_SkipsPriorityCall()
+        {
+            const string hash = "dry-run-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new UTorrentFile { Name = "malware.exe", Index = 0, Priority = 2, Size = 1024, Downloaded = 1024 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            _fixture.DryRunInterceptor
+                .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                .Returns(Task.CompletedTask);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilesPriorityAsync(Arg.Any<string>(), Arg.Any<List<int>>(), Arg.Any<int>());
+        }
+
+        [Fact]
+        public async Task PartialMalware_MultipleUnwantedFiles_CallsSetFilesPriorityWithExactIndicesOnly()
+        {
+            const string hash = "multi-partial-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new UTorrentFile { Name = "movie.mkv", Index = 0, Priority = 2, Size = 32_768, Downloaded = 32_768 },
+                new UTorrentFile { Name = "malware1.exe", Index = 1, Priority = 2, Size = 1024, Downloaded = 1024 },
+                new UTorrentFile { Name = "malware2.exe", Index = 2, Priority = 2, Size = 1024, Downloaded = 1024 },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.StartsWith("malware")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeFalse();
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilesPriorityAsync(hash, Arg.Is<List<int>>(idx => idx.Count == 2 && idx.Contains(1) && idx.Contains(2) && !idx.Contains(0)), 0);
+        }
     }
 }
