@@ -49,6 +49,7 @@ const utorrent = new UTorrentDriver();
  * Two scenarios may share the same physical client (e.g. qBittorrent category
  * vs tag) — they use different source categories so they never overlap, and
  * the physical client is prepared (ready/clear/reset) only once.
+ * Label-only clients (Deluge, uTorrent) fall back to a label change when useTag is on.
  */
 interface Scenario {
   key: string;
@@ -143,12 +144,36 @@ const scenarios: Scenario[] = [
       return (await deluge.getTorrentLabel(hash)) === TARGET;
     },
   },
+  // Deluge: useTag falls back to the label.
+  {
+    key: 'Deluge (tag fallback)', driver: deluge, physicalSlug: 'deluge', source: 'dl-tag', useTag: true, aliveAnnounce: ALIVE_ANNOUNCE_HOST, soloSeedSparable: true,
+    async addSeeding(name, announce) {
+      const d = buildTorrent('deluge', name, announce);
+      await deluge.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'dl-tag', name: d.name, infoHash: d.infoHash });
+      return d.infoHash;
+    },
+    async isMoved(hash) {
+      return (await deluge.getTorrentLabel(hash)) === TARGET;
+    },
+  },
   // µTorrent — label (bridge-networked → reaches opentracker via host.docker.internal).
   {
     key: 'uTorrent', driver: utorrent, physicalSlug: 'utorrent', source: 'ut-src', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_BRIDGE, soloSeedSparable: false,
     async addSeeding(name, announce) {
       const d = buildTorrent('utorrent', name, announce);
       await utorrent.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'ut-src', name: d.name, infoHash: d.infoHash });
+      return d.infoHash;
+    },
+    async isMoved(hash) {
+      return (await utorrent.getTorrentLabel(hash)) === TARGET;
+    },
+  },
+  // µTorrent: useTag falls back to the label.
+  {
+    key: 'uTorrent (tag fallback)', driver: utorrent, physicalSlug: 'utorrent', source: 'ut-tag', useTag: true, aliveAnnounce: ALIVE_ANNOUNCE_BRIDGE, soloSeedSparable: false,
+    async addSeeding(name, announce) {
+      const d = buildTorrent('utorrent', name, announce);
+      await utorrent.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'ut-tag', name: d.name, infoHash: d.infoHash });
       return d.infoHash;
     },
     async isMoved(hash) {
