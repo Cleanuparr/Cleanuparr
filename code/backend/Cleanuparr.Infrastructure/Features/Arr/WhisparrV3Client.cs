@@ -77,18 +77,24 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
 
         try
         {
-            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-            response?.Dispose();
-            
-            _logger.LogInformation("{log}", GetSearchLog(arrInstance.Url, command, true, logContext));
+            using HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
+
+            long? commandId = null;
+
+            if (response is not null)
+            {
+                commandId = await ReadCommandIdAsync(response);
+            }
+
+            _logger.LogInformation("{Log}", GetSearchLog(arrInstance.Url, command, true, logContext));
+
+            return commandId.HasValue ? [commandId.Value] : [];
         }
         catch
         {
-            _logger.LogError("{log}", GetSearchLog(arrInstance.Url, command, false, logContext));
+            _logger.LogError("{Log}", GetSearchLog(arrInstance.Url, command, false, logContext));
             throw;
         }
-
-        return [];
     }
 
     public override bool HasContentId(QueueRecord record) => record.MovieId is not 0;

@@ -32,10 +32,9 @@ public abstract class ArrClient : IArrClient
     protected const int QueuePageSize = 200;
 
     /// <summary>
-    /// Command API path.
-    /// Every client uses v3 here, whatever its ApiVersion.
+    /// Command API path for this app's API version.
     /// </summary>
-    protected const string CommandUrlPath = "/api/v3/command";
+    protected string CommandUrlPath => $"/api/{ApiVersion}/command";
 
     /// <summary>
     /// REST API version segment for this app, e.g. "v3".

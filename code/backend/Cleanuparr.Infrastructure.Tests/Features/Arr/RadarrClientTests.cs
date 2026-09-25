@@ -254,6 +254,40 @@ public class RadarrClientTests
 
     #endregion
 
+    #region GetCommandStatusAsync / GetCommandsAsync
+
+    [Fact]
+    public async Task GetCommandStatusAsync_UsesV3CommandPath()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
+            new ArrCommandStatus(42, ArrCommandState.Completed, null))));
+
+        // Act
+        await _client.GetCommandStatusAsync(_arrInstance, 42);
+
+        // Assert
+        var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command/42");
+    }
+
+    [Fact]
+    public async Task GetCommandsAsync_UsesV3CommandPath()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
+            new List<ArrCommandStatus> { new(1, ArrCommandState.Started, null) })));
+
+        // Act
+        await _client.GetCommandsAsync(_arrInstance);
+
+        // Assert
+        var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command");
+    }
+
+    #endregion
+
     #region StreamAllMoviesAsync / GetAllTagsAsync / GetQualityProfilesAsync / GetMovieFileScoresAsync
 
     [Fact]

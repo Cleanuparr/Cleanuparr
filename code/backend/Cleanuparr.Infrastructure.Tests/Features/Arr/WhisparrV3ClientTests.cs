@@ -137,8 +137,8 @@ public class WhisparrV3ClientTests
     [Fact]
     public async Task SearchItemsAsync_PostsMoviesSearchCommandWithAllIds()
     {
-        // Arrange: GET /movie/{id} calls build the log context, return null so it bails out
-        _httpMessageHandler.SetupResponse((req, _) => Task.FromResult(JsonNullResponse()));
+        // Arrange
+        RouteResponses(commandIdForPost: 22);
         HashSet<SearchItem> items = new()
         {
             new SearchItem { Id = 10 },
@@ -149,7 +149,7 @@ public class WhisparrV3ClientTests
         List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
 
         // Assert
-        ids.ShouldBeEmpty();
+        ids.ShouldBe(new long[] { 22 });
         HttpRequestMessage post = _httpMessageHandler.CapturedRequests.Single(r => r.Method == HttpMethod.Post);
         post.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command");
         string? body = _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(post)];
@@ -179,6 +179,62 @@ public class WhisparrV3ClientTests
         // Assert
         HttpRequestMessage get = _httpMessageHandler.CapturedRequests.Single(r => r.Method == HttpMethod.Get);
         get.RequestUri!.AbsolutePath.ShouldBe("/api/v3/movie/10");
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_NoCommandIdInResponse_ReturnsEmpty()
+    {
+        // Arrange — POST returns 200 with body that has no id (treated as null id)
+        _httpMessageHandler.SetupResponse((req, _) =>
+        {
+            if (req.Method == HttpMethod.Post)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json"),
+                });
+            }
+            return Task.FromResult(JsonNullResponse());
+        });
+
+        HashSet<SearchItem> items = new() { new SearchItem { Id = 1 } };
+
+        // Act
+        List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_NullCommandResponseFromDryRun_ReturnsEmpty()
+    {
+        // Arrange — interceptor returns null on dry-run
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .Returns((HttpResponseMessage?)null);
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        HashSet<SearchItem> items = new() { new SearchItem { Id = 1 } };
+
+        // Act
+        List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchItemAsync_ReturnsCommandIdInsteadOfThrowing()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 33);
+
+        // Act
+        long id = await _client.SearchItemAsync(_arrInstance, new SearchItem { Id = 1 });
+
+        // Assert
+        id.ShouldBe(33);
     }
 
     #endregion
@@ -250,6 +306,19 @@ public class WhisparrV3ClientTests
     }
 
     #region Helpers
+
+    private void RouteResponses(long commandIdForPost)
+    {
+        _httpMessageHandler.SetupResponse((req, _) =>
+        {
+            if (req.Method == HttpMethod.Post && req.RequestUri!.AbsolutePath.EndsWith("/command"))
+            {
+                return Task.FromResult(JsonResponse(new { id = commandIdForPost }));
+            }
+
+            return Task.FromResult(JsonNullResponse());
+        });
+    }
 
     private static QueueRecord BuildRecord(long id) => new()
     {

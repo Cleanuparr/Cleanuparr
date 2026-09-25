@@ -101,6 +101,40 @@ public class LidarrClientTests
 
     #endregion
 
+    #region GetCommandStatusAsync / GetCommandsAsync
+
+    [Fact]
+    public async Task GetCommandStatusAsync_UsesV1CommandPath()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
+            new ArrCommandStatus(42, ArrCommandState.Completed, null))));
+
+        // Act
+        await _client.GetCommandStatusAsync(_arrInstance, 42);
+
+        // Assert
+        var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/command/42");
+    }
+
+    [Fact]
+    public async Task GetCommandsAsync_UsesV1CommandPath()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
+            new List<ArrCommandStatus> { new(1, ArrCommandState.Started, null) })));
+
+        // Act
+        await _client.GetCommandsAsync(_arrInstance);
+
+        // Assert
+        var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/command");
+    }
+
+    #endregion
+
     #region HasContentId
 
     [Fact]
@@ -151,9 +185,9 @@ public class LidarrClientTests
     }
 
     [Fact]
-    public async Task SearchItemsAsync_PostsAlbumSearchCommandWithAllIds_AndReturnsEmpty()
+    public async Task SearchItemsAsync_PostsAlbumSearchCommandWithAllIds_AndReturnsCommandId()
     {
-        // Arrange — Lidarr's SearchItemsAsync always returns [] regardless of HTTP response
+        // Arrange
         RouteResponses(commandIdForPost: 11);
         var items = new HashSet<SearchItem>
         {
@@ -165,13 +199,69 @@ public class LidarrClientTests
         var ids = await _client.SearchItemsAsync(_arrInstance, items);
 
         // Assert
-        ids.ShouldBeEmpty();
+        ids.ShouldBe(new long[] { 11 });
         var post = _httpMessageHandler.CapturedRequests.Single(r => r.Method == HttpMethod.Post);
         post.RequestUri!.AbsolutePath.ShouldBe("/api/v1/command");
         var body = _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(post)];
         body.ShouldNotBeNull();
         body!.ShouldContain("\"name\":\"AlbumSearch\"", Case.Insensitive);
         body!.ShouldContain("\"albumIds\":[10,20]", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_NoCommandIdInResponse_ReturnsEmpty()
+    {
+        // Arrange — POST returns 200 with body that has no id (treated as null id)
+        _httpMessageHandler.SetupResponse((req, _) =>
+        {
+            if (req.Method == HttpMethod.Post)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json"),
+                });
+            }
+            return Task.FromResult(JsonNullResponse());
+        });
+
+        var items = new HashSet<SearchItem> { new() { Id = 1 } };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_NullCommandResponseFromDryRun_ReturnsEmpty()
+    {
+        // Arrange — interceptor returns null on dry-run
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .Returns((HttpResponseMessage?)null);
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        var items = new HashSet<SearchItem> { new() { Id = 5 } };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchItemAsync_ReturnsCommandIdInsteadOfThrowing()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 77);
+
+        // Act
+        var id = await _client.SearchItemAsync(_arrInstance, new SearchItem { Id = 1 });
+
+        // Assert
+        id.ShouldBe(77);
     }
 
     [Fact]

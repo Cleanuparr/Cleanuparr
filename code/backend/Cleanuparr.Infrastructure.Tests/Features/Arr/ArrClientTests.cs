@@ -358,7 +358,7 @@ public class ArrClientTests
         status.Status.ShouldBe(ArrCommandState.Completed);
         status.Message.ShouldBe("ok");
         var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
-        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command/42");
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/command/42");
     }
 
     [Fact]
@@ -406,7 +406,7 @@ public class ArrClientTests
 
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.Method.ShouldBe(HttpMethod.Get);
-        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command");
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/command");
         request.Headers.GetValues("x-api-key").ShouldHaveSingleItem().ShouldBe("secret-key");
     }
 
