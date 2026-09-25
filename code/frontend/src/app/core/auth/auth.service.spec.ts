@@ -191,6 +191,11 @@ describe('AuthService', () => {
 
       expect(service.hasRefreshToken()).toBe(true);
     });
+
+    it('keeps the persisted token keys stable', () => {
+      expect(ACCESS_TOKEN_KEY).toBe('access_token');
+      expect(REFRESH_TOKEN_KEY).toBe('refresh_token');
+    });
   });
 
   describe('login', () => {
