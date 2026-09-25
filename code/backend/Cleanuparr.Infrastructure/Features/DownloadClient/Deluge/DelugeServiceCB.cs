@@ -19,9 +19,9 @@ public partial class DelugeService
         DownloadStatus? download = await _client.GetTorrentStatus(hash);
         BlockFilesResult result = new();
         
-        if (download?.Hash is null)
+        if (download?.Hash is null || download?.Name is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
@@ -32,7 +32,7 @@ public partial class DelugeService
 
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            _logger.LogInformation("skip | download is ignored | {Name}", download.Name);
             return result;
         }
         
@@ -41,7 +41,7 @@ public partial class DelugeService
         if (malwareBlockerConfig.IgnorePrivate && download.Private)
         {
             // ignore private trackers
-            _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            _logger.LogDebug("skip files check | download is private | {Name}", download.Name);
             return result;
         }
         
@@ -53,7 +53,7 @@ public partial class DelugeService
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "failed to find files in the download client | {name}", download.Name);
+            _logger.LogWarning(exception, "failed to find files in the download client | {Name}", download.Name);
         }
 
         if (contents is null)
@@ -83,7 +83,7 @@ public partial class DelugeService
 
         if (deleteImmediately)
         {
-            _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+            _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
             return result;
@@ -96,13 +96,12 @@ public partial class DelugeService
 
         if (totalUnwantedFiles == totalFiles)
         {
-            _logger.LogDebug("All files are blocked for {name}", download.Name);
+            _logger.LogDebug("All files are blocked for {Name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
-        _logger.LogDebug("changing priorities | torrent {hash}", hash);
-        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
+        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", totalUnwantedFiles, download.Name);
 
         HashSet<int> unwantedLookup = [..unwantedIndices];
         List<int> sortedPriorities = originalPriorities
@@ -110,13 +109,20 @@ public partial class DelugeService
             .Select(x => unwantedLookup.Contains(x.Key) ? 0 : x.Value)
             .ToList();
 
-        await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, sortedPriorities));
+        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, sortedPriorities));
 
         return result;
     }
     
-    protected virtual async Task ChangeFilesPriority(string hash, List<int> sortedPriorities)
+    private async Task MarkFilesAsSkipped(string name, string hash, List<int> sortedPriorities)
     {
-        await _client.ChangeFilesPriority(hash, sortedPriorities);
+        try
+        {
+            await _client.ChangeFilesPriority(hash, sortedPriorities);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
+        }
     }
 }

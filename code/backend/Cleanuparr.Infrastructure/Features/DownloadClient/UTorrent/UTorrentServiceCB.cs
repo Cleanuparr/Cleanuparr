@@ -104,13 +104,20 @@ public partial class UTorrentService
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
-        await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, unwantedIndices));
+        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, unwantedIndices));
 
         return result;
     }
     
-    protected virtual async Task ChangeFilesPriority(string hash, List<int> fileIndexes)
+    private async Task MarkFilesAsSkipped(string name, string hash, List<int> fileIndexes)
     {
-        await _client.SetFilesPriorityAsync(hash, fileIndexes, 0);
+        try
+        {
+            await _client.SetFilesPriorityAsync(hash, fileIndexes, 0);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
+        }
     }
 } 

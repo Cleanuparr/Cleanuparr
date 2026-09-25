@@ -1,8 +1,5 @@
-﻿using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Extensions;
+﻿using Cleanuparr.Domain.Enums;
 using Microsoft.Extensions.Logging;
-using Transmission.API.RPC.Arguments;
 using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
@@ -67,15 +64,6 @@ public partial class TransmissionService
         (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient, result.ChangeCategory) = await EvaluateDownloadRemoval(torrent);
 
         return result;
-    }
-
-    protected virtual async Task SetUnwantedFiles(long downloadId, long[] unwantedFiles)
-    {
-        await _client.TorrentSetAsync(new TorrentSettings
-        {
-            Ids = [downloadId],
-            FilesUnwanted = unwantedFiles,
-        });
     }
 
     /// <inheritdoc/>

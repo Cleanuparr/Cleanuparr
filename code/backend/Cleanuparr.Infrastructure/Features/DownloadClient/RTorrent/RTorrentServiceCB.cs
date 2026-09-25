@@ -21,7 +21,7 @@ public partial class RTorrentService
 
         if (download?.Hash is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
 
@@ -44,7 +44,7 @@ public partial class RTorrentService
 
         if (malwareBlockerConfig.IgnorePrivate && download.IsPrivate == 1)
         {
-            _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            _logger.LogDebug("skip files check | download is private | {Name}", download.Name);
             return result;
         }
 
@@ -56,7 +56,7 @@ public partial class RTorrentService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "failed to find files in the download client | {name}", download.Name);
+            _logger.LogDebug(exception, "failed to find files in the download client | {Name}", download.Name);
             return result;
         }
 
@@ -85,7 +85,7 @@ public partial class RTorrentService
 
         if (deleteImmediately)
         {
-            _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+            _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
             return result;
@@ -98,23 +98,29 @@ public partial class RTorrentService
 
         if (totalUnwantedFiles == totalFiles)
         {
-            _logger.LogDebug("All files are blocked for {name}", download.Name);
+            _logger.LogDebug("All files are blocked for {Name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
-        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", unwantedIndices.Count, download.Name);
-
-        foreach (int index in unwantedIndices)
-        {
-            await _dryRunInterceptor.InterceptAsync(() => SetFilePriority(hash, index, 0));
-        }
+        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", unwantedIndices.Count, download.Name);
+        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, unwantedIndices));
 
         return result;
     }
 
-    protected virtual async Task SetFilePriority(string hash, int index, int priority)
+    private async Task MarkFilesAsSkipped(string name, string hash, List<int> unwantedIndices)
     {
-        await _client.SetFilePriorityAsync(hash, index, priority);
+        try
+        {
+            foreach (int index in unwantedIndices)
+            {
+                await _client.SetFilePriorityAsync(hash, index, 0);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
+        }
     }
 }

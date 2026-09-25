@@ -119,17 +119,23 @@ public partial class QBitService
         }
 
         _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", totalUnwantedFiles, download.Name);
-
-        foreach (int fileIndex in unwantedIndices)
-        {
-            await _dryRunInterceptor.InterceptAsync(() => MarkFileAsSkipped(hash, fileIndex));
-        }
-
+        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(download.Name, hash, unwantedIndices));
+        
         return result;
     }
-    
-    protected virtual async Task MarkFileAsSkipped(string hash, int fileIndex)
+
+    private async Task MarkFilesAsSkipped(string name, string hash, List<int> unwantedIndices)
     {
-        await _client.SetFilePriorityAsync(hash, fileIndex, TorrentContentPriority.Skip);
+        try
+        {
+            foreach (int fileIndex in unwantedIndices)
+            {
+                await _client.SetFilePriorityAsync(hash, fileIndex, TorrentContentPriority.Skip);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
+        }
     }
 }
