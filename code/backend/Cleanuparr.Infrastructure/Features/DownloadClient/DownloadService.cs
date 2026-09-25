@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Domain.Enums;
@@ -70,6 +72,55 @@ public abstract class DownloadService : IDownloadService
     protected virtual Task<bool> IsAltSpeedLimitActiveAsync()
     {
         return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Runs the slow check, then the stall check; the first removal wins.
+    /// </summary>
+    protected async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
+    {
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result = await CheckIfSlow(wrapper);
+
+        if (result.ShouldRemove)
+        {
+            return result;
+        }
+
+        return await CheckIfStuck(wrapper);
+    }
+
+    /// <summary>
+    /// Alt-speed-limit probe for the slow rules.
+    /// Only qBittorrent and Transmission report that state.
+    /// </summary>
+    protected virtual Func<Task<bool>>? GetAltSpeedLimitProbe() => null;
+
+    protected virtual async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfSlow(ITorrentItemWrapper wrapper)
+    {
+        if (!wrapper.IsDownloading())
+        {
+            _logger.LogTrace("skip slow check | download is not in downloading state | {Name}", wrapper.Name);
+            return (false, DeleteReason.None, false, false);
+        }
+
+        if (wrapper.DownloadSpeed <= 0)
+        {
+            _logger.LogTrace("skip slow check | download speed is 0 | {Name}", wrapper.Name);
+            return (false, DeleteReason.None, false, false);
+        }
+
+        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper, GetAltSpeedLimitProbe());
+    }
+
+    protected virtual async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
+    {
+        if (!wrapper.IsStalled())
+        {
+            _logger.LogTrace("skip stalled check | download is not in stalled state | {Name}", wrapper.Name);
+            return (false, DeleteReason.None, false, false);
+        }
+
+        return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
     }
 
     public abstract void Dispose();
@@ -176,10 +227,17 @@ public abstract class DownloadService : IDownloadService
             .TrimEnd(Path.DirectorySeparatorChar);
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
+    public virtual List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
+        downloads
+            ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
+            .ToList();
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
+    public virtual List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig) =>
+        downloads
+            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
+            .ToList();
 
     /// <inheritdoc/>
     public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules)
@@ -272,10 +330,230 @@ public abstract class DownloadService : IDownloadService
     }
 
     /// <inheritdoc/>
-    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
+    public async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
+    {
+        if (downloads?.Count is null or 0)
+        {
+            return;
+        }
+
+        foreach (ITorrentItemWrapper torrent in downloads)
+        {
+            if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Category))
+            {
+                continue;
+            }
+
+            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+            SetDownloadClientContext();
+
+            IEnumerable<(string FilePath, HardLinkScanAction Action)>? files = await GetHardLinkScanItemsAsync(torrent);
+
+            if (files is null)
+            {
+                continue;
+            }
+
+            (bool hasHardlinks, bool hasErrors) = ScanForHardLinks(files, unlinkedConfig.IgnoredRootDirs.Count > 0);
+
+            if (hasErrors)
+            {
+                continue;
+            }
+
+            if (hasHardlinks)
+            {
+                _logger.LogDebug("skip | download has hardlinks | {Name}", torrent.Name);
+                continue;
+            }
+
+            await ChangeTorrentCategoryAsync(torrent, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
+
+            _logger.LogInformation(unlinkedConfig.UseTag && SupportsTags ? "tag added for {Name}" : "category changed for {Name}", torrent.Name);
+        }
+    }
+
+    /// <summary>
+    /// Maps a torrent's files to (path, <see cref="HardLinkScanAction"/>) pairs.
+    /// Returns null to skip the torrent, such as when its files can't be read.
+    /// </summary>
+    protected abstract Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent);
+
+    /// <summary>
+    /// Stops at the first hardlink or unreadable file.
+    /// Each client maps its files to (path, <see cref="HardLinkScanAction"/>) pairs.
+    /// </summary>
+    protected (bool HasHardlinks, bool HasErrors) ScanForHardLinks(
+        IEnumerable<(string FilePath, HardLinkScanAction Action)> files,
+        bool ignoreRootDirs)
+    {
+        foreach ((string filePath, HardLinkScanAction action) in files)
+        {
+            if (action is HardLinkScanAction.TreatAsLinked)
+            {
+                return (true, false);
+            }
+
+            if (action is HardLinkScanAction.SkipUnwanted)
+            {
+                _logger.LogDebug("skip | file is not downloaded | {File}", filePath);
+                continue;
+            }
+
+            long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, ignoreRootDirs);
+
+            if (hardlinkCount < 0)
+            {
+                _logger.LogError("skip | file does not exist or insufficient permissions | {File}", filePath);
+                return (false, true);
+            }
+
+            if (hardlinkCount > 0)
+            {
+                return (true, false);
+            }
+        }
+
+        return (false, false);
+    }
+
+    /// <summary>
+    /// Counts unwanted files and collects the indices to block.
+    /// Don't yield a file the client excludes from the count, such as one with no index.
+    /// Deluge and rTorrent validate the bare filename but log the relative path.
+    /// With <paramref name="deleteIfAnyFileBlocked"/> on, the first unwanted file sets <c>DeleteImmediately</c> and ends the scan.
+    /// </summary>
+    protected (List<int> UnwantedIndices, long TotalFiles, long TotalUnwantedFiles, bool DeleteImmediately) ScanFilesForBlocking(
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> files,
+        BlocklistType blocklistType,
+        ConcurrentBag<string> patterns,
+        ConcurrentBag<Regex> regexes,
+        bool deleteIfAnyFileBlocked)
+    {
+        List<int> unwantedIndices = [];
+        long totalFiles = 0;
+        long totalUnwantedFiles = 0;
+
+        foreach ((int index, string validationName, string logName, FileBlockAction action) in files)
+        {
+            totalFiles++;
+
+            if (action is FileBlockAction.AlreadySkipped)
+            {
+                _logger.LogTrace("File is already skipped | {File}", logName);
+                totalUnwantedFiles++;
+                continue;
+            }
+
+            if (_filenameEvaluator.IsValid(validationName, blocklistType, patterns, regexes))
+            {
+                _logger.LogTrace("File is valid | {File}", logName);
+                continue;
+            }
+
+            _logger.LogInformation("unwanted file found | {File}", logName);
+            totalUnwantedFiles++;
+
+            if (deleteIfAnyFileBlocked)
+            {
+                return (unwantedIndices, totalFiles, totalUnwantedFiles, true);
+            }
+
+            unwantedIndices.Add(index);
+        }
+
+        return (unwantedIndices, totalFiles, totalUnwantedFiles, false);
+    }
+
+    /// <summary>
+    /// Scans the files, sets the removal verdict on <paramref name="result"/> and marks the unwanted files as skipped.
+    /// </summary>
+    /// <param name="markFilesAsSkipped">Marks the given file indices as skipped in the client.</param>
+    protected async Task ApplyFileBlockingAsync(
+        BlockFilesResult result,
+        string name,
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> files,
+        bool deleteIfAnyFileBlocked,
+        Func<List<int>, Task> markFilesAsSkipped)
+    {
+        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
+        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
+        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
+
+        (List<int> unwantedIndices, long totalFiles, long totalUnwantedFiles, bool deleteImmediately) =
+            ScanFilesForBlocking(files, blocklistType, patterns, regexes, deleteIfAnyFileBlocked);
+
+        if (deleteImmediately)
+        {
+            _logger.LogDebug("at least one file is blocked for {Name}", name);
+            result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
+            return;
+        }
+
+        if (unwantedIndices.Count is 0)
+        {
+            _logger.LogDebug("No unwanted files found for {Name}", name);
+            return;
+        }
+
+        if (totalUnwantedFiles == totalFiles)
+        {
+            _logger.LogDebug("All files are blocked for {Name}", name);
+            result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AllFilesBlocked;
+        }
+
+        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", unwantedIndices.Count, name);
+        await _dryRunInterceptor.InterceptAsync(() => MarkFilesAsSkipped(name, unwantedIndices, markFilesAsSkipped));
+    }
+
+    /// <summary>
+    /// A failed priority update leaves the verdict in place.
+    /// </summary>
+    private async Task MarkFilesAsSkipped(string name, List<int> unwantedIndices, Func<List<int>, Task> markFilesAsSkipped)
+    {
+        try
+        {
+            await markFilesAsSkipped(unwantedIndices);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to mark files as skipped | {Name}", name);
+        }
+    }
 
     /// <inheritdoc/>
-    public abstract Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag);
+    public async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
+    {
+        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
+        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+        SetDownloadClientContext();
+
+        string currentCategory = torrent.Category ?? string.Empty;
+        useTag = useTag && SupportsTags;
+
+        await _dryRunInterceptor.InterceptAsync(() => ChangeCategoryInClientAsync(torrent, targetCategory, useTag));
+
+        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory, useTag);
+
+        if (!useTag)
+        {
+            torrent.Category = targetCategory;
+        }
+    }
+
+    /// <summary>
+    /// Clients without tags fall back to a category change when asked for a tag.
+    /// </summary>
+    protected virtual bool SupportsTags => false;
+
+    /// <summary>
+    /// Applies the category, or the tag when <paramref name="useTag"/> is set, in the client.
+    /// </summary>
+    protected abstract Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag);
 
     /// <inheritdoc/>
     public abstract Task CreateCategoryAsync(string name);

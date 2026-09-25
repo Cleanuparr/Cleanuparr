@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
@@ -73,77 +71,30 @@ public partial class QBitService
             return result;
         }
 
-        List<int> unwantedFiles = [];
-        long totalFiles = 0;
-        long totalUnwantedFiles = 0;
-        
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-
-        foreach (TorrentContent file in files)
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
-            if (!file.Index.HasValue)
+            foreach (TorrentContent file in files)
             {
-                _logger.LogTrace("Skipping file with no index | {File}", file.Name);
-                continue;
+                if (!file.Index.HasValue)
+                {
+                    _logger.LogTrace("Skipping file with no index | {File}", file.Name);
+                    continue;
+                }
+
+                yield return (file.Index.Value, file.Name, file.Name, file.Priority is TorrentContentPriority.Skip
+                    ? FileBlockAction.AlreadySkipped
+                    : FileBlockAction.CheckBlocklist);
             }
-
-            totalFiles++;
-
-            if (file.Priority is TorrentContentPriority.Skip)
-            {
-                _logger.LogTrace("File is already skipped | {File}", file.Name);
-                totalUnwantedFiles++;
-                continue;
-            }
-
-            if (_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))
-            {
-                _logger.LogTrace("File is valid | {File}", file.Name);
-                continue;
-            }
-            
-            _logger.LogInformation("unwanted file found | {File}", file.Name);
-
-            if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-            {
-                _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                return result;
-            }
-
-            unwantedFiles.Add(file.Index.Value);
-            totalUnwantedFiles++;
         }
 
-        if (unwantedFiles.Count is 0)
+        await ApplyFileBlockingAsync(result, download.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            _logger.LogDebug("No unwanted files found for {Name}", download.Name);
-            return result;
-        }
-        
-        if (totalUnwantedFiles == totalFiles)
-        {
-            _logger.LogDebug("All files are blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-        }
-        
-        _logger.LogDebug("Marking {Count} unwanted files as skipped for {Name}", totalUnwantedFiles, download.Name);
+            foreach (int fileIndex in unwantedIndices)
+            {
+                await _client.SetFilePriorityAsync(hash, fileIndex, TorrentContentPriority.Skip);
+            }
+        });
 
-        foreach (int fileIndex in unwantedFiles)
-        {
-            await _dryRunInterceptor.InterceptAsync(() => MarkFileAsSkipped(hash, fileIndex));
-        }
-        
         return result;
-    }
-    
-    protected virtual async Task MarkFileAsSkipped(string hash, int fileIndex)
-    {
-        await _client.SetFilePriorityAsync(hash, fileIndex, TorrentContentPriority.Skip);
     }
 }

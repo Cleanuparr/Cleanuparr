@@ -1229,6 +1229,29 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await _fixture.EventPublisher.Received(1)
                 .PublishCategoryChanged("movies", "cleanuparr-dead", true);
         }
+
+        [Fact]
+        public async Task DryRun_SkipsClientCall_ButPublishesEvent()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = Substitute.For<ITorrentItemWrapper>();
+            torrent.Hash.Returns("hash1");
+            torrent.Name.Returns("Test");
+            torrent.Category.Returns("movies");
+
+            _fixture.DryRunInterceptor
+                .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                .Returns(Task.CompletedTask);
+
+            await sut.ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", useTag: false);
+
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
+            await _fixture.ClientWrapper.DidNotReceive()
+                .AddTorrentTagAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "cleanuparr-dead", false);
+        }
     }
 
     public class ChangeCategoryForNoHardLinksAsync_Tests : QBitServiceDCTests

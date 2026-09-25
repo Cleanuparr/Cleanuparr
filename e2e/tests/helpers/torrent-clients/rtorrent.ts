@@ -125,6 +125,12 @@ export class RTorrentDriver implements TorrentClientDriver {
       return { hash: String(arr[0]).toLowerCase(), name: String(arr[1]) };
     });
   }
+
+  async getFilePriorities(infoHash: string): Promise<number[]> {
+    const result = await this.call('f.multicall', [infoHash.toUpperCase(), '', 'f.priority=']);
+    if (!Array.isArray(result)) return [];
+    return result.map((row: unknown) => Number((row as unknown[])[0]));
+  }
 }
 
 type XmlRpcValue = string | number | boolean | { type: 'base64'; value: string };
@@ -189,7 +195,7 @@ function parseValue(xml: string): unknown {
     return out;
   }
   const scalar = xml.match(new RegExp(`<${type}>([\\s\\S]*?)<\\/${type}>`))?.[1] ?? '';
-  if (type === 'int' || type === 'i4') return Number(scalar);
+  if (type === 'int' || type === 'i4' || type === 'i8') return Number(scalar);
   if (type === 'boolean') return scalar === '1';
   if (type === 'double') return Number(scalar);
   return decodeXml(scalar);

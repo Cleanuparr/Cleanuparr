@@ -166,4 +166,16 @@ export class UTorrentDriver implements TorrentClientDriver {
       await fetch(url, { headers: this.requestHeaders() });
     }
   }
+
+  /** Priority sits at index 3 of each getfiles row. */
+  async getFilePriorities(infoHash: string): Promise<number[]> {
+    const url = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&action=getfiles&hash=${infoHash.toUpperCase()}`;
+    const res = await fetch(url, { headers: this.requestHeaders() });
+    if (!res.ok) {
+      throw new Error(`uTorrent getfiles: ${res.status}`);
+    }
+    const body: { files?: [string, unknown[][]] } = await res.json();
+    const rows = body.files?.[1] ?? [];
+    return rows.map((row) => Number(row[3]));
+  }
 }

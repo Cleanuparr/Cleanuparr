@@ -749,6 +749,82 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
+            await _fixture.EventPublisher.DidNotReceive().PublishCategoryChanged(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+        }
+
+        [Fact]
+        public async Task NullContents_TreatedAsNoFiles_NoHardlinks_ChangesLabel()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked"
+            };
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Name = "Test", Label = "movies", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents { Contents = null });
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabel("hash1", "unlinked");
+            _fixture.HardLinkFileService
+                .DidNotReceive()
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>());
+        }
+
+        [Fact]
+        public async Task UseTagTrue_StillChangesLabel_AndPublishesEventWithIsTagFalse()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked",
+                UseTag = true
+            };
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Name = "Test", Label = "movies", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "file1.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "file1.mkv" } }
+                    }
+                });
+
+            _fixture.HardLinkFileService
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabel("hash1", "unlinked");
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "unlinked", false);
+            downloads[0].Category.ShouldBe("unlinked");
         }
 
         [Fact]

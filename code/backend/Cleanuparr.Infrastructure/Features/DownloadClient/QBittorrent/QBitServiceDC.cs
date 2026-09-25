@@ -1,6 +1,5 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
@@ -125,115 +124,49 @@ public partial class QBitService
         await _dryRunInterceptor.InterceptAsync(() => CreateCategory(name));
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
+    /// <inheritdoc/>
+    protected override async Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
     {
-        if (downloads?.Count is null or 0)
+        QBitItemWrapper qBitTorrent = (QBitItemWrapper)torrent;
+        IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(qBitTorrent.Hash);
+
+        if (files is null)
         {
-            return;
+            _logger.LogDebug("failed to find files for {Name}", qBitTorrent.Name);
+            return null;
         }
 
-        foreach (QBitItemWrapper torrent in downloads.Cast<QBitItemWrapper>())
+        IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
         {
-            if (string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Category))
-            {
-                continue;
-            }
-
-            IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(torrent.Hash);
-
-            if (files is null)
-            {
-                _logger.LogDebug("failed to find files for {Name}", torrent.Name);
-                continue;
-            }
-
-            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-            SetDownloadClientContext();
-            bool hasHardlinks = false;
-            bool hasErrors = false;
-
             foreach (TorrentContent file in files)
             {
                 if (!file.Index.HasValue)
                 {
-                    _logger.LogDebug("skip | file index is null for {Name}", torrent.Name);
-                    hasHardlinks = true;
-                    break;
+                    _logger.LogDebug("skip | file index is null for {Name}", qBitTorrent.Name);
+                    yield return (string.Empty, HardLinkScanAction.TreatAsLinked);
+                    yield break;
                 }
 
                 string filePath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.Info.SavePath, file.Name),
+                    Path.Combine(qBitTorrent.Info.SavePath, file.Name),
                     _downloadClientConfig.DownloadDirectorySource,
                     _downloadClientConfig.DownloadDirectoryTarget);
 
-                if (file.Priority is TorrentContentPriority.Skip)
-                {
-                    _logger.LogDebug("skip | file is not downloaded | {File}", filePath);
-                    continue;
-                }
-
-                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-                if (hardlinkCount < 0)
-                {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {File}", filePath);
-                    hasErrors = true;
-                    break;
-                }
-
-                if (hardlinkCount > 0)
-                {
-                    hasHardlinks = true;
-                    break;
-                }
-            }
-
-            if (hasErrors)
-            {
-                continue;
-            }
-
-            if (hasHardlinks)
-            {
-                _logger.LogDebug("skip | download has hardlinks | {Name}", torrent.Name);
-                continue;
-            }
-
-            await _dryRunInterceptor.InterceptAsync(() => ChangeCategory(torrent.Hash, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag));
-
-            await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
-
-            if (unlinkedConfig.UseTag)
-            {
-                _logger.LogInformation("tag added for {Name}", torrent.Name);
-            }
-            else
-            {
-                _logger.LogInformation("category changed for {Name}", torrent.Name);
-                torrent.Category = unlinkedConfig.TargetCategory;
+                yield return (filePath, file.Priority is TorrentContentPriority.Skip
+                    ? HardLinkScanAction.SkipUnwanted
+                    : HardLinkScanAction.CheckHardLinks);
             }
         }
+
+        return BuildScanItems();
     }
 
     /// <inheritdoc/>
-    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
-    {
-        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-        SetDownloadClientContext();
+    protected override bool SupportsTags => true;
 
-        string currentCategory = torrent.Category ?? string.Empty;
-
-        await _dryRunInterceptor.InterceptAsync(() => ChangeCategory(torrent.Hash, targetCategory, useTag));
-
-        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory, useTag);
-
-        if (!useTag)
-        {
-            torrent.Category = targetCategory;
-        }
-    }
+    /// <inheritdoc/>
+    protected override async Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
+        await ChangeCategory(torrent.Hash, targetCategory, useTag);
 
     protected async Task CreateCategory(string name)
     {

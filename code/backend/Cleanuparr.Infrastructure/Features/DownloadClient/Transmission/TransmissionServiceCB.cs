@@ -1,10 +1,9 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
+using Transmission.API.RPC.Arguments;
 using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
@@ -17,21 +16,21 @@ public partial class TransmissionService
         TorrentInfo? download = await GetTorrentAsync(hash);
         BlockFilesResult result = new();
 
-        if (download?.FileStats is null || download.FileStats.Length == 0)
+        if (download?.FileStats is null || download.FileStats.Length == 0 || download.Name is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
         if (download.Files is null)
         {
-            _logger.LogDebug("torrent {hash} has no files", hash);
+            _logger.LogDebug("Torrent {Hash} has no files", hash);
             return result;
         }
         
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
         {
-            _logger.LogDebug("skip | download is ignored | {name}", download.Name);
+            _logger.LogDebug("skip | download is ignored | {Name}", download.Name);
             return result;
         }
 
@@ -46,72 +45,34 @@ public partial class TransmissionService
         if (malwareBlockerConfig.IgnorePrivate && isPrivate)
         {
             // ignore private trackers
-            _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            _logger.LogDebug("skip files check | download is private | {Name}", download.Name);
             return result;
         }
 
-        List<long> unwantedFiles = [];
-        long totalFiles = 0;
-        long totalUnwantedFiles = 0;
-        
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-
-        for (int i = 0; i < download.Files.Length; i++)
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
-            if (download.FileStats?[i].Wanted == null)
+            for (int i = 0; i < download.Files.Length; i++)
             {
-                _logger.LogTrace("Skipping file with no stats | {file}", download.Files[i].Name);
-                continue;
+                if (download.FileStats?[i].Wanted == null)
+                {
+                    _logger.LogTrace("Skipping file with no stats | {File}", download.Files[i].Name);
+                    continue;
+                }
+
+                yield return (i, download.Files[i].Name, download.Files[i].Name, download.FileStats[i].Wanted!.Value
+                    ? FileBlockAction.CheckBlocklist
+                    : FileBlockAction.AlreadySkipped);
             }
-
-            totalFiles++;
-
-            if (!download.FileStats[i].Wanted.Value)
-            {
-                _logger.LogTrace("File is already skipped | {file}", download.Files[i].Name);
-                totalUnwantedFiles++;
-                continue;
-            }
-
-            if (_filenameEvaluator.IsValid(download.Files[i].Name, blocklistType, patterns, regexes))
-            {
-                _logger.LogTrace("File is valid | {file}", download.Files[i].Name);
-                continue;
-            }
-            
-            _logger.LogInformation("unwanted file found | {file}", download.Files[i].Name);
-
-            if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-            {
-                _logger.LogDebug("at least one file is blocked for {name}", download.Name);
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                return result;
-            }
-
-            unwantedFiles.Add(i);
-            totalUnwantedFiles++;
         }
 
-        if (unwantedFiles.Count is 0)
+        await ApplyFileBlockingAsync(result, download.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            _logger.LogDebug("No unwanted files found for {name}", download.Name);
-            return result;
-        }
-
-        if (totalUnwantedFiles == totalFiles)
-        {
-            _logger.LogDebug("All files are blocked for {name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-        }
-        
-        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
-
-        await _dryRunInterceptor.InterceptAsync(() => SetUnwantedFiles(download.Id, unwantedFiles.ToArray()));
+            await _client.TorrentSetAsync(new TorrentSettings
+            {
+                Ids = [download.Id],
+                FilesUnwanted = unwantedIndices.Select(i => (long)i).ToArray(),
+            });
+        });
 
         return result;
     }

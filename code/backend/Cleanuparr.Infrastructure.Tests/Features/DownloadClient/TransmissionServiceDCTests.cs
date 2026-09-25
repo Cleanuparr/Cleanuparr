@@ -580,6 +580,106 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
         }
     }
 
+    public class ChangeTorrentCategoryAsync_Tests : TransmissionServiceDCTests
+    {
+        public ChangeTorrentCategoryAsync_Tests(TransmissionServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task CategoryMode_ChangesLocation_PublishesEvent_AndUpdatesCategory()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var baseDownloadDir = Path.Combine("downloads", "movies");
+            var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
+                Path.Combine(baseDownloadDir, "cleanuparr-dead").Split(['\\', '/']));
+
+            var torrent = new TransmissionItemWrapper(new TorrentInfo
+            {
+                Id = 123,
+                HashString = "hash1",
+                Name = "Test",
+                DownloadDir = baseDownloadDir
+            });
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", useTag: false);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentSetLocationAsync(Arg.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true);
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "cleanuparr-dead", false);
+            torrent.Category.ShouldBe("cleanuparr-dead");
+        }
+
+        [Fact]
+        public async Task TagMode_SetsLabels_PublishesEvent_AndKeepsCategoryUnchanged()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var baseDownloadDir = Path.Combine("downloads", "movies");
+
+            var torrent = new TransmissionItemWrapper(new TorrentInfo
+            {
+                Id = 123,
+                HashString = "hash1",
+                Name = "Test",
+                DownloadDir = baseDownloadDir,
+                Labels = ["existing", "CLEANUPARR-DEAD"]
+            });
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", useTag: true);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentSetAsync(Arg.Is<TorrentSettings>(s =>
+                    s.Ids.Contains(123L)
+                    && s.Labels.Contains("existing")
+                    && s.Labels.Contains("CLEANUPARR-DEAD")
+                    && s.Labels.Length == 2));
+            await _fixture.ClientWrapper.DidNotReceive()
+                .TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "cleanuparr-dead", true);
+            torrent.Category.ShouldBe("movies");
+        }
+
+        [Fact]
+        public async Task DryRun_SkipsClientCall_ButPublishesEvent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            _fixture.DryRunInterceptor
+                .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                .Returns(Task.CompletedTask);
+
+            var torrent = new TransmissionItemWrapper(new TorrentInfo
+            {
+                Id = 123,
+                HashString = "hash1",
+                Name = "Test",
+                DownloadDir = Path.Combine("downloads", "movies")
+            });
+
+            // Act
+            await sut.ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", useTag: false);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
+            await _fixture.ClientWrapper.DidNotReceive()
+                .TorrentSetAsync(Arg.Any<TorrentSettings>());
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "cleanuparr-dead", false);
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : TransmissionServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(TransmissionServiceFixture fixture) : base(fixture)

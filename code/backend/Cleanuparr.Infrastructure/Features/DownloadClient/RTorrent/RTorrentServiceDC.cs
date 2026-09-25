@@ -1,7 +1,5 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
-using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -66,17 +64,6 @@ public partial class RTorrentService
         return Task.FromResult<IReadOnlyList<string>>(claimed.ToList());
     }
 
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
-        downloads
-            ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
-            .ToList();
-
-    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig) =>
-        downloads
-            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
-            .ToList();
-
     /// <inheritdoc/>
     public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
@@ -113,104 +100,42 @@ public partial class RTorrentService
         return Task.CompletedTask;
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
+    /// <inheritdoc/>
+    protected override async Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
     {
-        if (downloads?.Count is null or 0)
+        RTorrentItemWrapper rTorrent = (RTorrentItemWrapper)torrent;
+        List<RTorrentFile> files;
+
+        try
         {
-            return;
+            files = await _client.GetTorrentFilesAsync(rTorrent.Hash);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "failed to find torrent files for {Name}", rTorrent.Name);
+            return null;
         }
 
-        foreach (RTorrentItemWrapper torrent in downloads.Cast<RTorrentItemWrapper>())
+        List<(string FilePath, HardLinkScanAction Action)> scanItems = [];
+
+        foreach (RTorrentFile file in files)
         {
-            if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Category))
-            {
-                continue;
-            }
+            string filePath = PathHelper.NormalizeAndRemap(
+                Path.Combine(rTorrent.Info.Directory ?? rTorrent.Info.BasePath ?? "", file.Path),
+                _downloadClientConfig.DownloadDirectorySource,
+                _downloadClientConfig.DownloadDirectoryTarget);
 
-            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-            SetDownloadClientContext();
-
-            List<RTorrentFile> files;
-            try
-            {
-                files = await _client.GetTorrentFilesAsync(torrent.Hash);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogDebug(exception, "failed to find torrent files for {name}", torrent.Name);
-                continue;
-            }
-
-            bool hasHardlinks = false;
-            bool hasErrors = false;
-
-            foreach (var file in files)
-            {
-                string filePath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path),
-                    _downloadClientConfig.DownloadDirectorySource,
-                    _downloadClientConfig.DownloadDirectoryTarget);
-
-                if (file.Priority <= 0)
-                {
-                    _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
-                    continue;
-                }
-
-                long hardlinkCount = _hardLinkFileService
-                    .GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
-
-                if (hardlinkCount < 0)
-                {
-                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
-                    hasErrors = true;
-                    continue;
-                }
-
-                if (hardlinkCount > 0)
-                {
-                    hasHardlinks = true;
-                    break;
-                }
-            }
-
-            if (hasErrors)
-            {
-                continue;
-            }
-
-            if (hasHardlinks)
-            {
-                _logger.LogDebug("skip | download has hardlinks | {name}", torrent.Name);
-                continue;
-            }
-
-            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
-
-            _logger.LogInformation("category changed for {name}", torrent.Name);
-
-            await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory);
-
-            torrent.Category = unlinkedConfig.TargetCategory;
+            scanItems.Add((filePath, file.Priority <= 0
+                ? HardLinkScanAction.SkipUnwanted
+                : HardLinkScanAction.CheckHardLinks));
         }
+
+        return scanItems;
     }
 
     /// <inheritdoc/>
-    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
-    {
-        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
-        SetDownloadClientContext();
-
-        string currentCategory = torrent.Category ?? string.Empty;
-
-        await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, targetCategory));
-
-        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory);
-
-        torrent.Category = targetCategory;
-    }
+    protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
+        ChangeLabel(torrent.Hash, targetCategory);
 
     protected virtual async Task ChangeLabel(string hash, string newLabel)
     {

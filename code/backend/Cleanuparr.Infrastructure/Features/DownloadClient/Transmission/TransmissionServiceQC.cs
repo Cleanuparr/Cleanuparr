@@ -1,11 +1,5 @@
-﻿using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Extensions;
-using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Services.Interfaces;
-using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+﻿using Cleanuparr.Domain.Enums;
 using Microsoft.Extensions.Logging;
-using Transmission.API.RPC.Arguments;
 using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
@@ -72,53 +66,6 @@ public partial class TransmissionService
         return result;
     }
 
-    protected virtual async Task SetUnwantedFiles(long downloadId, long[] unwantedFiles)
-    {
-        await _client.TorrentSetAsync(new TorrentSettings
-        {
-            Ids = [downloadId],
-            FilesUnwanted = unwantedFiles,
-        });
-    }
-
-    private async Task<(bool, DeleteReason, bool, bool)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
-    {
-        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result = await CheckIfSlow(wrapper);
-
-        if (result.ShouldRemove)
-        {
-            return result;
-        }
-
-        return await CheckIfStuck(wrapper);
-    }
-
-
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfSlow(ITorrentItemWrapper wrapper)
-    {
-        if (!wrapper.IsDownloading())
-        {
-            _logger.LogTrace("skip slow check | download is not in downloading state | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false, false);
-        }
-
-        if (wrapper.DownloadSpeed <= 0)
-        {
-            _logger.LogTrace("skip slow check | download speed is 0 | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false, false);
-        }
-
-        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper, IsAltSpeedLimitActiveAsync);
-    }
-
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
-    {
-        if (!wrapper.IsStalled())
-        {
-            _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false, false);
-        }
-
-        return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
-    }
+    /// <inheritdoc/>
+    protected override Func<Task<bool>>? GetAltSpeedLimitProbe() => IsAltSpeedLimitActiveAsync;
 }

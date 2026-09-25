@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
@@ -63,61 +61,22 @@ public partial class UTorrentService
             return result;
         }
 
-        List<int> fileIndexes = new(files.Count);
-        long totalUnwantedFiles = 0;
-        
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-
-        for (int i = 0; i < files.Count; i++)
+        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
         {
-            var file = files[i];
-
-            if (file.Priority == 0) // Already skipped
+            for (int i = 0; i < files.Count; i++)
             {
-                totalUnwantedFiles++;
-                continue;
-            }
-
-            if (file.Priority != 0 && !_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))
-            {
-                totalUnwantedFiles++;
-                fileIndexes.Add(i);
-                _logger.LogInformation("unwanted file found | {File}", file.Name);
-
-                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-                {
-                    _logger.LogDebug("at least one file is blocked for {Name}", download.Name);
-                    result.ShouldRemove = true;
-                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                    return result;
-                }
+                UTorrentFile file = files[i];
+                yield return (i, file.Name, file.Name, file.Priority == 0
+                    ? FileBlockAction.AlreadySkipped
+                    : FileBlockAction.CheckBlocklist);
             }
         }
 
-        if (fileIndexes.Count is 0)
+        await ApplyFileBlockingAsync(result, download.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            return result;
-        }
-        
-        _logger.LogDebug("changing priorities | torrent {Hash}", hash);
-
-        if (totalUnwantedFiles == files.Count)
-        {
-            _logger.LogDebug("All files are blocked for {Name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-        }
-
-        await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, fileIndexes));
+            await _client.SetFilesPriorityAsync(hash, unwantedIndices, 0);
+        });
 
         return result;
     }
-    
-    protected virtual async Task ChangeFilesPriority(string hash, List<int> fileIndexes)
-    {
-        await _client.SetFilesPriorityAsync(hash, fileIndexes, 0);
-    }
-} 
+}

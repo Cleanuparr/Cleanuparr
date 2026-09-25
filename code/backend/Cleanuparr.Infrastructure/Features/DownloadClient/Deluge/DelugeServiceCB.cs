@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Entities.Deluge.Response;
+﻿using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -19,9 +17,9 @@ public partial class DelugeService
         DownloadStatus? download = await _client.GetTorrentStatus(hash);
         BlockFilesResult result = new();
         
-        if (download?.Hash is null)
+        if (download?.Hash is null || download?.Name is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
@@ -32,7 +30,7 @@ public partial class DelugeService
 
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            _logger.LogInformation("skip | download is ignored | {Name}", download.Name);
             return result;
         }
         
@@ -41,7 +39,7 @@ public partial class DelugeService
         if (malwareBlockerConfig.IgnorePrivate && download.Private)
         {
             // ignore private trackers
-            _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            _logger.LogDebug("skip files check | download is private | {Name}", download.Name);
             return result;
         }
         
@@ -53,94 +51,37 @@ public partial class DelugeService
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "failed to find files in the download client | {name}", download.Name);
+            _logger.LogWarning(exception, "failed to find files in the download client | {Name}", download.Name);
         }
 
         if (contents is null)
         {
             return result;
         }
-        
-        Dictionary<int, int> priorities = [];
-        bool hasPriorityUpdates = false;
-        long totalFiles = 0;
-        long totalUnwantedFiles = 0;
-        
-        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
-        ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
-        ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
+
+        // Deluge's priority API takes the full per-file vector, so keep every original priority
+        Dictionary<int, int> originalPriorities = [];
+        List<(int Index, string ValidationName, string LogName, FileBlockAction Action)> scanItems = [];
 
         ProcessFiles(contents.Contents, (name, file) =>
         {
-            totalFiles++;
-            int priority = file.Priority;
-
-            if (result.ShouldRemove)
-            {
-                return;
-            }
-
-            if (file.Priority is 0)
-            {
-                _logger.LogTrace("File is already skipped | {file}", file.Path);
-                totalUnwantedFiles++;
-            }
-
-            if (file.Priority is not 0 && !_filenameEvaluator.IsValid(name, blocklistType, patterns, regexes))
-            {
-                totalUnwantedFiles++;
-                priority = 0;
-                hasPriorityUpdates = true;
-                _logger.LogInformation("unwanted file found | {file}", file.Path);
-
-                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
-                {
-                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
-                    result.ShouldRemove = true;
-                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
-                    return;
-                }
-            }
-            
-            _logger.LogTrace("File is valid | {file}", file.Path);
-            priorities.Add(file.Index, priority);
+            originalPriorities[file.Index] = file.Priority;
+            scanItems.Add((file.Index, name, file.Path, file.Priority is 0
+                ? FileBlockAction.AlreadySkipped
+                : FileBlockAction.CheckBlocklist));
         });
 
-        if (result.ShouldRemove)
+        await ApplyFileBlockingAsync(result, download.Name, scanItems, malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            return result;
-        }
+            HashSet<int> unwantedLookup = [..unwantedIndices];
+            List<int> sortedPriorities = originalPriorities
+                .OrderBy(x => x.Key)
+                .Select(x => unwantedLookup.Contains(x.Key) ? 0 : x.Value)
+                .ToList();
 
-        if (!hasPriorityUpdates)
-        {
-            return result;
-        }
-        
-        _logger.LogDebug("changing priorities | torrent {hash}", hash);
-
-        List<int> sortedPriorities = priorities
-            .OrderBy(x => x.Key)
-            .Select(x => x.Value)
-            .ToList();
-
-        if (totalUnwantedFiles == totalFiles)
-        {
-            _logger.LogDebug("All files are blocked for {name}", download.Name);
-            result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.AllFilesBlocked;
-            return result;
-        }
-
-        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
-
-        await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, sortedPriorities));
+            await _client.ChangeFilesPriority(hash, sortedPriorities);
+        });
 
         return result;
-    }
-    
-    protected virtual async Task ChangeFilesPriority(string hash, List<int> sortedPriorities)
-    {
-        await _client.ChangeFilesPriority(hash, sortedPriorities);
     }
 }
