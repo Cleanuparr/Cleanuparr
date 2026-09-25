@@ -195,7 +195,7 @@ function parseValue(xml: string): unknown {
     return out;
   }
   const scalar = xml.match(new RegExp(`<${type}>([\\s\\S]*?)<\\/${type}>`))?.[1] ?? '';
-  if (type === 'int' || type === 'i4') return Number(scalar);
+  if (type === 'int' || type === 'i4' || type === 'i8') return Number(scalar);
   if (type === 'boolean') return scalar === '1';
   if (type === 'double') return Number(scalar);
   return decodeXml(scalar);
