@@ -16,6 +16,7 @@ import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
 import { TransmissionDriver } from '../helpers/torrent-clients/transmission';
 import { DelugeDriver } from '../helpers/torrent-clients/deluge';
 import { UTorrentDriver } from '../helpers/torrent-clients/utorrent';
+import { RTorrentDriver } from '../helpers/torrent-clients/rtorrent';
 import { buildFolderTorrent, resetDirectory } from '../helpers/torrent-fixtures';
 import { mkdirShared } from '../helpers/shared-volume';
 
@@ -28,6 +29,7 @@ const qbit = new QBittorrentDriver();
 const transmission = new TransmissionDriver();
 const deluge = new DelugeDriver();
 const utorrent = new UTorrentDriver();
+const rtorrent = new RTorrentDriver();
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -95,6 +97,20 @@ const scenarios: Scenario[] = [
       mkdirShared(dir);
       const fx = buildFolderTorrent(dir, 'stop-rule-utorrent', 32_768, ANNOUNCE_BRIDGE);
       await utorrent.addSeedingTorrent({ metainfo: fx.metainfo, savePath: CLIENT_DOWNLOADS, category: 'ut-stop', name: fx.name, infoHash: fx.infoHash });
+      return fx;
+    },
+  },
+  {
+    key: 'rTorrent', driver: rtorrent, slug: 'rtorrent', category: 'rt-stop',
+    async addSeeding() {
+      const dir = join(HOST_DOWNLOADS, 'rtorrent');
+      mkdirShared(dir);
+      const fx = buildFolderTorrent(dir, 'stop-rule-rtorrent', 32_768, ANNOUNCE_HOST);
+      await rtorrent.addSeedingTorrent({ metainfo: fx.metainfo, savePath: CLIENT_DOWNLOADS, category: 'rt-stop', name: fx.name, infoHash: fx.infoHash });
+      // rTorrent lists a torrent as seeding only after its hash check completes.
+      await expect
+        .poll(() => rtorrent.getComplete(fx.infoHash), { message: 'rTorrent: hash check never completed', timeout: 30_000, intervals: [500] })
+        .toBe(1);
       return fx;
     },
   },
