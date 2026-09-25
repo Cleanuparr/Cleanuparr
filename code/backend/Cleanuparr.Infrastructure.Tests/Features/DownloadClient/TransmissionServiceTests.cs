@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Transmission.API.RPC.Arguments;
 using Transmission.API.RPC.Entity;
 using Shouldly;
@@ -586,6 +587,34 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             _fixture.FilenameEvaluator
                 .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
                 .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .TorrentSetAsync(Arg.Any<TorrentSettings>());
+        }
+
+        [Fact]
+        public async Task AllFilesAreMalware_PriorityUpdateThrows_StillMarksForRemoval()
+        {
+            const string hash = "all-malware-priority-throws-hash";
+            TransmissionService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [("malware.exe", true)]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            _fixture.ClientWrapper
+                .TorrentSetAsync(Arg.Any<TorrentSettings>())
+                .ThrowsAsync(new HttpRequestException("rejected"));
 
             BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
 

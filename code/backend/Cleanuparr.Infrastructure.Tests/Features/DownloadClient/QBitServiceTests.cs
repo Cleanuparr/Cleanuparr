@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Newtonsoft.Json.Linq;
 using QBittorrent.Client;
 using Shouldly;
@@ -1365,6 +1366,37 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             _fixture.FilenameEvaluator
                 .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
                 .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilePriorityAsync(hash, 0, TorrentContentPriority.Skip);
+        }
+
+        [Fact]
+        public async Task AllFilesAreMalware_PriorityUpdateThrows_StillMarksForRemoval()
+        {
+            const string hash = "all-malware-priority-throws-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "malware.exe", Index = 0, Priority = TorrentContentPriority.Normal },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            _fixture.ClientWrapper
+                .SetFilePriorityAsync(hash, 0, TorrentContentPriority.Skip)
+                .ThrowsAsync(new HttpRequestException("rejected"));
 
             BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
 

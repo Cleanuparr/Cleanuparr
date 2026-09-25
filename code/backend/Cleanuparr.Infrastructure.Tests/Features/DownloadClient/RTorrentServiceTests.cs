@@ -840,6 +840,34 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
         }
 
         [Fact]
+        public async Task AllFilesAreMalware_PriorityUpdateThrows_StillMarksForRemoval()
+        {
+            const string hash = "ALL-MALWARE-PRIORITY-THROWS-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new RTorrentFile { Index = 0, Path = "malware.exe", Priority = 1 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            _fixture.ClientWrapper
+                .SetFilePriorityAsync(hash, 0, 0)
+                .ThrowsAsync(new HttpRequestException("rejected"));
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilePriorityAsync(hash, 0, 0);
+        }
+
+        [Fact]
         public async Task PartialMalware_CallsSetFilePriority_AndDoesNotMarkForRemoval()
         {
             const string hash = "PARTIAL-MALWARE-HASH";

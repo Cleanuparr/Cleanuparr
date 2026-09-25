@@ -806,6 +806,34 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
         }
 
         [Fact]
+        public async Task AllFilesAreMalware_PriorityUpdateThrows_StillMarksForRemoval()
+        {
+            const string hash = "all-malware-priority-throws-hash";
+            UTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new UTorrentFile { Name = "malware.exe", Index = 0, Priority = 2, Size = 1024, Downloaded = 1024 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            _fixture.ClientWrapper
+                .SetFilesPriorityAsync(hash, Arg.Is<List<int>>(idx => idx.Count == 1 && idx[0] == 0), 0)
+                .ThrowsAsync(new HttpRequestException("rejected"));
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilesPriorityAsync(hash, Arg.Is<List<int>>(idx => idx.Count == 1 && idx[0] == 0), 0);
+        }
+
+        [Fact]
         public async Task PartialMalware_CallsSetFilesPriority_AndDoesNotMarkForRemoval()
         {
             const string hash = "partial-malware-hash";
