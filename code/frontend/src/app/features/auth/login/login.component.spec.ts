@@ -226,6 +226,25 @@ describe('LoginComponent', () => {
     expect(navigations).toEqual([]);
   });
 
+  it('verifies an accepted recovery code and lands on the dashboard', () => {
+    const { fixture, verify2faCalls, navigations } = setup({
+      login: of({ requiresTwoFactor: true, loginToken: 'login-token' }),
+      verify2fa: of(TOKENS),
+    });
+    const component = fixture.componentInstance;
+
+    component.submitLogin();
+    component.useRecoveryCode();
+    component.recoveryCode.set('ABCD-1234');
+    fixture.detectChanges();
+
+    submitButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(verify2faCalls).toEqual([['login-token', 'ABCD-1234', true]]);
+    expect(navigations).toEqual([[ROUTES.dashboard]]);
+  });
+
   it('counts down when the server rate limits the second factor step', () => {
     vi.useFakeTimers();
     const { fixture } = setup({
