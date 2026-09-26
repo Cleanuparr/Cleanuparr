@@ -130,6 +130,19 @@ public class NotificationProvidersControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateNotifiarrProvider_WithPlaceholderApiKey_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Notifiarr, ToJson(new CreateNotifiarrProviderRequest
+        {
+            Name = "Notifiarr",
+            ApiKey = "••••••••",
+            ChannelId = "123456789",
+        }));
+
+        Problem(result).Detail.ShouldBe("API key cannot be a placeholder value");
+    }
+
+    [Fact]
     public async Task UpdateNotifiarrProvider_WithPlaceholderApiKey_PreservesTheExistingKey()
     {
         Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Notifiarr, ToJson(new CreateNotifiarrProviderRequest
@@ -249,6 +262,20 @@ public class NotificationProvidersControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAppriseProvider_WithPlaceholderKey_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Apprise, ToJson(new CreateAppriseProviderRequest
+        {
+            Name = "Apprise",
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Key cannot be a placeholder value");
+    }
+
+    [Fact]
     public async Task TestAppriseProvider_WithPlaceholderKeyAndNoProviderId_ReturnsTheGenericMessage()
     {
         IActionResult result = await _controller.TestProvider(NotificationProviderType.Apprise, ToJson(new TestAppriseProviderRequest
@@ -335,6 +362,117 @@ public class NotificationProvidersControllerTests : IDisposable
         await ShouldBeStampedNow(provider.Id);
     }
 
+    [Fact]
+    public async Task CreateNtfyProvider_WithPlaceholderPassword_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Ntfy, ToJson(new CreateNtfyProviderRequest
+        {
+            Name = "Ntfy",
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Password cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task UpdateNtfyProvider_WithPlaceholderFields_PreservesTheExistingValuesButUpdatesServerUrl()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Ntfy, ToJson(new CreateNtfyProviderRequest
+        {
+            Name = "Ntfy",
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "password",
+            AccessToken = "access-token",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Ntfy, id, ToJson(new UpdateNtfyProviderRequest
+        {
+            Name = "Ntfy",
+            ServerUrl = "https://ntfy.example.com",
+            Topics = ["cleanuparr"],
+            Password = "••••••••",
+            AccessToken = "••••••••",
+        }));
+
+        NtfyConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.NtfyConfiguration)
+            .FirstAsync(p => p.Id == id)).NtfyConfiguration!;
+
+        stored.Password.ShouldBe("password");
+        stored.AccessToken.ShouldBe("access-token");
+        stored.ServerUrl.ShouldBe("https://ntfy.example.com");
+    }
+
+    [Fact]
+    public async Task TestNtfyProvider_WithPlaceholderPasswordAndNoProviderId_ReturnsTheGenericMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Ntfy, ToJson(new TestNtfyProviderRequest
+        {
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "••••••••",
+            AccessToken = "access-token",
+        }));
+
+        Problem(result).Detail.ShouldBe("Sensitive fields cannot be placeholder values");
+    }
+
+    [Fact]
+    public async Task TestNtfyProvider_WithPlaceholderAccessTokenAndNoProviderId_ReturnsTheGenericMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Ntfy, ToJson(new TestNtfyProviderRequest
+        {
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "password",
+            AccessToken = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Sensitive fields cannot be placeholder values");
+    }
+
+    [Fact]
+    public async Task TestNtfyProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Ntfy, ToJson(new TestNtfyProviderRequest
+        {
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "password",
+            AccessToken = "access-token",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestNtfyProvider_WithPlaceholderFieldsAndProviderId_UsesTheStoredValues()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Ntfy, ToJson(new CreateNtfyProviderRequest
+        {
+            Name = "Ntfy",
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "password",
+            AccessToken = "access-token",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Ntfy, ToJson(new TestNtfyProviderRequest
+        {
+            ServerUrl = "https://ntfy.sh",
+            Topics = ["cleanuparr"],
+            Password = "••••••••",
+            AccessToken = "••••••••",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
     #endregion
 
     #region Telegram
@@ -393,6 +531,45 @@ public class NotificationProvidersControllerTests : IDisposable
         Problem(result).Detail.ShouldBe("Bot token cannot be a placeholder value");
     }
 
+    [Fact]
+    public async Task CreateTelegramProvider_WithPlaceholderBotToken_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Telegram, ToJson(new CreateTelegramProviderRequest
+        {
+            Name = "Telegram",
+            BotToken = "••••••••",
+            ChatId = "-1001234567890",
+        }));
+
+        Problem(result).Detail.ShouldBe("Bot token cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task UpdateTelegramProvider_WithPlaceholderBotToken_PreservesTheExistingBotTokenButUpdatesChatId()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Telegram, ToJson(new CreateTelegramProviderRequest
+        {
+            Name = "Telegram",
+            BotToken = "0123456789:token",
+            ChatId = "-1001234567890",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Telegram, id, ToJson(new UpdateTelegramProviderRequest
+        {
+            Name = "Telegram",
+            BotToken = "••••••••",
+            ChatId = "-1009876543210",
+        }));
+
+        TelegramConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.TelegramConfiguration)
+            .FirstAsync(p => p.Id == id)).TelegramConfiguration!;
+
+        stored.BotToken.ShouldBe("0123456789:token");
+        stored.ChatId.ShouldBe("-1009876543210");
+    }
+
     #endregion
 
     #region Discord
@@ -434,6 +611,81 @@ public class NotificationProvidersControllerTests : IDisposable
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task CreateDiscordProvider_WithPlaceholderWebhookUrl_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Discord, ToJson(new CreateDiscordProviderRequest
+        {
+            Name = "Discord",
+            WebhookUrl = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Webhook URL cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task UpdateDiscordProvider_WithPlaceholderWebhookUrl_PreservesTheExistingWebhookUrl()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Discord, ToJson(new CreateDiscordProviderRequest
+        {
+            Name = "Discord",
+            WebhookUrl = "https://discord.com/api/webhooks/1/token",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Discord, id, ToJson(new UpdateDiscordProviderRequest
+        {
+            Name = "Discord",
+            WebhookUrl = "••••••••",
+        }));
+
+        DiscordConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.DiscordConfiguration)
+            .FirstAsync(p => p.Id == id)).DiscordConfiguration!;
+
+        stored.WebhookUrl.ShouldBe("https://discord.com/api/webhooks/1/token");
+    }
+
+    [Fact]
+    public async Task TestDiscordProvider_WithPlaceholderWebhookUrlAndNoProviderId_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Discord, ToJson(new TestDiscordProviderRequest
+        {
+            WebhookUrl = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Webhook URL cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task TestDiscordProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Discord, ToJson(new TestDiscordProviderRequest
+        {
+            WebhookUrl = "https://discord.com/api/webhooks/1/token",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestDiscordProvider_WithPlaceholderWebhookUrlAndProviderId_UsesTheStoredWebhookUrl()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Discord, ToJson(new CreateDiscordProviderRequest
+        {
+            Name = "Discord",
+            WebhookUrl = "https://discord.com/api/webhooks/1/token",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Discord, ToJson(new TestDiscordProviderRequest
+        {
+            WebhookUrl = "••••••••",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
     }
 
     #endregion
@@ -480,6 +732,45 @@ public class NotificationProvidersControllerTests : IDisposable
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task CreatePushoverProvider_WithPlaceholderApiToken_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Pushover, ToJson(new CreatePushoverProviderRequest
+        {
+            Name = "Pushover",
+            ApiToken = "••••••••",
+            UserKey = "user-key",
+        }));
+
+        Problem(result).Detail.ShouldBe("API token cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task UpdatePushoverProvider_WithPlaceholderFields_PreservesTheExistingValues()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Pushover, ToJson(new CreatePushoverProviderRequest
+        {
+            Name = "Pushover",
+            ApiToken = "api-token",
+            UserKey = "user-key",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Pushover, id, ToJson(new UpdatePushoverProviderRequest
+        {
+            Name = "Pushover",
+            ApiToken = "••••••••",
+            UserKey = "••••••••",
+        }));
+
+        PushoverConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.PushoverConfiguration)
+            .FirstAsync(p => p.Id == id)).PushoverConfiguration!;
+
+        stored.ApiToken.ShouldBe("api-token");
+        stored.UserKey.ShouldBe("user-key");
     }
 
     [Fact]
@@ -538,6 +829,89 @@ public class NotificationProvidersControllerTests : IDisposable
 
         provider.Events.OnDownloadStopped.ShouldBeTrue();
         await ShouldBeStampedNow(provider.Id);
+    }
+
+    [Fact]
+    public async Task CreateGotifyProvider_WithPlaceholderApplicationToken_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Application token cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task UpdateGotifyProvider_WithPlaceholderApplicationToken_PreservesTheExistingTokenButUpdatesServerUrl()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Gotify, id, ToJson(new UpdateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com/new",
+            ApplicationToken = "••••••••",
+        }));
+
+        GotifyConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.GotifyConfiguration)
+            .FirstAsync(p => p.Id == id)).GotifyConfiguration!;
+
+        stored.ApplicationToken.ShouldBe("app-token");
+        stored.ServerUrl.ShouldBe("https://gotify.example.com/new");
+    }
+
+    [Fact]
+    public async Task TestGotifyProvider_WithPlaceholderApplicationTokenAndNoProviderId_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Gotify, ToJson(new TestGotifyProviderRequest
+        {
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Application token cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task TestGotifyProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Gotify, ToJson(new TestGotifyProviderRequest
+        {
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestGotifyProvider_WithPlaceholderApplicationTokenAndProviderId_UsesTheStoredToken()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Gotify, ToJson(new TestGotifyProviderRequest
+        {
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "••••••••",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
     }
 
     #endregion
