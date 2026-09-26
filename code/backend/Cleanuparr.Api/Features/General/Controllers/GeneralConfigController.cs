@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Responses;
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -106,6 +107,8 @@ public sealed class GeneralConfigController : ControllerBase
                         deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, clearedFlags);
 
                     await transaction.CommitAsync();
+
+                    ForceImportService.ForgetDryRun();
                 }
                 catch
                 {

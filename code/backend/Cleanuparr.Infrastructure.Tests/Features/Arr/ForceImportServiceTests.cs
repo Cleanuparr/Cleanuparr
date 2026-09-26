@@ -22,7 +22,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
-public class ForceImportServiceTests
+public class ForceImportServiceTests : IDisposable
 {
     /// <summary>One of the reasons the service treats as safe to force past.</summary>
     private const string SafeReason = "Unable to determine if file is a sample";
@@ -78,6 +78,9 @@ public class ForceImportServiceTests
 
         SetConfig();
     }
+
+    // Resets the static dry-run eviction token between tests.
+    public void Dispose() => ForceImportService.ForgetDryRun();
 
     [Fact]
     public async Task TryImportAsync_AsksTheArrAndSaysNothingYet()
@@ -484,7 +487,7 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_DryRun_SpendsNoTry()
+    public async Task TryImportAsync_DryRun_SpendsADryTry()
     {
         // Arrange
         EnableDryRun();
@@ -494,9 +497,11 @@ public class ForceImportServiceTests
         // Act
         ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
 
-        // Assert: the run got far enough to ask, and still cost nothing
+        // Assert: dry run spends its own budget, live budget stays empty
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+        _cache.TryGetValue(CacheKeys.ForceImportDryRunTries(record.DownloadId, _instance.Url), out int dryTries).ShouldBeTrue();
+        dryTries.ShouldBe(1);
         _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url), out int _).ShouldBeFalse();
     }
 
@@ -527,23 +532,49 @@ public class ForceImportServiceTests
     }
 
     [Fact]
-    public async Task TryImportAsync_DryRun_AtTheTryLimit_SetsNoGiveUpMarker()
+    public async Task TryImportAsync_DryRun_AtTheTryLimit_SetsTheDryGiveUpMarker()
     {
-        // Arrange: the live run spends the only try, so the dry run meets the limit
+        // Arrange: the dry run spends its only try
         SetConfig(maxTries: 1);
+        EnableDryRun();
         QueueRecord record = BuildRecord(state: "importBlocked");
         StubCandidates(BuildCandidate(SafeReason));
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
-        EnableDryRun();
-
-        // Act
+        // Act: a second dry run hits the try limit and gives up
         ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
 
-        // Assert: a marker written here would block force import for six hours after going live
+        // Assert: dry run gives up and sets its own give-up marker
         outcome.ShouldBe(ForceImportOutcome.NotApplicable);
+        _cache.TryGetValue(CacheKeys.ForceImportDryRunGaveUp(record.DownloadId, _instance.Url), out DateTimeOffset _)
+            .ShouldBeTrue();
+
+        // Dry run leaves the live marker alone
         _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url), out DateTimeOffset _)
             .ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRun_ForgetDryRun_ClearsGiveUpMarkerAndTriesAgain()
+    {
+        // Arrange: the dry run gives up
+        SetConfig(maxTries: 1);
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome gaveUp = await _sut.TryImportAsync(_arrClient, _instance, record);
+        gaveUp.ShouldBe(ForceImportOutcome.NotApplicable);
+
+        // Act: turning dry run off drops the dry budget and its give-up marker
+        ForceImportService.ForgetDryRun();
+
+        // Assert: marker gone, a fresh dry run tries again
+        _cache.TryGetValue(CacheKeys.ForceImportDryRunGaveUp(record.DownloadId, _instance.Url), out DateTimeOffset _)
+            .ShouldBeFalse();
+
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
     }
 
     [Fact]

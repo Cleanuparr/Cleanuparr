@@ -13,6 +13,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
@@ -81,6 +82,11 @@ public sealed class ForceImportService : IForceImportService
         "importFailed",
     };
 
+    /// <summary>
+    /// <see cref="ForgetDryRun"/> cancels it to evict every dry-run entry.
+    /// </summary>
+    private static CancellationTokenSource _dryRunEviction = new();
+
     private readonly ILogger<ForceImportService> _logger;
     private readonly IMemoryCache _cache;
     private readonly IStriker _striker;
@@ -103,6 +109,17 @@ public sealed class ForceImportService : IForceImportService
         _eventPublisher = eventPublisher;
         _timeProvider = timeProvider;
         _dryRunInterceptor = dryRunInterceptor;
+    }
+
+    /// <summary>
+    /// Evicts the dry-run tries and give-up markers.
+    /// Live entries stay.
+    /// </summary>
+    public static void ForgetDryRun()
+    {
+        CancellationTokenSource previous = Interlocked.Exchange(ref _dryRunEviction, new CancellationTokenSource());
+        previous.Cancel();
+        previous.Dispose();
     }
 
     /// <inheritdoc/>
@@ -133,10 +150,12 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.NotApplicable;
         }
 
-        // A dry run asks the arr for nothing, so it must spend nothing a live run would need.
+        // Dry run keeps a separate try budget and give-up marker.
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
-        string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
+        string gaveUpKey = isDryRun
+            ? CacheKeys.ForceImportDryRunGaveUp(record.DownloadId, instance.Url)
+            : CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
 
         if (_cache.TryGetValue(gaveUpKey, out DateTimeOffset gaveUpAt) && _timeProvider.GetUtcNow() - gaveUpAt < GaveUpWindow)
         {
@@ -145,18 +164,15 @@ public sealed class ForceImportService : IForceImportService
         }
 
         ConcurrentDictionary<string, PendingForceImport> pending = GetPending(instance);
-        string triesKey = CacheKeys.ForceImportTries(record.DownloadId, instance.Url);
+        string triesKey = isDryRun
+            ? CacheKeys.ForceImportDryRunTries(record.DownloadId, instance.Url)
+            : CacheKeys.ForceImportTries(record.DownloadId, instance.Url);
         int tries = _cache.TryGetValue(triesKey, out int spent) ? spent : 0;
 
         if (tries >= config.ForceImportMaxTries)
         {
-            if (!isDryRun)
-            {
-                // The arr kept the download blocked, so the strike path takes over.
-                // The pending import stays: the last request can still land, and reconciliation retires it otherwise.
-                _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
-                _cache.Remove(triesKey);
-            }
+            SetCacheValue(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow, isDryRun);
+            _cache.Remove(triesKey);
 
             _logger.LogInformation("give up force import | {Tries} tries spent | {Title}", tries, record.Title);
 
@@ -175,12 +191,7 @@ public sealed class ForceImportService : IForceImportService
 
         void SpendTry()
         {
-            if (isDryRun)
-            {
-                return;
-            }
-
-            _cache.Set(triesKey, tries + 1, TriesWindow);
+            SetCacheValue(triesKey, tries + 1, TriesWindow, isDryRun);
         }
 
         int importedBefore;
@@ -329,6 +340,21 @@ public sealed class ForceImportService : IForceImportService
         GetPending(instance).TryRemove(downloadId, out _);
 
         return false;
+    }
+
+    /// <summary>
+    /// Tags dry-run entries so <see cref="ForgetDryRun"/> can evict them.
+    /// </summary>
+    private void SetCacheValue(string key, object value, TimeSpan window, bool isDryRun)
+    {
+        MemoryCacheEntryOptions options = new() { AbsoluteExpirationRelativeToNow = window };
+
+        if (isDryRun)
+        {
+            options.AddExpirationToken(new CancellationChangeToken(_dryRunEviction.Token));
+        }
+
+        _cache.Set(key, value, options);
     }
 
     /// <inheritdoc/>

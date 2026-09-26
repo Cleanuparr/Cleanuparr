@@ -19,7 +19,11 @@ public static class CacheKeys
     public static string ForceImportFirstSeen(string hash, Uri url) => $"force_import_seen_{hash.ToLowerInvariant()}_{url}";
 
     public static string ForceImportTries(string hash, Uri url) => $"force_import_tries_{hash.ToLowerInvariant()}_{url}";
-    
+
+    public static string ForceImportDryRunGaveUp(string hash, Uri url) => $"dry_run_force_import_gave_up_{hash.ToLowerInvariant()}_{url}";
+
+    public static string ForceImportDryRunTries(string hash, Uri url) => $"dry_run_force_import_tries_{hash.ToLowerInvariant()}_{url}";
+
     public static class UTorrent
     {
         public static string GetAuthTokenKey(string clientId) => $"utorrent:auth:token:{clientId}";
