@@ -51,7 +51,9 @@ export class StrikesComponent implements OnInit, OnDestroy {
   readonly expandedId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.strikes, 50));
+  readonly pageSize = signal(
+    this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.strikes, PaginationService.DEFAULT_PAGE_SIZE),
+  );
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
 

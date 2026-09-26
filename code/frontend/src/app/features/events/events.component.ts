@@ -62,7 +62,9 @@ export class EventsComponent implements OnInit, OnDestroy {
   readonly selectedJobRunId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.events, 50));
+  readonly pageSize = signal(
+    this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.events, PaginationService.DEFAULT_PAGE_SIZE),
+  );
   readonly selectedSeverity = signal<unknown>('');
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
