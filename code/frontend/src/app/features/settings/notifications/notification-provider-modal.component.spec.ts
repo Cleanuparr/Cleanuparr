@@ -11,6 +11,7 @@ import {
   NtfyPriority,
   PushoverPriority,
 } from '@shared/models/enums';
+import { NOTIFICATION_PROVIDER_DESCRIPTORS } from '@shared/utils/notification-provider.descriptors';
 import { NotificationProviderModalComponent } from './notification-provider-modal.component';
 
 const DEFAULT_EVENTS = {
@@ -91,7 +92,7 @@ function createApi(cliStatus: Observable<AppriseCliStatus> = of({ available: tru
     getAppriseCliStatus: vi.fn(() => cliStatus),
     create: vi.fn(() => of(created)),
     update: vi.fn(() => of(created)),
-    test: vi.fn((urlSegment: string) => of({ message: TEST_MESSAGES[urlSegment] ?? '' })),
+    test: vi.fn((descriptor) => of({ message: TEST_MESSAGES[descriptor.urlSegment] ?? '' })),
   };
 }
 
@@ -451,7 +452,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(api.update).toHaveBeenCalledWith('gotify', 'gotify-1', {
+    expect(api.update).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Gotify], 'gotify-1', {
       name: 'My gotify',
       serverUrl: 'https://gotify.example.com',
       applicationToken: 'token',
@@ -464,7 +465,7 @@ describe('NotificationProviderModalComponent', () => {
     fixture.detectChanges();
     component.saveProvider();
 
-    expect(api.update).toHaveBeenLastCalledWith('gotify', 'gotify-1', expect.objectContaining({ priority: 5 }));
+    expect(api.update).toHaveBeenLastCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Gotify], 'gotify-1', expect.objectContaining({ priority: 5 }));
   });
 
   it('sends a test notification with the current values and toasts the server message', () => {
@@ -473,7 +474,7 @@ describe('NotificationProviderModalComponent', () => {
     (fixture.nativeElement.querySelector('.modal__footer button') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(api.test).toHaveBeenCalledWith('discord', {
+    expect(api.test).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Discord], {
       webhookUrl: 'https://discord.com/api/webhooks/abc',
       username: 'Cleanuparr',
       avatarUrl: undefined,
@@ -492,7 +493,7 @@ describe('NotificationProviderModalComponent', () => {
     component.testNotification();
     fixture.detectChanges();
 
-    expect(api.test).toHaveBeenCalledWith('ntfy', {
+    expect(api.test).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Ntfy], {
       serverUrl: 'https://ntfy.sh',
       topics: ['topic'],
       authenticationType: NtfyAuthenticationType.None,
@@ -529,7 +530,7 @@ describe('NotificationProviderModalComponent', () => {
     (footerButtons(fixture)[1]).click();
     fixture.detectChanges();
 
-    expect(api.create).toHaveBeenCalledWith('discord', {
+    expect(api.create).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Discord], {
       name: 'Alerts',
       webhookUrl: 'https://discord.com/hook',
       username: undefined,
@@ -556,7 +557,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(api.update).toHaveBeenCalledWith('ntfy', 'ntfy-1', {
+    expect(api.update).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Ntfy], 'ntfy-1', {
       name: 'My ntfy',
       serverUrl: 'https://ntfy.example.com',
       topics: ['alpha'],
@@ -590,7 +591,7 @@ describe('NotificationProviderModalComponent', () => {
 
     component.saveProvider();
 
-    expect(api.create).toHaveBeenCalledWith('pushover', {
+    expect(api.create).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Pushover], {
       name: 'Phone',
       apiToken: 'token',
       userKey: 'key',
@@ -613,7 +614,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
 
     expect(api.create).toHaveBeenLastCalledWith(
-      'pushover',
+      NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Pushover],
       expect.objectContaining({ sound: 'siren', retry: 30, expire: 3600 }),
     );
   });

@@ -363,7 +363,7 @@ export class NotificationProviderModalComponent {
     const descriptor = NOTIFICATION_PROVIDER_DESCRIPTORS[this.modalType()];
     const providerId = this.editingProvider()?.id;
     this.testing.set(true);
-    this.api.test(descriptor.urlSegment, descriptor.buildTestRequest(this.modalModel(), providerId)).subscribe({
+    this.api.test(descriptor, descriptor.buildTestRequest(this.modalModel(), providerId)).subscribe({
       next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
       error: () => { this.toast.error('Test failed'); this.testing.set(false); },
     });
@@ -376,8 +376,8 @@ export class NotificationProviderModalComponent {
     const request = descriptor.buildRequest(this.modalModel());
     this.saving.set(true);
     const obs = editing
-      ? this.api.update(descriptor.urlSegment, editing.id, request)
-      : this.api.create(descriptor.urlSegment, request);
+      ? this.api.update(descriptor, editing.id, request)
+      : this.api.create(descriptor, request);
     obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
   }
 

@@ -7,6 +7,7 @@ import {
   AppriseCliStatus,
   TestNotificationResult,
 } from '@shared/models/notification-provider.model';
+import { NotificationProviderDescriptor } from '@shared/utils/notification-provider.descriptors';
 
 const BASE = '/api/configuration/notification_providers';
 
@@ -26,15 +27,15 @@ export class NotificationApi {
     return this.http.delete<void>(`${BASE}/${id}`);
   }
 
-  create<TRequest>(urlSegment: string, data: TRequest): Observable<NotificationProviderDto> {
-    return this.http.post<NotificationProviderDto>(`${BASE}/${urlSegment}`, data);
+  create<TRequest>(descriptor: NotificationProviderDescriptor<TRequest, unknown>, data: TRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${BASE}/${descriptor.urlSegment}`, data);
   }
 
-  update<TRequest>(urlSegment: string, id: string, data: TRequest): Observable<NotificationProviderDto> {
-    return this.http.put<NotificationProviderDto>(`${BASE}/${urlSegment}/${id}`, data);
+  update<TRequest>(descriptor: NotificationProviderDescriptor<TRequest, unknown>, id: string, data: TRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${BASE}/${descriptor.urlSegment}/${id}`, data);
   }
 
-  test<TRequest>(urlSegment: string, data: TRequest): Observable<TestNotificationResult> {
-    return this.http.post<TestNotificationResult>(`${BASE}/${urlSegment}/test`, data);
+  test<TTestRequest>(descriptor: NotificationProviderDescriptor<unknown, TTestRequest>, data: TTestRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${BASE}/${descriptor.urlSegment}/test`, data);
   }
 }
