@@ -75,8 +75,7 @@ $_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http:
   cursor: pointer;
 }
 
-// Hover glow rail effect - subtle gradient sweep on hover
-// Used on list rows and similar interactive list items
+// Hover glow rail: gradient sweep on hover
 @mixin glow-rail {
   &::before {
     content: '';
