@@ -28,7 +28,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor NotifiarrDescriptor = new()
     {
         Type = NotificationProviderType.Notifiarr,
-        UrlSegment = "notifiarr",
         ConfigType = typeof(NotifiarrConfig),
         CreateRequestType = typeof(CreateNotifiarrProviderRequest),
         UpdateRequestType = typeof(UpdateNotifiarrProviderRequest),
@@ -82,7 +81,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor AppriseDescriptor = new()
     {
         Type = NotificationProviderType.Apprise,
-        UrlSegment = "apprise",
         ConfigType = typeof(AppriseConfig),
         CreateRequestType = typeof(CreateAppriseProviderRequest),
         UpdateRequestType = typeof(UpdateAppriseProviderRequest),
@@ -150,7 +148,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor NtfyDescriptor = new()
     {
         Type = NotificationProviderType.Ntfy,
-        UrlSegment = "ntfy",
         ConfigType = typeof(NtfyConfig),
         CreateRequestType = typeof(CreateNtfyProviderRequest),
         UpdateRequestType = typeof(UpdateNtfyProviderRequest),
@@ -227,7 +224,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor PushoverDescriptor = new()
     {
         Type = NotificationProviderType.Pushover,
-        UrlSegment = "pushover",
         ConfigType = typeof(PushoverConfig),
         CreateRequestType = typeof(CreatePushoverProviderRequest),
         UpdateRequestType = typeof(UpdatePushoverProviderRequest),
@@ -304,7 +300,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor TelegramDescriptor = new()
     {
         Type = NotificationProviderType.Telegram,
-        UrlSegment = "telegram",
         ConfigType = typeof(TelegramConfig),
         CreateRequestType = typeof(CreateTelegramProviderRequest),
         UpdateRequestType = typeof(UpdateTelegramProviderRequest),
@@ -364,7 +359,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor DiscordDescriptor = new()
     {
         Type = NotificationProviderType.Discord,
-        UrlSegment = "discord",
         ConfigType = typeof(DiscordConfig),
         CreateRequestType = typeof(CreateDiscordProviderRequest),
         UpdateRequestType = typeof(UpdateDiscordProviderRequest),
@@ -421,7 +415,6 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
     private static readonly NotificationProviderDescriptor GotifyDescriptor = new()
     {
         Type = NotificationProviderType.Gotify,
-        UrlSegment = "gotify",
         ConfigType = typeof(GotifyConfig),
         CreateRequestType = typeof(CreateGotifyProviderRequest),
         UpdateRequestType = typeof(UpdateGotifyProviderRequest),

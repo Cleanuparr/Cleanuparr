@@ -16,11 +16,6 @@ public sealed record NotificationProviderDescriptor
     public required NotificationProviderType Type { get; init; }
 
     /// <summary>
-    /// The route segment used under "api/configuration/notification_providers" (e.g. "notifiarr", "apprise").
-    /// </summary>
-    public required string UrlSegment { get; init; }
-
-    /// <summary>
     /// The concrete <see cref="IConfig"/> type this provider persists (e.g. <see cref="NotifiarrConfig"/>).
     /// </summary>
     public required Type ConfigType { get; init; }
