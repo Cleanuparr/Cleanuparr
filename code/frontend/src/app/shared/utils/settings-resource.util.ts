@@ -1,4 +1,4 @@
-import { computed, effect, inject, ResourceRef, Signal } from '@angular/core';
+import { computed, effect, inject, ResourceRef, Signal, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { ToastService } from '@core/services/toast.service';
@@ -40,7 +40,8 @@ export function createSettingsResource<T, P = void>(
 
   effect(() => {
     if (resource.error()) {
-      toast.error(typeof options.errorMessage === 'function' ? options.errorMessage() : options.errorMessage);
+      const message = options.errorMessage;
+      toast.error(typeof message === 'function' ? untracked(message) : message);
     }
   });
 
