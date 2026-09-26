@@ -42,12 +42,15 @@ public class GeneralConfigControllerTests : IDisposable
         {
             HttpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() },
         };
+
+        Striker.RecurringHashes.Clear();
     }
 
     public void Dispose()
     {
         _dataContext.Dispose();
         _eventsContext.Dispose();
+        Striker.RecurringHashes.Clear();
         GC.SuppressFinalize(this);
     }
 
@@ -157,29 +160,32 @@ public class GeneralConfigControllerTests : IDisposable
         var jobRun = new JobRun { Id = Guid.NewGuid(), Type = JobType.QueueCleaner };
         _eventsContext.JobRuns.Add(jobRun);
 
-        var survivor = new DownloadItem
+        // Real strike plus a dry-run strike: purge clears the mark
+        var touchedByDryRun = new DownloadItem
         {
-            DownloadId = "kept",
-            Title = "Struck before the dry run",
+            DownloadId = "touched-by-dry-run",
+            Title = "Struck for real, then by a dry run",
+            IsMarkedForRemoval = true,
+        };
+
+        // Real strikes only: purge keeps its flags
+        var realOnly = new DownloadItem
+        {
+            DownloadId = "real-only",
+            Title = "Struck only by real runs",
             IsMarkedForRemoval = true,
             IsRemoved = true,
             IsReturning = true,
         };
-        var dryRunOnly = new DownloadItem
-        {
-            DownloadId = "purged",
-            Title = "Seen only during the dry run",
-            IsMarkedForRemoval = true,
-        };
-        _eventsContext.DownloadItems.AddRange(survivor, dryRunOnly);
+        _eventsContext.DownloadItems.AddRange(touchedByDryRun, realOnly);
 
         _eventsContext.Strikes.AddRange(
-            new Strike { DownloadItemId = survivor.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport },
-            new Strike { DownloadItemId = survivor.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport, IsDryRun = true },
-            new Strike { DownloadItemId = dryRunOnly.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport, IsDryRun = true });
+            new Strike { DownloadItemId = touchedByDryRun.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport },
+            new Strike { DownloadItemId = touchedByDryRun.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport, IsDryRun = true },
+            new Strike { DownloadItemId = realOnly.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport });
         await _eventsContext.SaveChangesAsync();
 
-        Striker.RecurringHashes.TryAdd("kept", null);
+        Striker.RecurringHashes.TryAdd("genuine-recurrence", null);
 
         var config = await _dataContext.GeneralConfigs.FirstAsync();
         config.DryRun = true;
@@ -200,14 +206,18 @@ public class GeneralConfigControllerTests : IDisposable
         // Assert
         _eventsContext.ChangeTracker.Clear();
         (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);
-        (await _eventsContext.DownloadItems.AnyAsync(x => x.DownloadId == "purged")).ShouldBeFalse();
 
-        // A flag the dry run set would otherwise outlive it and read as a real removal
-        DownloadItem kept = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "kept");
-        kept.IsMarkedForRemoval.ShouldBeFalse();
-        kept.IsRemoved.ShouldBeFalse();
-        kept.IsReturning.ShouldBeFalse();
-        Striker.RecurringHashes.ShouldBeEmpty();
+        DownloadItem touched = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "touched-by-dry-run");
+        touched.IsMarkedForRemoval.ShouldBeFalse();
+
+        // Real-run flags survive the purge
+        DownloadItem real = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "real-only");
+        real.IsMarkedForRemoval.ShouldBeTrue();
+        real.IsRemoved.ShouldBeTrue();
+        real.IsReturning.ShouldBeTrue();
+
+        // A recurrence from before the purge survives it
+        Striker.RecurringHashes.ShouldContainKey("genuine-recurrence");
     }
 
     [Fact]

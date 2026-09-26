@@ -1,10 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Responses;
-using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -70,6 +70,13 @@ public sealed class GeneralConfigController : ControllerBase
 
                 try
                 {
+                    // Read before the purge so the flag reset below can be scoped to items the dry run actually touched.
+                    List<Guid> dryRunItemIds = await eventsContext.Strikes
+                        .Where(s => s.IsDryRun)
+                        .Select(s => s.DownloadItemId)
+                        .Distinct()
+                        .ToListAsync();
+
                     var deletedStrikes = await eventsContext.Strikes
                         .Where(s => s.IsDryRun)
                         .ExecuteDeleteAsync();
@@ -83,25 +90,22 @@ public sealed class GeneralConfigController : ControllerBase
                         .Where(d => !d.Strikes.Any())
                         .ExecuteDeleteAsync();
 
-                    // An item with real strikes survives the purge, carrying whatever the dry run flagged on it.
+                    // Only IsMarkedForRemoval can be a dry-run leftover: IsRemoved and IsReturning are now only
+                    // ever set by a real removal, so they belong to the live run and must survive the purge.
                     var clearedFlags = await eventsContext.DownloadItems
-                        .Where(d => d.IsMarkedForRemoval || d.IsRemoved || d.IsReturning)
+                        .Where(d => dryRunItemIds.Contains(d.Id) && d.IsMarkedForRemoval)
                         .ExecuteUpdateAsync(setter => setter
-                            .SetProperty(d => d.IsMarkedForRemoval, false)
-                            .SetProperty(d => d.IsRemoved, false)
-                            .SetProperty(d => d.IsReturning, false));
+                            .SetProperty(d => d.IsMarkedForRemoval, false));
 
                     var deletedHistory = await eventsContext.SeekerHistory
                         .Where(h => h.IsDryRun)
                         .ExecuteDeleteAsync();
 
                     _logger.LogWarning(
-                        "Dry run disabled, purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed, {Flags} download items reset",
+                        "Dry run disabled, purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed, {Flags} removal marks cleared",
                         deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, clearedFlags);
 
                     await transaction.CommitAsync();
-
-                    Striker.RecurringHashes.Clear();
                 }
                 catch
                 {
