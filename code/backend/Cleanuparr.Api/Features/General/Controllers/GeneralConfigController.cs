@@ -71,7 +71,7 @@ public sealed class GeneralConfigController : ControllerBase
 
                 try
                 {
-                    // Read before the purge so the flag reset below can be scoped to items the dry run actually touched.
+                    // Read before the purge deletes these strikes.
                     List<Guid> dryRunItemIds = await eventsContext.Strikes
                         .Where(s => s.IsDryRun)
                         .Select(s => s.DownloadItemId)
@@ -91,8 +91,7 @@ public sealed class GeneralConfigController : ControllerBase
                         .Where(d => !d.Strikes.Any())
                         .ExecuteDeleteAsync();
 
-                    // Only IsMarkedForRemoval can be a dry-run leftover: IsRemoved and IsReturning are now only
-                    // ever set by a real removal, so they belong to the live run and must survive the purge.
+                    // Only real removals set IsRemoved and IsReturning.
                     var clearedFlags = await eventsContext.DownloadItems
                         .Where(d => dryRunItemIds.Contains(d.Id) && d.IsMarkedForRemoval)
                         .ExecuteUpdateAsync(setter => setter

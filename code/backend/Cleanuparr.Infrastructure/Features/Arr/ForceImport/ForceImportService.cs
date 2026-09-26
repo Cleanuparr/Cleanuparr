@@ -119,7 +119,6 @@ public sealed class ForceImportService : IForceImportService
     {
         CancellationTokenSource previous = Interlocked.Exchange(ref _dryRunEviction, new CancellationTokenSource());
         previous.Cancel();
-        previous.Dispose();
     }
 
     /// <inheritdoc/>
