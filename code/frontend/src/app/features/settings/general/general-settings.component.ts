@@ -15,6 +15,7 @@ import { GeneralConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 
 const CERT_OPTIONS: SelectOption[] = [
   { label: 'Enabled', value: CertificateValidationType.Enabled },
@@ -74,8 +75,6 @@ export class GeneralSettingsComponent implements HasPendingChanges {
   private readonly confirmService = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
-  private readonly savedSnapshot = signal('');
-
   private readonly configResource = rxResource({
     stream: () => this.api.get(),
   });
@@ -115,6 +114,8 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     logArchiveRetainedCount: 3,
     logArchiveTimeLimitHours: 720,
   });
+
+  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly genForm = form(this.model, (p) => {
     required(p.httpMaxRetries, { message: 'This field is required' });
@@ -205,7 +206,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
           logArchiveRetainedCount: config.log?.archiveRetainedCount ?? 3,
           logArchiveTimeLimitHours: config.log?.archiveTimeLimitHours ?? 720,
         });
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       });
     });
 
@@ -266,7 +267,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       },
       error: () => {
         this.toast.error('Failed to save general settings');
@@ -275,14 +276,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     });
   }
 
-  private buildSnapshot(): string {
-    return JSON.stringify(this.model());
-  }
-
-  readonly dirty = computed(() => {
-    const saved = this.savedSnapshot();
-    return saved !== '' && saved !== this.buildSnapshot();
-  });
+  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty();

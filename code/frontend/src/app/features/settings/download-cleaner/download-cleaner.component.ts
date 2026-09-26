@@ -24,6 +24,7 @@ import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, DownloadClientTypeName, SeedingRuleAction } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 import { SeedingRuleModalComponent } from './seeding-rule-modal.component';
 
@@ -89,7 +90,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly chipInputs = viewChildren(ChipInputComponent);
   private readonly seedingRuleModal = viewChild(SeedingRuleModalComponent);
 
-  private readonly savedSnapshot = signal('');
   private readonly orphanedFilesSnapshots = signal<Record<string, string>>({});
 
   readonly SeedingRuleAction = SeedingRuleAction;
@@ -123,6 +123,8 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     scheduleUnit: ScheduleUnit.Minutes,
     ignoredDownloads: [],
   });
+
+  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly dcForm = form(this.model, (p) => {
     validate(p.scheduleEvery, ({ value, valueOf }) => {
@@ -351,7 +353,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
         // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
         queueMicrotask(() => {
-          this.savedSnapshot.set(this.buildSnapshot());
+          this.dirtyTracker.markSaved();
         });
       });
     });
@@ -625,7 +627,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400
@@ -636,14 +638,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     });
   }
 
-  private buildSnapshot(): string {
-    return JSON.stringify(this.model());
-  }
-
-  readonly dirty = computed(() => {
-    const saved = this.savedSnapshot();
-    return saved !== '' && saved !== this.buildSnapshot();
-  });
+  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty()

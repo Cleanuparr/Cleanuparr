@@ -20,6 +20,7 @@ import { ScheduleUnit, PatternMode } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, resolveSchedule } from '@shared/utils/schedule.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { analyzeCoverage } from './coverage-analysis.util';
 
 const PATTERN_MODE_OPTIONS: SelectOption[] = [
@@ -74,8 +75,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
   private readonly stallModal = viewChild(StallRuleModalComponent);
   private readonly slowModal = viewChild(SlowRuleModalComponent);
 
-  private readonly savedSnapshot = signal('');
-
   readonly patternModeOptions = PATTERN_MODE_OPTIONS;
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   private readonly configResource = rxResource({
@@ -114,6 +113,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
     failedForceImportMaxTries: 3,
     metadataMaxStrikes: 3,
   });
+
+  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly failedSubFieldsDisabled = computed(() => this.model().failedMaxStrikes === 0);
 
@@ -245,7 +246,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
           failedForceImportMaxTries: config.failedImport.forceImportMaxTries,
           metadataMaxStrikes: config.downloadingMetadataMaxStrikes,
         });
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       });
     });
 
@@ -392,7 +393,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       },
       error: () => {
         this.toast.error('Failed to save queue cleaner settings');
@@ -401,14 +402,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
     });
   }
 
-  private buildSnapshot(): string {
-    return JSON.stringify(this.model());
-  }
-
-  readonly dirty = computed(() => {
-    const saved = this.savedSnapshot();
-    return saved !== '' && saved !== this.buildSnapshot();
-  });
+  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty()

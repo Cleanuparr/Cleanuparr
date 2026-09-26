@@ -16,6 +16,7 @@ import { UpdateSeekerConfig } from '@shared/models/seeker-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { SelectionStrategy } from '@shared/models/enums';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
@@ -97,8 +98,6 @@ export class SeekerComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
 
-  private readonly savedSnapshot = signal('');
-
   private readonly configResource = rxResource({
     stream: () => this.api.getConfig(),
   });
@@ -127,6 +126,12 @@ export class SeekerComponent implements HasPendingChanges {
   });
 
   readonly instances = signal<InstanceState[]>([]);
+
+  private readonly snapshotSource = computed(() => ({ model: this.model(), instances: this.instances() }));
+  private readonly dirtyTracker = createDirtyTracker(this.snapshotSource, (v) => ({
+    ...v.model,
+    instances: [...v.instances].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
+  }));
 
   readonly strategyDescription = computed(() => STRATEGY_DESCRIPTIONS[this.model().selectionStrategy] ?? '');
 
@@ -169,7 +174,7 @@ export class SeekerComponent implements HasPendingChanges {
           useCutoff: i.useCutoff,
           useCustomFormatScore: i.useCustomFormatScore,
         })));
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       });
     });
 
@@ -259,7 +264,7 @@ export class SeekerComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400
@@ -270,17 +275,7 @@ export class SeekerComponent implements HasPendingChanges {
     });
   }
 
-  private buildSnapshot(): string {
-    return JSON.stringify({
-      ...this.model(),
-      instances: [...this.instances()].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
-    });
-  }
-
-  readonly dirty = computed(() => {
-    const saved = this.savedSnapshot();
-    return saved !== '' && saved !== this.buildSnapshot();
-  });
+  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty();
