@@ -28,6 +28,7 @@ public class StrikerTests : IDisposable
     private readonly ILogger<Striker> _logger;
     private readonly EventPublisher _eventPublisher;
     private readonly Striker _striker;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly Guid _jobRunId;
 
     public StrikerTests()
@@ -41,21 +42,21 @@ public class StrikerTests : IDisposable
 
         var eventLogger = Substitute.For<ILogger<EventPublisher>>();
         var notificationPublisher = Substitute.For<INotificationPublisher>();
-        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
 
         // Configure dry run interceptor to report dry run as disabled by default
-        dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
         _eventPublisher = new EventPublisher(
             _strikerContext,
             eventNotifier,
             eventLogger,
             notificationPublisher,
-            dryRunInterceptor,
+            _dryRunInterceptor,
             new SqliteDatabaseProvider(),
             TimeProvider.System);
 
-        _striker = new Striker(_logger, _strikerContext, _eventPublisher, dryRunInterceptor);
+        _striker = new Striker(_logger, _strikerContext, _eventPublisher, _dryRunInterceptor);
 
         // Clear static state before each test
         Striker.RecurringHashes.Clear();
@@ -462,6 +463,50 @@ public class StrikerTests : IDisposable
         var strikeCount = await _strikerContext.Strikes
             .CountAsync(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled);
         strikeCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_DryRun_NotPreviouslyRemoved_ExceedsMax_DoesNotReportRecurring()
+    {
+        // Arrange
+        const string hash = "dry-run-not-removed";
+        const string itemName = "Dry Run Item";
+        const ushort maxStrikes = 1;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act - strike past the limit without a prior removal
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        var result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - would remove, records no recurrence
+        result.ShouldBeTrue();
+        Striker.RecurringHashes.ShouldNotContainKey(hash.ToLowerInvariant());
+        (await _strikerContext.ManualEvents.CountAsync(e => e.Type == ManualEventType.RecurringDownload)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_DryRun_PreviouslyRemoved_ExceedsMax_ReportsRecurring()
+    {
+        // Arrange
+        const string hash = "dry-run-returned";
+        const string itemName = "Dry Run Returned Item";
+        const ushort maxStrikes = 1;
+
+        // A real run struck and removed the item.
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        DownloadItem downloadItem = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        downloadItem.IsRemoved = true;
+        await _strikerContext.SaveChangesAsync();
+
+        // Act - dry run strikes the same, already-removed, item again
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        var result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - item removed then regrabbed by the arr counts as recurring
+        result.ShouldBeTrue();
+        Striker.RecurringHashes.ShouldContainKey(hash.ToLowerInvariant());
+        (await _strikerContext.ManualEvents.CountAsync(e => e.Type == ManualEventType.RecurringDownload)).ShouldBe(1);
     }
 
     [Fact]

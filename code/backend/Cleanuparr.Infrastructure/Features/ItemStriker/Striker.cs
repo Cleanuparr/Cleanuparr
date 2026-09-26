@@ -54,6 +54,10 @@ public sealed class Striker : IStriker
 
         int strikeCount = existingStrikeCount + 1;
 
+        // Read before the flip below.
+        // Dry run counts only a real return as recurring.
+        bool hasReturned = downloadItem.IsRemoved || downloadItem.IsReturning;
+
         // If item was previously removed and gets a new strike, it has returned
         if (downloadItem.IsRemoved)
         {
@@ -79,7 +83,7 @@ public sealed class Striker : IStriker
             return false;
         }
 
-        if (strikeCount > maxStrikes)
+        if (strikeCount > maxStrikes && (!isDryRun || hasReturned))
         {
             _logger.LogWarning("Blocked item keeps coming back | {name}", itemName);
 
