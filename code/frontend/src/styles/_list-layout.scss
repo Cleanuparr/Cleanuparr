@@ -4,6 +4,8 @@
 // Usage: @use 'list-layout' as *;
 // =============================================================================
 
+@use 'glass' as *;
+
 @mixin list-header {
   display: flex;
   align-items: center;
@@ -26,20 +28,7 @@
   position: relative;
   overflow: hidden;
 
-  // Glow rail — subtle gradient sweep on hover
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.06), transparent);
-    transform: translateX(-100%);
-    transition: transform var(--duration-normal) var(--ease-default);
-    pointer-events: none;
-  }
-
-  &:hover::after {
-    transform: translateX(100%);
-  }
+  @include glow-rail;
 
   &:not(:last-child) {
     border-bottom: 1px solid var(--divider);

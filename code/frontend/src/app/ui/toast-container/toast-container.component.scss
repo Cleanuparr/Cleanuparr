@@ -29,22 +29,22 @@
 
   &--success {
     border-left-color: var(--color-success);
-    --toast-glow-color: rgba(34, 197, 94, 0.3);
+    --toast-glow-color: rgba(var(--color-success-rgb), 0.3);
   }
 
   &--error {
     border-left-color: var(--color-error);
-    --toast-glow-color: rgba(239, 68, 68, 0.3);
+    --toast-glow-color: rgba(var(--color-error-rgb), 0.3);
   }
 
   &--warning {
     border-left-color: var(--color-warning);
-    --toast-glow-color: rgba(245, 158, 11, 0.3);
+    --toast-glow-color: rgba(var(--color-warning-rgb), 0.3);
   }
 
   &--info {
     border-left-color: var(--color-info);
-    --toast-glow-color: rgba(59, 130, 246, 0.3);
+    --toast-glow-color: rgba(var(--color-info-rgb), 0.3);
   }
 
   &--removing {

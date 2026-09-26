@@ -1,4 +1,5 @@
 @use 'settings-layout' as *;
+@use 'responsive' as *;
 
 :host { @include settings-page; }
 
@@ -17,7 +18,7 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
 
-  @media (max-width: 480px) {
+  @include mobile {
     grid-template-columns: 1fr;
   }
 }

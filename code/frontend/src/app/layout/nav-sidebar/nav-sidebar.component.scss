@@ -219,7 +219,7 @@
     white-space: nowrap;
 
     &:hover {
-      background: rgba(239, 68, 68, 0.08);
+      background: rgba(var(--color-error-rgb), 0.08);
       color: var(--color-error);
     }
   }
