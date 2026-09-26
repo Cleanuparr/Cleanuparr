@@ -21,6 +21,7 @@ import { ToastService } from '@core/services/toast.service';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
+import { createFilterDrawer } from '@shared/utils/filter-drawer.util';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -28,7 +29,7 @@ type TriState = 'any' | 'true' | 'false';
 const DEFAULT_SORT_BY = SearchEventsSortBy.Timestamp;
 const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
-interface AdvancedFilters {
+interface AdvancedFilters extends Record<string, unknown> {
   instanceId: string;
   cycleFilter: CycleFilter;
   statuses: SearchCommandStatus[];
@@ -111,12 +112,15 @@ export class SearchesTabComponent {
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
 
   // Applied filters drive the query; draft lives inside the open drawer.
-  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
-  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
-  readonly drawerOpen = signal(false);
+  private readonly filters = createFilterDrawer(EMPTY_FILTERS);
+  readonly applied = this.filters.applied;
+  readonly draft = this.filters.draft;
+  readonly drawerOpen = this.filters.drawerOpen;
 
   readonly eventsPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerSearches, 50));
+  readonly pageSize = signal(
+    this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerSearches, PaginationService.DEFAULT_PAGE_SIZE),
+  );
 
   private readonly eventsParams = computed<SearchEventsQuery>(() => {
     const instanceId = this.selectedInstanceId() || undefined;
@@ -253,24 +257,24 @@ export class SearchesTabComponent {
   );
 
   openFilters(): void {
-    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
-    this.drawerOpen.set(true);
+    this.filters.open();
+    // Seed the drafted instance from the toolbar selector, not just the applied filters.
+    this.filters.draft.update(d => ({ ...d, instanceId: this.selectedInstanceId() }));
   }
 
   resetFilters(): void {
-    this.draft.set({ ...EMPTY_FILTERS });
+    this.filters.reset();
   }
 
   applyFilters(): void {
-    const draft = { ...this.draft() };
-    this.applied.set(draft);
+    const draft = this.draft();
+    this.filters.apply();
     this.selectedInstanceId.set(draft.instanceId);
-    this.drawerOpen.set(false);
     this.eventsPage.set(1);
   }
 
   toggleStatus(value: SearchCommandStatus): void {
-    this.draft.update(d => {
+    this.filters.draft.update(d => {
       const has = d.statuses.includes(value);
       return { ...d, statuses: has ? d.statuses.filter(s => s !== value) : [...d.statuses, value] };
     });
@@ -281,7 +285,7 @@ export class SearchesTabComponent {
   }
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
-    this.draft.update(d => {
+    this.filters.draft.update(d => {
       const next = { ...d, [key]: value };
       // 'Current Cycle' only makes sense against a specific instance — clearing
       // the instance must fall the cycle filter back to 'All Time'.
