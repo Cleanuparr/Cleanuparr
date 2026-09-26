@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
@@ -27,6 +28,7 @@ public sealed class NotificationProvidersController : ControllerBase
     private const string DuplicateProviderNameMessage = "A provider with this name already exists";
     private const string SensitiveFieldsPlaceholderMessage = "Sensitive fields cannot be placeholder values";
     private const string TestNotificationSuccessMessage = "Test notification sent successfully";
+    private const string InvalidRequestBodyMessage = "Invalid request body";
 
     private readonly ILogger<NotificationProvidersController> _logger;
     private readonly DataContext _dataContext;
@@ -106,8 +108,10 @@ public sealed class NotificationProvidersController : ControllerBase
             return notSupported!;
         }
 
-        CreateNotificationProviderRequestBase request =
-            (CreateNotificationProviderRequestBase)requestBody.Deserialize(descriptor.CreateRequestType, _jsonOptions)!;
+        if (!TryReadRequest(requestBody, descriptor.CreateRequestType, out CreateNotificationProviderRequestBase? request, out IActionResult? invalidBody))
+        {
+            return invalidBody!;
+        }
 
         await DataContext.Lock.WaitAsync();
         try
@@ -176,8 +180,10 @@ public sealed class NotificationProvidersController : ControllerBase
             return notSupported!;
         }
 
-        UpdateNotificationProviderRequestBase request =
-            (UpdateNotificationProviderRequestBase)requestBody.Deserialize(descriptor.UpdateRequestType, _jsonOptions)!;
+        if (!TryReadRequest(requestBody, descriptor.UpdateRequestType, out UpdateNotificationProviderRequestBase? request, out IActionResult? invalidBody))
+        {
+            return invalidBody!;
+        }
 
         await DataContext.Lock.WaitAsync();
         try
@@ -281,8 +287,10 @@ public sealed class NotificationProvidersController : ControllerBase
             return notSupported!;
         }
 
-        TestNotificationProviderRequestBase request =
-            (TestNotificationProviderRequestBase)requestBody.Deserialize(descriptor.TestRequestType, _jsonOptions)!;
+        if (!TryReadRequest(requestBody, descriptor.TestRequestType, out TestNotificationProviderRequestBase? request, out IActionResult? invalidBody))
+        {
+            return invalidBody!;
+        }
 
         try
         {
@@ -380,6 +388,40 @@ public sealed class NotificationProvidersController : ControllerBase
                 StatusCodes.Status404NotFound, $"Notification provider type {type} is not supported");
             return false;
         }
+    }
+
+    /// <summary>
+    /// Deserializes the request body into the given type, returning a 400 problem result instead of throwing on a null or wrong-typed body.
+    /// </summary>
+    private bool TryReadRequest<TRequest>(
+        JsonElement body,
+        Type requestType,
+        [NotNullWhen(true)] out TRequest? request,
+        out IActionResult? error)
+        where TRequest : class
+    {
+        request = null;
+        error = null;
+
+        if (body.ValueKind == JsonValueKind.Object)
+        {
+            try
+            {
+                request = body.Deserialize(requestType, _jsonOptions) as TRequest;
+            }
+            catch (Exception ex) when (ex is JsonException or NotSupportedException)
+            {
+                // Falls through to the 400 below.
+            }
+        }
+
+        if (request is null)
+        {
+            error = this.ProblemResult(StatusCodes.Status400BadRequest, InvalidRequestBodyMessage);
+            return false;
+        }
+
+        return true;
     }
 
     private async Task<IConfig?> GetExistingProviderConfig(Guid? providerId, NotificationProviderType type)

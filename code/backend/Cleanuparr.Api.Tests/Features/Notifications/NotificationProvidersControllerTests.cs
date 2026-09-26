@@ -992,4 +992,83 @@ public class NotificationProvidersControllerTests : IDisposable
 
         result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
+
+    #region Invalid request bodies
+
+    private static JsonElement NullBody() =>
+        JsonSerializer.Deserialize<JsonElement>("null");
+
+    private static JsonElement WrongTypedFieldBody() =>
+        JsonSerializer.Deserialize<JsonElement>("""{"Name": 123}""");
+
+    private static JsonElement WrongTypedProviderIdBody() =>
+        JsonSerializer.Deserialize<JsonElement>("""{"ProviderId": 123}""");
+
+    [Fact]
+    public async Task CreateProvider_NullBody_ReturnsBadRequestWithoutTouchingTheDatabase()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Gotify, NullBody());
+
+        Problem(result).Detail.ShouldBe("Invalid request body");
+        (await _dataContext.NotificationConfigs.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task CreateProvider_WrongTypedField_ReturnsBadRequestWithoutTouchingTheDatabase()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Gotify, WrongTypedFieldBody());
+
+        Problem(result).Detail.ShouldBe("Invalid request body");
+        (await _dataContext.NotificationConfigs.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task UpdateProvider_NullBody_ReturnsBadRequestWithoutTouchingTheDatabase()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }))).Id;
+
+        IActionResult result = await _controller.UpdateProvider(NotificationProviderType.Gotify, id, NullBody());
+
+        Problem(result).Detail.ShouldBe("Invalid request body");
+        (await _dataContext.NotificationConfigs.AsNoTracking().FirstAsync(p => p.Id == id)).Name.ShouldBe("Gotify");
+    }
+
+    [Fact]
+    public async Task UpdateProvider_WrongTypedField_ReturnsBadRequestWithoutTouchingTheDatabase()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }))).Id;
+
+        IActionResult result = await _controller.UpdateProvider(NotificationProviderType.Gotify, id, WrongTypedFieldBody());
+
+        Problem(result).Detail.ShouldBe("Invalid request body");
+        (await _dataContext.NotificationConfigs.AsNoTracking().FirstAsync(p => p.Id == id)).Name.ShouldBe("Gotify");
+    }
+
+    [Fact]
+    public async Task TestProvider_NullBody_ReturnsBadRequest()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Gotify, NullBody());
+
+        Problem(result).Detail.ShouldBe("Invalid request body");
+    }
+
+    [Fact]
+    public async Task TestProvider_WrongTypedField_ReturnsBadRequest()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Gotify, WrongTypedProviderIdBody());
+
+        Problem(result).Detail.ShouldBe("Invalid request body");
+    }
+
+    #endregion
 }
