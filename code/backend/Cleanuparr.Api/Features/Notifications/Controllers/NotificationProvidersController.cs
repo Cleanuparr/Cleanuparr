@@ -154,7 +154,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnForceImported = request.OnForceImported
             }, config);
 
-            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.NotificationConfigs.AddAsync(provider);
             await _dataContext.SaveChangesAsync();
 
             await _notificationConfigurationService.InvalidateCacheAsync();
@@ -231,7 +231,7 @@ public sealed class NotificationProvidersController : ControllerBase
             }, newConfig);
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
-            _dataContext.NotificationConfigs.Add(newProvider);
+            await _dataContext.NotificationConfigs.AddAsync(newProvider);
 
             await _dataContext.SaveChangesAsync();
             await _notificationConfigurationService.InvalidateCacheAsync();
