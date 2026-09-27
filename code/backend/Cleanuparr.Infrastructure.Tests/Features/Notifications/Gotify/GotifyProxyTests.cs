@@ -232,7 +232,7 @@ public class GotifyProxyTests
         // Act & Assert
         var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public class GotifyProxyTests
         // Act & Assert
         var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     #endregion

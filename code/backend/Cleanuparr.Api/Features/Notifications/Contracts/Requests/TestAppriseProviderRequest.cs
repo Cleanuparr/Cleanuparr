@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 
-public record TestAppriseProviderRequest
+public record TestAppriseProviderRequest : TestNotificationProviderRequestBase
 {
     public AppriseMode Mode { get; init; } = AppriseMode.Api;
 
@@ -15,6 +15,4 @@ public record TestAppriseProviderRequest
 
     // CLI mode fields
     public string? ServiceUrls { get; init; }
-
-    public Guid? ProviderId { get; init; }
 }

@@ -18,11 +18,12 @@ import { ToastService } from '@core/services/toast.service';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeHighlight } from '@shared/utils/instance-display.util';
+import { createFilterDrawer } from '@shared/utils/filter-drawer.util';
 
 const DEFAULT_SORT_BY = CfUpgradesSortBy.UpgradedAt;
 const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
-interface AdvancedFilters {
+interface AdvancedFilters extends Record<string, unknown> {
   instanceId: string;
   timeRange: string;
 }
@@ -62,7 +63,9 @@ export class UpgradesTabComponent {
   private initialLoad = true;
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerUpgrades, 50));
+  readonly pageSize = signal(
+    this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerUpgrades, PaginationService.DEFAULT_PAGE_SIZE),
+  );
 
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
@@ -70,9 +73,10 @@ export class UpgradesTabComponent {
   readonly sortBy = signal<CfUpgradesSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
 
-  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
-  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
-  readonly drawerOpen = signal(false);
+  private readonly filters = createFilterDrawer(EMPTY_FILTERS);
+  readonly applied = this.filters.applied;
+  readonly draft = this.filters.draft;
+  readonly drawerOpen = this.filters.drawerOpen;
 
   private readonly upgradesParams = computed<CfScoreUpgradesQuery>(() => {
     const a = this.applied();
@@ -127,13 +131,7 @@ export class UpgradesTabComponent {
     { label: 'All Time', value: '0' },
   ];
 
-  readonly activeFilterCount = computed(() => {
-    const a = this.applied();
-    let n = 0;
-    if (a.instanceId) n++;
-    if (a.timeRange !== EMPTY_FILTERS.timeRange) n++;
-    return n;
-  });
+  readonly activeFilterCount = this.filters.activeCount;
 
   constructor() {
     effect(() => {
@@ -181,24 +179,24 @@ export class UpgradesTabComponent {
   );
 
   openFilters(): void {
-    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
-    this.drawerOpen.set(true);
+    this.filters.open();
+    // Seed the drafted instance from the toolbar selector, not just the applied filters.
+    this.filters.draft.update(d => ({ ...d, instanceId: this.selectedInstanceId() }));
   }
 
   resetFilters(): void {
-    this.draft.set({ ...EMPTY_FILTERS });
+    this.filters.reset();
   }
 
   applyFilters(): void {
-    const draft = { ...this.draft() };
-    this.applied.set(draft);
+    const draft = this.draft();
+    this.filters.apply();
     this.selectedInstanceId.set(draft.instanceId);
-    this.drawerOpen.set(false);
     this.currentPage.set(1);
   }
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
-    this.draft.update(d => ({ ...d, [key]: value }));
+    this.filters.updateDraft(key, value);
   }
 
   refresh(): void {

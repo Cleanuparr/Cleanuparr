@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, inject, signal, input, computed, effect, untracked } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -13,7 +12,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '@shared/models/arr-config.model';
 import { ArrType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { DeferredLoader } from '@shared/utils/loading.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
 
 const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   sonarr:  [{ label: 'v4', value: 4 }],
@@ -76,13 +75,15 @@ export class ArrSettingsComponent implements HasPendingChanges {
   readonly urlPlaceholder = computed(() => `http://localhost:${ARR_DEFAULT_PORT[this.type()] ?? 8989}`);
   readonly externalUrlPlaceholder = computed(() => `https://${this.type()}.example.com`);
 
-  private readonly configResource = rxResource({
+  private readonly settings = createSettingsResource({
     params: () => this.type(),
-    stream: ({ params }) => this.api.getConfig(params as ArrType),
+    load: (type) => this.api.getConfig(type as ArrType),
+    errorMessage: () => `Failed to load ${this.displayName()} settings`,
   });
+  private readonly configResource = this.settings.resource;
 
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.configResource.error());
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly instances = computed(() =>
     this.configResource.hasValue() ? (this.configResource.value().instances ?? []) : [],
@@ -111,24 +112,10 @@ export class ArrSettingsComponent implements HasPendingChanges {
         untracked(() => this.instanceModel.update(m => ({ ...m, version: options[0].value as number })));
       }
     });
-
-    effect(() => {
-      if (this.configResource.error()) {
-        this.toast.error(`Failed to load ${this.displayName()} settings`);
-      }
-    });
-
-    effect(() => {
-      if (this.configResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
-    });
   }
 
   retry(): void {
-    this.configResource.reload();
+    this.settings.retry();
   }
 
   openAddModal(): void {

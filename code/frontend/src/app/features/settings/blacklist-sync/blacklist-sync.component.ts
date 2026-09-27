@@ -9,6 +9,7 @@ import { ToastService } from '@core/services/toast.service';
 import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 
 interface BlacklistSyncFormModel {
   enabled: boolean;
@@ -27,8 +28,6 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   private readonly api = inject(BlacklistSyncApi);
   private readonly toast = inject(ToastService);
 
-  private readonly savedSnapshot = signal('');
-
   private readonly configResource = rxResource({
     stream: () => this.api.getConfig(),
   });
@@ -39,6 +38,8 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   readonly saved = signal(false);
 
   private readonly model = signal<BlacklistSyncFormModel>({ enabled: false, blacklistPath: '' });
+
+  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly bsForm = form(this.model, (p) => {
     required(p.blacklistPath, {
@@ -57,7 +58,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
       }
       untracked(() => {
         this.model.set({ enabled: config.enabled, blacklistPath: config.blacklistPath ?? '' });
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       });
     });
 
@@ -94,7 +95,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot.set(this.buildSnapshot());
+        this.dirtyTracker.markSaved();
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save blacklist sync settings');
@@ -103,14 +104,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
     });
   }
 
-  private buildSnapshot(): string {
-    return JSON.stringify(this.model());
-  }
-
-  readonly dirty = computed(() => {
-    const saved = this.savedSnapshot();
-    return saved !== '' && saved !== this.buildSnapshot();
-  });
+  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty();

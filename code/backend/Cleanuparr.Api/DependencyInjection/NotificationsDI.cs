@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Features.Notifications.Descriptors;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
@@ -26,5 +27,6 @@ public static class NotificationsDI
             .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
             .AddScoped<NotificationProviderFactory>()
             .AddScoped<INotificationPublisher, NotificationPublisher>()
-            .AddScoped<NotificationService>();
+            .AddScoped<NotificationService>()
+            .AddScoped<INotificationProviderDescriptorRegistry, NotificationProviderDescriptorRegistry>();
 }

@@ -20,11 +20,12 @@ import { ToastService } from '@core/services/toast.service';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeHighlight } from '@shared/utils/instance-display.util';
+import { createFilterDrawer } from '@shared/utils/filter-drawer.util';
 
 const DEFAULT_SORT_BY = CfScoresSortBy.Title;
 const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
 
-interface AdvancedFilters {
+interface AdvancedFilters extends Record<string, unknown> {
   instanceId: string;
   qualityProfile: string;
   cutoffFilter: CutoffFilter;
@@ -69,7 +70,9 @@ export class QualityTabComponent {
   private initialLoad = true;
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerQuality, 50));
+  readonly pageSize = signal(
+    this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerQuality, PaginationService.DEFAULT_PAGE_SIZE),
+  );
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
 
@@ -90,9 +93,10 @@ export class QualityTabComponent {
     { label: 'Descending', value: SortDirection.Desc },
   ];
 
-  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
-  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
-  readonly drawerOpen = signal(false);
+  private readonly filters = createFilterDrawer(EMPTY_FILTERS);
+  readonly applied = this.filters.applied;
+  readonly draft = this.filters.draft;
+  readonly drawerOpen = this.filters.drawerOpen;
 
   private readonly scoresParams = computed<CfScoresQuery>(() => {
     const a = this.applied();
@@ -178,15 +182,7 @@ export class QualityTabComponent {
     ];
   });
 
-  readonly activeFilterCount = computed(() => {
-    const a = this.applied();
-    let n = 0;
-    if (a.instanceId) n++;
-    if (a.qualityProfile) n++;
-    if (a.cutoffFilter !== CutoffFilter.All) n++;
-    if (a.monitoredFilter !== MonitoredFilter.All) n++;
-    return n;
-  });
+  readonly activeFilterCount = this.filters.activeCount;
 
   constructor() {
     effect(() => {
@@ -240,12 +236,13 @@ export class QualityTabComponent {
   );
 
   openFilters(): void {
-    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
-    this.drawerOpen.set(true);
+    this.filters.open();
+    // Seed the drafted instance from the toolbar selector, not just the applied filters.
+    this.filters.draft.update(d => ({ ...d, instanceId: this.selectedInstanceId() }));
   }
 
   resetFilters(): void {
-    this.draft.set({ ...EMPTY_FILTERS });
+    this.filters.reset();
   }
 
   applyFilters(): void {
@@ -258,9 +255,9 @@ export class QualityTabComponent {
         draft.qualityProfile = '';
       }
     }
-    this.applied.set(draft);
+    this.filters.draft.set(draft);
+    this.filters.apply();
     this.selectedInstanceId.set(draft.instanceId);
-    this.drawerOpen.set(false);
     this.currentPage.set(1);
   }
 
@@ -276,7 +273,7 @@ export class QualityTabComponent {
   }
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
-    this.draft.update(d => ({ ...d, [key]: value }));
+    this.filters.updateDraft(key, value);
   }
 
   refresh(): void {

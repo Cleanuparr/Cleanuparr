@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 
-public record TestPushoverProviderRequest
+public record TestPushoverProviderRequest : TestNotificationProviderRequestBase
 {
     public string ApiToken { get; init; } = string.Empty;
 
@@ -19,6 +19,4 @@ public record TestPushoverProviderRequest
     public int? Expire { get; init; }
 
     public List<string> Tags { get; init; } = [];
-
-    public Guid? ProviderId { get; init; }
 }

@@ -11,6 +11,7 @@ import {
   NtfyPriority,
   PushoverPriority,
 } from '@shared/models/enums';
+import { NOTIFICATION_PROVIDER_DESCRIPTORS } from '@shared/utils/notification-provider.descriptors';
 import { NotificationProviderModalComponent } from './notification-provider-modal.component';
 
 const DEFAULT_EVENTS = {
@@ -79,31 +80,79 @@ const GOTIFY_PROVIDER: NotificationProviderDto = {
   },
 };
 
+const NOTIFIARR_PROVIDER: NotificationProviderDto = {
+  id: 'notifiarr-1',
+  name: 'My notifiarr',
+  type: NotificationProviderType.Notifiarr,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    apiKey: 'key123',
+    channelId: 'channel1',
+  },
+};
+
+const TELEGRAM_PROVIDER: NotificationProviderDto = {
+  id: 'telegram-1',
+  name: 'My telegram',
+  type: NotificationProviderType.Telegram,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    botToken: 'bot-token',
+    chatId: '-100123',
+    topicId: '42',
+    sendSilently: true,
+  },
+};
+
+const APPRISE_PROVIDER: NotificationProviderDto = {
+  id: 'apprise-1',
+  name: 'My apprise',
+  type: NotificationProviderType.Apprise,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    mode: AppriseMode.Api,
+    url: 'http://apprise.example.com',
+    key: 'config-key',
+    tags: 'tag1,tag2',
+    serviceUrls: 'discord://id/token\nslack://token',
+  },
+};
+
+const PUSHOVER_PROVIDER: NotificationProviderDto = {
+  id: 'pushover-1',
+  name: 'My pushover',
+  type: NotificationProviderType.Pushover,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    apiToken: 'api-token',
+    userKey: 'user-key',
+    devices: ['phone1'],
+    priority: PushoverPriority.High,
+    retry: 60,
+    expire: 7200,
+    sound: 'siren',
+    customSound: '',
+    tags: ['urgent'],
+  },
+};
+
+const TEST_MESSAGES: Record<string, string> = {
+  discord: 'Discord test sent',
+  telegram: 'Telegram test sent',
+  gotify: 'Gotify test sent',
+};
+
 function createApi(cliStatus: Observable<AppriseCliStatus> = of({ available: true, version: '1.9.0' })) {
   const created: NotificationProviderDto = DISCORD_PROVIDER;
   return {
     getAppriseCliStatus: vi.fn(() => cliStatus),
-    createDiscord: vi.fn(() => of(created)),
-    createTelegram: vi.fn(() => of(created)),
-    createNotifiarr: vi.fn(() => of(created)),
-    createApprise: vi.fn(() => of(created)),
-    createNtfy: vi.fn(() => of(created)),
-    createPushover: vi.fn(() => of(created)),
-    createGotify: vi.fn(() => of(created)),
-    updateDiscord: vi.fn(() => of(created)),
-    updateTelegram: vi.fn(() => of(created)),
-    updateNotifiarr: vi.fn(() => of(created)),
-    updateApprise: vi.fn(() => of(created)),
-    updateNtfy: vi.fn(() => of(created)),
-    updatePushover: vi.fn(() => of(created)),
-    updateGotify: vi.fn(() => of(created)),
-    testDiscord: vi.fn(() => of({ message: 'Discord test sent' })),
-    testTelegram: vi.fn(() => of({ message: 'Telegram test sent' })),
-    testNotifiarr: vi.fn(() => of({ message: '' })),
-    testApprise: vi.fn(() => of({ message: '' })),
-    testNtfy: vi.fn(() => of({ message: '' })),
-    testPushover: vi.fn(() => of({ message: '' })),
-    testGotify: vi.fn(() => of({ message: 'Gotify test sent' })),
+    create: vi.fn(() => of(created)),
+    update: vi.fn(() => of(created)),
+    test: vi.fn((descriptor) => of({ message: TEST_MESSAGES[descriptor.urlSegment] ?? '' })),
   };
 }
 
@@ -224,6 +273,87 @@ describe('NotificationProviderModalComponent', () => {
     });
     expect(component.hasPendingChanges()).toBe(false);
     expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing notifiarr provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: NOTIFIARR_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Notifiarr Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Notifiarr);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My notifiarr',
+      enabled: true,
+      apiKey: 'key123',
+      channelId: 'channel1',
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing telegram provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: TELEGRAM_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Telegram Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Telegram);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My telegram',
+      enabled: true,
+      botToken: 'bot-token',
+      chatId: '-100123',
+      topicId: '42',
+      sendSilently: true,
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing apprise provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: APPRISE_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Apprise Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Apprise);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My apprise',
+      enabled: true,
+      appriseMode: AppriseMode.Api,
+      appriseUrl: 'http://apprise.example.com',
+      appriseKey: 'config-key',
+      appriseTags: 'tag1,tag2',
+      appriseServiceUrls: ['discord://id/token', 'slack://token'],
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing pushover provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: PUSHOVER_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Pushover Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Pushover);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My pushover',
+      enabled: true,
+      pushoverApiToken: 'api-token',
+      pushoverUserKey: 'user-key',
+      pushoverDevices: ['phone1'],
+      pushoverPriority: PushoverPriority.High,
+      pushoverRetry: 60,
+      pushoverExpire: 7200,
+      pushoverSound: 'siren',
+      pushoverCustomSound: '',
+      pushoverTags: ['urgent'],
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('shows the required error when an array-valued field is empty', () => {
+    const { fixture, component } = setup({ initialType: NotificationProviderType.Ntfy });
+
+    component.modalModel.update((m) => ({ ...m, name: 'Provider' }));
+    fixture.detectChanges();
+
+    expect(errorMessages(fixture)).toContain('At least one topic is required');
   });
 
   const FIELD_SETS: { type: NotificationProviderType; labels: string[] }[] = [
@@ -463,7 +593,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(api.updateGotify).toHaveBeenCalledWith('gotify-1', {
+    expect(api.update).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Gotify], 'gotify-1', {
       name: 'My gotify',
       serverUrl: 'https://gotify.example.com',
       applicationToken: 'token',
@@ -476,7 +606,7 @@ describe('NotificationProviderModalComponent', () => {
     fixture.detectChanges();
     component.saveProvider();
 
-    expect(api.updateGotify).toHaveBeenLastCalledWith('gotify-1', expect.objectContaining({ priority: 5 }));
+    expect(api.update).toHaveBeenLastCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Gotify], 'gotify-1', expect.objectContaining({ priority: 5 }));
   });
 
   it('sends a test notification with the current values and toasts the server message', () => {
@@ -485,7 +615,7 @@ describe('NotificationProviderModalComponent', () => {
     (fixture.nativeElement.querySelector('.modal__footer button') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(api.testDiscord).toHaveBeenCalledWith({
+    expect(api.test).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Discord], {
       webhookUrl: 'https://discord.com/api/webhooks/abc',
       username: 'Cleanuparr',
       avatarUrl: undefined,
@@ -504,7 +634,7 @@ describe('NotificationProviderModalComponent', () => {
     component.testNotification();
     fixture.detectChanges();
 
-    expect(api.testNtfy).toHaveBeenCalledWith({
+    expect(api.test).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Ntfy], {
       serverUrl: 'https://ntfy.sh',
       topics: ['topic'],
       authenticationType: NtfyAuthenticationType.None,
@@ -517,7 +647,7 @@ describe('NotificationProviderModalComponent', () => {
     });
     expect(toast.success).toHaveBeenCalledWith('Test sent');
 
-    api.testNtfy.mockReturnValue(throwError(() => new Error('offline')));
+    api.test.mockReturnValue(throwError(() => new Error('offline')));
     component.testNotification();
     fixture.detectChanges();
 
@@ -541,7 +671,7 @@ describe('NotificationProviderModalComponent', () => {
     (footerButtons(fixture)[1]).click();
     fixture.detectChanges();
 
-    expect(api.createDiscord).toHaveBeenCalledWith({
+    expect(api.create).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Discord], {
       name: 'Alerts',
       webhookUrl: 'https://discord.com/hook',
       username: undefined,
@@ -551,7 +681,7 @@ describe('NotificationProviderModalComponent', () => {
       onCategoryChanged: true,
       onForceImported: true,
     });
-    expect(api.updateDiscord).not.toHaveBeenCalled();
+    expect(api.update).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith('Provider added');
     expect(component.visible()).toBe(false);
     expect(component.saving()).toBe(false);
@@ -568,7 +698,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(api.updateNtfy).toHaveBeenCalledWith('ntfy-1', {
+    expect(api.update).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Ntfy], 'ntfy-1', {
       name: 'My ntfy',
       serverUrl: 'https://ntfy.example.com',
       topics: ['alpha'],
@@ -602,7 +732,7 @@ describe('NotificationProviderModalComponent', () => {
 
     component.saveProvider();
 
-    expect(api.createPushover).toHaveBeenCalledWith({
+    expect(api.create).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Pushover], {
       name: 'Phone',
       apiToken: 'token',
       userKey: 'key',
@@ -624,7 +754,8 @@ describe('NotificationProviderModalComponent', () => {
     fixture.detectChanges();
     component.saveProvider();
 
-    expect(api.createPushover).toHaveBeenLastCalledWith(
+    expect(api.create).toHaveBeenLastCalledWith(
+      NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Pushover],
       expect.objectContaining({ sound: 'siren', retry: 30, expire: 3600 }),
     );
   });
@@ -635,7 +766,7 @@ describe('NotificationProviderModalComponent', () => {
     component.modalModel.update((m) => ({ ...m, name: 'Provider', apiKey: 'key' }));
     fixture.detectChanges();
 
-    api.createNotifiarr.mockReturnValue(throwError(() => new Error('boom')));
+    api.create.mockReturnValue(throwError(() => new Error('boom')));
     component.saveProvider();
     fixture.detectChanges();
 

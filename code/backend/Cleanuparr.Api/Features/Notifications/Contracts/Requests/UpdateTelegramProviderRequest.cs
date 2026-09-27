@@ -1,6 +1,6 @@
 namespace Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 
-public sealed record UpdateTelegramProviderRequest : CreateNotificationProviderRequestBase
+public sealed record UpdateTelegramProviderRequest : UpdateNotificationProviderRequestBase
 {
     public string BotToken { get; init; } = string.Empty;
 
