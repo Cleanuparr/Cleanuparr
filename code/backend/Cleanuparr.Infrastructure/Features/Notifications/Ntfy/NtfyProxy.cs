@@ -41,8 +41,7 @@ public sealed class NtfyProxy : INtfyProxy
             CleanuparrJsonOptions.Notification,
             logTrace: null,
             (message, exception) => exception is null ? new NtfyException(message) : new NtfyException(message, exception),
-            StatusCodeMessages,
-            defaultErrorMessage: "Unable to send notification");
+            StatusCodeMessages);
     }
 
     private static void SetAuthenticationHeaders(HttpRequestMessage request, NtfyConfig config)

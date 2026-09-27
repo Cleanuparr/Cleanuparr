@@ -9,6 +9,8 @@ namespace Cleanuparr.Infrastructure.Features.Notifications;
 /// </summary>
 public static class NotificationHttpSender
 {
+    private const string DefaultErrorMessage = "Unable to send notification";
+
     /// <summary>
     /// Serializes <paramref name="payload"/> onto <paramref name="request"/> and sends it, translating
     /// any <see cref="HttpRequestException"/> into a provider-specific exception via
@@ -21,7 +23,6 @@ public static class NotificationHttpSender
     /// <param name="logTrace">Optional callback invoked with the serialized payload before sending, for trace logging.</param>
     /// <param name="exceptionFactory">Builds the provider-specific exception from a message and an optional inner exception.</param>
     /// <param name="statusCodeMessages">Maps an HTTP status code to the message and whether to include the inner exception.</param>
-    /// <param name="defaultErrorMessage">The message used when the status code is unknown or absent.</param>
     public static async Task SendAsync<TPayload>(
         HttpClient httpClient,
         HttpRequestMessage request,
@@ -29,8 +30,7 @@ public static class NotificationHttpSender
         JsonSerializerOptions serializerOptions,
         Action<string>? logTrace,
         Func<string, Exception?, Exception> exceptionFactory,
-        IReadOnlyDictionary<int, (string Message, bool IncludeException)> statusCodeMessages,
-        string defaultErrorMessage = "Unable to send notification")
+        IReadOnlyDictionary<int, (string Message, bool IncludeException)> statusCodeMessages)
     {
         try
         {
@@ -46,7 +46,7 @@ public static class NotificationHttpSender
         {
             if (exception.StatusCode is null)
             {
-                throw exceptionFactory(defaultErrorMessage, exception);
+                throw exceptionFactory(DefaultErrorMessage, exception);
             }
 
             if (statusCodeMessages.TryGetValue((int)exception.StatusCode, out (string Message, bool IncludeException) entry))
@@ -54,7 +54,7 @@ public static class NotificationHttpSender
                 throw exceptionFactory(entry.Message, entry.IncludeException ? exception : null);
             }
 
-            throw exceptionFactory(defaultErrorMessage, exception);
+            throw exceptionFactory(DefaultErrorMessage, exception);
         }
     }
 }

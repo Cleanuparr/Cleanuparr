@@ -46,7 +46,6 @@ public sealed class AppriseProxy : IAppriseProxy
             CleanuparrJsonOptions.Notification,
             logTrace: null,
             (message, exception) => exception is null ? new AppriseException(message) : new AppriseException(message, exception),
-            StatusCodeMessages,
-            defaultErrorMessage: "Unable to send notification");
+            StatusCodeMessages);
     }
 }
