@@ -30,7 +30,7 @@ public static class NotificationHttpSender
         Action<string>? logTrace,
         Func<string, Exception?, Exception> exceptionFactory,
         IReadOnlyDictionary<int, (string Message, bool IncludeException)> statusCodeMessages,
-        string defaultErrorMessage = "unable to send notification")
+        string defaultErrorMessage = "Unable to send notification")
     {
         try
         {

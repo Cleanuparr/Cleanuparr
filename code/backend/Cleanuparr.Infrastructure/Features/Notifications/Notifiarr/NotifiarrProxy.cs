@@ -15,10 +15,10 @@ public sealed class NotifiarrProxy : INotifiarrProxy
     private static readonly IReadOnlyDictionary<int, (string Message, bool IncludeException)> StatusCodeMessages =
         new Dictionary<int, (string, bool)>
         {
-            [401] = ("unable to send notification | API key is invalid", false),
-            [502] = ("unable to send notification | service unavailable", true),
-            [503] = ("unable to send notification | service unavailable", true),
-            [504] = ("unable to send notification | service unavailable", true),
+            [401] = ("Unable to send notification | API key is invalid", false),
+            [502] = ("Unable to send notification | service unavailable", true),
+            [503] = ("Unable to send notification | service unavailable", true),
+            [504] = ("Unable to send notification | service unavailable", true),
         };
 
     public NotifiarrProxy(ILogger<NotifiarrProxy> logger, IHttpClientFactory httpClientFactory)

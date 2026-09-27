@@ -13,12 +13,12 @@ public sealed class GotifyProxy : IGotifyProxy
     private static readonly IReadOnlyDictionary<int, (string Message, bool IncludeException)> StatusCodeMessages =
         new Dictionary<int, (string, bool)>
         {
-            [401] = ("unable to send notification | application token is invalid or unauthorized", false),
-            [403] = ("unable to send notification | application token is invalid or unauthorized", false),
-            [404] = ("unable to send notification | Gotify server not found", false),
-            [502] = ("unable to send notification | Gotify service unavailable", true),
-            [503] = ("unable to send notification | Gotify service unavailable", true),
-            [504] = ("unable to send notification | Gotify service unavailable", true),
+            [401] = ("Unable to send notification | application token is invalid or unauthorized", false),
+            [403] = ("Unable to send notification | application token is invalid or unauthorized", false),
+            [404] = ("Unable to send notification | Gotify server not found", false),
+            [502] = ("Unable to send notification | Gotify service unavailable", true),
+            [503] = ("Unable to send notification | Gotify service unavailable", true),
+            [504] = ("Unable to send notification | Gotify service unavailable", true),
         };
 
     public GotifyProxy(ILogger<GotifyProxy> logger, IHttpClientFactory httpClientFactory)
