@@ -127,12 +127,11 @@ public sealed class NotificationProvidersController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status400BadRequest, DuplicateProviderNameMessage);
             }
 
-            foreach (NotificationProviderSensitiveField field in descriptor.SensitiveFields)
+            NotificationProviderSensitiveField? placeholderField = descriptor.SensitiveFields
+                .FirstOrDefault(field => GetFieldValue(request, field.Name).IsPlaceholder());
+            if (placeholderField is not null)
             {
-                if (GetFieldValue(request, field.Name).IsPlaceholder())
-                {
-                    return this.ProblemResult(StatusCodes.Status400BadRequest, field.PlaceholderErrorMessage);
-                }
+                return this.ProblemResult(StatusCodes.Status400BadRequest, placeholderField.PlaceholderErrorMessage);
             }
 
             IConfig config = descriptor.BuildConfig(request);
