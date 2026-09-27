@@ -6,14 +6,17 @@ using Cleanuparr.Api.Features.Notifications.Descriptors;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Shouldly;
 using Xunit;
 
@@ -24,6 +27,8 @@ public class NotificationProvidersControllerTests : IDisposable
     private readonly DataContext _dataContext;
     private readonly NotificationProvidersController _controller;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly INotificationProviderFactory _providerFactory;
+    private readonly IAppriseCliDetector _appriseCliDetector;
 
     public NotificationProvidersControllerTests()
     {
@@ -35,14 +40,16 @@ public class NotificationProvidersControllerTests : IDisposable
         INotificationConfigurationService configurationService =
             Substitute.For<INotificationConfigurationService>();
 
-        INotificationProviderFactory providerFactory = Substitute.For<INotificationProviderFactory>();
-        providerFactory.CreateProvider(Arg.Any<Infrastructure.Features.Notifications.Models.NotificationProviderDto>())
+        _providerFactory = Substitute.For<INotificationProviderFactory>();
+        _providerFactory.CreateProvider(Arg.Any<Infrastructure.Features.Notifications.Models.NotificationProviderDto>())
             .Returns(Substitute.For<INotificationProvider>());
+
+        _appriseCliDetector = Substitute.For<IAppriseCliDetector>();
 
         NotificationService notificationService = new(
             Substitute.For<ILogger<NotificationService>>(),
             configurationService,
-            providerFactory,
+            _providerFactory,
             TimeProvider.System);
 
         _controller = new NotificationProvidersController(
@@ -50,7 +57,7 @@ public class NotificationProvidersControllerTests : IDisposable
             _dataContext,
             configurationService,
             notificationService,
-            Substitute.For<IAppriseCliDetector>(),
+            _appriseCliDetector,
             TimeProvider.System,
             new NotificationProviderDescriptorRegistry(),
             _jsonOptions);
@@ -316,6 +323,73 @@ public class NotificationProvidersControllerTests : IDisposable
         stored.Url.ShouldBe("https://apprise.example.com/new");
     }
 
+    [Fact]
+    public async Task UpdateAppriseProvider_WithPlaceholderServiceUrls_PreservesTheExistingServiceUrls()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Apprise, ToJson(new CreateAppriseProviderRequest
+        {
+            Name = "Apprise",
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "config-key",
+            ServiceUrls = "discord://webhook_id/webhook_token",
+        }))).Id;
+
+        await _controller.UpdateProvider(NotificationProviderType.Apprise, id, ToJson(new UpdateAppriseProviderRequest
+        {
+            Name = "Apprise",
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "new-config-key",
+            ServiceUrls = "••••••••",
+        }));
+
+        AppriseConfig stored = (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.AppriseConfiguration)
+            .FirstAsync(p => p.Id == id)).AppriseConfiguration!;
+
+        stored.Key.ShouldBe("new-config-key");
+        stored.ServiceUrls.ShouldBe("discord://webhook_id/webhook_token");
+    }
+
+    [Fact]
+    public async Task TestAppriseProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Apprise, ToJson(new TestAppriseProviderRequest
+        {
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "config-key",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestAppriseProvider_WithPlaceholderFieldsAndProviderId_UsesTheStoredValues()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Apprise, ToJson(new CreateAppriseProviderRequest
+        {
+            Name = "Apprise",
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "config-key",
+            ServiceUrls = "discord://webhook_id/webhook_token",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Apprise, ToJson(new TestAppriseProviderRequest
+        {
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "••••••••",
+            ServiceUrls = "••••••••",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
     #endregion
 
     #region Ntfy
@@ -570,6 +644,38 @@ public class NotificationProvidersControllerTests : IDisposable
         stored.ChatId.ShouldBe("-1009876543210");
     }
 
+    [Fact]
+    public async Task TestTelegramProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Telegram, ToJson(new TestTelegramProviderRequest
+        {
+            BotToken = "0123456789:token",
+            ChatId = "-1001234567890",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestTelegramProvider_WithPlaceholderBotTokenAndProviderId_UsesTheStoredBotToken()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Telegram, ToJson(new CreateTelegramProviderRequest
+        {
+            Name = "Telegram",
+            BotToken = "0123456789:token",
+            ChatId = "-1001234567890",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Telegram, ToJson(new TestTelegramProviderRequest
+        {
+            BotToken = "••••••••",
+            ChatId = "-1001234567890",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
     #endregion
 
     #region Discord
@@ -785,6 +891,38 @@ public class NotificationProvidersControllerTests : IDisposable
         Problem(result).Detail.ShouldBe("Sensitive fields cannot be placeholder values");
     }
 
+    [Fact]
+    public async Task TestPushoverProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Pushover, ToJson(new TestPushoverProviderRequest
+        {
+            ApiToken = "api-token",
+            UserKey = "user-key",
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task TestPushoverProvider_WithPlaceholderFieldsAndProviderId_UsesTheStoredValues()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Pushover, ToJson(new CreatePushoverProviderRequest
+        {
+            Name = "Pushover",
+            ApiToken = "api-token",
+            UserKey = "user-key",
+        }))).Id;
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Pushover, ToJson(new TestPushoverProviderRequest
+        {
+            ApiToken = "••••••••",
+            UserKey = "••••••••",
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
     #endregion
 
     #region Gotify
@@ -992,6 +1130,184 @@ public class NotificationProvidersControllerTests : IDisposable
 
         result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
+
+    #region UpdateProvider
+
+    [Fact]
+    public async Task UpdateProvider_UnsupportedType_ReturnsNotFound()
+    {
+        IActionResult result = await _controller.UpdateProvider((NotificationProviderType)999, Guid.NewGuid(), ToJson(new UpdateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task UpdateProvider_UnknownId_ReturnsNotFound()
+    {
+        IActionResult result = await _controller.UpdateProvider(NotificationProviderType.Gotify, Guid.NewGuid(), ToJson(new UpdateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task UpdateProvider_MissingName_ReturnsBadRequest()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }))).Id;
+
+        IActionResult result = await _controller.UpdateProvider(NotificationProviderType.Gotify, id, ToJson(new UpdateGotifyProviderRequest
+        {
+            Name = "",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        Problem(result).Detail.ShouldBe("Provider name is required");
+    }
+
+    [Fact]
+    public async Task UpdateProvider_DuplicateName_ReturnsBadRequest()
+    {
+        await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify-2",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token-2",
+        }))).Id;
+
+        IActionResult result = await _controller.UpdateProvider(NotificationProviderType.Gotify, id, ToJson(new UpdateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token-2",
+        }));
+
+        Problem(result).Detail.ShouldBe("A provider with this name already exists");
+    }
+
+    #endregion
+
+    #region DeleteNotificationProvider
+
+    [Fact]
+    public async Task DeleteNotificationProvider_RemovesProvider()
+    {
+        Guid id = Created(await _controller.CreateProvider(NotificationProviderType.Gotify, ToJson(new CreateGotifyProviderRequest
+        {
+            Name = "Gotify",
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }))).Id;
+
+        IActionResult result = await _controller.DeleteNotificationProvider(id);
+
+        result.ShouldBeOfType<NoContentResult>();
+        (await _dataContext.NotificationConfigs.CountAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeleteNotificationProvider_UnknownId_ReturnsNotFound()
+    {
+        IActionResult result = await _controller.DeleteNotificationProvider(Guid.NewGuid());
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
+    }
+
+    #endregion
+
+    #region TestProvider
+
+    [Fact]
+    public async Task TestProvider_UnsupportedType_ReturnsNotFound()
+    {
+        IActionResult result = await _controller.TestProvider((NotificationProviderType)999, ToJson(new TestGotifyProviderRequest
+        {
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "app-token",
+        }));
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task TestProvider_SendFailure_ThrowsTheTranslatedException()
+    {
+        INotificationProvider failingProvider = Substitute.For<INotificationProvider>();
+        failingProvider.SendNotificationAsync(Arg.Any<NotificationContext>())
+            .ThrowsAsync(new InvalidOperationException("connection refused"));
+        _providerFactory.CreateProvider(Arg.Any<NotificationProviderDto>()).Returns(failingProvider);
+
+        NotificationTestException exception = await Should.ThrowAsync<NotificationTestException>(
+            () => _controller.TestProvider(NotificationProviderType.Gotify, ToJson(new TestGotifyProviderRequest
+            {
+                ServerUrl = "https://gotify.example.com",
+                ApplicationToken = "app-token",
+            })));
+
+        exception.Message.ShouldBe("Test failed: connection refused");
+    }
+
+    [Fact]
+    public async Task TestProvider_WithPlaceholderFieldAndUnknownProviderId_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Gotify, ToJson(new TestGotifyProviderRequest
+        {
+            ServerUrl = "https://gotify.example.com",
+            ApplicationToken = "••••••••",
+            ProviderId = Guid.NewGuid(),
+        }));
+
+        Problem(result).Detail.ShouldBe("Application token cannot be a placeholder value");
+    }
+
+    #endregion
+
+    #region GetAppriseCliStatus
+
+    [Fact]
+    public async Task GetAppriseCliStatus_WhenDetectorReturnsVersion_ReturnsAvailableAndVersion()
+    {
+        _appriseCliDetector.GetAppriseVersionAsync().Returns("1.2.3");
+
+        object value = (await _controller.GetAppriseCliStatus()).ShouldBeOfType<OkObjectResult>().Value!;
+
+        value.GetType().GetProperty("Available")!.GetValue(value).ShouldBe(true);
+        value.GetType().GetProperty("Version")!.GetValue(value).ShouldBe("1.2.3");
+    }
+
+    [Fact]
+    public async Task GetAppriseCliStatus_WhenDetectorReturnsNull_ReturnsNotAvailable()
+    {
+        _appriseCliDetector.GetAppriseVersionAsync().Returns((string?)null);
+
+        object value = (await _controller.GetAppriseCliStatus()).ShouldBeOfType<OkObjectResult>().Value!;
+
+        value.GetType().GetProperty("Available")!.GetValue(value).ShouldBe(false);
+        value.GetType().GetProperty("Version")!.GetValue(value).ShouldBeNull();
+    }
+
+    #endregion
 
     #region Invalid request bodies
 
