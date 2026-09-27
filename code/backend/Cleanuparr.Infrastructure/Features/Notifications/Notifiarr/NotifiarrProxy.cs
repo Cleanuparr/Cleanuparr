@@ -36,7 +36,7 @@ public sealed class NotifiarrProxy : INotifiarrProxy
             request,
             payload,
             CleanuparrJsonOptions.NotificationIncludeNulls,
-            content => _logger.LogTrace("sending notification to Notifiarr: {content}", content),
+            content => _logger.LogTrace("sending notification to Notifiarr: {Content}", content),
             (message, exception) => exception is null ? new NotifiarrException(message) : new NotifiarrException(message, exception),
             StatusCodeMessages);
     }

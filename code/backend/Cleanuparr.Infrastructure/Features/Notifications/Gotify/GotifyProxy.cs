@@ -39,7 +39,7 @@ public sealed class GotifyProxy : IGotifyProxy
             request,
             payload,
             CleanuparrJsonOptions.Notification,
-            content => _logger.LogTrace("sending notification to Gotify: {content}", content),
+            content => _logger.LogTrace("sending notification to Gotify: {Content}", content),
             (message, exception) => exception is null ? new GotifyException(message) : new GotifyException(message, exception),
             StatusCodeMessages);
     }

@@ -37,7 +37,7 @@ public sealed class DiscordProxy : IDiscordProxy
             request,
             payload,
             CleanuparrJsonOptions.Notification,
-            content => _logger.LogTrace("sending notification to Discord: {content}", content),
+            content => _logger.LogTrace("sending notification to Discord: {Content}", content),
             (message, exception) => exception is null ? new DiscordException(message) : new DiscordException(message, exception),
             StatusCodeMessages);
     }
