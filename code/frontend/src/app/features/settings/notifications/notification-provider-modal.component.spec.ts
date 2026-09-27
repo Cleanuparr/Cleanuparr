@@ -80,6 +80,66 @@ const GOTIFY_PROVIDER: NotificationProviderDto = {
   },
 };
 
+const NOTIFIARR_PROVIDER: NotificationProviderDto = {
+  id: 'notifiarr-1',
+  name: 'My notifiarr',
+  type: NotificationProviderType.Notifiarr,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    apiKey: 'key123',
+    channelId: 'channel1',
+  },
+};
+
+const TELEGRAM_PROVIDER: NotificationProviderDto = {
+  id: 'telegram-1',
+  name: 'My telegram',
+  type: NotificationProviderType.Telegram,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    botToken: 'bot-token',
+    chatId: '-100123',
+    topicId: '42',
+    sendSilently: true,
+  },
+};
+
+const APPRISE_PROVIDER: NotificationProviderDto = {
+  id: 'apprise-1',
+  name: 'My apprise',
+  type: NotificationProviderType.Apprise,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    mode: AppriseMode.Api,
+    url: 'http://apprise.example.com',
+    key: 'config-key',
+    tags: 'tag1,tag2',
+    serviceUrls: 'discord://id/token\nslack://token',
+  },
+};
+
+const PUSHOVER_PROVIDER: NotificationProviderDto = {
+  id: 'pushover-1',
+  name: 'My pushover',
+  type: NotificationProviderType.Pushover,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    apiToken: 'api-token',
+    userKey: 'user-key',
+    devices: ['phone1'],
+    priority: PushoverPriority.High,
+    retry: 60,
+    expire: 7200,
+    sound: 'siren',
+    customSound: '',
+    tags: ['urgent'],
+  },
+};
+
 const TEST_MESSAGES: Record<string, string> = {
   discord: 'Discord test sent',
   telegram: 'Telegram test sent',
@@ -213,6 +273,87 @@ describe('NotificationProviderModalComponent', () => {
     });
     expect(component.hasPendingChanges()).toBe(false);
     expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing notifiarr provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: NOTIFIARR_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Notifiarr Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Notifiarr);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My notifiarr',
+      enabled: true,
+      apiKey: 'key123',
+      channelId: 'channel1',
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing telegram provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: TELEGRAM_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Telegram Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Telegram);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My telegram',
+      enabled: true,
+      botToken: 'bot-token',
+      chatId: '-100123',
+      topicId: '42',
+      sendSilently: true,
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing apprise provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: APPRISE_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Apprise Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Apprise);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My apprise',
+      enabled: true,
+      appriseMode: AppriseMode.Api,
+      appriseUrl: 'http://apprise.example.com',
+      appriseKey: 'config-key',
+      appriseTags: 'tag1,tag2',
+      appriseServiceUrls: ['discord://id/token', 'slack://token'],
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('hydrates the model from an existing pushover provider without reporting pending changes', () => {
+    const { fixture, component } = setup({ editingProvider: PUSHOVER_PROVIDER });
+
+    expect(modalTitle(fixture)).toBe('Edit Pushover Provider');
+    expect(component.modalType()).toBe(NotificationProviderType.Pushover);
+    expect(component.modalModel()).toMatchObject({
+      name: 'My pushover',
+      enabled: true,
+      pushoverApiToken: 'api-token',
+      pushoverUserKey: 'user-key',
+      pushoverDevices: ['phone1'],
+      pushoverPriority: PushoverPriority.High,
+      pushoverRetry: 60,
+      pushoverExpire: 7200,
+      pushoverSound: 'siren',
+      pushoverCustomSound: '',
+      pushoverTags: ['urgent'],
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('shows the required error when an array-valued field is empty', () => {
+    const { fixture, component } = setup({ initialType: NotificationProviderType.Ntfy });
+
+    component.modalModel.update((m) => ({ ...m, name: 'Provider' }));
+    fixture.detectChanges();
+
+    expect(errorMessages(fixture)).toContain('At least one topic is required');
   });
 
   const FIELD_SETS: { type: NotificationProviderType; labels: string[] }[] = [
