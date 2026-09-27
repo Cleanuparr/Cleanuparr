@@ -67,4 +67,17 @@ describe('createFilterDrawer', () => {
 
     expect(drawer.activeCount()).toBe(2);
   });
+
+  it('activeCount() treats an array with the same items as empty as inactive', () => {
+    const drawer = createFilterDrawer<{ statuses: string[] }>({ statuses: [] });
+    drawer.open();
+    drawer.updateDraft('statuses', ['a']);
+    drawer.apply();
+    expect(drawer.activeCount()).toBe(1);
+
+    drawer.open();
+    drawer.updateDraft('statuses', []);
+    drawer.apply();
+    expect(drawer.activeCount()).toBe(0);
+  });
 });

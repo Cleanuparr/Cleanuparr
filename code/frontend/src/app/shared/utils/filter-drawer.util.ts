@@ -22,7 +22,7 @@ export interface FilterDrawer<T> {
 
 /**
  * Applied/draft/drawer-open filter state shared by the seeker-stats tabs.
- * `activeCount` compares each field of `applied` against `empty` by strict equality.
+ * `activeCount` compares each field of `applied` against `empty` by strict equality, arrays by content.
  */
 export function createFilterDrawer<T extends Record<string, unknown>>(empty: T): FilterDrawer<T> {
   const applied = signal<T>({ ...empty });
@@ -31,7 +31,7 @@ export function createFilterDrawer<T extends Record<string, unknown>>(empty: T):
 
   const activeCount = computed(() => {
     const a = applied();
-    return (Object.keys(empty) as (keyof T)[]).filter((key) => a[key] !== empty[key]).length;
+    return (Object.keys(empty) as (keyof T)[]).filter((key) => !sameValue(a[key], empty[key])).length;
   });
 
   const open = (): void => {
@@ -62,4 +62,11 @@ export function createFilterDrawer<T extends Record<string, unknown>>(empty: T):
     updateDraft,
     activeCount,
   };
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => item === b[i]);
+  }
+  return a === b;
 }
