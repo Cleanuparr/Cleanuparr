@@ -178,14 +178,14 @@ export class QueueCleanerComponent implements HasPendingChanges {
   readonly metadataExpanded = signal(false);
 
   // Stall rules
-  readonly stallRules = computed(() => this.stallRulesResource.value());
+  readonly stallRules = computed(() => (this.stallRulesResource.hasValue() ? this.stallRulesResource.value() : []));
   readonly stallRulesLoading = computed(() => this.stallRulesResource.isLoading());
   readonly stallExpanded = signal(false);
   readonly stallModalVisible = signal(false);
   readonly editingStallRule = signal<StallRule | null>(null);
 
   // Slow rules
-  readonly slowRules = computed(() => this.slowRulesResource.value());
+  readonly slowRules = computed(() => (this.slowRulesResource.hasValue() ? this.slowRulesResource.value() : []));
   readonly slowRulesLoading = computed(() => this.slowRulesResource.isLoading());
   readonly slowExpanded = signal(false);
   readonly slowModalVisible = signal(false);

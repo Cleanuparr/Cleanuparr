@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
+import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { QueueCleanerConfig } from '@shared/models/queue-cleaner-config.model';
 import { SlowRule, StallRule } from '@shared/models/queue-rule.model';
@@ -73,10 +75,15 @@ function createApi(config: QueueCleanerConfig, stall: StallRule[], slow: SlowRul
   };
 }
 
+function createToast() {
+  return { success: vi.fn(), error: vi.fn() };
+}
+
 interface Setup {
   fixture: ComponentFixture<QueueCleanerComponent>;
   component: QueueCleanerComponent;
   api: ReturnType<typeof createApi>;
+  toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
   confirm: ConfirmService;
 }
 
@@ -95,8 +102,14 @@ describe('QueueCleanerComponent', () => {
       api = createApi(config, stall, slow);
     }
 
+    const toast = createToast();
+
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), { provide: QueueCleanerApi, useValue: api }],
+      providers: [
+        provideHttpClient(),
+        { provide: QueueCleanerApi, useValue: api },
+        { provide: ToastService, useValue: toast },
+      ],
     });
 
     const fixture = TestBed.createComponent(QueueCleanerComponent);
@@ -106,6 +119,7 @@ describe('QueueCleanerComponent', () => {
       fixture,
       component: fixture.componentInstance,
       api,
+      toast,
       confirm: TestBed.inject(ConfirmService),
     };
   }
@@ -453,5 +467,15 @@ describe('QueueCleanerComponent', () => {
     expect(component.loadError()).toBe(false);
     expect(component.qcForm.enabled().value()).toBe(true);
     expect(api.getConfig).toHaveBeenCalledTimes(2);
+  });
+
+  it('toasts which rule load failed alongside the backend message', () => {
+    const api = createApi(CONFIG, STALL_RULES, SLOW_RULES);
+    api.getStallRules.mockReturnValue(throwError(() => new ApiError('stall boom')));
+    api.getSlowRules.mockReturnValue(throwError(() => new ApiError('slow boom')));
+    const { toast } = setup(CONFIG, STALL_RULES, SLOW_RULES, api);
+
+    expect(toast.error).toHaveBeenCalledWith('Failed to load stall rules: stall boom');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load slow rules: slow boom');
   });
 });
