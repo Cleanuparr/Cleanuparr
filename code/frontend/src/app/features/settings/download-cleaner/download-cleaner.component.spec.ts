@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
@@ -432,5 +432,88 @@ describe('DownloadCleanerComponent', () => {
       useAdvancedScheduling: true,
       ignoredDownloads: ['skip-me'],
     });
+  });
+
+  it('stays dirty when the model is edited again while the per-client save is in flight', async () => {
+    const { fixture, component, api } = await setup();
+
+    const save$ = new Subject<undefined>();
+    api.updateUnlinkedConfig.mockReturnValue(save$);
+
+    component.unlinkedModel.update((m) => ({ ...m, categories: ['movies'] }));
+    fixture.detectChanges();
+    component.saveUnlinkedConfig();
+    fixture.detectChanges();
+
+    component.unlinkedModel.update((m) => ({ ...m, categories: ['movies', 'tv'] }));
+    fixture.detectChanges();
+
+    save$.next(undefined);
+    save$.complete();
+    fixture.detectChanges();
+
+    expect(component.unlinkedDirty()).toBe(true);
+    expect(component.hasPendingChanges()).toBe(true);
+  });
+
+  it('does not clean the newly selected client when a stale save from the previous one resolves', async () => {
+    const { fixture, component, api, confirm } = await setup();
+
+    const save$ = new Subject<undefined>();
+    api.updateUnlinkedConfig.mockReturnValue(save$);
+
+    component.unlinkedModel.update((m) => ({ ...m, categories: ['movies'] }));
+    fixture.detectChanges();
+    component.saveUnlinkedConfig();
+    fixture.detectChanges();
+
+    const switched = component.onClientChange('client-rt');
+    confirm.accept();
+    await switched;
+    fixture.detectChanges();
+
+    component.unlinkedModel.update((m) => ({ ...m, categories: ['tv', 'movies'] }));
+    fixture.detectChanges();
+
+    save$.next(undefined);
+    save$.complete();
+    fixture.detectChanges();
+
+    expect(component.selectedClientId()).toBe('client-rt');
+    expect(component.unlinkedDirty()).toBe(true);
+  });
+
+  it('shows the connection error state when loading fails and recovers on retry', async () => {
+    const api = createApi(CONFIG, []);
+    api.getConfig.mockReturnValue(throwError(() => new Error('offline')));
+
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), { provide: DownloadCleanerApi, useValue: api }],
+    });
+    const fixture = TestBed.createComponent(DownloadCleanerComponent);
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.loadError()).toBe(true);
+
+    api.getConfig.mockReturnValue(of(CONFIG));
+    component.retry();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(api.getConfig).toHaveBeenCalledTimes(2);
+    expect(component.selectedClientId()).toBe('client-qb');
+  });
+
+  it('renders without a selected client and stays clean when there are no clients', async () => {
+    const { component } = await setup({ ...CONFIG, clients: [] });
+
+    expect(component.selectedClientId()).toBeNull();
+    expect(component.clientOptions()).toEqual([]);
+    expect(component.hasPendingChanges()).toBe(false);
   });
 });

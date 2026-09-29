@@ -42,4 +42,30 @@ describe('createDirtyTracker', () => {
 
     expect(tracker.dirty()).toBe(false);
   });
+
+  it('markSaved(value) snapshots the passed value, not the model', () => {
+    const model = signal({ enabled: true });
+    const tracker = createDirtyTracker(model);
+
+    tracker.markSaved({ enabled: false });
+    expect(tracker.dirty()).toBe(true);
+  });
+
+  it('stays dirty when the model later diverges from a markSaved(value) snapshot', () => {
+    const model = signal({ enabled: true });
+    const tracker = createDirtyTracker(model);
+
+    tracker.markSaved({ enabled: true });
+    model.set({ enabled: false });
+
+    expect(tracker.dirty()).toBe(true);
+  });
+
+  it('markSaved() with no argument still snapshots the model', () => {
+    const model = signal({ enabled: true });
+    const tracker = createDirtyTracker(model);
+
+    tracker.markSaved();
+    expect(tracker.dirty()).toBe(false);
+  });
 });

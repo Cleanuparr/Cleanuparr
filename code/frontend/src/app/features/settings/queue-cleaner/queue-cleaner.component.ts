@@ -382,7 +382,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved();
+        this.dirtyTracker.markSaved(m);
       },
       error: () => {
         this.toast.error('Failed to save queue cleaner settings');

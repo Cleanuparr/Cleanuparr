@@ -83,7 +83,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved();
+        this.dirtyTracker.markSaved(m);
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save blacklist sync settings');

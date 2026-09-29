@@ -512,7 +512,9 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.unlinkedSaved.set(true);
         setTimeout(() => this.unlinkedSaved.set(false), SAVED_FLASH_MS);
         this.unlinkedSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
-        this.unlinkedDirtyTracker.markSaved();
+        if (this.selectedClientId() === clientId) {
+          this.unlinkedDirtyTracker.markSaved(m);
+        }
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save unlinked config');
@@ -545,7 +547,9 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.deadTorrentSaved.set(true);
         setTimeout(() => this.deadTorrentSaved.set(false), SAVED_FLASH_MS);
         this.deadTorrentSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
-        this.deadTorrentDirtyTracker.markSaved();
+        if (this.selectedClientId() === clientId) {
+          this.deadTorrentDirtyTracker.markSaved(m);
+        }
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save dead torrent config');
@@ -579,7 +583,9 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.orphanedFilesSaved.set(true);
         setTimeout(() => this.orphanedFilesSaved.set(false), SAVED_FLASH_MS);
         this.orphanedFilesSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
-        this.orphanedFilesDirtyTracker.markSaved();
+        if (this.selectedClientId() === clientId) {
+          this.orphanedFilesDirtyTracker.markSaved(m);
+        }
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files settings');
@@ -615,7 +621,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved();
+        this.dirtyTracker.markSaved(m);
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400

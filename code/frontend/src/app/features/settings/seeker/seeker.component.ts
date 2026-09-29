@@ -245,6 +245,7 @@ export class SeekerComponent implements HasPendingChanges {
       })),
     };
 
+    const snapshot = this.snapshotSource();
     this.saving.set(true);
     this.api.updateConfig(config).subscribe({
       next: () => {
@@ -252,7 +253,7 @@ export class SeekerComponent implements HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved();
+        this.dirtyTracker.markSaved(snapshot);
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400
