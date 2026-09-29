@@ -164,8 +164,8 @@ export class TwoFactorCardComponent {
         this.disabling2fa.set(false);
         this.changed.emit();
       },
-      error: (err) => {
-        this.toast.error(this.rateLimitMessage(err) ?? 'Failed to disable 2FA. Check your password and code.');
+      error: (err: ApiError) => {
+        this.toast.error(this.rateLimitMessage(err) ?? err.message);
         this.disabling2fa.set(false);
       },
     });

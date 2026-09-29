@@ -60,9 +60,9 @@ export class PlexIntegrationCardComponent {
         this.toast.success('Plex account linked');
         this.changed.emit();
       },
-      onError: () => {
+      onError: (err) => {
         this.plexLinking.set(false);
-        this.toast.error('Plex linking failed');
+        this.toast.error((err as ApiError).message);
       },
       onTimeout: () => {
         this.plexLinking.set(false);

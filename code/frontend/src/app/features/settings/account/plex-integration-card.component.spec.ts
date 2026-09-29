@@ -167,7 +167,7 @@ describe('PlexIntegrationCardComponent', () => {
     fixture.detectChanges();
 
     expect(verifiedPins).toEqual([4242]);
-    expect(toasts).toEqual(['error:Plex linking failed']);
+    expect(toasts).toEqual(['error:plex down']);
     expect(card(fixture).plexLinking()).toBe(false);
     expect(fixture.componentInstance.changes).toEqual([]);
   });
