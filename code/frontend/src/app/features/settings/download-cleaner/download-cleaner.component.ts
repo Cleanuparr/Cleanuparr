@@ -481,7 +481,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.rulesReloading.set(false);
       },
       error: (err: ApiError) => {
-        this.toast.error(err.message);
+        this.toast.error(`Failed to reload seeding rules: ${err.message}`);
         this.rulesReloading.set(false);
       },
     });
