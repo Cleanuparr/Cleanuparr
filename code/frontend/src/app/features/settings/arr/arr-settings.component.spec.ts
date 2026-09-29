@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { ArrApi } from '@core/api/arr.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
 import { ArrConfig, ArrInstance } from '@shared/models/arr-config.model';
@@ -396,5 +397,48 @@ describe('ArrSettingsComponent', () => {
 
     expect(component.loadError()).toBe(false);
     expect(text(fixture, '.instance-row__name')).toEqual(['Main Sonarr', 'Backup Sonarr']);
+  });
+
+  it('reports the ApiError message when testing connection fails', () => {
+    const api = createApi();
+    api.testInstance.mockReturnValue(throwError(() => new ApiError('Network timeout')));
+    const { fixture, component, toast } = setup('sonarr', api);
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    component.testConnection();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Network timeout');
+    expect(component.testing()).toBe(false);
+  });
+
+  it('reports the ApiError message when saving an instance fails', () => {
+    const api = createApi();
+    api.updateInstance.mockReturnValue(throwError(() => new ApiError('Save error')));
+    const { fixture, component, toast } = setup('sonarr', api);
+
+    component.openEditModal(INSTANCE);
+    fixture.detectChanges();
+
+    component.saveInstance();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Save error');
+    expect(component.saving()).toBe(false);
+  });
+
+  it('reports the ApiError message when deleting an instance fails', async () => {
+    const api = createApi();
+    api.deleteInstance.mockReturnValue(throwError(() => new ApiError('Delete error')));
+    const { fixture, component, toast, confirm } = setup('sonarr', api);
+
+    const accepted = component.deleteInstance(INSTANCE);
+    confirm.accept();
+    await accepted;
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Delete error');
   });
 });

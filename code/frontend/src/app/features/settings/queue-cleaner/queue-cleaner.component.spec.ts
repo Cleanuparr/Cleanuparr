@@ -478,4 +478,20 @@ describe('QueueCleanerComponent', () => {
     expect(toast.error).toHaveBeenCalledWith('Failed to load stall rules: stall boom');
     expect(toast.error).toHaveBeenCalledWith('Failed to load slow rules: slow boom');
   });
+
+  it('returns empty array for stallRules after load failure', () => {
+    const api = createApi(CONFIG, STALL_RULES, SLOW_RULES);
+    api.getStallRules.mockReturnValue(throwError(() => new ApiError('stall boom')));
+    const { component } = setup(CONFIG, STALL_RULES, SLOW_RULES, api);
+
+    expect(component.stallRules()).toEqual([]);
+  });
+
+  it('returns empty array for slowRules after load failure', () => {
+    const api = createApi(CONFIG, STALL_RULES, SLOW_RULES);
+    api.getSlowRules.mockReturnValue(throwError(() => new ApiError('slow boom')));
+    const { component } = setup(CONFIG, STALL_RULES, SLOW_RULES, api);
+
+    expect(component.slowRules()).toEqual([]);
+  });
 });

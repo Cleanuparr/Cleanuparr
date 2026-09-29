@@ -670,4 +670,18 @@ describe('DownloadCleanerComponent', () => {
 
     expect(toast.error).toHaveBeenCalledWith('Save failed');
   });
+
+  it('toasts the backend message when reloading seeding rules fails', async () => {
+    const { fixture, component, api, toast } = await setup();
+
+    api.getSeedingRules.mockReturnValue(throwError(() => new ApiError('reload failed')));
+
+    component.onSeedingRuleSaved();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Failed to reload seeding rules: reload failed');
+    expect(component.rulesReloading()).toBe(false);
+  });
 });

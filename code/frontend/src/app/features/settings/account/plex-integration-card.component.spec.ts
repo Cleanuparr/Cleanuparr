@@ -172,6 +172,20 @@ describe('PlexIntegrationCardComponent', () => {
     expect(fixture.componentInstance.changes).toEqual([]);
   });
 
+  it('reports poll onError with the ApiError message', () => {
+    const { fixture, toasts, verifiedPins } = setup({
+      verify: () => throwError(() => new Error('Plex service down')),
+    });
+
+    click(fixture);
+    vi.advanceTimersByTime(10000);
+    fixture.detectChanges();
+
+    expect(verifiedPins).toEqual([4242]);
+    expect(toasts).toEqual(['error:Plex service down']);
+    expect(card(fixture).plexLinking()).toBe(false);
+  });
+
   it('times out after the poller gives up', () => {
     const { fixture, toasts, verifiedPins } = setup();
 

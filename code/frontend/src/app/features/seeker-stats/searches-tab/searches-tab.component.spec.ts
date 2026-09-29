@@ -393,4 +393,43 @@ describe('SearchesTabComponent', () => {
     expect(toastError).toHaveBeenCalledWith('Failed to load search events: events unavailable');
     expect(fixture.nativeElement).toBeDefined();
   });
+
+  it('passes currentCycleId to getEvents when current cycle filter is applied with an instance that has a currentCycleId', () => {
+    const { fixture, component, lastQuery } = setup();
+
+    component.openFilters();
+    component.updateDraft('instanceId', 'sonarr-beta');
+    component.updateDraft('cycleFilter', 'current');
+    component.applyFilters();
+    fixture.detectChanges();
+
+    expect(lastQuery().cycleId).toBe('cycle-aaaaaaaa-1111');
+    expect(lastQuery().instanceId).toBe('sonarr-beta');
+  });
+
+  it('does not request events when current cycle filter is applied with an instance lacking currentCycleId', () => {
+    const { fixture, component, queries } = setup();
+    const initialQueryCount = queries.length;
+
+    component.openFilters();
+    component.updateDraft('instanceId', 'radarr-alpha');
+    component.updateDraft('cycleFilter', 'current');
+    component.applyFilters();
+    fixture.detectChanges();
+
+    expect(queries.length).toBe(initialQueryCount);
+  });
+
+  it('does not request events when current cycle filter is applied but summary load fails', () => {
+    const { fixture, component, queries } = setup({ summaryLoadFails: true });
+    const initialQueryCount = queries.length;
+
+    component.openFilters();
+    component.updateDraft('instanceId', 'sonarr-beta');
+    component.updateDraft('cycleFilter', 'current');
+    component.applyFilters();
+    fixture.detectChanges();
+
+    expect(queries.length).toBe(initialQueryCount);
+  });
 });

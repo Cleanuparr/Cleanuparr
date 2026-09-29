@@ -3,6 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthStatus, AuthService, TotpSetupResponse } from '@core/auth/auth.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
+import { ToastService } from '@core/services/toast.service';
 import { SetupComponent } from './setup.component';
 import { ROUTES } from '@shared/routes';
 
@@ -21,6 +23,7 @@ interface SetupOptions {
   completeSetup?: Observable<{ message: string }>;
   connectionError?: boolean;
   setupComplete?: boolean;
+  verifyPlexPin?: Observable<{ completed: boolean }>;
 }
 
 interface Harness {
@@ -34,6 +37,8 @@ interface Harness {
 describe('SetupComponent', () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete (navigator as { clipboard?: Clipboard }).clipboard;
   });
 
   function setup(options: SetupOptions = {}): Harness {
@@ -61,7 +66,7 @@ describe('SetupComponent', () => {
       },
       completeSetup: () => options.completeSetup ?? of({ message: 'ok' }),
       requestSetupPlexPin: () => of({ pinId: 1, authUrl: 'https://plex.tv/link' }),
-      verifySetupPlexPin: () => of({ completed: false }),
+      verifySetupPlexPin: () => options.verifyPlexPin ?? of({ completed: false }),
     };
 
     TestBed.configureTestingModule({
@@ -292,5 +297,48 @@ describe('SetupComponent', () => {
 
     expect(fixture.componentInstance.retrying()).toBe(false);
     expect(navigations).toEqual([[ROUTES.login]]);
+  });
+
+  function stubClipboard(writeText: () => Promise<void>): void {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  }
+
+  it('toasts success once the recovery codes reach the clipboard', async () => {
+    const { fixture } = setup();
+    const writeText = vi.fn(() => Promise.resolve());
+    stubClipboard(writeText);
+    fixture.componentInstance.recoveryCodes.set(['CODE-1', 'CODE-2']);
+
+    fixture.componentInstance.copyRecoveryCodes();
+    await Promise.resolve();
+
+    expect(writeText).toHaveBeenCalledWith('CODE-1\nCODE-2');
+    expect(TestBed.inject(ToastService).toasts().at(-1)?.message).toBe('Recovery codes copied to clipboard');
+  });
+
+  it('toasts an error when copying the recovery codes fails', async () => {
+    const { fixture } = setup();
+    stubClipboard(() => Promise.reject(new Error('denied')));
+    fixture.componentInstance.recoveryCodes.set(['CODE-1']);
+
+    fixture.componentInstance.copyRecoveryCodes();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(TestBed.inject(ToastService).toasts().at(-1)?.message).toBe('Failed to copy recovery codes');
+  });
+
+  it('shows the backend message when polling the Plex PIN fails', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('open', vi.fn(() => null));
+    const { fixture } = setup({ verifyPlexPin: throwError(() => new ApiError('Plex is down')) });
+    const component = fixture.componentInstance;
+
+    component.startPlexLink();
+    vi.advanceTimersByTime(2000);
+    fixture.detectChanges();
+
+    expect(component.plexLinking()).toBe(false);
+    expect(component.error()).toBe('Plex is down');
   });
 });

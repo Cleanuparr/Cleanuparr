@@ -434,4 +434,48 @@ describe('TwoFactorCardComponent', () => {
     expect(recoveryCodes(fixture)).toEqual([]);
     expect(card(fixture).twoFaPassword()).toBe('my-password');
   });
+
+  it('toasts the default error message when regeneration fails without retryAfterSeconds', async () => {
+    const { fixture, toasts } = setup({ enabled: true, regenerateFails: true });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
+    await card(fixture).confirmRegenerate2fa();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:2FA operation failed']);
+  });
+
+  it('reports the retry countdown when regeneration is rate limited', async () => {
+    const { fixture, toasts } = setup({ enabled: true, regenerateFails: true, rateLimitedSeconds: 12 });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
+    await card(fixture).confirmRegenerate2fa();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:Too many failed attempts. Try again in 12s.']);
+  });
+
+  it('toasts the default error message when disable fails without retryAfterSeconds', async () => {
+    const { fixture, toasts } = setup({ enabled: true, disableFails: true });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
+    await card(fixture).confirmDisable2fa();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:2FA operation failed']);
+  });
+
+  it('reports the retry countdown when disable is rate limited', async () => {
+    const { fixture, toasts } = setup({ enabled: true, disableFails: true, rateLimitedSeconds: 6 });
+
+    type(fixture, 'Enter your password', 'my-password');
+    type(fixture, 'Enter 6-digit code or recovery code', '123456');
+    await card(fixture).confirmDisable2fa();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:Too many failed attempts. Try again in 6s.']);
+  });
 });
