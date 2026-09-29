@@ -130,15 +130,21 @@ export class SearchesTabComponent {
     this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerSearches, PaginationService.DEFAULT_PAGE_SIZE),
   );
 
-  private readonly eventsParams = computed<SearchEventsQuery>(() => {
+  private readonly eventsParams = computed<SearchEventsQuery | undefined>(() => {
     const instanceId = this.selectedInstanceId() || undefined;
     const search = this.searchQuery() || undefined;
     const a = this.applied();
 
     let cycleId: string | undefined;
     if (a.cycleFilter === 'current' && instanceId) {
-      const instance = this.summaryResource.hasValue() ? this.summaryResource.value()?.perInstanceStats.find((s) => s.instanceId === instanceId) : undefined;
-      cycleId = instance?.currentCycleId ?? undefined;
+      if (!this.summaryResource.hasValue()) {
+        return undefined;
+      }
+      const instance = this.summaryResource.value()?.perInstanceStats.find((s) => s.instanceId === instanceId);
+      if (!instance?.currentCycleId) {
+        return undefined;
+      }
+      cycleId = instance.currentCycleId;
     }
 
     const triToBool = (v: TriState): boolean | undefined => (v === 'any' ? undefined : v === 'true');
