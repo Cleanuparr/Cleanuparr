@@ -97,7 +97,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
   private readonly settings = createSettingsResource({
     load: () => this.api.getConfig(),
-    errorMessage: 'Failed to load download cleaner settings',
   });
   private readonly configResource = this.settings.resource;
 
@@ -480,8 +479,8 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         );
         this.rulesReloading.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to reload seeding rules');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.rulesReloading.set(false);
       },
     });

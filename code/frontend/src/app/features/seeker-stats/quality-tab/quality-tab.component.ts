@@ -193,18 +193,21 @@ export class QualityTabComponent {
       this.statsResource.reload();
     });
     effect(() => {
-      if (this.scoresResource.error()) {
-        this.toast.error('Failed to load CF scores');
+      const err = this.scoresResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
     effect(() => {
-      if (this.statsResource.error()) {
-        this.toast.error('Failed to load CF score stats');
+      const err = this.statsResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
     effect(() => {
-      if (this.instancesResource.error()) {
-        this.toast.error('Failed to load instances');
+      const err = this.instancesResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
   }

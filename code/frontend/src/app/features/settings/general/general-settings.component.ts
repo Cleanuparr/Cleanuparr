@@ -77,7 +77,6 @@ export class GeneralSettingsComponent implements HasPendingChanges {
 
   private readonly settings = createSettingsResource({
     load: () => this.api.get(),
-    errorMessage: 'Failed to load general settings',
   });
   private readonly configResource = this.settings.resource;
 

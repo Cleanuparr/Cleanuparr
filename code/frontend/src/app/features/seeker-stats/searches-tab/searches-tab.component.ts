@@ -219,13 +219,15 @@ export class SearchesTabComponent {
       this.eventsResource.reload();
     });
     effect(() => {
-      if (this.summaryResource.error()) {
-        this.toast.error('Failed to load search stats');
+      const err = this.summaryResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
     effect(() => {
-      if (this.eventsResource.error()) {
-        this.toast.error('Failed to load search events');
+      const err = this.eventsResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
   }

@@ -62,7 +62,6 @@ export class DownloadClientsComponent implements HasPendingChanges {
 
   private readonly settings = createSettingsResource({
     load: () => this.api.getConfig(),
-    errorMessage: 'Failed to load download clients',
   });
   private readonly clientsResource = this.settings.resource;
 

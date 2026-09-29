@@ -94,8 +94,9 @@ export class StrikesComponent implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      if (this.strikesResource.error()) {
-        this.toast.error('Failed to load strikes');
+      const err = this.strikesResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
   }

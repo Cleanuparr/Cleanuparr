@@ -66,8 +66,9 @@ export class NotificationsComponent implements HasPendingChanges {
 
   constructor() {
     effect(() => {
-      if (this.providersResource.error()) {
-        this.toast.error('Failed to load notification providers');
+      const err = this.providersResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
 

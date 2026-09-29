@@ -119,8 +119,9 @@ export class AccountSettingsComponent implements OnInit {
     });
 
     effect(() => {
-      if (this.accountResource.error()) {
-        this.toast.error('Failed to load account information');
+      const err = this.accountResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
 

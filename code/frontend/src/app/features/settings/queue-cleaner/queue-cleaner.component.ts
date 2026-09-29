@@ -80,7 +80,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   private readonly settings = createSettingsResource({
     load: () => this.api.getConfig(),
-    errorMessage: 'Failed to load queue cleaner settings',
   });
   private readonly configResource = this.settings.resource;
   private readonly stallRulesResource = rxResource({
@@ -255,14 +254,16 @@ export class QueueCleanerComponent implements HasPendingChanges {
     });
 
     effect(() => {
-      if (this.stallRulesResource.error()) {
-        this.toast.error('Failed to load stall rules');
+      const err = this.stallRulesResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
 
     effect(() => {
-      if (this.slowRulesResource.error()) {
-        this.toast.error('Failed to load slow rules');
+      const err = this.slowRulesResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
   }

@@ -99,7 +99,6 @@ export class SeekerComponent implements HasPendingChanges {
 
   private readonly settings = createSettingsResource({
     load: () => this.api.getConfig(),
-    errorMessage: 'Failed to load seeker settings',
   });
   private readonly configResource = this.settings.resource;
 

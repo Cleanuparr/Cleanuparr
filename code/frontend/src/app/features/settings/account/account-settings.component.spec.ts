@@ -199,7 +199,7 @@ describe('AccountSettingsComponent', () => {
       'Could not connect to server',
     );
     expect(cardTitles(fixture)).toEqual([]);
-    expect(toasts).toEqual(['error:Failed to load account information']);
+    expect(toasts).toEqual(['error:boom']);
     expect(infoCalls()).toBe(1);
 
     button(fixture, 'Retry').click();

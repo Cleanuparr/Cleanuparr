@@ -133,8 +133,9 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      if (this.eventsResource.error()) {
-        this.toast.error('Failed to load events');
+      const err = this.eventsResource.error();
+      if (err) {
+        this.toast.error(err.message);
       }
     });
   }
