@@ -62,7 +62,7 @@ export class PlexIntegrationCardComponent {
       },
       onError: (err) => {
         this.plexLinking.set(false);
-        this.toast.error((err as ApiError).message);
+        this.toast.error(err.message);
       },
       onTimeout: () => {
         this.plexLinking.set(false);

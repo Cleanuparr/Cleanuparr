@@ -217,7 +217,7 @@ export class SetupComponent {
       },
       onError: (error) => {
         this.plexLinking.set(false);
-        this.error.set((error as { message?: string })?.message || 'Plex linking failed');
+        this.error.set(error.message);
       },
       onTimeout: () => {
         this.plexLinking.set(false);
