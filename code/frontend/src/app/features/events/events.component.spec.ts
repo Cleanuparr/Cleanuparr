@@ -2,11 +2,13 @@ vi.mock('@unovis/angular', async () => (await import('../../../testing/unovis.st
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { EventsApi } from '@core/api/events.api';
+import { ToastService } from '@core/services/toast.service';
 import { AppEvent, EventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { EventsComponent } from './events.component';
 import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
@@ -44,6 +46,7 @@ const EVENTS: AppEvent[] = [
 interface Harness {
   fixture: ComponentFixture<EventsComponent>;
   filters: EventFilter[];
+  toastError: ReturnType<typeof vi.fn>;
 }
 
 describe('EventsComponent', () => {
@@ -54,7 +57,7 @@ describe('EventsComponent', () => {
     localStorage.clear();
   });
 
-  function setup(options: { storedPageSize?: string; totalCount?: number } = {}): Harness {
+  function setup(options: { storedPageSize?: string; totalCount?: number; eventsLoadFails?: boolean } = {}): Harness {
     localStorage.clear();
     if (options.storedPageSize !== undefined) {
       localStorage.setItem(PAGE_SIZE_KEY, options.storedPageSize);
@@ -63,6 +66,7 @@ describe('EventsComponent', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: false }));
 
     const filters: EventFilter[] = [];
+    const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
@@ -72,6 +76,9 @@ describe('EventsComponent', () => {
           useValue: {
             getEvents: (filter: EventFilter) => {
               filters.push(filter);
+              if (options.eventsLoadFails) {
+                return throwError(() => new ApiError('failed to fetch events'));
+              }
               return of({
                 items: EVENTS,
                 page: filter.page ?? 1,
@@ -85,12 +92,16 @@ describe('EventsComponent', () => {
             getEventTypeTimeline: () => of(EMPTY_TIMELINE),
           },
         },
+        {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: vi.fn() },
+        },
       ],
     });
 
     const fixture = TestBed.createComponent(EventsComponent);
     fixture.detectChanges();
-    return { fixture, filters };
+    return { fixture, filters, toastError: toastErrorSpy };
   }
 
   function lastFilter(filters: EventFilter[]): EventFilter {

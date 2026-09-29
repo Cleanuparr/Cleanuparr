@@ -3,17 +3,19 @@ vi.mock('@unovis/angular', async () => (await import('../../../testing/unovis.st
 import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { EventsApi } from '@core/api/events.api';
 import { JobsApi } from '@core/api/jobs.api';
 import { GeneralConfigApi } from '@core/api/general-config.api';
 import { CfScoreApi, CfScoreStats } from '@core/api/cf-score.api';
 import { StatsApi } from '@core/api/stats.api';
+import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ManualEvent, ManualEventFilter } from '@core/models/event.models';
 import { StatsV2Response } from '@core/models/stats.models';
 import { GeneralConfig } from '@shared/models/general-config.model';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { DashboardComponent } from './dashboard.component';
 
 const ROW_ORDER_KEY = 'dashboard-row-order';
@@ -68,6 +70,7 @@ interface Harness {
   resolved: string[];
   resolveAllCalls: () => number;
   confirmState: { answer: boolean; asked: number };
+  toastError: ReturnType<typeof vi.fn>;
 }
 
 describe('DashboardComponent', () => {
@@ -82,6 +85,10 @@ describe('DashboardComponent', () => {
     pages?: StubPage[];
     storedOrder?: string;
     cfStats?: CfScoreStats | null;
+    manualEventsError?: ApiError;
+    dismissManualEventError?: ApiError;
+    dismissAllManualEventsError?: ApiError;
+    triggerJobError?: ApiError;
   } = {}): Harness {
     localStorage.clear();
     if (options.storedOrder !== undefined) {
@@ -95,6 +102,7 @@ describe('DashboardComponent', () => {
     const pages = [...(options.pages ?? [{ items: [], totalCount: 0 }])];
     const confirmState = { answer: true, asked: 0 };
     let resolveAll = 0;
+    const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
@@ -119,6 +127,9 @@ describe('DashboardComponent', () => {
           useValue: {
             getManualEvents: (filter: ManualEventFilter) => {
               requests.push(filter);
+              if (options.manualEventsError) {
+                return throwError(() => options.manualEventsError);
+              }
               const page = pages.shift() ?? { items: [], totalCount: 0 };
               return of({
                 items: page.items,
@@ -130,15 +141,31 @@ describe('DashboardComponent', () => {
             },
             resolveManualEvent: (id: string) => {
               resolved.push(id);
+              if (options.dismissManualEventError) {
+                return throwError(() => options.dismissManualEventError);
+              }
               return of(undefined);
             },
             resolveAllManualEvents: () => {
               resolveAll += 1;
+              if (options.dismissAllManualEventsError) {
+                return throwError(() => options.dismissAllManualEventsError);
+              }
               return of({ resolvedCount: 12 });
             },
           },
         },
-        { provide: JobsApi, useValue: { trigger: () => of({ message: 'ok' }) } },
+        {
+          provide: JobsApi,
+          useValue: {
+            trigger: () => {
+              if (options.triggerJobError) {
+                return throwError(() => options.triggerJobError);
+              }
+              return of({ message: 'ok' });
+            },
+          },
+        },
         {
           provide: GeneralConfigApi,
           useValue: { get: () => of({ displaySupportBanner: false } as GeneralConfig) },
@@ -155,6 +182,10 @@ describe('DashboardComponent', () => {
           useValue: { getStats: () => of(STATS), getTimeline: () => of([]) },
         },
         {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: vi.fn() },
+        },
+        {
           provide: ConfirmService,
           useValue: {
             confirm: () => {
@@ -168,7 +199,7 @@ describe('DashboardComponent', () => {
 
     const fixture = TestBed.createComponent(DashboardComponent);
     fixture.detectChanges();
-    return { fixture, hubManualEvents, requests, resolved, resolveAllCalls: () => resolveAll, confirmState };
+    return { fixture, hubManualEvents, requests, resolved, resolveAllCalls: () => resolveAll, confirmState, toastError: toastErrorSpy };
   }
 
   function eventIds(fixture: ComponentFixture<DashboardComponent>): string[] {
@@ -370,5 +401,58 @@ describe('DashboardComponent', () => {
       'strikes',
       'cf-scores',
     ]);
+  });
+
+  it('toasts the backend message when loading more events fails', () => {
+    const err = new ApiError('network timeout');
+    const firstPage = manualEventPage('p1', 20);
+    const { fixture, toastError } = setup({
+      pages: [
+        { items: firstPage, totalCount: 30 },
+      ],
+      manualEventsError: err,
+    });
+    const component = fixture.componentInstance;
+
+    component.manualEventIndex.set(19);
+    fixture.detectChanges();
+    component.nextManualEvent();
+    fixture.detectChanges();
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load more events: network timeout');
+  });
+
+  it('toasts the backend message when dismissing a manual event fails', async () => {
+    const err = new ApiError('unauthorized');
+    const { fixture, toastError } = setup({
+      dismissManualEventError: err,
+      pages: [{ items: [manualEvent('m1', 0)], totalCount: 1 }],
+    });
+    const component = fixture.componentInstance;
+
+    await component.dismissManualEvent(component.currentManualEvent()!);
+    fixture.detectChanges();
+
+    expect(toastError).toHaveBeenCalledWith('unauthorized');
+  });
+
+  it('toasts the backend message when dismissing all manual events fails', async () => {
+    const err = new ApiError('server error');
+    const { fixture, toastError } = setup({ dismissAllManualEventsError: err });
+
+    await fixture.componentInstance.dismissAllManualEvents();
+    fixture.detectChanges();
+
+    expect(toastError).toHaveBeenCalledWith('server error');
+  });
+
+  it('toasts the backend message when triggering a job fails', () => {
+    const err = new ApiError('job already running');
+    const { fixture, toastError } = setup({ triggerJobError: err });
+
+    fixture.componentInstance.triggerJob('Seeker');
+    fixture.detectChanges();
+
+    expect(toastError).toHaveBeenCalledWith('job already running');
   });
 });

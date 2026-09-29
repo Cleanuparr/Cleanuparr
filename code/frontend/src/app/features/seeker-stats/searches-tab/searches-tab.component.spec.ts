@@ -1,13 +1,15 @@
 import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
 import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import type { InstanceSearchStat, SearchEvent, SearchStatsSummary } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { AppHubService } from '@core/realtime/app-hub.service';
+import { ToastService } from '@core/services/toast.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { SearchesTabComponent } from './searches-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
@@ -101,6 +103,7 @@ interface Harness {
   component: SearchesTabComponent;
   queries: SearchEventsQuery[];
   lastQuery: () => SearchEventsQuery;
+  toastError: ReturnType<typeof vi.fn>;
 }
 
 describe('SearchesTabComponent', () => {
@@ -110,18 +113,27 @@ describe('SearchesTabComponent', () => {
     localStorage.removeItem(PAGE_SIZE_KEY);
   });
 
-  function setup(summary: SearchStatsSummary = SUMMARY): Harness {
+  function setup(options: { summary?: SearchStatsSummary; summaryLoadFails?: boolean; eventsLoadFails?: boolean } = {}): Harness {
     vi.stubGlobal('IntersectionObserver', IntersectionObserverStub);
     const queries: SearchEventsQuery[] = [];
+    const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: SearchStatsApi,
           useValue: {
-            getSummary: () => of(summary),
+            getSummary: () => {
+              if (options.summaryLoadFails) {
+                return throwError(() => new ApiError('summary unavailable'));
+              }
+              return of(options.summary ?? SUMMARY);
+            },
             getEvents: (query: SearchEventsQuery) => {
               queries.push(query);
+              if (options.eventsLoadFails) {
+                return throwError(() => new ApiError('events unavailable'));
+              }
               return of(EVENTS);
             },
           },
@@ -129,6 +141,10 @@ describe('SearchesTabComponent', () => {
         {
           provide: AppHubService,
           useValue: { searchStatsVersion: signal(0) },
+        },
+        {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: vi.fn() },
         },
       ],
     });
@@ -141,6 +157,7 @@ describe('SearchesTabComponent', () => {
       component: fixture.componentInstance,
       queries,
       lastQuery: () => queries[queries.length - 1],
+      toastError: toastErrorSpy,
     };
   }
 

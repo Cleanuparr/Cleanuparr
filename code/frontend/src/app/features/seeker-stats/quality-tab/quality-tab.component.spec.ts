@@ -10,6 +10,8 @@ import type {
   CfScoreStats, CfScoresQuery,
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
+import { ToastService } from '@core/services/toast.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { QualityTabComponent } from './quality-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
@@ -84,6 +86,7 @@ interface Harness {
   queries: CfScoresQuery[];
   lastQuery: () => CfScoresQuery;
   historyCalls: [string, number, number][];
+  toastError: ReturnType<typeof vi.fn>;
 }
 
 describe('QualityTabComponent', () => {
@@ -92,20 +95,34 @@ describe('QualityTabComponent', () => {
     localStorage.removeItem(PAGE_SIZE_KEY);
   });
 
-  function setup(options: { historyFails?: boolean } = {}): Harness {
+  function setup(options: { historyFails?: boolean; scoresLoadFails?: boolean; statsLoadFails?: boolean; instancesLoadFails?: boolean } = {}): Harness {
     vi.stubGlobal('IntersectionObserver', IntersectionObserverStub);
     const queries: CfScoresQuery[] = [];
     const historyCalls: [string, number, number][] = [];
+    const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: CfScoreApi,
           useValue: {
-            getStats: () => of(STATS),
-            getInstances: () => of({ instances: INSTANCES }),
+            getStats: () => {
+              if (options.statsLoadFails) {
+                return throwError(() => new ApiError('stats unavailable'));
+              }
+              return of(STATS);
+            },
+            getInstances: () => {
+              if (options.instancesLoadFails) {
+                return throwError(() => new ApiError('instances unavailable'));
+              }
+              return of({ instances: INSTANCES });
+            },
             getScores: (query: CfScoresQuery) => {
               queries.push(query);
+              if (options.scoresLoadFails) {
+                return throwError(() => new ApiError('scores unavailable'));
+              }
               return of(SCORES);
             },
             getItemHistory: (instanceId: string, itemId: number, episodeId: number) => {
@@ -121,6 +138,10 @@ describe('QualityTabComponent', () => {
           provide: AppHubService,
           useValue: { cfScoresVersion: signal(0) },
         },
+        {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: vi.fn() },
+        },
       ],
     });
 
@@ -133,6 +154,7 @@ describe('QualityTabComponent', () => {
       queries,
       lastQuery: () => queries[queries.length - 1],
       historyCalls,
+      toastError: toastErrorSpy,
     };
   }
 
@@ -339,5 +361,14 @@ describe('QualityTabComponent', () => {
     expect(component.itemTypeSeverity('Sonarr')).toBe('info');
     expect(component.itemTypeSeverity('Radarr')).toBe('info');
     expect(component.itemTypeSeverity('Readarr')).toBe('default');
+  });
+
+  it('toasts a generic message when loading score history fails', () => {
+    const { fixture, component, toastError } = setup({ historyFails: true });
+
+    component.toggleExpand(SCORES.items[0]);
+    fixture.detectChanges();
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load score history');
   });
 });
