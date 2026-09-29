@@ -86,7 +86,7 @@ export class StatsCardComponent {
   readonly hasError = computed(() => !!this.statsResource.error());
 
   readonly tiles = computed<StatTile[]>(() => {
-    const s = this.statsResource.value();
+    const s = this.statsResource.hasValue() ? this.statsResource.value() : EMPTY_STATS;
     return [
       {
         key: 'removed',
@@ -130,7 +130,7 @@ export class StatsCardComponent {
     ];
   });
 
-  readonly timeline = computed(() => this.timelineResource.value());
+  readonly timeline = computed(() => this.timelineResource.hasValue() ? this.timelineResource.value() : []);
   readonly hasActivity = computed(() => this.timeline().some((b) => b.count > 0));
   readonly chartColor = computed(() => METRIC_COLORS[this.selectedMetric()]);
 

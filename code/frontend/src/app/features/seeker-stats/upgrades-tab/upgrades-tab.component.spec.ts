@@ -235,4 +235,18 @@ describe('UpgradesTabComponent', () => {
     expect(component.itemTypeSeverity('Radarr')).toBe('info');
     expect(component.itemTypeSeverity('Whisparr')).toBe('default');
   });
+
+  it('toasts the error message when loading upgrades fails', () => {
+    const { fixture, toastError } = setup({ upgradesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load upgrades: upgrades unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('toasts the error message when loading instances fails', () => {
+    const { fixture, toastError } = setup({ instancesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load instances: instances unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
 });

@@ -304,4 +304,11 @@ describe('EventsComponent', () => {
 
     expect(filters.length).toBe(afterInit + 1);
   });
+
+  it('toasts the error message when loading events fails', () => {
+    const { fixture, toastError } = setup({ eventsLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load events: failed to fetch events');
+    expect(fixture.nativeElement).toBeDefined();
+  });
 });

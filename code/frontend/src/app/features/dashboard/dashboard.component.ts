@@ -94,8 +94,8 @@ export class DashboardComponent {
   readonly showSupportSection = computed(() =>
     this.generalConfigResource.hasValue() ? this.generalConfigResource.value().displaySupportBanner : false,
   );
-  readonly cfScoreStats = computed(() => this.cfScoreStatsResource.value());
-  readonly cfScoreUpgrades = computed(() => this.cfScoreUpgradesResource.value().items);
+  readonly cfScoreStats = computed(() => this.cfScoreStatsResource.hasValue() ? this.cfScoreStatsResource.value() : null);
+  readonly cfScoreUpgrades = computed(() => this.cfScoreUpgradesResource.hasValue() ? this.cfScoreUpgradesResource.value().items : []);
 
   readonly rowOrder = signal<DashboardRowId[]>(this.loadOrder());
   readonly visibleRowOrder = computed(() => {

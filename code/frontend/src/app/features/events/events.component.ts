@@ -120,15 +120,15 @@ export class EventsComponent implements OnInit, OnDestroy {
     defaultValue: [] as string[],
   });
 
-  readonly events = computed(() => this.eventsResource.value().items);
-  readonly totalRecords = computed(() => this.eventsResource.value().totalCount);
+  readonly events = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().items : []);
+  readonly totalRecords = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().totalCount : 0);
   readonly severityOptions = computed<SelectOption[]>(() => [
     { label: 'All Severities', value: '' },
-    ...this.severitiesResource.value().map((s) => ({ label: s, value: s })),
+    ...(this.severitiesResource.hasValue() ? this.severitiesResource.value() : []).map((s) => ({ label: s, value: s })),
   ]);
   readonly typeOptions = computed<SelectOption[]>(() => [
     { label: 'All Types', value: '' },
-    ...this.eventTypesResource.value().map((t) => ({ label: this.formatEventType(t), value: t })),
+    ...(this.eventTypesResource.hasValue() ? this.eventTypesResource.value() : []).map((t) => ({ label: this.formatEventType(t), value: t })),
   ]);
 
   constructor() {

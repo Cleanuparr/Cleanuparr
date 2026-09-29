@@ -281,4 +281,11 @@ describe('StrikesComponent', () => {
 
     expect(toastError).toHaveBeenCalledWith('delete failed');
   });
+
+  it('toasts the error message when loading strikes fails', () => {
+    const { fixture, toastError } = setup({ strikesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load strikes: failed to fetch strikes');
+    expect(fixture.nativeElement).toBeDefined();
+  });
 });

@@ -371,4 +371,25 @@ describe('QualityTabComponent', () => {
 
     expect(toastError).toHaveBeenCalledWith('Failed to load score history');
   });
+
+  it('toasts the error message when loading CF scores fails', () => {
+    const { fixture, toastError } = setup({ scoresLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load CF scores: scores unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('toasts the error message when loading CF score stats fails', () => {
+    const { fixture, toastError } = setup({ statsLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load CF score stats: stats unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('toasts the error message when loading instances fails', () => {
+    const { fixture, toastError } = setup({ instancesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load instances: instances unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
 });

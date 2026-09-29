@@ -379,4 +379,18 @@ describe('SearchesTabComponent', () => {
     expect(component.formatCycleDuration('2026-07-31T07:00:00Z')).toBe('5h');
     expect(component.formatCycleDuration('2026-07-31T11:30:00Z')).toBe('30m');
   });
+
+  it('toasts the error message when loading search stats fails', () => {
+    const { fixture, toastError } = setup({ summaryLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load search stats: summary unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('toasts the error message when loading search events fails', () => {
+    const { fixture, toastError } = setup({ eventsLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load search events: events unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
 });

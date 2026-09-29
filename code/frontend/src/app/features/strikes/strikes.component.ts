@@ -85,11 +85,11 @@ export class StrikesComponent implements OnInit, OnDestroy {
     defaultValue: [] as string[],
   });
 
-  readonly items = computed(() => this.strikesResource.value().items);
-  readonly totalRecords = computed(() => this.strikesResource.value().totalCount);
+  readonly items = computed(() => this.strikesResource.hasValue() ? this.strikesResource.value().items : []);
+  readonly totalRecords = computed(() => this.strikesResource.hasValue() ? this.strikesResource.value().totalCount : 0);
   readonly typeOptions = computed<SelectOption[]>(() => [
     { label: 'All Types', value: '' },
-    ...this.strikeTypesResource.value().map((t) => ({ label: this.formatStrikeType(t), value: t })),
+    ...(this.strikeTypesResource.hasValue() ? this.strikeTypesResource.value() : []).map((t) => ({ label: this.formatStrikeType(t), value: t })),
   ]);
 
   constructor() {

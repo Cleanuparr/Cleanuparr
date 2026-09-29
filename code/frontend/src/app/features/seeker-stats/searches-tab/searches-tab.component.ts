@@ -97,7 +97,7 @@ export class SearchesTabComponent {
     defaultValue: null,
   });
 
-  readonly summary = computed(() => this.summaryResource.value());
+  readonly summary = computed(() => this.summaryResource.hasValue() ? this.summaryResource.value() : null);
 
   readonly sortedInstanceStats = computed(() =>
     [...(this.summary()?.perInstanceStats ?? [])].sort((a, b) => {
@@ -110,7 +110,7 @@ export class SearchesTabComponent {
   readonly instanceOptions = computed<SelectOption[]>(() => {
     return [
       { label: 'All Instances', value: '' },
-      ...(this.summaryResource.value()?.perInstanceStats ?? []).map((st) => ({ label: st.instanceName, value: st.instanceId })),
+      ...(this.summaryResource.hasValue() ? (this.summaryResource.value()?.perInstanceStats ?? []) : []).map((st) => ({ label: st.instanceName, value: st.instanceId })),
     ];
   });
 
@@ -137,7 +137,7 @@ export class SearchesTabComponent {
 
     let cycleId: string | undefined;
     if (a.cycleFilter === 'current' && instanceId) {
-      const instance = this.summaryResource.value()?.perInstanceStats.find((s) => s.instanceId === instanceId);
+      const instance = this.summaryResource.hasValue() ? this.summaryResource.value()?.perInstanceStats.find((s) => s.instanceId === instanceId) : undefined;
       cycleId = instance?.currentCycleId ?? undefined;
     }
 
@@ -164,8 +164,8 @@ export class SearchesTabComponent {
     defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as PaginatedResult<SearchEvent>,
   });
 
-  readonly events = computed(() => this.eventsResource.value().items);
-  readonly eventsTotalRecords = computed(() => this.eventsResource.value().totalCount);
+  readonly events = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().items : []);
+  readonly eventsTotalRecords = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().totalCount : 0);
 
   readonly sortOptions: SelectOption[] = [
     { label: 'Timestamp', value: SearchEventsSortBy.Timestamp },
