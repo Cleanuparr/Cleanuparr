@@ -206,20 +206,7 @@ export class SearchesTabComponent {
 
   readonly statusOptions = STATUS_OPTIONS;
 
-  // Not the composable's generic activeCount: `statuses` is an array field, and toggling
-  // a status on then off leaves a new-but-empty array that would still fail reference
-  // equality against EMPTY_FILTERS.statuses, so this counts it by length instead.
-  readonly activeFilterCount = computed(() => {
-    const a = this.applied();
-    let n = 0;
-    if (a.instanceId) n++;
-    if (a.cycleFilter !== EMPTY_FILTERS.cycleFilter) n++;
-    if (a.statuses.length) n++;
-    if (a.searchType) n++;
-    if (a.searchReason) n++;
-    if (a.grabbed !== 'any') n++;
-    return n;
-  });
+  readonly activeFilterCount = this.filters.activeCount;
 
   constructor() {
     effect(() => {
