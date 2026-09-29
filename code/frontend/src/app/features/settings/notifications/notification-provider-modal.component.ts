@@ -6,6 +6,7 @@ import {
   type SelectOption,
 } from '@ui';
 import { NotificationApi } from '@core/api/notification.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { NotificationProviderDto, AppriseCliStatus } from '@shared/models/notification-provider.model';
 import {
@@ -365,7 +366,7 @@ export class NotificationProviderModalComponent {
     this.testing.set(true);
     this.api.test(descriptor, descriptor.buildTestRequest(this.modalModel(), providerId)).subscribe({
       next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
-      error: () => { this.toast.error('Test failed'); this.testing.set(false); },
+      error: (err: ApiError) => { this.toast.error(err.message); this.testing.set(false); },
     });
   }
 
@@ -378,7 +379,7 @@ export class NotificationProviderModalComponent {
     const obs = editing
       ? this.api.update(descriptor, editing.id, request)
       : this.api.create(descriptor, request);
-    obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
+    obs.subscribe({ next: () => this.onSaveSuccess(editing), error: (err: ApiError) => this.onSaveError(err.message) });
   }
 
   private onSaveSuccess(editing: NotificationProviderDto | null): void {
@@ -388,8 +389,8 @@ export class NotificationProviderModalComponent {
     this.saved.emit();
   }
 
-  private onSaveError(): void {
-    this.toast.error('Failed to save provider');
+  private onSaveError(message: string): void {
+    this.toast.error(message);
     this.saving.set(false);
   }
 }
