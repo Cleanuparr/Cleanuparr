@@ -411,4 +411,15 @@ describe('AccountSettingsComponent', () => {
     expect(toasts).toEqual(['error:OIDC configuration invalid']);
     expect(fixture.componentInstance.oidcLinking()).toBe(false);
   });
+
+  it('reports a failed unlink of OIDC account', async () => {
+    const { fixture, toasts } = setup({ oidc: ENABLED_OIDC, unlinkFails: true });
+
+    await fixture.componentInstance.confirmUnlinkOidc();
+    fixture.detectChanges();
+
+    expect(toasts).toEqual(['error:Unlink failed']);
+    expect(fixture.componentInstance.oidcAuthorizedSubject()).toBe('subject-123');
+    expect(fixture.componentInstance.oidcUnlinking()).toBe(false);
+  });
 });
