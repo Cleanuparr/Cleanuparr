@@ -212,5 +212,5 @@ make migrate-users name=YourMigrationName
 - **Sidebar** stays dark purple in both themes - uses sidebar-specific CSS variables
 - The project uses **Clean Architecture** - respect layer boundaries
 - **Settings dirty tracking** uses JSON snapshot comparison (`buildSnapshot()` + `hasPendingChanges()`) — keep this even with Signal Forms; Signal Forms `dirty()` means "touched", not "differs from saved"
-- **Resource API** (`rxResource`): `value()` throws in the error state — always set a `defaultValue` (lists) or guard with `hasValue()` before reading
+- **Resource API** (`rxResource`): `value()` throws in the error state, even with a `defaultValue`. Guard every read: `r.hasValue() ? r.value() : fallback`
 - **Signal Forms** (`[formField]`) owns `min`/`max`/`disabled`/`required` — set these via schema validators, not template bindings. Custom controls satisfy the contract via `model()` signals (`chip-input` exposes a `value` model; `size-input`'s numeric-min input is named `minValue` to avoid clashing with the field min)
