@@ -1,10 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { StrikesApi } from '@core/api/strikes.api';
+import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { StrikesComponent } from './strikes.component';
 import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
@@ -63,6 +65,7 @@ interface Harness {
   fixture: ComponentFixture<StrikesComponent>;
   filters: StrikeFilter[];
   deleted: string[];
+  toastError: ReturnType<typeof vi.fn>;
 }
 
 describe('StrikesComponent', () => {
@@ -72,7 +75,7 @@ describe('StrikesComponent', () => {
     localStorage.clear();
   });
 
-  function setup(options: { confirmed?: boolean; storedPageSize?: string; totalCount?: number } = {}): Harness {
+  function setup(options: { confirmed?: boolean; storedPageSize?: string; totalCount?: number; strikesLoadFails?: boolean; deleteStrikesFails?: boolean } = {}): Harness {
     localStorage.clear();
     if (options.storedPageSize !== undefined) {
       localStorage.setItem(PAGE_SIZE_KEY, options.storedPageSize);
@@ -81,6 +84,7 @@ describe('StrikesComponent', () => {
 
     const filters: StrikeFilter[] = [];
     const deleted: string[] = [];
+    const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
@@ -89,6 +93,9 @@ describe('StrikesComponent', () => {
           useValue: {
             getStrikes: (filter: StrikeFilter) => {
               filters.push(filter);
+              if (options.strikesLoadFails) {
+                return throwError(() => new ApiError('failed to fetch strikes'));
+              }
               return of({
                 items: ITEMS,
                 page: filter.page ?? 1,
@@ -100,9 +107,16 @@ describe('StrikesComponent', () => {
             getStrikeTypes: () => of(['FailedImport', 'SlowSpeed', 'Stalled']),
             deleteStrikesForItem: (id: string) => {
               deleted.push(id);
+              if (options.deleteStrikesFails) {
+                return throwError(() => new ApiError('delete failed'));
+              }
               return of(undefined);
             },
           },
+        },
+        {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: vi.fn() },
         },
         {
           provide: ConfirmService,
@@ -113,7 +127,7 @@ describe('StrikesComponent', () => {
 
     const fixture = TestBed.createComponent(StrikesComponent);
     fixture.detectChanges();
-    return { fixture, filters, deleted };
+    return { fixture, filters, deleted, toastError: toastErrorSpy };
   }
 
   function lastFilter(filters: StrikeFilter[]): StrikeFilter {
@@ -256,5 +270,22 @@ describe('StrikesComponent', () => {
     vi.advanceTimersByTime(30_000);
 
     expect(filters.length).toBe(afterInit + 1);
+  });
+
+  it('toasts the backend message when deleting strikes fails', async () => {
+    const { fixture, toastError } = setup({ deleteStrikesFails: true });
+    const component = fixture.componentInstance;
+
+    await component.deleteItemStrikes(ITEMS[0]);
+    fixture.detectChanges();
+
+    expect(toastError).toHaveBeenCalledWith('delete failed');
+  });
+
+  it('toasts the error message when loading strikes fails', () => {
+    const { fixture, toastError } = setup({ strikesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load strikes: failed to fetch strikes');
+    expect(fixture.nativeElement).toBeDefined();
   });
 });

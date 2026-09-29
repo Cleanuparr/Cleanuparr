@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, input, signal, computed } f
 import { form, required, minLength, validate, FormField } from '@angular/forms/signals';
 import { CardComponent, InputComponent, ButtonComponent, SpinnerComponent } from '@ui';
 import { AccountApi } from '@core/api/account.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 
 interface ChangePasswordFormModel {
@@ -72,8 +73,8 @@ export class ChangePasswordCardComponent {
         this.model.set({ currentPassword: '', newPassword: '', confirmPassword: '' });
         this.changingPassword.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to change password');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.changingPassword.set(false);
       },
     });

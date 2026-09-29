@@ -30,6 +30,7 @@ import { logIcon, logLevelLabel, logSeverity } from '@shared/utils/log-display.u
 import { jobDisplayName, jobStatusSeverity } from '@shared/utils/job-display.util';
 import { formatStrikeType, strikeTypeSeverity } from '@shared/utils/strike-display.util';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
+import { ApiError } from '@core/interceptors/error.interceptor';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -93,8 +94,8 @@ export class DashboardComponent {
   readonly showSupportSection = computed(() =>
     this.generalConfigResource.hasValue() ? this.generalConfigResource.value().displaySupportBanner : false,
   );
-  readonly cfScoreStats = computed(() => this.cfScoreStatsResource.value());
-  readonly cfScoreUpgrades = computed(() => this.cfScoreUpgradesResource.value().items);
+  readonly cfScoreStats = computed(() => this.cfScoreStatsResource.hasValue() ? this.cfScoreStatsResource.value() : null);
+  readonly cfScoreUpgrades = computed(() => this.cfScoreUpgradesResource.hasValue() ? this.cfScoreUpgradesResource.value().items : []);
 
   readonly rowOrder = signal<DashboardRowId[]>(this.loadOrder());
   readonly visibleRowOrder = computed(() => {
@@ -188,9 +189,9 @@ export class DashboardComponent {
           this.loadingMoreManualEvents.set(false);
           after?.();
         },
-        error: () => {
+        error: (err: ApiError) => {
           this.loadingMoreManualEvents.set(false);
-          this.toast.error('Failed to load more events');
+          this.toast.error(`Failed to load more events: ${err.message}`);
         },
       });
   }
@@ -211,7 +212,7 @@ export class DashboardComponent {
         }
         this.toast.success('Event dismissed');
       },
-      error: () => this.toast.error('Failed to dismiss event'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -233,14 +234,14 @@ export class DashboardComponent {
         this.hasMoreBacklog.set(false);
         this.toast.success(`Dismissed ${res.resolvedCount} events`);
       },
-      error: () => this.toast.error('Failed to dismiss events'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
   triggerJob(jobType: string): void {
     this.jobsApi.trigger(jobType as JobType).subscribe({
       next: () => this.toast.success(`${this.jobDisplayName(jobType)} triggered`),
-      error: () => this.toast.error(`Failed to trigger ${this.jobDisplayName(jobType)}`),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 

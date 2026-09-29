@@ -7,6 +7,7 @@ import {
   type SelectOption,
 } from '@ui';
 import { ArrApi } from '@core/api/arr.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '@shared/models/arr-config.model';
@@ -163,8 +164,8 @@ export class ArrSettingsComponent implements HasPendingChanges {
         this.toast.success(result.message || 'Connection successful');
         this.testing.set(false);
       },
-      error: () => {
-        this.toast.error('Connection test failed');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.testing.set(false);
       },
     });
@@ -197,8 +198,8 @@ export class ArrSettingsComponent implements HasPendingChanges {
         this.saving.set(false);
         this.configResource.reload();
       },
-      error: () => {
-        this.toast.error('Failed to save instance');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });
@@ -219,7 +220,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
         this.toast.success('Instance deleted');
         this.configResource.reload();
       },
-      error: () => this.toast.error('Failed to delete instance'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 

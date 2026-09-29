@@ -10,6 +10,7 @@ import {
 } from '@ui';
 import { NgIcon } from '@ng-icons/core';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { QueueCleanerConfig, ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
@@ -18,8 +19,8 @@ import { SlowRuleModalComponent } from './slow-rule-modal.component';
 import { StallRuleModalComponent } from './stall-rule-modal.component';
 import { ScheduleUnit, PatternMode } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { createSettingsResource } from '@shared/utils/settings-resource.util';
-import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource, saveSettings } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, resolveSchedule } from '@shared/utils/schedule.util';
 import { analyzeCoverage } from './coverage-analysis.util';
 
@@ -177,14 +178,14 @@ export class QueueCleanerComponent implements HasPendingChanges {
   readonly metadataExpanded = signal(false);
 
   // Stall rules
-  readonly stallRules = computed(() => this.stallRulesResource.value());
+  readonly stallRules = computed(() => (this.stallRulesResource.hasValue() ? this.stallRulesResource.value() : []));
   readonly stallRulesLoading = computed(() => this.stallRulesResource.isLoading());
   readonly stallExpanded = signal(false);
   readonly stallModalVisible = signal(false);
   readonly editingStallRule = signal<StallRule | null>(null);
 
   // Slow rules
-  readonly slowRules = computed(() => this.slowRulesResource.value());
+  readonly slowRules = computed(() => (this.slowRulesResource.hasValue() ? this.slowRulesResource.value() : []));
   readonly slowRulesLoading = computed(() => this.slowRulesResource.isLoading());
   readonly slowExpanded = signal(false);
   readonly slowModalVisible = signal(false);
@@ -254,14 +255,16 @@ export class QueueCleanerComponent implements HasPendingChanges {
     });
 
     effect(() => {
-      if (this.stallRulesResource.error()) {
-        this.toast.error('Failed to load stall rules');
+      const err = this.stallRulesResource.error();
+      if (err) {
+        this.toast.error(`Failed to load stall rules: ${err.message}`);
       }
     });
 
     effect(() => {
-      if (this.slowRulesResource.error()) {
-        this.toast.error('Failed to load slow rules');
+      const err = this.slowRulesResource.error();
+      if (err) {
+        this.toast.error(`Failed to load slow rules: ${err.message}`);
       }
     });
   }
@@ -315,7 +318,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.toast.success('Stall rule deleted');
         this.stallRulesResource.reload();
       },
-      error: () => this.toast.error('Failed to delete stall rule'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -342,7 +345,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.toast.success('Slow rule deleted');
         this.slowRulesResource.reload();
       },
-      error: () => this.toast.error('Failed to delete slow rule'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -375,19 +378,13 @@ export class QueueCleanerComponent implements HasPendingChanges {
       downloadingMetadataMaxStrikes: m.metadataMaxStrikes ?? 3,
     };
 
-    this.saving.set(true);
-    this.api.updateConfig(config).subscribe({
-      next: () => {
-        this.toast.success('Queue cleaner settings saved');
-        this.saving.set(false);
-        this.saved.set(true);
-        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved(m);
-      },
-      error: () => {
-        this.toast.error('Failed to save queue cleaner settings');
-        this.saving.set(false);
-      },
+    saveSettings({
+      request: this.api.updateConfig(config),
+      toast: this.toast,
+      saving: this.saving,
+      saved: this.saved,
+      successMessage: 'Queue cleaner settings saved',
+      onSaved: () => this.dirtyTracker.markSaved(m),
     });
   }
 

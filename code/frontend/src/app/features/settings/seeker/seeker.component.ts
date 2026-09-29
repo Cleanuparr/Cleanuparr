@@ -185,7 +185,7 @@ export class SeekerComponent implements HasPendingChanges {
     this.settings.retry();
   }
 
-  readonly confirmRoundRobin = async (newValue: boolean): Promise<boolean> => {
+  readonly confirmRoundRobin = (newValue: boolean): Promise<boolean> => {
     if (!newValue) {
       return this.confirm.confirm({
         title: 'Disable Round Robin',
@@ -194,7 +194,7 @@ export class SeekerComponent implements HasPendingChanges {
         destructive: true,
       });
     }
-    return true;
+    return Promise.resolve(true);
   };
 
   patchInstance(index: number, patch: Partial<InstanceState>): void {
@@ -256,9 +256,7 @@ export class SeekerComponent implements HasPendingChanges {
         this.dirtyTracker.markSaved(snapshot);
       },
       error: (err: ApiError) => {
-        this.toast.error(err.statusCode === 400
-          ? err.message
-          : 'Failed to save seeker settings');
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });

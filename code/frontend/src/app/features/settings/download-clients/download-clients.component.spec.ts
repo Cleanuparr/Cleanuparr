@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { DownloadClientApi } from '@core/api/download-client.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
@@ -338,7 +339,7 @@ describe('DownloadClientsComponent', () => {
 
   it('keeps the modal open and reports the failure when the update fails', () => {
     const api = createApi();
-    api.update.mockReturnValue(throwError(() => new Error('boom')));
+    api.update.mockReturnValue(throwError(() => ({ message: 'Invalid host address' })));
     const { fixture, component, toast } = setup(api);
 
     component.openEditModal(QBIT);
@@ -347,7 +348,7 @@ describe('DownloadClientsComponent', () => {
     component.saveClient();
     fixture.detectChanges();
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to update client');
+    expect(toast.error).toHaveBeenCalledWith('Invalid host address');
     expect(component.modalVisible()).toBe(true);
     expect(component.saving()).toBe(false);
   });
@@ -376,7 +377,7 @@ describe('DownloadClientsComponent', () => {
 
   it('reports a failed connection test and stops the testing spinner', () => {
     const api = createApi();
-    api.test.mockReturnValue(throwError(() => new Error('refused')));
+    api.test.mockReturnValue(throwError(() => ({ message: 'Connection refused' })));
     const { fixture, component, toast } = setup(api);
 
     component.openAddModal();
@@ -391,7 +392,7 @@ describe('DownloadClientsComponent', () => {
         clientId: undefined,
       }),
     );
-    expect(toast.error).toHaveBeenCalledWith('Connection test failed');
+    expect(toast.error).toHaveBeenCalledWith('Connection refused');
     expect(component.testing()).toBe(false);
   });
 
@@ -448,7 +449,7 @@ describe('DownloadClientsComponent', () => {
 
     expect(component.loadError()).toBe(true);
     expect(component.clients()).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith('Failed to load download clients');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load download clients: offline');
     expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
 
     api.getConfig.mockReturnValue(of(CONFIG));
@@ -457,5 +458,37 @@ describe('DownloadClientsComponent', () => {
 
     expect(component.loadError()).toBe(false);
     expect(text(fixture, '.item-row__name')).toEqual(['qBit box', 'Deluge box']);
+  });
+
+  it('reports a failed create and keeps the modal open', () => {
+    const api = createApi();
+    api.create.mockReturnValue(throwError(() => new ApiError('Invalid port')));
+    const { fixture, component, toast } = setup(api);
+
+    component.openAddModal();
+    component.clientForm.name().value.set('New client');
+    component.clientForm.host().value.set('http://localhost:9091');
+    fixture.detectChanges();
+
+    component.saveClient();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Invalid port');
+    expect(component.modalVisible()).toBe(true);
+    expect(component.saving()).toBe(false);
+  });
+
+  it('reports a failed delete and keeps the client list open', async () => {
+    const api = createApi();
+    api.delete.mockReturnValue(throwError(() => new ApiError('Client in use')));
+    const { fixture, component, toast, confirm } = setup(api);
+
+    const accepted = component.deleteClient(QBIT);
+    confirm.accept();
+    await accepted;
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Client in use');
+    expect(component.clients()).toEqual([QBIT, DELUGE]);
   });
 });

@@ -58,12 +58,12 @@ describe('PlexIntegrationCardComponent', () => {
         {
           provide: AccountApi,
           useValue: {
-            linkPlex: () => (options.linkFails ? throwError(() => new Error('boom')) : of(PIN)),
+            linkPlex: () => (options.linkFails ? throwError(() => ({ message: 'boom' })) : of(PIN)),
             verifyPlexLink: (pinId: number) => {
               verifiedPins.push(pinId);
               return options.verify ? options.verify() : of({ completed: false } as PlexPinStatus);
             },
-            unlinkPlex: () => (options.unlinkFails ? throwError(() => new Error('boom')) : of(undefined)),
+            unlinkPlex: () => (options.unlinkFails ? throwError(() => ({ message: 'boom' })) : of(undefined)),
           },
         },
         {
@@ -131,7 +131,7 @@ describe('PlexIntegrationCardComponent', () => {
     vi.advanceTimersByTime(10000);
 
     expect(authWindow.close).toHaveBeenCalledTimes(1);
-    expect(toasts).toEqual(['error:Failed to start Plex linking']);
+    expect(toasts).toEqual(['error:boom']);
     expect(card(fixture).plexLinking()).toBe(false);
     expect(verifiedPins).toEqual([]);
   });
@@ -167,9 +167,23 @@ describe('PlexIntegrationCardComponent', () => {
     fixture.detectChanges();
 
     expect(verifiedPins).toEqual([4242]);
-    expect(toasts).toEqual(['error:Plex linking failed']);
+    expect(toasts).toEqual(['error:plex down']);
     expect(card(fixture).plexLinking()).toBe(false);
     expect(fixture.componentInstance.changes).toEqual([]);
+  });
+
+  it('reports poll onError with the ApiError message', () => {
+    const { fixture, toasts, verifiedPins } = setup({
+      verify: () => throwError(() => new Error('Plex service down')),
+    });
+
+    click(fixture);
+    vi.advanceTimersByTime(10000);
+    fixture.detectChanges();
+
+    expect(verifiedPins).toEqual([4242]);
+    expect(toasts).toEqual(['error:Plex service down']);
+    expect(card(fixture).plexLinking()).toBe(false);
   });
 
   it('times out after the poller gives up', () => {

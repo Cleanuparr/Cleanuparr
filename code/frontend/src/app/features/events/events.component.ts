@@ -22,6 +22,7 @@ import {
   formatEventType,
 } from '@shared/utils/event-display.util';
 import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.component';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 const POLL_INTERVAL_MS = 10_000;
 
@@ -120,21 +121,22 @@ export class EventsComponent implements OnInit, OnDestroy {
     defaultValue: [] as string[],
   });
 
-  readonly events = computed(() => this.eventsResource.value().items);
-  readonly totalRecords = computed(() => this.eventsResource.value().totalCount);
+  readonly events = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().items : []);
+  readonly totalRecords = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().totalCount : 0);
   readonly severityOptions = computed<SelectOption[]>(() => [
     { label: 'All Severities', value: '' },
-    ...this.severitiesResource.value().map((s) => ({ label: s, value: s })),
+    ...(this.severitiesResource.hasValue() ? this.severitiesResource.value() : []).map((s) => ({ label: s, value: s })),
   ]);
   readonly typeOptions = computed<SelectOption[]>(() => [
     { label: 'All Types', value: '' },
-    ...this.eventTypesResource.value().map((t) => ({ label: this.formatEventType(t), value: t })),
+    ...(this.eventTypesResource.hasValue() ? this.eventTypesResource.value() : []).map((t) => ({ label: this.formatEventType(t), value: t })),
   ]);
 
   constructor() {
     effect(() => {
-      if (this.eventsResource.error()) {
-        this.toast.error('Failed to load events');
+      const err = this.eventsResource.error();
+      if (err) {
+        this.toast.error(`Failed to load events: ${err.message}`);
       }
     });
   }
@@ -174,8 +176,10 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   copyEvent(event: AppEvent): void {
     const text = `[${event.timestamp}] [${event.severity}] ${event.eventType}: ${event.message}`;
-    navigator.clipboard.writeText(text);
-    this.toast.success('Event copied');
+    copyToClipboard(text).then(
+      () => this.toast.success('Event copied'),
+      () => this.toast.error('Failed to copy event'),
+    );
   }
 
   refresh(): void {

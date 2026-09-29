@@ -651,7 +651,7 @@ describe('NotificationProviderModalComponent', () => {
     component.testNotification();
     fixture.detectChanges();
 
-    expect(toast.error).toHaveBeenCalledWith('Test failed');
+    expect(toast.error).toHaveBeenCalledWith('offline');
     expect(component.testing()).toBe(false);
   });
 
@@ -770,7 +770,7 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
     fixture.detectChanges();
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to save provider');
+    expect(toast.error).toHaveBeenCalledWith('boom');
     expect(toast.success).not.toHaveBeenCalled();
     expect(component.visible()).toBe(true);
     expect(component.saving()).toBe(false);

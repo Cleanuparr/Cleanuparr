@@ -1,11 +1,12 @@
 import { DestroyRef } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
+import { ApiError } from '@core/interceptors/error.interceptor';
 
 export interface PlexPinPollOptions<T extends { completed: boolean }> {
   /** Called on each attempt to check whether the Plex PIN has been authorized. */
   verify: () => Observable<T>;
   onCompleted: (result: T) => void;
-  onError: (error: unknown) => void;
+  onError: (error: ApiError) => void;
   onTimeout: () => void;
   destroyRef: DestroyRef;
   intervalMs?: number;

@@ -2,11 +2,13 @@ vi.mock('@unovis/angular', async () => (await import('../../../testing/unovis.st
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { EventsApi } from '@core/api/events.api';
+import { ToastService } from '@core/services/toast.service';
 import { AppEvent, EventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { EventsComponent } from './events.component';
 import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
 
@@ -44,6 +46,8 @@ const EVENTS: AppEvent[] = [
 interface Harness {
   fixture: ComponentFixture<EventsComponent>;
   filters: EventFilter[];
+  toastError: ReturnType<typeof vi.fn>;
+  toastSuccess: ReturnType<typeof vi.fn>;
 }
 
 describe('EventsComponent', () => {
@@ -51,10 +55,18 @@ describe('EventsComponent', () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     vi.restoreAllMocks();
+    delete (navigator as { clipboard?: Clipboard }).clipboard;
     localStorage.clear();
   });
 
-  function setup(options: { storedPageSize?: string; totalCount?: number } = {}): Harness {
+  function stubClipboard(writeText: () => Promise<void>): void {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+  }
+
+  function setup(options: { storedPageSize?: string; totalCount?: number; eventsLoadFails?: boolean; severitiesLoadFails?: boolean; typesLoadFails?: boolean } = {}): Harness {
     localStorage.clear();
     if (options.storedPageSize !== undefined) {
       localStorage.setItem(PAGE_SIZE_KEY, options.storedPageSize);
@@ -63,6 +75,8 @@ describe('EventsComponent', () => {
     vi.stubGlobal('matchMedia', () => ({ matches: false }));
 
     const filters: EventFilter[] = [];
+    const toastErrorSpy = vi.fn();
+    const toastSuccessSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
@@ -72,6 +86,9 @@ describe('EventsComponent', () => {
           useValue: {
             getEvents: (filter: EventFilter) => {
               filters.push(filter);
+              if (options.eventsLoadFails) {
+                return throwError(() => new ApiError('failed to fetch events'));
+              }
               return of({
                 items: EVENTS,
                 page: filter.page ?? 1,
@@ -80,17 +97,21 @@ describe('EventsComponent', () => {
                 totalPages: 1,
               } as PaginatedResult<AppEvent>);
             },
-            getSeverities: () => of(['Information', 'Warning', 'Error']),
-            getEventTypes: () => of(['StalledStrike', 'QueueItemDeleted']),
+            getSeverities: () => (options.severitiesLoadFails ? throwError(() => new ApiError('severities error')) : of(['Information', 'Warning', 'Error'])),
+            getEventTypes: () => (options.typesLoadFails ? throwError(() => new ApiError('types error')) : of(['StalledStrike', 'QueueItemDeleted'])),
             getEventTypeTimeline: () => of(EMPTY_TIMELINE),
           },
+        },
+        {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: toastSuccessSpy },
         },
       ],
     });
 
     const fixture = TestBed.createComponent(EventsComponent);
     fixture.detectChanges();
-    return { fixture, filters };
+    return { fixture, filters, toastError: toastErrorSpy, toastSuccess: toastSuccessSpy };
   }
 
   function lastFilter(filters: EventFilter[]): EventFilter {
@@ -292,5 +313,56 @@ describe('EventsComponent', () => {
     vi.advanceTimersByTime(30_000);
 
     expect(filters.length).toBe(afterInit + 1);
+  });
+
+  it('toasts the error message when loading events fails', () => {
+    const { fixture, toastError } = setup({ eventsLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load events: failed to fetch events');
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('renders without throwing when events load fails and exposes empty array', () => {
+    const { fixture } = setup({ eventsLoadFails: true });
+    const component = fixture.componentInstance;
+
+    expect(component.events()).toEqual([]);
+    expect(component.totalRecords()).toBe(0);
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('renders without throwing when severity options load fails and shows all severities entry', () => {
+    const { fixture } = setup({ severitiesLoadFails: true });
+
+    expect(fixture.componentInstance.severityOptions()).toEqual([{ label: 'All Severities', value: '' }]);
+  });
+
+  it('renders without throwing when event type options load fails and shows all types entry', () => {
+    const { fixture } = setup({ typesLoadFails: true });
+
+    expect(fixture.componentInstance.typeOptions()).toEqual([{ label: 'All Types', value: '' }]);
+  });
+
+  it('copies the event to clipboard and shows success toast', async () => {
+    const { fixture, toastSuccess } = setup();
+    const writeTextSpy = vi.fn(() => Promise.resolve());
+    stubClipboard(writeTextSpy);
+
+    const event = EVENTS[0];
+    fixture.componentInstance.copyEvent(event);
+    await Promise.resolve();
+
+    expect(writeTextSpy).toHaveBeenCalledWith(`[${event.timestamp}] [${event.severity}] ${event.eventType}: ${event.message}`);
+    expect(toastSuccess).toHaveBeenCalledWith('Event copied');
+  });
+
+  it('shows error toast when copying event to clipboard fails', async () => {
+    const { fixture, toastError } = setup();
+    stubClipboard(vi.fn(() => Promise.reject(new Error('copy failed'))));
+
+    fixture.componentInstance.copyEvent(EVENTS[0]);
+    await Promise.resolve();
+
+    expect(toastError).toHaveBeenCalledWith('Failed to copy event');
   });
 });

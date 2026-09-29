@@ -71,8 +71,8 @@ export class EventsStatsCardComponent {
   readonly isLoading = computed(() => this.timelineResource.isLoading());
   readonly hasError = computed(() => !!this.timelineResource.error());
 
-  readonly data = computed(() => this.timelineResource.value().buckets);
-  readonly allTypes = computed(() => this.timelineResource.value().types);
+  readonly data = computed(() => this.timelineResource.hasValue() ? this.timelineResource.value().buckets : []);
+  readonly allTypes = computed(() => this.timelineResource.hasValue() ? this.timelineResource.value().types : []);
   readonly hasActivity = computed(() => this.allTypes().length > 0);
 
   private readonly busiestType = computed(() => {

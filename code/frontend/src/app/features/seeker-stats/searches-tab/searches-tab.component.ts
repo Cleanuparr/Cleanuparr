@@ -97,7 +97,7 @@ export class SearchesTabComponent {
     defaultValue: null,
   });
 
-  readonly summary = computed(() => this.summaryResource.value());
+  readonly summary = computed(() => this.summaryResource.hasValue() ? this.summaryResource.value() : null);
 
   readonly sortedInstanceStats = computed(() =>
     [...(this.summary()?.perInstanceStats ?? [])].sort((a, b) => {
@@ -110,7 +110,7 @@ export class SearchesTabComponent {
   readonly instanceOptions = computed<SelectOption[]>(() => {
     return [
       { label: 'All Instances', value: '' },
-      ...(this.summaryResource.value()?.perInstanceStats ?? []).map((st) => ({ label: st.instanceName, value: st.instanceId })),
+      ...(this.summaryResource.hasValue() ? (this.summaryResource.value()?.perInstanceStats ?? []) : []).map((st) => ({ label: st.instanceName, value: st.instanceId })),
     ];
   });
 
@@ -130,15 +130,21 @@ export class SearchesTabComponent {
     this.pagination.getPageSize(PAGE_SIZE_STORAGE_KEYS.seekerSearches, PaginationService.DEFAULT_PAGE_SIZE),
   );
 
-  private readonly eventsParams = computed<SearchEventsQuery>(() => {
+  private readonly eventsParams = computed<SearchEventsQuery | undefined>(() => {
     const instanceId = this.selectedInstanceId() || undefined;
     const search = this.searchQuery() || undefined;
     const a = this.applied();
 
     let cycleId: string | undefined;
     if (a.cycleFilter === 'current' && instanceId) {
+      if (!this.summaryResource.hasValue()) {
+        return undefined;
+      }
       const instance = this.summaryResource.value()?.perInstanceStats.find((s) => s.instanceId === instanceId);
-      cycleId = instance?.currentCycleId ?? undefined;
+      if (!instance?.currentCycleId) {
+        return undefined;
+      }
+      cycleId = instance.currentCycleId;
     }
 
     const triToBool = (v: TriState): boolean | undefined => (v === 'any' ? undefined : v === 'true');
@@ -164,8 +170,8 @@ export class SearchesTabComponent {
     defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as PaginatedResult<SearchEvent>,
   });
 
-  readonly events = computed(() => this.eventsResource.value().items);
-  readonly eventsTotalRecords = computed(() => this.eventsResource.value().totalCount);
+  readonly events = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().items : []);
+  readonly eventsTotalRecords = computed(() => this.eventsResource.hasValue() ? this.eventsResource.value().totalCount : 0);
 
   readonly sortOptions: SelectOption[] = [
     { label: 'Timestamp', value: SearchEventsSortBy.Timestamp },
@@ -219,13 +225,15 @@ export class SearchesTabComponent {
       this.eventsResource.reload();
     });
     effect(() => {
-      if (this.summaryResource.error()) {
-        this.toast.error('Failed to load search stats');
+      const err = this.summaryResource.error();
+      if (err) {
+        this.toast.error(`Failed to load search stats: ${err.message}`);
       }
     });
     effect(() => {
-      if (this.eventsResource.error()) {
-        this.toast.error('Failed to load search events');
+      const err = this.eventsResource.error();
+      if (err) {
+        this.toast.error(`Failed to load search events: ${err.message}`);
       }
     });
   }

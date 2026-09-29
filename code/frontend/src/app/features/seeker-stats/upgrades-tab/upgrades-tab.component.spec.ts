@@ -1,10 +1,12 @@
 import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CfScoreApi, CfUpgradesSortBy, SortDirection } from '@core/api/cf-score.api';
 import type { CfScoreInstance, CfScoreUpgradesQuery, CfScoreUpgradesResponse } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
+import { ToastService } from '@core/services/toast.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { UpgradesTabComponent } from './upgrades-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
 
@@ -51,6 +53,7 @@ interface Harness {
   component: UpgradesTabComponent;
   queries: CfScoreUpgradesQuery[];
   lastQuery: () => CfScoreUpgradesQuery;
+  toastError: ReturnType<typeof vi.fn>;
 }
 
 describe('UpgradesTabComponent', () => {
@@ -59,18 +62,27 @@ describe('UpgradesTabComponent', () => {
     localStorage.removeItem(PAGE_SIZE_KEY);
   });
 
-  function setup(): Harness {
+  function setup(options: { upgradesLoadFails?: boolean; instancesLoadFails?: boolean } = {}): Harness {
     vi.stubGlobal('IntersectionObserver', IntersectionObserverStub);
     const queries: CfScoreUpgradesQuery[] = [];
+    const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: CfScoreApi,
           useValue: {
-            getInstances: () => of({ instances: INSTANCES }),
+            getInstances: () => {
+              if (options.instancesLoadFails) {
+                return throwError(() => new ApiError('instances unavailable'));
+              }
+              return of({ instances: INSTANCES });
+            },
             getRecentUpgrades: (query: CfScoreUpgradesQuery) => {
               queries.push(query);
+              if (options.upgradesLoadFails) {
+                return throwError(() => new ApiError('upgrades unavailable'));
+              }
               return of(UPGRADES);
             },
           },
@@ -78,6 +90,10 @@ describe('UpgradesTabComponent', () => {
         {
           provide: AppHubService,
           useValue: { cfScoresVersion: signal(0) },
+        },
+        {
+          provide: ToastService,
+          useValue: { error: toastErrorSpy, success: vi.fn() },
         },
       ],
     });
@@ -90,6 +106,7 @@ describe('UpgradesTabComponent', () => {
       component: fixture.componentInstance,
       queries,
       lastQuery: () => queries[queries.length - 1],
+      toastError: toastErrorSpy,
     };
   }
 
@@ -217,5 +234,19 @@ describe('UpgradesTabComponent', () => {
     expect(component.itemTypeSeverity('Sonarr')).toBe('info');
     expect(component.itemTypeSeverity('Radarr')).toBe('info');
     expect(component.itemTypeSeverity('Whisparr')).toBe('default');
+  });
+
+  it('toasts the error message when loading upgrades fails', () => {
+    const { fixture, toastError } = setup({ upgradesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load upgrades: upgrades unavailable');
+    expect(fixture.nativeElement).toBeDefined();
+  });
+
+  it('toasts the error message when loading instances fails', () => {
+    const { fixture, toastError } = setup({ instancesLoadFails: true });
+
+    expect(toastError).toHaveBeenCalledWith('Failed to load instances: instances unavailable');
+    expect(fixture.nativeElement).toBeDefined();
   });
 });

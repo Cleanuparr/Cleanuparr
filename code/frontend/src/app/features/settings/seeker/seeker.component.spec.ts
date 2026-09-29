@@ -188,7 +188,7 @@ describe('SeekerComponent', () => {
 
     expect(component.loadError()).toBe(true);
     expect(text(fixture)).toContain('Could not connect to server');
-    expect(toasts).toContain('error:Failed to load seeker settings');
+    expect(toasts).toContain('error:Failed to load seeker settings: boom');
     expect(fixture.nativeElement.querySelector('.settings-form')).toBeNull();
 
     (fixture.nativeElement.querySelector('app-empty-state button') as HTMLButtonElement).click();
@@ -556,7 +556,7 @@ describe('SeekerComponent', () => {
     component.patchInstance(0, { ignoreStruckDownloads: true });
     component.save();
 
-    expect(toasts).toContain('error:Failed to save seeker settings');
+    expect(toasts).toContain('error:Internal Server Error');
   });
 
   it('maps the instance type to an icon and a badge severity', () => {

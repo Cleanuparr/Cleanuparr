@@ -9,6 +9,7 @@ import {
 } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StrikesApi } from '@core/api/strikes.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
@@ -84,17 +85,18 @@ export class StrikesComponent implements OnInit, OnDestroy {
     defaultValue: [] as string[],
   });
 
-  readonly items = computed(() => this.strikesResource.value().items);
-  readonly totalRecords = computed(() => this.strikesResource.value().totalCount);
+  readonly items = computed(() => this.strikesResource.hasValue() ? this.strikesResource.value().items : []);
+  readonly totalRecords = computed(() => this.strikesResource.hasValue() ? this.strikesResource.value().totalCount : 0);
   readonly typeOptions = computed<SelectOption[]>(() => [
     { label: 'All Types', value: '' },
-    ...this.strikeTypesResource.value().map((t) => ({ label: this.formatStrikeType(t), value: t })),
+    ...(this.strikeTypesResource.hasValue() ? this.strikeTypesResource.value() : []).map((t) => ({ label: this.formatStrikeType(t), value: t })),
   ]);
 
   constructor() {
     effect(() => {
-      if (this.strikesResource.error()) {
-        this.toast.error('Failed to load strikes');
+      const err = this.strikesResource.error();
+      if (err) {
+        this.toast.error(`Failed to load strikes: ${err.message}`);
       }
     });
   }
@@ -142,7 +144,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
         this.toast.success(`Strikes deleted for "${item.title}"`);
         this.strikesResource.reload();
       },
-      error: () => this.toast.error('Failed to delete strikes'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 

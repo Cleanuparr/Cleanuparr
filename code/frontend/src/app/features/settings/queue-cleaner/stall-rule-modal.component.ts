@@ -6,6 +6,7 @@ import {
   type SelectOption, type SizeUnit,
 } from '@ui';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { StallRule, CreateStallRuleDto } from '@shared/models/queue-rule.model';
 import { TorrentPrivacyType } from '@shared/models/enums';
@@ -155,8 +156,8 @@ export class StallRuleModalComponent {
         this.visible.set(false);
         this.saved.emit();
       },
-      error: (e: Error) => {
-        this.toast.error(e.message);
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.saving.set(false);
       },
     });

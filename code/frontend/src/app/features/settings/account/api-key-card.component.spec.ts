@@ -30,11 +30,11 @@ describe('ApiKeyCardComponent', () => {
           provide: AccountApi,
           useValue: {
             getApiKey: () =>
-              options.revealFails ? throwError(() => new Error('boom')) : of({ apiKey: 'live-key-1234' }),
+              options.revealFails ? throwError(() => ({ message: 'boom' })) : of({ apiKey: 'live-key-1234' }),
             regenerateApiKey: () => {
               regenerateCalls++;
               return options.regenerateFails
-                ? throwError(() => new Error('boom'))
+                ? throwError(() => ({ message: 'boom' }))
                 : of({ apiKey: 'fresh-key-9999' });
             },
           },
@@ -113,7 +113,7 @@ describe('ApiKeyCardComponent', () => {
 
     expect(fixture.componentInstance.apiKeyRevealed()).toBe(false);
     expect(shownKey(fixture)).toBe('live****1234');
-    expect(toasts).toEqual(['error:Failed to load API key']);
+    expect(toasts).toEqual(['error:Failed to load API key: boom']);
   });
 
   it('copies the revealed key to the clipboard', async () => {
@@ -178,6 +178,6 @@ describe('ApiKeyCardComponent', () => {
 
     expect(shownKey(fixture)).toBe('live-key-1234');
     expect(fixture.componentInstance.regeneratingApiKey()).toBe(false);
-    expect(toasts).toEqual(['error:Failed to regenerate API key']);
+    expect(toasts).toEqual(['error:boom']);
   });
 });

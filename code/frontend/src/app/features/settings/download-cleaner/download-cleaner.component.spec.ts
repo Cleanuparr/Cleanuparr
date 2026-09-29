@@ -3,7 +3,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { of, Subject, throwError } from 'rxjs';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ConfirmService } from '@core/services/confirm.service';
+import { ToastService } from '@core/services/toast.service';
 import {
   DownloadCleanerConfig,
   OrphanedFilesConfig,
@@ -105,11 +107,16 @@ interface Setup {
   fixture: ComponentFixture<DownloadCleanerComponent>;
   component: DownloadCleanerComponent;
   api: ReturnType<typeof createApi>;
+  toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
   confirm: ConfirmService;
 }
 
 function dropEvent(previousIndex: number, currentIndex: number): CdkDragDrop<SeedingRule[]> {
   return { previousIndex, currentIndex } as unknown as CdkDragDrop<SeedingRule[]>;
+}
+
+function createToast() {
+  return { success: vi.fn(), error: vi.fn() };
 }
 
 describe('DownloadCleanerComponent', () => {
@@ -122,9 +129,14 @@ describe('DownloadCleanerComponent', () => {
     reloadedRules: SeedingRule[] = [RULE_B],
   ): Promise<Setup> {
     const api = createApi(config, reloadedRules);
+    const toast = createToast();
 
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), { provide: DownloadCleanerApi, useValue: api }],
+      providers: [
+        provideHttpClient(),
+        { provide: DownloadCleanerApi, useValue: api },
+        { provide: ToastService, useValue: toast },
+      ],
     });
 
     const fixture = TestBed.createComponent(DownloadCleanerComponent);
@@ -136,6 +148,7 @@ describe('DownloadCleanerComponent', () => {
       fixture,
       component: fixture.componentInstance,
       api,
+      toast,
       confirm: TestBed.inject(ConfirmService),
     };
   }
@@ -630,5 +643,45 @@ describe('DownloadCleanerComponent', () => {
     expect(component.selectedClientId()).toBeNull();
     expect(component.clientOptions()).toEqual([]);
     expect(component.hasPendingChanges()).toBe(false);
+  });
+
+  it('toasts the backend message when deleting a seeding rule fails', async () => {
+    const { fixture, component, api, toast, confirm } = await setup();
+
+    api.deleteSeedingRule.mockReturnValue(throwError(() => new ApiError('Network error')));
+
+    const accepted = component.deleteRule(RULE_A);
+    confirm.accept();
+    await accepted;
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Network error');
+  });
+
+  it('toasts the backend message when reordering seeding rules fails', async () => {
+    const { fixture, component, api, toast } = await setup();
+
+    api.reorderSeedingRules.mockReturnValue(throwError(() => new ApiError('Save failed')));
+
+    component.onRulesReorder(dropEvent(0, 1));
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Save failed');
+  });
+
+  it('toasts the backend message when reloading seeding rules fails', async () => {
+    const { fixture, component, api, toast } = await setup();
+
+    api.getSeedingRules.mockReturnValue(throwError(() => new ApiError('reload failed')));
+
+    component.onSeedingRuleSaved();
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(toast.error).toHaveBeenCalledWith('Failed to reload seeding rules: reload failed');
+    expect(component.rulesReloading()).toBe(false);
   });
 });

@@ -129,13 +129,13 @@ export class QualityTabComponent {
     defaultValue: { instances: [] as CfScoreInstance[] },
   });
 
-  readonly items = computed(() => this.scoresResource.value().items);
-  readonly totalRecords = computed(() => this.scoresResource.value().totalCount);
-  readonly stats = computed(() => this.statsResource.value());
-  readonly instances = computed(() => this.instancesResource.value().instances);
+  readonly items = computed(() => this.scoresResource.hasValue() ? this.scoresResource.value().items : []);
+  readonly totalRecords = computed(() => this.scoresResource.hasValue() ? this.scoresResource.value().totalCount : 0);
+  readonly stats = computed(() => this.statsResource.hasValue() ? this.statsResource.value() : null);
+  readonly instances = computed(() => this.instancesResource.hasValue() ? this.instancesResource.value().instances : []);
   readonly instanceOptions = computed<SelectOption[]>(() => [
     { label: 'All Instances', value: '' },
-    ...this.instancesResource.value().instances.map((i) => ({ label: `${i.name} (${i.itemType})`, value: i.id })),
+    ...(this.instancesResource.hasValue() ? this.instancesResource.value().instances : []).map((i) => ({ label: `${i.name} (${i.itemType})`, value: i.id })),
   ]);
 
   readonly displayStats = computed(() => {
@@ -193,18 +193,21 @@ export class QualityTabComponent {
       this.statsResource.reload();
     });
     effect(() => {
-      if (this.scoresResource.error()) {
-        this.toast.error('Failed to load CF scores');
+      const err = this.scoresResource.error();
+      if (err) {
+        this.toast.error(`Failed to load CF scores: ${err.message}`);
       }
     });
     effect(() => {
-      if (this.statsResource.error()) {
-        this.toast.error('Failed to load CF score stats');
+      const err = this.statsResource.error();
+      if (err) {
+        this.toast.error(`Failed to load CF score stats: ${err.message}`);
       }
     });
     effect(() => {
-      if (this.instancesResource.error()) {
-        this.toast.error('Failed to load instances');
+      const err = this.instancesResource.error();
+      if (err) {
+        this.toast.error(`Failed to load instances: ${err.message}`);
       }
     });
   }

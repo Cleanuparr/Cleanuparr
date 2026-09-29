@@ -103,11 +103,11 @@ export class UpgradesTabComponent {
     defaultValue: { instances: [] as CfScoreInstance[] },
   });
 
-  readonly upgrades = computed(() => this.upgradesResource.value().items);
-  readonly totalRecords = computed(() => this.upgradesResource.value().totalCount);
+  readonly upgrades = computed(() => this.upgradesResource.hasValue() ? this.upgradesResource.value().items : []);
+  readonly totalRecords = computed(() => this.upgradesResource.hasValue() ? this.upgradesResource.value().totalCount : 0);
   readonly instanceOptions = computed<SelectOption[]>(() => [
     { label: 'All Instances', value: '' },
-    ...this.instancesResource.value().instances.map((i) => ({ label: `${i.name} (${i.itemType})`, value: i.id })),
+    ...(this.instancesResource.hasValue() ? this.instancesResource.value().instances : []).map((i) => ({ label: `${i.name} (${i.itemType})`, value: i.id })),
   ]);
 
   readonly sortOptions: SelectOption[] = [
@@ -141,13 +141,15 @@ export class UpgradesTabComponent {
       this.upgradesResource.reload();
     });
     effect(() => {
-      if (this.upgradesResource.error()) {
-        this.toast.error('Failed to load upgrades');
+      const err = this.upgradesResource.error();
+      if (err) {
+        this.toast.error(`Failed to load upgrades: ${err.message}`);
       }
     });
     effect(() => {
-      if (this.instancesResource.error()) {
-        this.toast.error('Failed to load instances');
+      const err = this.instancesResource.error();
+      if (err) {
+        this.toast.error(`Failed to load instances: ${err.message}`);
       }
     });
   }

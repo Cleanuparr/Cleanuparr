@@ -329,14 +329,14 @@ describe('GeneralSettingsComponent', () => {
   it('reports a failed save without clearing the pending changes', () => {
     const { fixture, component, api, toast } = setup();
 
-    api.update.mockReturnValue(throwError(() => new Error('boom')));
+    api.update.mockReturnValue(throwError(() => ({ message: 'Invalid configuration' })));
     component.genForm.dryRun().value.set(false);
     fixture.detectChanges();
 
     component.save();
     fixture.detectChanges();
 
-    expect(toast.toasts().at(-1)?.message).toBe('Failed to save general settings');
+    expect(toast.toasts().at(-1)?.message).toBe('Invalid configuration');
     expect(component.saving()).toBe(false);
     expect(component.saved()).toBe(false);
     expect(component.dirty()).toBe(true);
@@ -353,7 +353,7 @@ describe('GeneralSettingsComponent', () => {
     const { fixture, component, toast } = setup(CONFIG, api);
 
     expect(component.loadError()).toBe(true);
-    expect(toast.toasts().at(-1)?.message).toBe('Failed to load general settings');
+    expect(toast.toasts().at(-1)?.message).toBe('Failed to load general settings: offline');
     expect(fixture.nativeElement.textContent).toContain('Could not connect');
 
     component.retry();

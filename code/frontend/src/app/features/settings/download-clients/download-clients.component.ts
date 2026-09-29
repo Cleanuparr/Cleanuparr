@@ -7,6 +7,7 @@ import {
   type SelectOption,
 } from '@ui';
 import { DownloadClientApi } from '@core/api/download-client.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
@@ -191,8 +192,8 @@ export class DownloadClientsComponent implements HasPendingChanges {
         this.toast.success(result.message || 'Connection successful');
         this.testing.set(false);
       },
-      error: () => {
-        this.toast.error('Connection test failed');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.testing.set(false);
       },
     });
@@ -227,8 +228,8 @@ export class DownloadClientsComponent implements HasPendingChanges {
           this.saving.set(false);
           this.clientsResource.reload();
         },
-        error: () => {
-          this.toast.error('Failed to update client');
+        error: (err: ApiError) => {
+          this.toast.error(err.message);
           this.saving.set(false);
         },
       });
@@ -253,8 +254,8 @@ export class DownloadClientsComponent implements HasPendingChanges {
           this.saving.set(false);
           this.clientsResource.reload();
         },
-        error: () => {
-          this.toast.error('Failed to add client');
+        error: (err: ApiError) => {
+          this.toast.error(err.message);
           this.saving.set(false);
         },
       });
@@ -277,7 +278,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
         this.toast.success('Client deleted');
         this.clientsResource.reload();
       },
-      error: () => this.toast.error('Failed to delete client'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
