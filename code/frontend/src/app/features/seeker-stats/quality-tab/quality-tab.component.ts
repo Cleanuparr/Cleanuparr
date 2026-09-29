@@ -195,19 +195,19 @@ export class QualityTabComponent {
     effect(() => {
       const err = this.scoresResource.error();
       if (err) {
-        this.toast.error(err.message);
+        this.toast.error(`Failed to load CF scores: ${err.message}`);
       }
     });
     effect(() => {
       const err = this.statsResource.error();
       if (err) {
-        this.toast.error(err.message);
+        this.toast.error(`Failed to load CF score stats: ${err.message}`);
       }
     });
     effect(() => {
       const err = this.instancesResource.error();
       if (err) {
-        this.toast.error(err.message);
+        this.toast.error(`Failed to load instances: ${err.message}`);
       }
     });
   }

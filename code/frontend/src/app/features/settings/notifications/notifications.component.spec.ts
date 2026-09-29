@@ -246,7 +246,7 @@ describe('NotificationsComponent', () => {
     expect(fixture.componentInstance.loadError()).toBe(true);
     expect(fixture.componentInstance.providers()).toEqual([]);
     expect(root(fixture).textContent).toContain('Could not connect to server');
-    expect(toast.error).toHaveBeenCalledWith('offline');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load notification providers: offline');
 
     api.getProviders.mockReturnValue(of({ providers: [DISCORD_PROVIDER] }));
     (root(fixture).querySelector('app-empty-state button') as HTMLButtonElement).click();

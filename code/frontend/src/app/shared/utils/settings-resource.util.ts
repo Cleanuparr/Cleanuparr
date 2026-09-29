@@ -1,4 +1,4 @@
-import { computed, effect, inject, ResourceRef, Signal } from '@angular/core';
+import { computed, effect, inject, ResourceRef, Signal, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 import { ToastService } from '@core/services/toast.service';
@@ -8,6 +8,8 @@ export interface SettingsResourceOptions<T, P> {
   /** Reactive params for the load call; re-runs the load whenever they change. */
   params?: () => P;
   load: (params: P) => Observable<T>;
+  /** Prefixes the backend message when the load fails. Evaluated lazily, at error time. */
+  errorMessage: string | (() => string);
 }
 
 export interface SettingsResource<T> {
@@ -39,7 +41,8 @@ export function createSettingsResource<T, P = void>(
   effect(() => {
     const err = resource.error();
     if (err) {
-      toast.error(err.message);
+      const message = options.errorMessage;
+      toast.error(`${typeof message === 'function' ? untracked(message) : message}: ${err.message}`);
     }
   });
 

@@ -188,7 +188,7 @@ describe('SeekerComponent', () => {
 
     expect(component.loadError()).toBe(true);
     expect(text(fixture)).toContain('Could not connect to server');
-    expect(toasts).toContain('error:boom');
+    expect(toasts).toContain('error:Failed to load seeker settings: boom');
     expect(fixture.nativeElement.querySelector('.settings-form')).toBeNull();
 
     (fixture.nativeElement.querySelector('app-empty-state button') as HTMLButtonElement).click();

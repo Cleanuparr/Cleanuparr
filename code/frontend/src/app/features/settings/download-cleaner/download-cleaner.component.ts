@@ -97,6 +97,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
   private readonly settings = createSettingsResource({
     load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load download cleaner settings',
   });
   private readonly configResource = this.settings.resource;
 

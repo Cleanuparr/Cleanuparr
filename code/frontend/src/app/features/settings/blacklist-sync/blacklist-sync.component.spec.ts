@@ -163,7 +163,7 @@ describe('BlacklistSyncComponent', () => {
     const { fixture, component, toast } = setup(CONFIG, api);
 
     expect(component.loadError()).toBe(true);
-    expect(toast.toasts().at(-1)?.message).toBe('offline');
+    expect(toast.toasts().at(-1)?.message).toBe('Failed to load blacklist sync settings: offline');
     expect(fixture.nativeElement.textContent).toContain('Could not connect');
 
     component.retry();

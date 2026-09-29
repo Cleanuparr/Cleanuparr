@@ -36,7 +36,7 @@ export class ApiKeyCardComponent {
         this.apiKey.set(result.apiKey);
         this.apiKeyRevealed.set(true);
       },
-      error: (err: ApiError) => this.toast.error(err.message),
+      error: (err: ApiError) => this.toast.error(`Failed to load API key: ${err.message}`),
     });
   }
 

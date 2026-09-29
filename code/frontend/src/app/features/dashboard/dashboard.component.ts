@@ -191,7 +191,7 @@ export class DashboardComponent {
         },
         error: (err: ApiError) => {
           this.loadingMoreManualEvents.set(false);
-          this.toast.error(err.message);
+          this.toast.error(`Failed to load more events: ${err.message}`);
         },
       });
   }

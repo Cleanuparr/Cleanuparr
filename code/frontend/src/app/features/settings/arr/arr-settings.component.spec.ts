@@ -387,7 +387,7 @@ describe('ArrSettingsComponent', () => {
 
     expect(component.loadError()).toBe(true);
     expect(component.instances()).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith('offline');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load Sonarr settings: offline');
     expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
 
     api.getConfig.mockReturnValue(of(CONFIG));

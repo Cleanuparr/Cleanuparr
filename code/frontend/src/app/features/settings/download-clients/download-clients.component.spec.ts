@@ -448,7 +448,7 @@ describe('DownloadClientsComponent', () => {
 
     expect(component.loadError()).toBe(true);
     expect(component.clients()).toEqual([]);
-    expect(toast.error).toHaveBeenCalledWith('offline');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load download clients: offline');
     expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
 
     api.getConfig.mockReturnValue(of(CONFIG));

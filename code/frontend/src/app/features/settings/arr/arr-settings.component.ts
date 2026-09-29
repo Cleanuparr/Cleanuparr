@@ -79,6 +79,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
   private readonly settings = createSettingsResource({
     params: () => this.type(),
     load: (type) => this.api.getConfig(type as ArrType),
+    errorMessage: () => `Failed to load ${this.displayName()} settings`,
   });
   private readonly configResource = this.settings.resource;
 

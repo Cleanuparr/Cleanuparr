@@ -31,6 +31,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
 
   private readonly settings = createSettingsResource({
     load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load blacklist sync settings',
   });
   private readonly configResource = this.settings.resource;
 

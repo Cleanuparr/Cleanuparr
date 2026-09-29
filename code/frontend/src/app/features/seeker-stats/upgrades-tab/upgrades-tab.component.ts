@@ -143,13 +143,13 @@ export class UpgradesTabComponent {
     effect(() => {
       const err = this.upgradesResource.error();
       if (err) {
-        this.toast.error(err.message);
+        this.toast.error(`Failed to load upgrades: ${err.message}`);
       }
     });
     effect(() => {
       const err = this.instancesResource.error();
       if (err) {
-        this.toast.error(err.message);
+        this.toast.error(`Failed to load instances: ${err.message}`);
       }
     });
   }

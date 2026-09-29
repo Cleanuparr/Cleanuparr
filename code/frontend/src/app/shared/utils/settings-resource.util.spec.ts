@@ -16,7 +16,7 @@ describe('createSettingsResource', () => {
 
     let settingsResource!: SettingsResource<number>;
     TestBed.runInInjectionContext(() => {
-      settingsResource = createSettingsResource<number, void>({ load });
+      settingsResource = createSettingsResource<number, void>({ load, errorMessage: 'Failed to load' });
     });
     TestBed.tick();
 
@@ -50,6 +50,22 @@ describe('createSettingsResource', () => {
 
     expect(settingsResource.loader.loading()).toBe(false);
     expect(settingsResource.loadError()).toBe(true);
-    expect(toast.error).toHaveBeenCalledWith('boom');
+    expect(toast.error).toHaveBeenCalledWith('Failed to load: boom');
+  });
+
+  it('evaluates a function error message lazily at error time', () => {
+    const errorMessage = vi.fn(() => 'Dynamic failure');
+    const toast = createToast();
+    TestBed.configureTestingModule({
+      providers: [{ provide: ToastService, useValue: toast }],
+    });
+
+    TestBed.runInInjectionContext(() => {
+      createSettingsResource<number, void>({ load: () => throwError(() => new Error('boom')), errorMessage });
+    });
+    TestBed.tick();
+
+    expect(errorMessage).toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('Dynamic failure: boom');
   });
 });

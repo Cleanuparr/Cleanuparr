@@ -113,7 +113,7 @@ describe('ApiKeyCardComponent', () => {
 
     expect(fixture.componentInstance.apiKeyRevealed()).toBe(false);
     expect(shownKey(fixture)).toBe('live****1234');
-    expect(toasts).toEqual(['error:boom']);
+    expect(toasts).toEqual(['error:Failed to load API key: boom']);
   });
 
   it('copies the revealed key to the clipboard', async () => {
