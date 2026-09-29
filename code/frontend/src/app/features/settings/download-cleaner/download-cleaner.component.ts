@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal, WritableSignal } from '@angular/core';
 import { form, min, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -23,7 +23,7 @@ import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, DownloadClientTypeName, SeedingRuleAction } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { createSettingsResource } from '@shared/utils/settings-resource.util';
-import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
+import { createDirtyTracker, DirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 import { SeedingRuleModalComponent } from './seeding-rule-modal.component';
 
@@ -378,11 +378,27 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         return;
       }
       untracked(() => {
+        this.clientSwitchCount++;
         this.unlinkedDirtyTracker.markSaved();
         this.deadTorrentDirtyTracker.markSaved();
         this.orphanedFilesDirtyTracker.markSaved();
       });
     });
+  }
+
+  private clientSwitchCount = 0;
+
+  /** Resyncs a model rehydrated from the pre-save snapshot when the user left and returned mid-save without editing. */
+  private applySavedClientModel<T>(
+    model: WritableSignal<T>,
+    tracker: DirtyTracker<T>,
+    switchCountAtSave: number,
+    value: T,
+  ): void {
+    if (this.clientSwitchCount !== switchCountAtSave && !tracker.dirty()) {
+      model.set(value);
+    }
+    tracker.markSaved(value);
   }
 
   readonly hasGlobalErrors = computed(() =>
@@ -503,6 +519,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       ignoredRootDirs: m.ignoredRootDirs,
       categories: m.categories,
     };
+    const switchCountAtSave = this.clientSwitchCount;
 
     this.unlinkedSaving.set(true);
     this.api.updateUnlinkedConfig(clientId, dto).subscribe({
@@ -513,7 +530,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         setTimeout(() => this.unlinkedSaved.set(false), SAVED_FLASH_MS);
         this.unlinkedSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
         if (this.selectedClientId() === clientId) {
-          this.unlinkedDirtyTracker.markSaved(m);
+          this.applySavedClientModel(this.unlinkedModel, this.unlinkedDirtyTracker, switchCountAtSave, m);
         }
       },
       error: (err: ApiError) => {
@@ -538,6 +555,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       maxStrikes: m.maxStrikes ?? 0,
       categories: m.categories,
     };
+    const switchCountAtSave = this.clientSwitchCount;
 
     this.deadTorrentSaving.set(true);
     this.api.updateDeadTorrentConfig(clientId, dto).subscribe({
@@ -548,7 +566,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         setTimeout(() => this.deadTorrentSaved.set(false), SAVED_FLASH_MS);
         this.deadTorrentSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
         if (this.selectedClientId() === clientId) {
-          this.deadTorrentDirtyTracker.markSaved(m);
+          this.applySavedClientModel(this.deadTorrentModel, this.deadTorrentDirtyTracker, switchCountAtSave, m);
         }
       },
       error: (err: ApiError) => {
@@ -574,6 +592,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       minFileAgeHours: m.minFileAgeHours ?? 24,
       purgeAfterHours: m.purgeAfterHours ?? undefined,
     };
+    const switchCountAtSave = this.clientSwitchCount;
 
     this.orphanedFilesSaving.set(true);
     this.api.updateOrphanedFilesConfig(clientId, dto).subscribe({
@@ -584,7 +603,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         setTimeout(() => this.orphanedFilesSaved.set(false), SAVED_FLASH_MS);
         this.orphanedFilesSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
         if (this.selectedClientId() === clientId) {
-          this.orphanedFilesDirtyTracker.markSaved(m);
+          this.applySavedClientModel(this.orphanedFilesModel, this.orphanedFilesDirtyTracker, switchCountAtSave, m);
         }
       },
       error: (err: ApiError) => {
