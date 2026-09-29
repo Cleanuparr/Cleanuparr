@@ -22,6 +22,7 @@ import {
   formatEventType,
 } from '@shared/utils/event-display.util';
 import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.component';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 const POLL_INTERVAL_MS = 10_000;
 
@@ -175,7 +176,7 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   copyEvent(event: AppEvent): void {
     const text = `[${event.timestamp}] [${event.severity}] ${event.eventType}: ${event.message}`;
-    navigator.clipboard.writeText(text).then(
+    copyToClipboard(text).then(
       () => this.toast.success('Event copied'),
       () => this.toast.error('Failed to copy event'),
     );

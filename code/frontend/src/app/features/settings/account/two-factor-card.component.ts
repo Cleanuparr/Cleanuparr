@@ -6,6 +6,7 @@ import { AccountApi } from '@core/api/account.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 @Component({
   selector: 'app-two-factor-card',
@@ -78,7 +79,7 @@ export class TwoFactorCardComponent {
 
   copyRecoveryCodes(): void {
     const codes = this.newRecoveryCodes().join('\n');
-    navigator.clipboard.writeText(codes).then(
+    copyToClipboard(codes).then(
       () => this.toast.success('Recovery codes copied to clipboard'),
       () => this.toast.error('Failed to copy recovery codes'),
     );

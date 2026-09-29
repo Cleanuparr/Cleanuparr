@@ -13,6 +13,7 @@ import { LogEntry } from '@core/models/signalr.models';
 import { LogEventLevel } from '@shared/models/enums';
 import { logLevelLabel, logSeverity } from '@shared/utils/log-display.util';
 import { jobDisplayName } from '@shared/utils/job-display.util';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 const LOG_LEVELS: SelectOption[] = [
   { label: 'All Levels', value: '' },
@@ -142,7 +143,7 @@ export class LogsComponent implements OnInit {
 
   copyLog(log: LogEntry): void {
     const text = `[${log.timestamp}] [${log.level}] ${log.category ? `[${log.category}] ` : ''}${log.message}${log.exception ? '\n' + log.exception : ''}`;
-    navigator.clipboard.writeText(text).then(
+    copyToClipboard(text).then(
       () => this.toast.success('Log copied'),
       () => this.toast.error('Failed to copy log'),
     );
@@ -152,7 +153,7 @@ export class LogsComponent implements OnInit {
     const text = this.filteredLogs()
       .map((l) => `[${l.timestamp}] [${l.level}] ${l.category ? `[${l.category}] ` : ''}${l.message}`)
       .join('\n');
-    navigator.clipboard.writeText(text).then(
+    copyToClipboard(text).then(
       () => this.toast.success(`${this.filteredLogs().length} logs copied`),
       () => this.toast.error('Failed to copy logs'),
     );

@@ -10,6 +10,7 @@ import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerCopy, tablerShieldLock } from '@ng-icons/tabler-icons';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { forkJoin, timer } from 'rxjs';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 @Component({
   selector: 'app-setup',
@@ -167,7 +168,7 @@ export class SetupComponent {
 
   copyRecoveryCodes(): void {
     const text = this.recoveryCodes().join('\n');
-    navigator.clipboard.writeText(text).then(
+    copyToClipboard(text).then(
       () => this.toast.success('Recovery codes copied to clipboard'),
       () => this.toast.error('Failed to copy recovery codes'),
     );

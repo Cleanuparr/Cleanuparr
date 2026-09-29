@@ -4,6 +4,7 @@ import { AccountApi } from '@core/api/account.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { copyToClipboard } from '@shared/utils/clipboard.util';
 
 @Component({
   selector: 'app-api-key-card',
@@ -41,7 +42,7 @@ export class ApiKeyCardComponent {
   }
 
   copyApiKey(): void {
-    navigator.clipboard.writeText(this.apiKey()).then(
+    copyToClipboard(this.apiKey()).then(
       () => this.toast.success('API key copied to clipboard'),
       () => this.toast.error('Failed to copy API key'),
     );
