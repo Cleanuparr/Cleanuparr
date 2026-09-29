@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { form, min, max, FormField } from '@angular/forms/signals';
 import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -15,8 +14,8 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { UpdateSeekerConfig } from '@shared/models/seeker-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
-import { DeferredLoader } from '@shared/utils/loading.util';
-import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
 import { SelectionStrategy } from '@shared/models/enums';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
@@ -98,14 +97,16 @@ export class SeekerComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
 
-  private readonly configResource = rxResource({
-    stream: () => this.api.getConfig(),
+  private readonly settings = createSettingsResource({
+    load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load seeker settings',
   });
+  private readonly configResource = this.settings.resource;
 
   readonly intervalOptions = INTERVAL_OPTIONS;
   readonly strategyOptions = STRATEGY_OPTIONS;
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.configResource.error());
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -127,12 +128,6 @@ export class SeekerComponent implements HasPendingChanges {
 
   readonly instances = signal<InstanceState[]>([]);
 
-  private readonly snapshotSource = computed(() => ({ model: this.model(), instances: this.instances() }));
-  private readonly dirtyTracker = createDirtyTracker(this.snapshotSource, (v) => ({
-    ...v.model,
-    instances: [...v.instances].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
-  }));
-
   readonly strategyDescription = computed(() => STRATEGY_DESCRIPTIONS[this.model().selectionStrategy] ?? '');
 
   readonly instanceError = computed(() => {
@@ -143,6 +138,13 @@ export class SeekerComponent implements HasPendingChanges {
   });
 
   readonly hasErrors = computed(() => this.seekerForm().invalid() || !!this.instanceError());
+
+  private readonly snapshotSource = computed(() => ({ settings: this.model(), instances: this.instances() }));
+  private readonly dirtyTracker = createDirtyTracker(this.snapshotSource, ({ settings, instances }) => ({
+    ...settings,
+    instances: [...instances].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
+  }));
+  readonly dirty = this.dirtyTracker.dirty;
 
   constructor() {
     effect(() => {
@@ -177,24 +179,10 @@ export class SeekerComponent implements HasPendingChanges {
         this.dirtyTracker.markSaved();
       });
     });
-
-    effect(() => {
-      if (this.configResource.error()) {
-        this.toast.error('Failed to load seeker settings');
-      }
-    });
-
-    effect(() => {
-      if (this.configResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
-    });
   }
 
   retry(): void {
-    this.configResource.reload();
+    this.settings.retry();
   }
 
   readonly confirmRoundRobin = async (newValue: boolean): Promise<boolean> => {
@@ -257,14 +245,15 @@ export class SeekerComponent implements HasPendingChanges {
       })),
     };
 
+    const snapshot = this.snapshotSource();
     this.saving.set(true);
     this.api.updateConfig(config).subscribe({
       next: () => {
         this.toast.success('Seeker settings saved');
         this.saving.set(false);
         this.saved.set(true);
-        setTimeout(() => this.saved.set(false), 1500);
-        this.dirtyTracker.markSaved();
+        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
+        this.dirtyTracker.markSaved(snapshot);
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400
@@ -274,8 +263,6 @@ export class SeekerComponent implements HasPendingChanges {
       },
     });
   }
-
-  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty();

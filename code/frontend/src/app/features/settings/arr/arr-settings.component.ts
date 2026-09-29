@@ -105,6 +105,11 @@ export class ArrSettingsComponent implements HasPendingChanges {
 
   readonly hasModalErrors = computed(() => this.instanceForm().invalid());
 
+  /** JSON snapshot of the model as loaded when the modal opened, for dirty tracking. */
+  private readonly openSnapshot = signal('');
+  private readonly modalDirty = computed(() =>
+    this.modalVisible() && JSON.stringify(this.instanceModel()) !== this.openSnapshot());
+
   constructor() {
     effect(() => {
       const options = this.versionOptions();
@@ -126,6 +131,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
       version: options.length > 0 ? (options[0].value as number) : 3,
       enabled: true,
     });
+    this.openSnapshot.set(JSON.stringify(this.instanceModel()));
     this.modalVisible.set(true);
   }
 
@@ -139,6 +145,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
       version: instance.version,
       enabled: instance.enabled,
     });
+    this.openSnapshot.set(JSON.stringify(this.instanceModel()));
     this.modalVisible.set(true);
   }
 
@@ -217,6 +224,6 @@ export class ArrSettingsComponent implements HasPendingChanges {
   }
 
   hasPendingChanges(): boolean {
-    return false;
+    return this.modalDirty();
   }
 }

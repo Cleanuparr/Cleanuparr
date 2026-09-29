@@ -18,9 +18,9 @@ import { SlowRuleModalComponent } from './slow-rule-modal.component';
 import { StallRuleModalComponent } from './stall-rule-modal.component';
 import { ScheduleUnit, PatternMode } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { DeferredLoader } from '@shared/utils/loading.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, resolveSchedule } from '@shared/utils/schedule.util';
-import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { analyzeCoverage } from './coverage-analysis.util';
 
 const PATTERN_MODE_OPTIONS: SelectOption[] = [
@@ -77,9 +77,11 @@ export class QueueCleanerComponent implements HasPendingChanges {
 
   readonly patternModeOptions = PATTERN_MODE_OPTIONS;
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
-  private readonly configResource = rxResource({
-    stream: () => this.api.getConfig(),
+  private readonly settings = createSettingsResource({
+    load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load queue cleaner settings',
   });
+  private readonly configResource = this.settings.resource;
   private readonly stallRulesResource = rxResource({
     stream: () => this.api.getStallRules(),
     defaultValue: [] as StallRule[],
@@ -89,8 +91,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
     defaultValue: [] as SlowRule[],
   });
 
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.configResource.error());
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -113,8 +115,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
     failedForceImportMaxTries: 3,
     metadataMaxStrikes: 3,
   });
-
-  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly failedSubFieldsDisabled = computed(() => this.model().failedMaxStrikes === 0);
 
@@ -190,6 +190,9 @@ export class QueueCleanerComponent implements HasPendingChanges {
   readonly slowModalVisible = signal(false);
   readonly editingSlowRule = signal<SlowRule | null>(null);
 
+  private readonly dirtyTracker = createDirtyTracker(this.model);
+  readonly dirty = this.dirtyTracker.dirty;
+
   constructor() {
     effect(() => {
       const unit = this.model().scheduleUnit;
@@ -251,20 +254,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
     });
 
     effect(() => {
-      if (this.configResource.error()) {
-        this.toast.error('Failed to load queue cleaner settings');
-      }
-    });
-
-    effect(() => {
-      if (this.configResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
-    });
-
-    effect(() => {
       if (this.stallRulesResource.error()) {
         this.toast.error('Failed to load stall rules');
       }
@@ -298,7 +287,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
   private config: QueueCleanerConfig | null = null;
 
   retry(): void {
-    this.configResource.reload();
+    this.settings.retry();
     this.stallRulesResource.reload();
     this.slowRulesResource.reload();
   }
@@ -392,8 +381,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
         this.toast.success('Queue cleaner settings saved');
         this.saving.set(false);
         this.saved.set(true);
-        setTimeout(() => this.saved.set(false), 1500);
-        this.dirtyTracker.markSaved();
+        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
+        this.dirtyTracker.markSaved(m);
       },
       error: () => {
         this.toast.error('Failed to save queue cleaner settings');
@@ -401,8 +390,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
       },
     });
   }
-
-  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty()

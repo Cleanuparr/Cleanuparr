@@ -6,7 +6,7 @@ export interface FilterDrawer<T> {
   readonly applied: Signal<T>;
   /** Filters being edited in the open drawer, discarded on close without apply. */
   readonly draft: WritableSignal<T>;
-  /** Whether the drawer is open. Writable so it can drive a `[(visible)]` two-way binding. */
+  /** Whether the drawer is open. Writable so the drawer can be dismissed via backdrop/Escape. */
   readonly drawerOpen: WritableSignal<boolean>;
   /** Seeds the draft from the current applied filters and opens the drawer. */
   open(): void;

@@ -1,5 +1,4 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
 import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent } from '@ui';
@@ -8,8 +7,8 @@ import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { DeferredLoader } from '@shared/utils/loading.util';
-import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
 
 interface BlacklistSyncFormModel {
   enabled: boolean;
@@ -28,18 +27,21 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   private readonly api = inject(BlacklistSyncApi);
   private readonly toast = inject(ToastService);
 
-  private readonly configResource = rxResource({
-    stream: () => this.api.getConfig(),
-  });
+  private readonly model = signal<BlacklistSyncFormModel>({ enabled: false, blacklistPath: '' });
 
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.configResource.error());
+  private readonly settings = createSettingsResource({
+    load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load blacklist sync settings',
+  });
+  private readonly configResource = this.settings.resource;
+
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  private readonly model = signal<BlacklistSyncFormModel>({ enabled: false, blacklistPath: '' });
-
   private readonly dirtyTracker = createDirtyTracker(this.model);
+  readonly dirty = this.dirtyTracker.dirty;
 
   readonly bsForm = form(this.model, (p) => {
     required(p.blacklistPath, {
@@ -61,24 +63,10 @@ export class BlacklistSyncComponent implements HasPendingChanges {
         this.dirtyTracker.markSaved();
       });
     });
-
-    effect(() => {
-      if (this.configResource.error()) {
-        this.toast.error('Failed to load blacklist sync settings');
-      }
-    });
-
-    effect(() => {
-      if (this.configResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
-    });
   }
 
   retry(): void {
-    this.configResource.reload();
+    this.settings.retry();
   }
 
   save(): void {
@@ -94,8 +82,8 @@ export class BlacklistSyncComponent implements HasPendingChanges {
         this.toast.success('Blacklist sync settings saved');
         this.saving.set(false);
         this.saved.set(true);
-        setTimeout(() => this.saved.set(false), 1500);
-        this.dirtyTracker.markSaved();
+        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
+        this.dirtyTracker.markSaved(m);
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save blacklist sync settings');
@@ -103,8 +91,6 @@ export class BlacklistSyncComponent implements HasPendingChanges {
       },
     });
   }
-
-  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty();

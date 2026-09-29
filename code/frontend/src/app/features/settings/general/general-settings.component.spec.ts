@@ -71,8 +71,10 @@ describe('GeneralSettingsComponent', () => {
     TestBed.inject(ConfirmService).state.set(null);
   });
 
-  function setup(config: GeneralConfig = CONFIG): Setup {
-    const api = createApi(config);
+  function setup(config: GeneralConfig = CONFIG, api?: ReturnType<typeof createApi>): Setup {
+    if (!api) {
+      api = createApi(config);
+    }
 
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), { provide: GeneralConfigApi, useValue: api }],
@@ -338,5 +340,27 @@ describe('GeneralSettingsComponent', () => {
     expect(component.saving()).toBe(false);
     expect(component.saved()).toBe(false);
     expect(component.dirty()).toBe(true);
+  });
+
+  it('shows the load error and recovers on retry', () => {
+    const api = {
+      get: vi.fn()
+        .mockReturnValueOnce(throwError(() => new Error('offline')))
+        .mockReturnValue(of(CONFIG)),
+      update: vi.fn(() => of(undefined)),
+      purgeStrikes: vi.fn(() => of({ deletedStrikes: 12, deletedItems: 3 })),
+    };
+    const { fixture, component, toast } = setup(CONFIG, api);
+
+    expect(component.loadError()).toBe(true);
+    expect(toast.toasts().at(-1)?.message).toBe('Failed to load general settings');
+    expect(fixture.nativeElement.textContent).toContain('Could not connect');
+
+    component.retry();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(component.genForm.dryRun().value()).toBe(true);
+    expect(api.get).toHaveBeenCalledTimes(2);
   });
 });

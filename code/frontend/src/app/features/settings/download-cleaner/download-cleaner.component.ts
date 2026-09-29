@@ -1,5 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal, WritableSignal } from '@angular/core';
 import { form, min, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -23,8 +22,8 @@ import {
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, DownloadClientTypeName, SeedingRuleAction } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { DeferredLoader } from '@shared/utils/loading.util';
-import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker, DirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 import { SeedingRuleModalComponent } from './seeding-rule-modal.component';
 
@@ -96,12 +95,14 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
 
-  private readonly configResource = rxResource({
-    stream: () => this.api.getConfig(),
+  private readonly settings = createSettingsResource({
+    load: () => this.api.getConfig(),
+    errorMessage: 'Failed to load download cleaner settings',
   });
+  private readonly configResource = this.settings.resource;
 
-  readonly loader = new DeferredLoader();
-  readonly loadError = computed(() => !!this.configResource.error());
+  readonly loader = this.settings.loader;
+  readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
@@ -123,8 +124,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     scheduleUnit: ScheduleUnit.Minutes,
     ignoredDownloads: [],
   });
-
-  private readonly dirtyTracker = createDirtyTracker(this.model);
 
   readonly dcForm = form(this.model, (p) => {
     validate(p.scheduleEvery, ({ value, valueOf }) => {
@@ -260,6 +259,18 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     min(p.purgeAfterHours, 1);
   });
 
+  private readonly dirtyTracker = createDirtyTracker(this.model);
+  readonly dirty = this.dirtyTracker.dirty;
+
+  private readonly unlinkedDirtyTracker = createDirtyTracker(this.unlinkedModel);
+  readonly unlinkedDirty = this.unlinkedDirtyTracker.dirty;
+
+  private readonly deadTorrentDirtyTracker = createDirtyTracker(this.deadTorrentModel);
+  readonly deadTorrentDirty = this.deadTorrentDirtyTracker.dirty;
+
+  private readonly orphanedFilesDirtyTracker = createDirtyTracker(this.orphanedFilesModel);
+  readonly orphanedFilesDirty = this.orphanedFilesDirtyTracker.dirty;
+
   private toUnlinkedModel(c: UnlinkedConfigModel | null): UnlinkedFormModel {
     const d = c ?? createDefaultUnlinkedConfig();
     return {
@@ -358,47 +369,37 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       });
     });
 
+    // Re-syncs the three per-client trackers' saved baseline whenever the selected client
+    // changes: the linkedSignal models above already recompute from the per-client snapshot
+    // Records, so this just captures that recomputed value as "clean" for the new client.
     effect(() => {
-      if (this.configResource.error()) {
-        this.toast.error('Failed to load download cleaner settings');
+      const id = this.selectedClientId();
+      if (!id) {
+        return;
       }
-    });
-
-    effect(() => {
-      if (this.configResource.isLoading()) {
-        this.loader.start();
-      } else {
-        this.loader.stop();
-      }
+      untracked(() => {
+        this.clientSwitchCount++;
+        this.unlinkedDirtyTracker.markSaved();
+        this.deadTorrentDirtyTracker.markSaved();
+        this.orphanedFilesDirtyTracker.markSaved();
+      });
     });
   }
 
-  readonly unlinkedDirty = computed(() => {
-    const id = this.selectedClientId();
-    if (!id) {
-      return false;
-    }
-    const saved = this.unlinkedSnapshots()[id] ?? JSON.stringify(this.toUnlinkedModel(null));
-    return saved !== JSON.stringify(this.unlinkedModel());
-  });
+  private clientSwitchCount = 0;
 
-  readonly deadTorrentDirty = computed(() => {
-    const id = this.selectedClientId();
-    if (!id) {
-      return false;
+  /** Resyncs a model rehydrated from the pre-save snapshot when the user left and returned mid-save without editing. */
+  private applySavedClientModel<T>(
+    model: WritableSignal<T>,
+    tracker: DirtyTracker<T>,
+    switchCountAtSave: number,
+    value: T,
+  ): void {
+    if (this.clientSwitchCount !== switchCountAtSave && !tracker.dirty()) {
+      model.set(value);
     }
-    const saved = this.deadTorrentSnapshots()[id] ?? JSON.stringify(this.toDeadTorrentModel(null));
-    return saved !== JSON.stringify(this.deadTorrentModel());
-  });
-
-  readonly orphanedFilesDirty = computed(() => {
-    const id = this.selectedClientId();
-    if (!id) {
-      return false;
-    }
-    const saved = this.orphanedFilesSnapshots()[id] ?? JSON.stringify(this.toOrphanedFilesModel(null));
-    return saved !== JSON.stringify(this.orphanedFilesModel());
-  });
+    tracker.markSaved(value);
+  }
 
   readonly hasGlobalErrors = computed(() =>
     this.dcForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
@@ -407,7 +408,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   private config: DownloadCleanerConfig | null = null;
 
   retry(): void {
-    this.configResource.reload();
+    this.settings.retry();
   }
 
   // --- Seeding rule modal CRUD ---
@@ -518,6 +519,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       ignoredRootDirs: m.ignoredRootDirs,
       categories: m.categories,
     };
+    const switchCountAtSave = this.clientSwitchCount;
 
     this.unlinkedSaving.set(true);
     this.api.updateUnlinkedConfig(clientId, dto).subscribe({
@@ -525,8 +527,11 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.toast.success('Unlinked config saved');
         this.unlinkedSaving.set(false);
         this.unlinkedSaved.set(true);
-        setTimeout(() => this.unlinkedSaved.set(false), 1500);
+        setTimeout(() => this.unlinkedSaved.set(false), SAVED_FLASH_MS);
         this.unlinkedSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
+        if (this.selectedClientId() === clientId) {
+          this.applySavedClientModel(this.unlinkedModel, this.unlinkedDirtyTracker, switchCountAtSave, m);
+        }
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save unlinked config');
@@ -550,6 +555,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       maxStrikes: m.maxStrikes ?? 0,
       categories: m.categories,
     };
+    const switchCountAtSave = this.clientSwitchCount;
 
     this.deadTorrentSaving.set(true);
     this.api.updateDeadTorrentConfig(clientId, dto).subscribe({
@@ -557,8 +563,11 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.toast.success('Dead torrent config saved');
         this.deadTorrentSaving.set(false);
         this.deadTorrentSaved.set(true);
-        setTimeout(() => this.deadTorrentSaved.set(false), 1500);
+        setTimeout(() => this.deadTorrentSaved.set(false), SAVED_FLASH_MS);
         this.deadTorrentSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
+        if (this.selectedClientId() === clientId) {
+          this.applySavedClientModel(this.deadTorrentModel, this.deadTorrentDirtyTracker, switchCountAtSave, m);
+        }
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save dead torrent config');
@@ -583,6 +592,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       minFileAgeHours: m.minFileAgeHours ?? 24,
       purgeAfterHours: m.purgeAfterHours ?? undefined,
     };
+    const switchCountAtSave = this.clientSwitchCount;
 
     this.orphanedFilesSaving.set(true);
     this.api.updateOrphanedFilesConfig(clientId, dto).subscribe({
@@ -590,8 +600,11 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.toast.success('Orphaned files settings saved');
         this.orphanedFilesSaving.set(false);
         this.orphanedFilesSaved.set(true);
-        setTimeout(() => this.orphanedFilesSaved.set(false), 1500);
+        setTimeout(() => this.orphanedFilesSaved.set(false), SAVED_FLASH_MS);
         this.orphanedFilesSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
+        if (this.selectedClientId() === clientId) {
+          this.applySavedClientModel(this.orphanedFilesModel, this.orphanedFilesDirtyTracker, switchCountAtSave, m);
+        }
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files settings');
@@ -626,8 +639,8 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.toast.success('Download cleaner settings saved');
         this.saving.set(false);
         this.saved.set(true);
-        setTimeout(() => this.saved.set(false), 1500);
-        this.dirtyTracker.markSaved();
+        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
+        this.dirtyTracker.markSaved(m);
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400
@@ -637,8 +650,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       },
     });
   }
-
-  readonly dirty = this.dirtyTracker.dirty;
 
   hasPendingChanges(): boolean {
     return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty()

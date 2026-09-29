@@ -36,8 +36,10 @@ describe('BlacklistSyncComponent', () => {
     TestBed.inject(ToastService).clear();
   });
 
-  function setup(config: BlacklistSyncConfig = CONFIG): Setup {
-    const api = createApi(config);
+  function setup(config: BlacklistSyncConfig = CONFIG, api?: ReturnType<typeof createApi>): Setup {
+    if (!api) {
+      api = createApi(config);
+    }
 
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), { provide: BlacklistSyncApi, useValue: api }],
@@ -149,5 +151,26 @@ describe('BlacklistSyncComponent', () => {
     fixture.detectChanges();
 
     expect(toast.toasts().at(-1)?.message).toBe('Failed to save blacklist sync settings');
+  });
+
+  it('shows the load error and recovers on retry', () => {
+    const api = {
+      getConfig: vi.fn()
+        .mockReturnValueOnce(throwError(() => new Error('offline')))
+        .mockReturnValue(of(CONFIG)),
+      updateConfig: vi.fn(() => of(undefined)),
+    };
+    const { fixture, component, toast } = setup(CONFIG, api);
+
+    expect(component.loadError()).toBe(true);
+    expect(toast.toasts().at(-1)?.message).toBe('Failed to load blacklist sync settings');
+    expect(fixture.nativeElement.textContent).toContain('Could not connect');
+
+    component.retry();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(component.bsForm.enabled().value()).toBe(true);
+    expect(api.getConfig).toHaveBeenCalledTimes(2);
   });
 });
