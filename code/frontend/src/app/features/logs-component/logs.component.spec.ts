@@ -240,6 +240,21 @@ describe('LogsComponent', () => {
     expect(toastSuccess).toHaveBeenCalledWith('3 logs copied');
   });
 
+  it('counts only the logs that were copied when a log arrives mid-copy', async () => {
+    const { fixture, logsSignal, toastSuccess } = setup();
+    let finishWrite!: () => void;
+    stubClipboard(() => new Promise<void>((resolve) => {
+      finishWrite = resolve;
+    }));
+
+    fixture.componentInstance.copyAllLogs();
+    logsSignal.update((logs) => [...logs, { ...logs[0], message: 'late arrival' }]);
+    finishWrite();
+    await Promise.resolve();
+
+    expect(toastSuccess).toHaveBeenCalledWith('3 logs copied');
+  });
+
   it('shows error toast when copying all logs fails', async () => {
     const { fixture, toastError } = setup();
     stubClipboard(vi.fn(() => Promise.reject(new Error('copy failed'))));

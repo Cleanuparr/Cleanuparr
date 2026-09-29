@@ -150,11 +150,12 @@ export class LogsComponent implements OnInit {
   }
 
   copyAllLogs(): void {
-    const text = this.filteredLogs()
+    const logs = this.filteredLogs();
+    const text = logs
       .map((l) => `[${l.timestamp}] [${l.level}] ${l.category ? `[${l.category}] ` : ''}${l.message}`)
       .join('\n');
     copyToClipboard(text).then(
-      () => this.toast.success(`${this.filteredLogs().length} logs copied`),
+      () => this.toast.success(`${logs.length} logs copied`),
       () => this.toast.error('Failed to copy logs'),
     );
   }
