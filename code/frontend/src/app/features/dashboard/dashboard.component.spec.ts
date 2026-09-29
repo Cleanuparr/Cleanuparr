@@ -86,9 +86,12 @@ describe('DashboardComponent', () => {
     storedOrder?: string;
     cfStats?: CfScoreStats | null;
     manualEventsError?: ApiError;
+    manualEventsErrorFromCall?: number;
     dismissManualEventError?: ApiError;
     dismissAllManualEventsError?: ApiError;
     triggerJobError?: ApiError;
+    cfScoreStatsError?: ApiError;
+    cfScoreUpgradesError?: ApiError;
   } = {}): Harness {
     localStorage.clear();
     if (options.storedOrder !== undefined) {
@@ -102,6 +105,7 @@ describe('DashboardComponent', () => {
     const pages = [...(options.pages ?? [{ items: [], totalCount: 0 }])];
     const confirmState = { answer: true, asked: 0 };
     let resolveAll = 0;
+    let getManualEventsCallCount = 0;
     const toastErrorSpy = vi.fn();
 
     TestBed.configureTestingModule({
@@ -127,7 +131,9 @@ describe('DashboardComponent', () => {
           useValue: {
             getManualEvents: (filter: ManualEventFilter) => {
               requests.push(filter);
-              if (options.manualEventsError) {
+              getManualEventsCallCount += 1;
+              const shouldFail = options.manualEventsError && (!options.manualEventsErrorFromCall || getManualEventsCallCount >= options.manualEventsErrorFromCall);
+              if (shouldFail) {
                 return throwError(() => options.manualEventsError);
               }
               const page = pages.shift() ?? { items: [], totalCount: 0 };
@@ -173,8 +179,8 @@ describe('DashboardComponent', () => {
         {
           provide: CfScoreApi,
           useValue: {
-            getStats: () => of(options.cfStats ?? null),
-            getRecentUpgrades: () => of({ items: [], page: 1, pageSize: 5, totalCount: 0, totalPages: 0 }),
+            getStats: () => (options.cfScoreStatsError ? throwError(() => options.cfScoreStatsError) : of(options.cfStats ?? null)),
+            getRecentUpgrades: () => (options.cfScoreUpgradesError ? throwError(() => options.cfScoreUpgradesError) : of({ items: [], page: 1, pageSize: 5, totalCount: 0, totalPages: 0 })),
           },
         },
         {
@@ -406,19 +412,24 @@ describe('DashboardComponent', () => {
   it('toasts the backend message when loading more events fails', () => {
     const err = new ApiError('network timeout');
     const firstPage = manualEventPage('p1', 20);
-    const { fixture, toastError } = setup({
+    const { fixture, requests, toastError } = setup({
       pages: [
         { items: firstPage, totalCount: 30 },
+        { items: manualEventPage('p2', 5, 20), totalCount: 30 },
       ],
       manualEventsError: err,
+      manualEventsErrorFromCall: 2,
     });
     const component = fixture.componentInstance;
+
+    expect(requests).toHaveLength(1);
 
     component.manualEventIndex.set(19);
     fixture.detectChanges();
     component.nextManualEvent();
     fixture.detectChanges();
 
+    expect(requests).toHaveLength(2);
     expect(toastError).toHaveBeenCalledWith('Failed to load more events: network timeout');
   });
 
@@ -454,5 +465,17 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
 
     expect(toastError).toHaveBeenCalledWith('job already running');
+  });
+
+  it('renders without throwing when cf score stats load fails and exposes null', () => {
+    const { fixture } = setup({ cfScoreStatsError: new ApiError('cf score error') });
+
+    expect(fixture.componentInstance.cfScoreStats()).toBeNull();
+  });
+
+  it('renders without throwing when cf score upgrades load fails and exposes empty array', () => {
+    const { fixture } = setup({ cfScoreUpgradesError: new ApiError('upgrades error') });
+
+    expect(fixture.componentInstance.cfScoreUpgrades()).toEqual([]);
   });
 });

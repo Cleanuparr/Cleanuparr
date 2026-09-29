@@ -1,9 +1,10 @@
 vi.mock('@unovis/angular', async () => (await import('../../../../testing/unovis.stub')).createUnovisStub());
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { EventsApi } from '@core/api/events.api';
 import { EventTypeTimelineResponse } from '@core/models/event.models';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { EventsStatsCardComponent } from './events-stats-card.component';
 
 const TIMELINE: EventTypeTimelineResponse = {
@@ -35,14 +36,14 @@ describe('EventsStatsCardComponent', () => {
     vi.unstubAllGlobals();
   });
 
-  function setup(timeline: EventTypeTimelineResponse = TIMELINE): ComponentFixture<EventsStatsCardComponent> {
+  function setup(options: { timeline?: EventTypeTimelineResponse; timelineError?: boolean } = {}): ComponentFixture<EventsStatsCardComponent> {
     vi.stubGlobal('matchMedia', () => ({ matches: false }));
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: EventsApi,
-          useValue: { getEventTypeTimeline: () => of(timeline) },
+          useValue: { getEventTypeTimeline: () => (options.timelineError ? throwError(() => new ApiError('timeline error')) : of(options.timeline ?? TIMELINE)) },
         },
       ],
     });
@@ -61,7 +62,7 @@ describe('EventsStatsCardComponent', () => {
   });
 
   it('resolves a tie to the first type in the declared order', () => {
-    const fixture = setup(TIED_TIMELINE);
+    const fixture = setup({ timeline: TIED_TIMELINE });
 
     expect(fixture.componentInstance.current()).toBe('StalledStrike');
   });
@@ -96,9 +97,16 @@ describe('EventsStatsCardComponent', () => {
   });
 
   it('uses a unit y domain for an all-zero series instead of a degenerate one', () => {
-    const fixture = setup(ZEROED_TIMELINE);
+    const fixture = setup({ timeline: ZEROED_TIMELINE });
 
     expect(fixture.componentInstance.yDomain()).toEqual([0, 1]);
     expect(fixture.componentInstance.yBaseline()).toBe(0);
+  });
+
+  it('renders without throwing when timeline load fails and exposes empty arrays', () => {
+    const fixture = setup({ timelineError: true });
+
+    expect(fixture.componentInstance.data()).toEqual([]);
+    expect(fixture.componentInstance.allTypes()).toEqual([]);
   });
 });

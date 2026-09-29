@@ -2,6 +2,7 @@ import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { AppHubService } from '@core/realtime/app-hub.service';
+import { ToastService } from '@core/services/toast.service';
 import { LogEntry } from '@core/models/signalr.models';
 import { LogsComponent } from './logs.component';
 import { IntersectionObserverStub } from '../../../testing/intersection-observer.stub';
@@ -45,13 +46,23 @@ const LOGS: LogEntry[] = [
 describe('LogsComponent', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    delete (navigator as { clipboard?: Clipboard }).clipboard;
   });
+
+  function stubClipboard(writeText: () => Promise<void>): void {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+  }
 
   function setup(
     logs: LogEntry[] = LOGS,
     queryParams: Record<string, string> = {},
-  ): { fixture: ComponentFixture<LogsComponent>; logsSignal: WritableSignal<LogEntry[]> } {
+  ): { fixture: ComponentFixture<LogsComponent>; logsSignal: WritableSignal<LogEntry[]>; toastSuccess: ReturnType<typeof vi.fn>; toastError: ReturnType<typeof vi.fn> } {
     const logsSignal = signal(logs);
+    const toastSuccessSpy = vi.fn();
+    const toastErrorSpy = vi.fn();
     vi.stubGlobal('IntersectionObserver', IntersectionObserverStub);
 
     TestBed.configureTestingModule({
@@ -69,12 +80,16 @@ describe('LogsComponent', () => {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: convertToParamMap(queryParams) } },
         },
+        {
+          provide: ToastService,
+          useValue: { success: toastSuccessSpy, error: toastErrorSpy },
+        },
       ],
     });
 
     const fixture = TestBed.createComponent(LogsComponent);
     fixture.detectChanges();
-    return { fixture, logsSignal };
+    return { fixture, logsSignal, toastSuccess: toastSuccessSpy, toastError: toastErrorSpy };
   }
 
   function messages(fixture: ComponentFixture<LogsComponent>): string[] {
@@ -188,5 +203,50 @@ describe('LogsComponent', () => {
       { label: 'QueueCleaner', value: 'QueueCleaner' },
       { label: 'Sonarr', value: 'Sonarr' },
     ]);
+  });
+
+  it('copies a single log to clipboard and shows success toast', async () => {
+    const { fixture, toastSuccess } = setup();
+    const writeTextSpy = vi.fn(() => Promise.resolve());
+    stubClipboard(writeTextSpy);
+
+    const log = LOGS[0];
+    fixture.componentInstance.copyLog(log);
+    await Promise.resolve();
+
+    expect(writeTextSpy).toHaveBeenCalledWith(`[${log.timestamp}] [${log.level}] [${log.category}] ${log.message}`);
+    expect(toastSuccess).toHaveBeenCalledWith('Log copied');
+  });
+
+  it('shows error toast when copying single log fails', async () => {
+    const { fixture, toastError } = setup();
+    stubClipboard(vi.fn(() => Promise.reject(new Error('copy failed'))));
+
+    fixture.componentInstance.copyLog(LOGS[0]);
+    await Promise.resolve();
+
+    expect(toastError).toHaveBeenCalledWith('Failed to copy log');
+  });
+
+  it('copies all filtered logs to clipboard and shows success toast with count', async () => {
+    const { fixture, toastSuccess } = setup();
+    const writeTextSpy = vi.fn(() => Promise.resolve());
+    stubClipboard(writeTextSpy);
+
+    fixture.componentInstance.copyAllLogs();
+    await Promise.resolve();
+
+    expect(writeTextSpy).toHaveBeenCalled();
+    expect(toastSuccess).toHaveBeenCalledWith('3 logs copied');
+  });
+
+  it('shows error toast when copying all logs fails', async () => {
+    const { fixture, toastError } = setup();
+    stubClipboard(vi.fn(() => Promise.reject(new Error('copy failed'))));
+
+    fixture.componentInstance.copyAllLogs();
+    await Promise.resolve();
+
+    expect(toastError).toHaveBeenCalledWith('Failed to copy logs');
   });
 });
