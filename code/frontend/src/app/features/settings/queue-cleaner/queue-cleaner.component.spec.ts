@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { QueueCleanerConfig } from '@shared/models/queue-cleaner-config.model';
@@ -89,8 +89,11 @@ describe('QueueCleanerComponent', () => {
     config: QueueCleanerConfig = CONFIG,
     stall: StallRule[] = STALL_RULES,
     slow: SlowRule[] = SLOW_RULES,
+    api?: ReturnType<typeof createApi>,
   ): Setup {
-    const api = createApi(config, stall, slow);
+    if (!api) {
+      api = createApi(config, stall, slow);
+    }
 
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), { provide: QueueCleanerApi, useValue: api }],
@@ -425,5 +428,30 @@ describe('QueueCleanerComponent', () => {
         downloadingMetadataMaxStrikes: 3,
       }),
     );
+  });
+
+  it('shows the load error and recovers on retry', () => {
+    const api = {
+      state: { stall: STALL_RULES, slow: SLOW_RULES },
+      getConfig: vi.fn()
+        .mockReturnValueOnce(throwError(() => new Error('offline')))
+        .mockReturnValue(of(CONFIG)),
+      updateConfig: vi.fn(() => of(undefined)),
+      getStallRules: vi.fn(() => of(STALL_RULES)),
+      getSlowRules: vi.fn(() => of(SLOW_RULES)),
+      deleteStallRule: vi.fn(() => of(undefined)),
+      deleteSlowRule: vi.fn(() => of(undefined)),
+    };
+    const { fixture, component } = setup(CONFIG, STALL_RULES, SLOW_RULES, api);
+
+    expect(component.loadError()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Could not connect');
+
+    component.retry();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(component.qcForm.enabled().value()).toBe(true);
+    expect(api.getConfig).toHaveBeenCalledTimes(2);
   });
 });
