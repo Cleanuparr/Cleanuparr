@@ -102,7 +102,7 @@ public sealed class AccountController : ControllerBase
 
             _logger.LogInformation("Password changed for user {Username}", user.Username);
 
-            return Ok(new { message = "Password changed" });
+            return Ok(new { Message = "Password changed" });
         }
         finally
         {
@@ -158,7 +158,7 @@ public sealed class AccountController : ControllerBase
             _logger.LogInformation("Username changed from {PreviousUsername} to {Username}",
                 previousUsername.SanitizeForLog(), newUsername.SanitizeForLog());
 
-            return Ok(new { message = "Username changed" });
+            return Ok(new { Message = "Username changed" });
         }
         finally
         {
@@ -303,7 +303,7 @@ public sealed class AccountController : ControllerBase
 
             _logger.LogInformation("2FA enabled for user {Username}", user.Username);
 
-            return Ok(new { message = "2FA enabled" });
+            return Ok(new { Message = "2FA enabled" });
         }
         finally
         {
@@ -382,7 +382,7 @@ public sealed class AccountController : ControllerBase
 
         _logger.LogInformation("2FA disabled for user {Username}", user.Username);
 
-        return Ok(new { message = "2FA disabled" });
+        return Ok(new { Message = "2FA disabled" });
     }
 
     [HttpGet("api-key")]
@@ -491,7 +491,7 @@ public sealed class AccountController : ControllerBase
 
         _logger.LogInformation("Plex account unlinked for user {Username}", user.Username);
 
-        return Ok(new { message = "Plex account unlinked" });
+        return Ok(new { Message = "Plex account unlinked" });
     }
 
     [HttpGet("oidc")]
@@ -524,7 +524,7 @@ public sealed class AccountController : ControllerBase
             user.UpdatedAt = _timeProvider.GetUtcNow();
             await _usersContext.SaveChangesAsync();
 
-            return Ok(new { message = "OIDC configuration updated" });
+            return Ok(new { Message = "OIDC configuration updated" });
         }
         finally
         {
@@ -637,7 +637,7 @@ public sealed class AccountController : ControllerBase
 
             _logger.LogInformation("OIDC account unlinked for user {Username}", user.Username);
 
-            return Ok(new { message = "OIDC account unlinked" });
+            return Ok(new { Message = "OIDC account unlinked" });
         }
         finally
         {

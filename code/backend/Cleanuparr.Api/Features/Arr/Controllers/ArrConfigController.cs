@@ -2,7 +2,7 @@
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Features.Arr.Dtos;
+using Cleanuparr.Api.Features.Arr.Contracts.Responses;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -413,7 +413,7 @@ public sealed class ArrConfigController : ControllerBase
         }
     }
 
-    private static ArrConfigDto ToDto(ArrConfig config) => new()
+    private static ArrConfigResponse ToDto(ArrConfig config) => new()
     {
         Id = config.Id,
         Type = config.Type,
@@ -421,7 +421,7 @@ public sealed class ArrConfigController : ControllerBase
         Instances = config.Instances.Select(ToDto).ToList(),
     };
 
-    private static ArrInstanceDto ToDto(ArrInstance instance) => new()
+    private static ArrInstanceResponse ToDto(ArrInstance instance) => new()
     {
         Id = instance.Id,
         Enabled = instance.Enabled,

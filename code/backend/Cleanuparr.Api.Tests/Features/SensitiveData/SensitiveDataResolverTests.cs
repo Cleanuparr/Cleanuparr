@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Arr.Dtos;
+using Cleanuparr.Api.Features.Arr.Contracts.Responses;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -74,7 +74,7 @@ public class SensitiveDataResolverTests
     public void ArrInstance_NullApiKey_RemainsNull()
     {
         // ApiKey is required, but let's test with the DTO which might handle null
-        var dto = new ArrInstanceDto
+        var dto = new ArrInstanceResponse
         {
             Name = "Sonarr",
             Url = "http://sonarr:8989",
@@ -90,12 +90,12 @@ public class SensitiveDataResolverTests
 
     #endregion
 
-    #region ArrInstanceDto
+    #region ArrInstanceResponse
 
     [Fact]
     public void ArrInstanceDto_ApiKey_IsMasked()
     {
-        var dto = new ArrInstanceDto
+        var dto = new ArrInstanceResponse
         {
             Id = Guid.NewGuid(),
             Name = "Radarr",
