@@ -142,16 +142,20 @@ export class LogsComponent implements OnInit {
 
   copyLog(log: LogEntry): void {
     const text = `[${log.timestamp}] [${log.level}] ${log.category ? `[${log.category}] ` : ''}${log.message}${log.exception ? '\n' + log.exception : ''}`;
-    navigator.clipboard.writeText(text);
-    this.toast.success('Log copied');
+    navigator.clipboard.writeText(text).then(
+      () => this.toast.success('Log copied'),
+      () => this.toast.error('Failed to copy log'),
+    );
   }
 
   copyAllLogs(): void {
     const text = this.filteredLogs()
       .map((l) => `[${l.timestamp}] [${l.level}] ${l.category ? `[${l.category}] ` : ''}${l.message}`)
       .join('\n');
-    navigator.clipboard.writeText(text);
-    this.toast.success(`${this.filteredLogs().length} logs copied`);
+    navigator.clipboard.writeText(text).then(
+      () => this.toast.success(`${this.filteredLogs().length} logs copied`),
+      () => this.toast.error('Failed to copy logs'),
+    );
   }
 
   exportLogs(format: 'json' | 'csv' | 'text'): void {

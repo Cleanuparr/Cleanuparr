@@ -167,8 +167,10 @@ export class SetupComponent {
 
   copyRecoveryCodes(): void {
     const text = this.recoveryCodes().join('\n');
-    navigator.clipboard.writeText(text);
-    this.toast.success('Recovery codes copied to clipboard');
+    navigator.clipboard.writeText(text).then(
+      () => this.toast.success('Recovery codes copied to clipboard'),
+      () => this.toast.error('Failed to copy recovery codes'),
+    );
   }
 
   downloadRecoveryCodes(): void {

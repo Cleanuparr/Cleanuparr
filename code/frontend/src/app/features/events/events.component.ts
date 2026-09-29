@@ -175,8 +175,10 @@ export class EventsComponent implements OnInit, OnDestroy {
 
   copyEvent(event: AppEvent): void {
     const text = `[${event.timestamp}] [${event.severity}] ${event.eventType}: ${event.message}`;
-    navigator.clipboard.writeText(text);
-    this.toast.success('Event copied');
+    navigator.clipboard.writeText(text).then(
+      () => this.toast.success('Event copied'),
+      () => this.toast.error('Failed to copy event'),
+    );
   }
 
   refresh(): void {
