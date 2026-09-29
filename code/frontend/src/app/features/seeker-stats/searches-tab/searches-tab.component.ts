@@ -30,7 +30,7 @@ import {
   searchReasonSeverity,
   searchStatusSeverity,
   searchTypeSeverity,
-} from '@shared/utils/search-display.util';
+} from './search-display.util';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
