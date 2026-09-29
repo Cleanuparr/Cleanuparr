@@ -445,7 +445,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
         this.toast.success('Seeding rule deleted');
         this.reloadSeedingRules(clientId);
       },
-      error: () => this.toast.error('Failed to delete seeding rule'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
@@ -464,8 +464,8 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
     const orderedIds = rules.map(r => r.id!).filter(Boolean);
     this.api.reorderSeedingRules(clientId, orderedIds).subscribe({
-      error: () => {
-        this.toast.error('Failed to reorder seeding rules');
+      error: (err: ApiError) => {
+        this.toast.error(err.message);
         this.reloadSeedingRules(clientId);
       },
     });

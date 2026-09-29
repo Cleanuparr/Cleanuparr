@@ -9,6 +9,7 @@ import {
 } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StrikesApi } from '@core/api/strikes.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
@@ -142,7 +143,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
         this.toast.success(`Strikes deleted for "${item.title}"`);
         this.strikesResource.reload();
       },
-      error: () => this.toast.error('Failed to delete strikes'),
+      error: (err: ApiError) => this.toast.error(err.message),
     });
   }
 
