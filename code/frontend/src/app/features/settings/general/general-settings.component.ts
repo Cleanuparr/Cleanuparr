@@ -14,8 +14,8 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { GeneralConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { createSettingsResource } from '@shared/utils/settings-resource.util';
-import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource, saveSettings } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 
 const CERT_OPTIONS: SelectOption[] = [
   { label: 'Enabled', value: CertificateValidationType.Enabled },
@@ -249,19 +249,13 @@ export class GeneralSettingsComponent implements HasPendingChanges {
       },
     };
 
-    this.saving.set(true);
-    this.api.update(config).subscribe({
-      next: () => {
-        this.toast.success('General settings saved');
-        this.saving.set(false);
-        this.saved.set(true);
-        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved(m);
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.saving.set(false);
-      },
+    saveSettings({
+      request: this.api.update(config),
+      toast: this.toast,
+      saving: this.saving,
+      saved: this.saved,
+      successMessage: 'General settings saved',
+      onSaved: () => this.dirtyTracker.markSaved(m),
     });
   }
 

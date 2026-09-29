@@ -19,8 +19,8 @@ import { SlowRuleModalComponent } from './slow-rule-modal.component';
 import { StallRuleModalComponent } from './stall-rule-modal.component';
 import { ScheduleUnit, PatternMode } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { createSettingsResource } from '@shared/utils/settings-resource.util';
-import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource, saveSettings } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, resolveSchedule } from '@shared/utils/schedule.util';
 import { analyzeCoverage } from './coverage-analysis.util';
 
@@ -378,19 +378,13 @@ export class QueueCleanerComponent implements HasPendingChanges {
       downloadingMetadataMaxStrikes: m.metadataMaxStrikes ?? 3,
     };
 
-    this.saving.set(true);
-    this.api.updateConfig(config).subscribe({
-      next: () => {
-        this.toast.success('Queue cleaner settings saved');
-        this.saving.set(false);
-        this.saved.set(true);
-        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved(m);
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.saving.set(false);
-      },
+    saveSettings({
+      request: this.api.updateConfig(config),
+      toast: this.toast,
+      saving: this.saving,
+      saved: this.saved,
+      successMessage: 'Queue cleaner settings saved',
+      onSaved: () => this.dirtyTracker.markSaved(m),
     });
   }
 

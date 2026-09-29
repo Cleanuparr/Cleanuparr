@@ -3,12 +3,11 @@ import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent } from '@ui';
 import { BlacklistSyncApi } from '@core/api/blacklist-sync.api';
-import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { createSettingsResource } from '@shared/utils/settings-resource.util';
-import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource, saveSettings } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker } from '@shared/utils/dirty-tracker.util';
 
 interface BlacklistSyncFormModel {
   enabled: boolean;
@@ -76,19 +75,13 @@ export class BlacklistSyncComponent implements HasPendingChanges {
       blacklistPath: m.blacklistPath || undefined,
     };
 
-    this.saving.set(true);
-    this.api.updateConfig(config).subscribe({
-      next: () => {
-        this.toast.success('Blacklist sync settings saved');
-        this.saving.set(false);
-        this.saved.set(true);
-        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved(m);
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.saving.set(false);
-      },
+    saveSettings({
+      request: this.api.updateConfig(config),
+      toast: this.toast,
+      saving: this.saving,
+      saved: this.saved,
+      successMessage: 'Blacklist sync settings saved',
+      onSaved: () => this.dirtyTracker.markSaved(m),
     });
   }
 

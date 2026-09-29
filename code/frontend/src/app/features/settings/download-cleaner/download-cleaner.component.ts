@@ -22,8 +22,8 @@ import {
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, DownloadClientTypeName, SeedingRuleAction } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { createSettingsResource } from '@shared/utils/settings-resource.util';
-import { createDirtyTracker, DirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
+import { createSettingsResource, saveSettings } from '@shared/utils/settings-resource.util';
+import { createDirtyTracker, DirtyTracker } from '@shared/utils/dirty-tracker.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 import { SeedingRuleModalComponent } from './seeding-rule-modal.component';
 
@@ -521,21 +521,17 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     };
     const switchCountAtSave = this.clientSwitchCount;
 
-    this.unlinkedSaving.set(true);
-    this.api.updateUnlinkedConfig(clientId, dto).subscribe({
-      next: () => {
-        this.toast.success('Unlinked config saved');
-        this.unlinkedSaving.set(false);
-        this.unlinkedSaved.set(true);
-        setTimeout(() => this.unlinkedSaved.set(false), SAVED_FLASH_MS);
+    saveSettings({
+      request: this.api.updateUnlinkedConfig(clientId, dto),
+      toast: this.toast,
+      saving: this.unlinkedSaving,
+      saved: this.unlinkedSaved,
+      successMessage: 'Unlinked config saved',
+      onSaved: () => {
         this.unlinkedSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
         if (this.selectedClientId() === clientId) {
           this.applySavedClientModel(this.unlinkedModel, this.unlinkedDirtyTracker, switchCountAtSave, m);
         }
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.unlinkedSaving.set(false);
       },
     });
   }
@@ -557,21 +553,17 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     };
     const switchCountAtSave = this.clientSwitchCount;
 
-    this.deadTorrentSaving.set(true);
-    this.api.updateDeadTorrentConfig(clientId, dto).subscribe({
-      next: () => {
-        this.toast.success('Dead torrent config saved');
-        this.deadTorrentSaving.set(false);
-        this.deadTorrentSaved.set(true);
-        setTimeout(() => this.deadTorrentSaved.set(false), SAVED_FLASH_MS);
+    saveSettings({
+      request: this.api.updateDeadTorrentConfig(clientId, dto),
+      toast: this.toast,
+      saving: this.deadTorrentSaving,
+      saved: this.deadTorrentSaved,
+      successMessage: 'Dead torrent config saved',
+      onSaved: () => {
         this.deadTorrentSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
         if (this.selectedClientId() === clientId) {
           this.applySavedClientModel(this.deadTorrentModel, this.deadTorrentDirtyTracker, switchCountAtSave, m);
         }
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.deadTorrentSaving.set(false);
       },
     });
   }
@@ -594,21 +586,17 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     };
     const switchCountAtSave = this.clientSwitchCount;
 
-    this.orphanedFilesSaving.set(true);
-    this.api.updateOrphanedFilesConfig(clientId, dto).subscribe({
-      next: () => {
-        this.toast.success('Orphaned files settings saved');
-        this.orphanedFilesSaving.set(false);
-        this.orphanedFilesSaved.set(true);
-        setTimeout(() => this.orphanedFilesSaved.set(false), SAVED_FLASH_MS);
+    saveSettings({
+      request: this.api.updateOrphanedFilesConfig(clientId, dto),
+      toast: this.toast,
+      saving: this.orphanedFilesSaving,
+      saved: this.orphanedFilesSaved,
+      successMessage: 'Orphaned files settings saved',
+      onSaved: () => {
         this.orphanedFilesSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
         if (this.selectedClientId() === clientId) {
           this.applySavedClientModel(this.orphanedFilesModel, this.orphanedFilesDirtyTracker, switchCountAtSave, m);
         }
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.orphanedFilesSaving.set(false);
       },
     });
   }
@@ -633,19 +621,13 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       ignoredDownloads: m.ignoredDownloads,
     };
 
-    this.saving.set(true);
-    this.api.updateConfig(config).subscribe({
-      next: () => {
-        this.toast.success('Download cleaner settings saved');
-        this.saving.set(false);
-        this.saved.set(true);
-        setTimeout(() => this.saved.set(false), SAVED_FLASH_MS);
-        this.dirtyTracker.markSaved(m);
-      },
-      error: (err: ApiError) => {
-        this.toast.error(err.message);
-        this.saving.set(false);
-      },
+    saveSettings({
+      request: this.api.updateConfig(config),
+      toast: this.toast,
+      saving: this.saving,
+      saved: this.saved,
+      successMessage: 'Download cleaner settings saved',
+      onSaved: () => this.dirtyTracker.markSaved(m),
     });
   }
 
