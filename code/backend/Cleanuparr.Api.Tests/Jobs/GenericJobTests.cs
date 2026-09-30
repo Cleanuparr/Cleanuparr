@@ -2,10 +2,13 @@ using Cleanuparr.Api.Hubs;
 using Cleanuparr.Api.Jobs;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Jobs;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -22,12 +25,14 @@ namespace Cleanuparr.Api.Tests.Jobs;
 public sealed class GenericJobTests : IDisposable
 {
     private readonly EventsContext _eventsContext;
+    private readonly DataContext _dataContext;
     private readonly ServiceProvider _serviceProvider;
     private readonly Seeker _handler = new();
 
     public GenericJobTests()
     {
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
+        _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
 
         IJobManagementService jobManagementService = Substitute.For<IJobManagementService>();
         jobManagementService.GetJob(Arg.Any<JobType>()).Returns(new JobInfo { JobType = nameof(JobType.Seeker) });
@@ -37,6 +42,8 @@ public sealed class GenericJobTests : IDisposable
         services.AddSingleton(Substitute.For<IHubContext<AppHub>>());
         services.AddSingleton(jobManagementService);
         services.AddSingleton(_handler);
+        services.AddScoped<IDryRunInterceptor>(_ =>
+            new DryRunInterceptor(Substitute.For<ILogger<DryRunInterceptor>>(), _dataContext));
         _serviceProvider = services.BuildServiceProvider();
     }
 
@@ -44,6 +51,7 @@ public sealed class GenericJobTests : IDisposable
     {
         _serviceProvider.Dispose();
         _eventsContext.Dispose();
+        _dataContext.Dispose();
     }
 
     private static readonly DateTimeOffset Now = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -76,6 +84,30 @@ public sealed class GenericJobTests : IDisposable
         run.CompletedAt!.Value.ShouldBe(Now);
     }
 
+    [Fact]
+    public async Task Execute_CapturesDryRunOnceForTheWholeRun()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        _handler.ObservedDryRun.ShouldBe(true);
+    }
+
+    [Fact]
+    public async Task Execute_DoesNotStickWhenTheRunStartedLive()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = false;
+        await _dataContext.SaveChangesAsync();
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        _handler.ObservedDryRun.ShouldBe(false);
+    }
+
     /// <summary>
     /// Named after a <see cref="JobType"/> member because the job parses its type name.
     /// </summary>
@@ -83,7 +115,12 @@ public sealed class GenericJobTests : IDisposable
     {
         public Exception? Throw { get; set; }
 
-        public Task ExecuteAsync(CancellationToken cancellationToken = default) =>
-            Throw is null ? Task.CompletedTask : Task.FromException(Throw);
+        public bool ObservedDryRun { get; private set; }
+
+        public Task ExecuteAsync(CancellationToken cancellationToken = default)
+        {
+            ObservedDryRun = ContextProvider.IsDryRunSticky();
+            return Throw is null ? Task.CompletedTask : Task.FromException(Throw);
+        }
     }
 }
