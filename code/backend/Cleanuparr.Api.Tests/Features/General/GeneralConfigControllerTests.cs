@@ -2,18 +2,18 @@ using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Responses;
 using Cleanuparr.Api.Features.General.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
-using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
-using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Shouldly;
 using Xunit;
 
@@ -24,6 +24,7 @@ public class GeneralConfigControllerTests : IDisposable
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
     private readonly IDynamicHttpClientFactory _dynamicHttpClientFactory;
+    private readonly IDryRunPurger _dryRunPurger;
     private readonly GeneralConfigController _controller;
 
     public GeneralConfigControllerTests()
@@ -31,9 +32,10 @@ public class GeneralConfigControllerTests : IDisposable
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         _dynamicHttpClientFactory = Substitute.For<IDynamicHttpClientFactory>();
+        _dryRunPurger = Substitute.For<IDryRunPurger>();
 
         var logger = Substitute.For<ILogger<GeneralConfigController>>();
-        _controller = new GeneralConfigController(logger, _dataContext);
+        _controller = new GeneralConfigController(logger, _dataContext, _dryRunPurger);
 
         // Mount a DefaultHttpContext with a ServiceProvider that resolves IDynamicHttpClientFactory
         var services = new ServiceCollection();
@@ -85,7 +87,7 @@ public class GeneralConfigControllerTests : IDisposable
         };
 
         // Act
-        var result = await _controller.UpdateGeneralConfig(request, _eventsContext);
+        var result = await _controller.UpdateGeneralConfig(request);
 
         // Assert
         result.ShouldBeOfType<OkObjectResult>();
@@ -114,7 +116,7 @@ public class GeneralConfigControllerTests : IDisposable
         };
 
         // Act / Assert
-        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request, _eventsContext));
+        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request));
     }
 
     [Fact]
@@ -131,7 +133,7 @@ public class GeneralConfigControllerTests : IDisposable
         };
 
         // Act / Assert
-        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request, _eventsContext));
+        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request));
     }
 
     [Fact]
@@ -150,43 +152,13 @@ public class GeneralConfigControllerTests : IDisposable
         };
 
         // Act / Assert
-        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request, _eventsContext));
+        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request));
     }
 
     [Fact]
-    public async Task UpdateGeneralConfig_DryRunDisabled_ClearsWhatTheDryRunLeftBehind()
+    public async Task UpdateGeneralConfig_DryRunDisabled_PurgesBeforeSaving()
     {
         // Arrange
-        var jobRun = new JobRun { Id = Guid.NewGuid(), Type = JobType.QueueCleaner };
-        _eventsContext.JobRuns.Add(jobRun);
-
-        // Real strike plus a dry-run strike: purge clears the mark
-        var touchedByDryRun = new DownloadItem
-        {
-            DownloadId = "touched-by-dry-run",
-            Title = "Struck for real, then by a dry run",
-            IsMarkedForRemoval = true,
-        };
-
-        // Real strikes only: purge keeps its flags
-        var realOnly = new DownloadItem
-        {
-            DownloadId = "real-only",
-            Title = "Struck only by real runs",
-            IsMarkedForRemoval = true,
-            IsRemoved = true,
-            IsReturning = true,
-        };
-        _eventsContext.DownloadItems.AddRange(touchedByDryRun, realOnly);
-
-        _eventsContext.Strikes.AddRange(
-            new Strike { DownloadItemId = touchedByDryRun.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport },
-            new Strike { DownloadItemId = touchedByDryRun.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport, IsDryRun = true },
-            new Strike { DownloadItemId = realOnly.Id, JobRunId = jobRun.Id, Type = StrikeType.FailedImport });
-        await _eventsContext.SaveChangesAsync();
-
-        Striker.RecurringHashes.TryAdd("genuine-recurrence", null);
-
         var config = await _dataContext.GeneralConfigs.FirstAsync();
         config.DryRun = true;
         await _dataContext.SaveChangesAsync();
@@ -201,23 +173,63 @@ public class GeneralConfigControllerTests : IDisposable
         };
 
         // Act
-        await _controller.UpdateGeneralConfig(request, _eventsContext);
+        await _controller.UpdateGeneralConfig(request);
 
         // Assert
-        _eventsContext.ChangeTracker.Clear();
-        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);
+        await _dryRunPurger.Received(1).PurgeAsync();
 
-        DownloadItem touched = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "touched-by-dry-run");
-        touched.IsMarkedForRemoval.ShouldBeFalse();
+        var saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
+        saved.DryRun.ShouldBeFalse();
+    }
 
-        // Real-run flags survive the purge
-        DownloadItem real = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "real-only");
-        real.IsMarkedForRemoval.ShouldBeTrue();
-        real.IsRemoved.ShouldBeTrue();
-        real.IsReturning.ShouldBeTrue();
+    [Fact]
+    public async Task UpdateGeneralConfig_DryRunStaysOnOrStaysOff_DoesNotPurge()
+    {
+        // Arrange - dry run stays on
+        var config = await _dataContext.GeneralConfigs.FirstAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
 
-        // A recurrence from before the purge survives it
-        Striker.RecurringHashes.ShouldContainKey("genuine-recurrence");
+        var request = new UpdateGeneralConfigRequest
+        {
+            DryRun = true,
+            HttpTimeout = 60,
+            StrikeInactivityWindowHours = 24,
+            Log = MatchingLogRequest(config.Log),
+            Auth = new UpdateAuthConfigRequest(),
+        };
+
+        // Act
+        await _controller.UpdateGeneralConfig(request);
+
+        // Assert
+        await _dryRunPurger.DidNotReceive().PurgeAsync();
+    }
+
+    [Fact]
+    public async Task UpdateGeneralConfig_PurgeFails_LeavesDryRunOnAndPropagates()
+    {
+        // Arrange
+        var config = await _dataContext.GeneralConfigs.FirstAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        _dryRunPurger.PurgeAsync().ThrowsAsync(new Exception("purge failed"));
+
+        var request = new UpdateGeneralConfigRequest
+        {
+            DryRun = false,
+            HttpTimeout = 60,
+            StrikeInactivityWindowHours = 24,
+            Log = MatchingLogRequest(config.Log),
+            Auth = new UpdateAuthConfigRequest(),
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request));
+
+        var saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
+        saved.DryRun.ShouldBeTrue();
     }
 
     [Fact]

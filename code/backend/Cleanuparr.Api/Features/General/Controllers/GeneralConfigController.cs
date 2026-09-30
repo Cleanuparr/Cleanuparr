@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Responses;
-using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -22,13 +21,16 @@ public sealed class GeneralConfigController : ControllerBase
 {
     private readonly ILogger<GeneralConfigController> _logger;
     private readonly DataContext _dataContext;
+    private readonly IDryRunPurger _dryRunPurger;
 
     public GeneralConfigController(
         ILogger<GeneralConfigController> logger,
-        DataContext dataContext)
+        DataContext dataContext,
+        IDryRunPurger dryRunPurger)
     {
         _logger = logger;
         _dataContext = dataContext;
+        _dryRunPurger = dryRunPurger;
     }
 
     [HttpGet("general")]
@@ -50,8 +52,7 @@ public sealed class GeneralConfigController : ControllerBase
 
     [HttpPut("general")]
     public async Task<IActionResult> UpdateGeneralConfig(
-        [FromBody] UpdateGeneralConfigRequest request,
-        [FromServices] EventsContext eventsContext)
+        [FromBody] UpdateGeneralConfigRequest request)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -63,58 +64,13 @@ public sealed class GeneralConfigController : ControllerBase
 
             request.ApplyTo(config, HttpContext.RequestServices, _logger);
 
-            await _dataContext.SaveChangesAsync();
-
             if (wasDryRun && !config.DryRun)
             {
-                await using var transaction = await eventsContext.Database.BeginTransactionAsync();
-
-                try
-                {
-                    // Read before the purge deletes these strikes.
-                    List<Guid> dryRunItemIds = await eventsContext.Strikes
-                        .Where(s => s.IsDryRun)
-                        .Select(s => s.DownloadItemId)
-                        .Distinct()
-                        .ToListAsync();
-
-                    var deletedStrikes = await eventsContext.Strikes
-                        .Where(s => s.IsDryRun)
-                        .ExecuteDeleteAsync();
-                    var deletedEvents = await eventsContext.Events
-                        .Where(e => e.IsDryRun)
-                        .ExecuteDeleteAsync();
-                    var deletedManualEvents = await eventsContext.ManualEvents
-                        .Where(e => e.IsDryRun)
-                        .ExecuteDeleteAsync();
-                    var deletedItems = await eventsContext.DownloadItems
-                        .Where(d => !d.Strikes.Any())
-                        .ExecuteDeleteAsync();
-
-                    // Only real removals set IsRemoved and IsReturning.
-                    var clearedFlags = await eventsContext.DownloadItems
-                        .Where(d => dryRunItemIds.Contains(d.Id) && d.IsMarkedForRemoval)
-                        .ExecuteUpdateAsync(setter => setter
-                            .SetProperty(d => d.IsMarkedForRemoval, false));
-
-                    var deletedHistory = await eventsContext.SeekerHistory
-                        .Where(h => h.IsDryRun)
-                        .ExecuteDeleteAsync();
-
-                    _logger.LogWarning(
-                        "Dry run disabled, purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed, {Flags} removal marks cleared",
-                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, clearedFlags);
-
-                    await transaction.CommitAsync();
-
-                    ForceImportService.ForgetDryRun();
-                }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
+                // A failed purge must leave dry run on.
+                await _dryRunPurger.PurgeAsync();
             }
+
+            await _dataContext.SaveChangesAsync();
 
             return Ok(new { Message = "General configuration updated successfully" });
         }
