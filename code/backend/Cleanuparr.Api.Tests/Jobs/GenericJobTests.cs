@@ -3,6 +3,7 @@ using Cleanuparr.Api.Jobs;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Models;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Quartz;
 using Shouldly;
 using Xunit;
@@ -26,6 +28,7 @@ public sealed class GenericJobTests : IDisposable
 {
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
+    private readonly IDryRunPurger _dryRunPurger;
     private readonly ServiceProvider _serviceProvider;
     private readonly Seeker _handler = new();
 
@@ -33,6 +36,7 @@ public sealed class GenericJobTests : IDisposable
     {
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
+        _dryRunPurger = Substitute.For<IDryRunPurger>();
 
         IJobManagementService jobManagementService = Substitute.For<IJobManagementService>();
         jobManagementService.GetJob(Arg.Any<JobType>()).Returns(new JobInfo { JobType = nameof(JobType.Seeker) });
@@ -42,6 +46,7 @@ public sealed class GenericJobTests : IDisposable
         services.AddSingleton(Substitute.For<IHubContext<AppHub>>());
         services.AddSingleton(jobManagementService);
         services.AddSingleton(_handler);
+        services.AddSingleton(_dryRunPurger);
         services.AddScoped<IDryRunInterceptor>(_ =>
             new DryRunInterceptor(Substitute.For<ILogger<DryRunInterceptor>>(), _dataContext));
         _serviceProvider = services.BuildServiceProvider();
@@ -106,6 +111,44 @@ public sealed class GenericJobTests : IDisposable
         await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
 
         _handler.ObservedDryRun.ShouldBe(false);
+    }
+
+    [Fact]
+    public async Task Execute_WhenRunStartedDry_PurgesAfterFinishing()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        await _dryRunPurger.Received(1).PurgeIfDryRunOffAsync();
+    }
+
+    [Fact]
+    public async Task Execute_WhenRunStartedLive_DoesNotPurge()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = false;
+        await _dataContext.SaveChangesAsync();
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        await _dryRunPurger.DidNotReceive().PurgeIfDryRunOffAsync();
+    }
+
+    [Fact]
+    public async Task Execute_WhenPurgeThrows_StillStampsTheRunAsCompleted()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+        _dryRunPurger.PurgeIfDryRunOffAsync().ThrowsAsync(new Exception("purge failed"));
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        JobRun run = await _eventsContext.JobRuns.SingleAsync();
+        run.Status.ShouldBe(JobRunStatus.Completed);
     }
 
     /// <summary>

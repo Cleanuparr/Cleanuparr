@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Api.Hubs;
@@ -76,6 +77,19 @@ public sealed class GenericJob<T> : IJob
                 jobRun.CompletedAt = _timeProvider.GetUtcNow();
                 jobRun.Status = status;
                 await eventsContext.SaveChangesAsync();
+            }
+
+            if (ContextProvider.IsDryRunSticky())
+            {
+                try
+                {
+                    var dryRunPurger = finalScope.ServiceProvider.GetRequiredService<IDryRunPurger>();
+                    await dryRunPurger.PurgeIfDryRunOffAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "failed to purge dry-run data after {Name}", typeof(T).Name);
+                }
             }
         }
     }

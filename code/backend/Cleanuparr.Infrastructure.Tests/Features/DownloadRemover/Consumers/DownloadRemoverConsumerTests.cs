@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using MassTransit;
@@ -20,13 +21,15 @@ public class DownloadRemoverConsumerTests
 {
     private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
+    private readonly IDryRunPurger _dryRunPurger;
     private readonly DownloadRemoverConsumer _consumer;
 
     public DownloadRemoverConsumerTests()
     {
         _logger = Substitute.For<ILogger<DownloadRemoverConsumer>>();
         _queueItemRemover = Substitute.For<IQueueItemRemover>();
-        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover);
+        _dryRunPurger = Substitute.For<IDryRunPurger>();
+        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover, _dryRunPurger);
     }
 
     #region Consume Tests
@@ -109,6 +112,63 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         observedDryRun.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Consume_WithDryRunRequest_PurgesAfterRemoving()
+    {
+        // Arrange
+        var request = CreateRemoveRequest() with { IsDryRun = true };
+        var context = CreateConsumeContext(request);
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        await _dryRunPurger.Received(1).PurgeIfDryRunOffAsync();
+    }
+
+    [Fact]
+    public async Task Consume_WithLiveRequest_DoesNotPurge()
+    {
+        // Arrange
+        var request = CreateRemoveRequest() with { IsDryRun = false };
+        var context = CreateConsumeContext(request);
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        await _dryRunPurger.DidNotReceive().PurgeIfDryRunOffAsync();
+    }
+
+    [Fact]
+    public async Task Consume_WhenPurgeThrows_LogsErrorAndDoesNotRethrow()
+    {
+        // Arrange
+        var request = CreateRemoveRequest() with { IsDryRun = true };
+        var context = CreateConsumeContext(request);
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .Returns(Task.CompletedTask);
+        _dryRunPurger
+            .PurgeIfDryRunOffAsync()
+            .ThrowsAsync(new Exception("Purge failed"));
+
+        // Act - Should not throw
+        await _consumer.Consume(context);
+
+        // Assert
+        _logger.HasLogContaining(LogLevel.Error, "failed to purge dry-run data").ShouldBeTrue();
     }
 
     [Fact]

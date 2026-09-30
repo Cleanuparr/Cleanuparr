@@ -1,6 +1,7 @@
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 
@@ -10,14 +11,17 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
 {
     private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
+    private readonly IDryRunPurger _dryRunPurger;
 
     public DownloadRemoverConsumer(
         ILogger<DownloadRemoverConsumer> logger,
-        IQueueItemRemover queueItemRemover
+        IQueueItemRemover queueItemRemover,
+        IDryRunPurger dryRunPurger
     )
     {
         _logger = logger;
         _queueItemRemover = queueItemRemover;
+        _dryRunPurger = dryRunPurger;
     }
 
     public async Task Consume(ConsumeContext<QueueItemRemoveRequest> context)
@@ -26,6 +30,22 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
         {
             ContextProvider.SetDryRun(context.Message.IsDryRun);
             await _queueItemRemover.RemoveQueueItemAsync(context.Message);
+
+            if (context.Message.IsDryRun)
+            {
+                try
+                {
+                    await _dryRunPurger.PurgeIfDryRunOffAsync();
+                }
+                catch (Exception purgeException)
+                {
+                    _logger.LogError(purgeException,
+                        "failed to purge dry-run data | {Title} | {Url}",
+                        context.Message.Target.Title,
+                        context.Message.Instance.Url
+                    );
+                }
+            }
         }
         catch (Exception exception)
         {
