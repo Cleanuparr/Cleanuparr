@@ -37,10 +37,10 @@ public sealed class Striker : IStriker
 
         var downloadItem = await GetOrCreateDownloadItemAsync(hash, itemName);
 
-        int existingStrikeCount = await _context.Strikes
-            .CountAsync(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType);
-
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
+        int existingStrikeCount = await _context.Strikes
+            .CountAsync(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType && (isDryRun || !s.IsDryRun));
 
         var strike = new Strike
         {

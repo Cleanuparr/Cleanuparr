@@ -510,6 +510,26 @@ public class StrikerTests : IDisposable
     }
 
     [Fact]
+    public async Task StrikeAndCheckLimit_LiveRun_DoesNotCountDryRunStrikes()
+    {
+        // Arrange - two dry run strikes, then a live run with a low limit
+        const string hash = "dry-run-not-counted";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 3;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Act - first live strike
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        var result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - only 1 live strike exists, below maxStrikes
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task StrikeAndCheckLimit_StoresTitleOnDownloadItem()
     {
         // Arrange

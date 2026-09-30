@@ -403,7 +403,9 @@ public sealed class Seeker : IHandler
         // Load search history for the current cycle
         List<SeekerHistory> currentCycleHistory = await _eventsContext.SeekerHistory
             .AsNoTracking()
-            .Where(h => h.ArrInstanceId == arrInstance.Id && h.CycleId == instanceConfig.CurrentCycleId)
+            .Where(h => h.ArrInstanceId == arrInstance.Id
+                        && h.CycleId == instanceConfig.CurrentCycleId
+                        && (isDryRun || !h.IsDryRun))
             .ToListAsync();
 
         // Load all history for stale cleanup
