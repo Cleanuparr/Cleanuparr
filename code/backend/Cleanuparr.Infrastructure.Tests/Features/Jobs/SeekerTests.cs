@@ -3310,6 +3310,124 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Radarr_LiveRunAfterDryRun_ClaimsDryRunHistoryRow()
+    {
+        // Arrange - a dry run searches the item first
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var cycleId = Guid.NewGuid();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = cycleId
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        // Act - dry run writes a dry history row for the item
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await CreateSut().ExecuteAsync();
+
+        // Act - a live run searches the same item
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await CreateSut().ExecuteAsync();
+
+        // Assert - live run owns the row, count restarts at 1
+        var history = await _fixture.EventsContext.SeekerHistory
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1);
+        history.ShouldNotBeNull();
+        history.IsDryRun.ShouldBeFalse();
+        history.SearchCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_DryRunAfterLiveRun_DoesNotTouchLiveHistoryRow()
+    {
+        // Arrange - a live run searches the item first
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var cycleId = Guid.NewGuid();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = cycleId
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        // Act - the live run writes a real history row
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await CreateSut().ExecuteAsync();
+
+        // Act - dry run skips the item the live run searched
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await CreateSut().ExecuteAsync();
+
+        // Assert - the live row is untouched
+        var history = await _fixture.EventsContext.SeekerHistory
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1);
+        history.ShouldNotBeNull();
+        history.IsDryRun.ShouldBeFalse();
+        history.SearchCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_ProactiveSearch_SavesCommandTracker()
     {
         // Arrange

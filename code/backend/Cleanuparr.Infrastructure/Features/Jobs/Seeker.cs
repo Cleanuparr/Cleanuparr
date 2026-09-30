@@ -975,6 +975,18 @@ public sealed class Seeker : IHandler
 
             if (existing is not null)
             {
+                if (isDryRun && !existing.IsDryRun)
+                {
+                    _logger.LogDebug("[DRY RUN] skipping search history update for live row | {Title}", title);
+                    continue;
+                }
+
+                if (!isDryRun && existing.IsDryRun)
+                {
+                    existing.IsDryRun = false;
+                    existing.SearchCount = 0;
+                }
+
                 existing.LastSearchedAt = now;
                 existing.SearchCount++;
                 if (!string.IsNullOrEmpty(title))
