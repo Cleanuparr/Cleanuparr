@@ -324,6 +324,31 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     }
 
     [Fact]
+    public async Task PublishQueueItemRemoveRequest_DryRunEnabled_StampsTheMessageAsDryRun()
+    {
+        // Arrange
+        var arrConfig = new ArrConfig { Type = InstanceType.Sonarr, Instances = [] };
+        var instance = new ArrInstance
+        {
+            Name = "s",
+            Url = new Uri("http://s"),
+            ApiKey = "k",
+            ArrConfig = arrConfig,
+            Version = 4f,
+        };
+        var record = NewRecord(seriesId: 1, episodeId: 2);
+        _fixture.DryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act
+        await _handler.PublicPublishQueueItemRemoveRequest(
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+
+        // Assert
+        await _fixture.MessageBus.Received(1)
+            .Publish(Arg.Is<QueueItemRemoveRequest>(r => r.IsDryRun), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task PublishQueueItemRemoveRequest_Radarr_PublishesGenericSearchItemMessage()
     {
         // Arrange

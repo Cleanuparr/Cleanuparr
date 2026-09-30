@@ -122,6 +122,7 @@ public class QueueItemRemoverTests : IDisposable
         },
         DeleteReason = DeleteReason.Stalled,
         JobRunId = _jobRunId,
+        IsDryRun = false,
     };
 
     private void StubProgress(int progress)
@@ -805,7 +806,8 @@ public class QueueItemRemoverTests : IDisposable
             },
             DeleteReason = deleteReason,
             SkipSearch = skipSearch,
-            JobRunId = _jobRunId
+            JobRunId = _jobRunId,
+            IsDryRun = false,
         };
     }
 

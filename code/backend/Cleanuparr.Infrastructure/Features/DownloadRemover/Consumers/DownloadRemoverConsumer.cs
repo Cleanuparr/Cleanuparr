@@ -1,3 +1,4 @@
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using MassTransit;
@@ -23,6 +24,7 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
     {
         try
         {
+            ContextProvider.SetDryRun(context.Message.IsDryRun);
             await _queueItemRemover.RemoveQueueItemAsync(context.Message);
         }
         catch (Exception exception)

@@ -1,6 +1,7 @@
 ﻿using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
@@ -91,6 +92,26 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
+    public async Task Consume_WithDryRunRequest_SetsStickyDryRunBeforeRemoving()
+    {
+        // Arrange
+        var request = CreateRemoveRequest() with { IsDryRun = true };
+        var context = CreateConsumeContext(request);
+        bool observedDryRun = false;
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => observedDryRun = ContextProvider.IsDryRunSticky());
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        observedDryRun.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task Consume_WithRemoveFromClientTrue_PassesCorrectly()
     {
         // Arrange
@@ -104,7 +125,8 @@ public class DownloadRemoverConsumerTests
                 RemoveFromClient = true,
             },
             DeleteReason = DeleteReason.Stalled,
-            JobRunId = Guid.NewGuid()
+            JobRunId = Guid.NewGuid(),
+            IsDryRun = false,
         };
         var context = CreateConsumeContext(request);
 
@@ -136,7 +158,8 @@ public class DownloadRemoverConsumerTests
                 RemoveFromClient = false,
             },
             DeleteReason = DeleteReason.FailedImport,
-            JobRunId = Guid.NewGuid()
+            JobRunId = Guid.NewGuid(),
+            IsDryRun = false,
         };
         var context = CreateConsumeContext(request);
 
@@ -167,7 +190,8 @@ public class DownloadRemoverConsumerTests
                 RemoveFromClient = true,
             },
             DeleteReason = DeleteReason.SlowSpeed,
-            JobRunId = Guid.NewGuid()
+            JobRunId = Guid.NewGuid(),
+            IsDryRun = false,
         };
         var context = CreateConsumeContext(request);
 
@@ -199,7 +223,8 @@ public class DownloadRemoverConsumerTests
                 RemoveFromClient = true,
             },
             DeleteReason = DeleteReason.Stalled,
-            JobRunId = Guid.NewGuid()
+            JobRunId = Guid.NewGuid(),
+            IsDryRun = false,
         };
     }
 
