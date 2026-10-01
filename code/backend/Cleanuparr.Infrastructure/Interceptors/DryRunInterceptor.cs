@@ -74,16 +74,9 @@ public partial class DryRunInterceptor : IDryRunInterceptor
 
     private bool IsDryRun(string? expression)
     {
-        if (!ContextProvider.IsDryRunSticky())
+        if (!ContextProvider.IsDryRunSticky() && !_dataContext.GeneralConfigs.AsNoTracking().First().DryRun)
         {
-            GeneralConfig config = _dataContext.GeneralConfigs
-                .AsNoTracking()
-                .First();
-
-            if (!config.DryRun)
-            {
-                return false;
-            }
+            return false;
         }
 
         _logger.LogInformation("[DRY RUN] skipping method: {name}", ExtractMethodName(expression));
