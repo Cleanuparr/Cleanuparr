@@ -136,9 +136,7 @@ public sealed class ForceImportService : IForceImportService
         // Dry run keeps a separate try budget and give-up marker.
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
-        string gaveUpKey = isDryRun
-            ? CacheKeys.ForceImportDryRunGaveUp(record.DownloadId, instance.Url)
-            : CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url);
+        string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url, isDryRun);
 
         if (_cache.TryGetValue(gaveUpKey, out DateTimeOffset gaveUpAt) && _timeProvider.GetUtcNow() - gaveUpAt < GaveUpWindow)
         {
@@ -147,9 +145,7 @@ public sealed class ForceImportService : IForceImportService
         }
 
         ConcurrentDictionary<string, PendingForceImport> pending = GetPending(instance);
-        string triesKey = isDryRun
-            ? CacheKeys.ForceImportDryRunTries(record.DownloadId, instance.Url)
-            : CacheKeys.ForceImportTries(record.DownloadId, instance.Url);
+        string triesKey = CacheKeys.ForceImportTries(record.DownloadId, instance.Url, isDryRun);
         int tries = _cache.TryGetValue(triesKey, out int spent) ? spent : 0;
 
         if (tries >= config.ForceImportMaxTries)

@@ -516,7 +516,7 @@ public class ForceImportServiceTests
         // Assert: dry run spends its own budget, live budget stays empty
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
-        _cache.TryGetValue(CacheKeys.ForceImportDryRunTries(record.DownloadId, _instance.Url), out int dryTries).ShouldBeTrue();
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url, true), out int dryTries).ShouldBeTrue();
         dryTries.ShouldBe(1);
         _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url), out int _).ShouldBeFalse();
     }
@@ -563,7 +563,7 @@ public class ForceImportServiceTests
 
         // Assert: dry run gives up and sets its own give-up marker
         outcome.ShouldBe(ForceImportOutcome.NotApplicable);
-        _cache.TryGetValue(CacheKeys.ForceImportDryRunGaveUp(record.DownloadId, _instance.Url), out DateTimeOffset _)
+        _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url, true), out DateTimeOffset _)
             .ShouldBeTrue();
 
         // Dry run leaves the live marker alone
