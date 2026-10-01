@@ -227,14 +227,8 @@ public sealed class ForceImportService : IForceImportService
             // The arr answered, so the try is spent and the strike path stays reachable.
             SpendTry();
 
-            if (isDryRun)
-            {
-                _logger.LogError(exception, "[DRY RUN] force import failed | {Title}", record.Title);
-            }
-            else
-            {
-                _logger.LogError(exception, "force import failed | try {Try} | {Title}", tries + 1, record.Title);
-            }
+            string prefix = isDryRun ? "[DRY RUN] " : string.Empty;
+            _logger.LogError(exception, prefix + "force import failed | try {Try} | {Title}", tries + 1, record.Title);
         }
         catch (Exception exception)
         {
