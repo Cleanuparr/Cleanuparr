@@ -3416,12 +3416,12 @@ public class SeekerTests : IDisposable
         await CreateSut().ExecuteAsync();
 
         // Act - advance past MinCycleTimeDays so the dry run re-selects the item
-        // A dry run leaves CurrentCycleId unchanged, so the guard's lookup still matches the live row
+        // The dry run keeps CurrentCycleId, so the guard finds the live row
         _fixture.TimeProvider.Advance(TimeSpan.FromDays(8));
         _dryRunInterceptor.IsDryRunEnabled().Returns(true);
         await CreateSut().ExecuteAsync();
 
-        // Assert - the item was searched both times, but the live row is untouched
+        // Assert - both runs search, the live row stays unchanged
         await mockArrClient.Received(2)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 

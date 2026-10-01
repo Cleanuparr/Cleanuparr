@@ -54,7 +54,7 @@ public sealed class Striker : IStriker
 
         int strikeCount = existingStrikeCount + 1;
 
-        // Read before the flip below.
+        // Read before the IsRemoved reset below.
         // Dry run counts only a real return as recurring.
         bool hasReturned = downloadItem.IsRemoved || downloadItem.IsReturning;
 

@@ -712,7 +712,7 @@ public class QueueItemRemoverTests : IDisposable
     [Fact]
     public async Task RemoveQueueItemAsync_Live_MarksDownloadRemoved()
     {
-        // Arrange: a live run deletes for real, so the download leaves the arr queue
+        // Arrange: the live delete takes the download out of the arr queue
         _eventsContext.DownloadItems.Add(new DownloadItem
         {
             DownloadId = "abc123def456",
@@ -726,7 +726,7 @@ public class QueueItemRemoverTests : IDisposable
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
-        // Assert: the live run marks the download removed and clears the removal flag
+        // Assert
         DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
             .FirstAsync(x => x.DownloadId == "abc123def456");
         item.IsRemoved.ShouldBeTrue();

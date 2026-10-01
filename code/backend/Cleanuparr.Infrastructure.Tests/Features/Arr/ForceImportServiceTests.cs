@@ -490,8 +490,7 @@ public class ForceImportServiceTests : IDisposable
     [Fact]
     public async Task TryImportAsync_DryRunTurnsOnMidRun_RegistersNoPendingAndSpendsNoTry()
     {
-        // Arrange: the service read dry run as off, but the arr client's own check caught it
-        // turning on before the send, so the request never reached the arr.
+        // Arrange: dry run turns on after the service reads it
         QueueRecord record = BuildRecord(state: "importBlocked");
         StubCandidates(BuildCandidate(SafeReason));
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>()).Returns(false);
@@ -499,7 +498,7 @@ public class ForceImportServiceTests : IDisposable
         // Act
         ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
 
-        // Assert: nothing was spent or recorded for a request that never reached the arr
+        // Assert: no try spent, no pending import
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url), out int _).ShouldBeFalse();
         _cache.TryGetValue(CacheKeys.ForceImportPending(_instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending);
@@ -933,7 +932,7 @@ public class ForceImportServiceTests : IDisposable
         await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
     }
 
-    // Mirrors the real ArrClient: its own interceptor skips the send and returns false during a dry run.
+    // The real ArrClient skips the send under dry run.
     private void EnableDryRun()
     {
         _dryRunInterceptor.IsDryRunEnabled().Returns(true);
