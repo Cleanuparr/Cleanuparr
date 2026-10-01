@@ -13,7 +13,6 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 
@@ -82,11 +81,6 @@ public sealed class ForceImportService : IForceImportService
         "importFailed",
     };
 
-    /// <summary>
-    /// <see cref="ForgetDryRun"/> cancels it to evict every dry-run entry.
-    /// </summary>
-    private static CancellationTokenSource _dryRunEviction = new();
-
     private readonly ILogger<ForceImportService> _logger;
     private readonly IMemoryCache _cache;
     private readonly IStriker _striker;
@@ -109,16 +103,6 @@ public sealed class ForceImportService : IForceImportService
         _eventPublisher = eventPublisher;
         _timeProvider = timeProvider;
         _dryRunInterceptor = dryRunInterceptor;
-    }
-
-    /// <summary>
-    /// Evicts the dry-run tries and give-up markers.
-    /// Live entries stay.
-    /// </summary>
-    public static void ForgetDryRun()
-    {
-        CancellationTokenSource previous = Interlocked.Exchange(ref _dryRunEviction, new CancellationTokenSource());
-        previous.Cancel();
     }
 
     /// <inheritdoc/>
@@ -170,7 +154,7 @@ public sealed class ForceImportService : IForceImportService
 
         if (tries >= config.ForceImportMaxTries)
         {
-            SetCacheValue(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow, isDryRun);
+            _cache.Set(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow);
             _cache.Remove(triesKey);
 
             _logger.LogInformation("give up force import | {Tries} tries spent | {Title}", tries, record.Title);
@@ -188,10 +172,7 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.Deferred;
         }
 
-        void SpendTry()
-        {
-            SetCacheValue(triesKey, tries + 1, TriesWindow, isDryRun);
-        }
+        void SpendTry() => _cache.Set(triesKey, tries + 1, TriesWindow);
 
         int importedBefore;
 
@@ -343,21 +324,6 @@ public sealed class ForceImportService : IForceImportService
         GetPending(instance).TryRemove(downloadId, out _);
 
         return false;
-    }
-
-    /// <summary>
-    /// Tags dry-run entries so <see cref="ForgetDryRun"/> can evict them.
-    /// </summary>
-    private void SetCacheValue(string key, object value, TimeSpan window, bool isDryRun)
-    {
-        MemoryCacheEntryOptions options = new() { AbsoluteExpirationRelativeToNow = window };
-
-        if (isDryRun)
-        {
-            options.AddExpirationToken(new CancellationChangeToken(_dryRunEviction.Token));
-        }
-
-        _cache.Set(key, value, options);
     }
 
     /// <inheritdoc/>
