@@ -1,3 +1,4 @@
+using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.EntityFrameworkCore;
@@ -79,6 +80,8 @@ public sealed class DryRunPurger : IDryRunPurger
             }
 
             await transaction.CommitAsync();
+
+            ForceImportService.ForgetDryRun();
         }
         catch
         {
