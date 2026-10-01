@@ -577,9 +577,10 @@ public class SonarrClientTests
         ];
 
         // Act
-        await _client.ForceImportAsync(_arrInstance, files);
+        bool sent = await _client.ForceImportAsync(_arrInstance, files);
 
         // Assert
+        sent.ShouldBeTrue();
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.Method.ShouldBe(HttpMethod.Post);
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/command");
@@ -606,9 +607,10 @@ public class SonarrClientTests
             .Returns(Task.FromResult<HttpResponseMessage?>(null));
 
         // Act
-        await _client.ForceImportAsync(_arrInstance, [new ManualImportFile { Path = "/downloads/show.mkv" }]);
+        bool sent = await _client.ForceImportAsync(_arrInstance, [new ManualImportFile { Path = "/downloads/show.mkv" }]);
 
         // Assert
+        sent.ShouldBeFalse();
         _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
     }
 

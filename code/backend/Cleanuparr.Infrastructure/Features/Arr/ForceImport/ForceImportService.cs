@@ -215,19 +215,23 @@ public sealed class ForceImportService : IForceImportService
                 return failure!.Value;
             }
 
-            await arrClient.ForceImportAsync(instance, files);
+            bool sent = await arrClient.ForceImportAsync(instance, files);
 
-            SpendTry();
-
-            if (isDryRun)
+            if (!sent)
             {
-                _logger.LogInformation(
-                    "[DRY RUN] would ask the arr to import {Count} file(s) | {Title}",
-                    files.Count, record.Title
-                );
+                if (isDryRun)
+                {
+                    SpendTry();
+                    _logger.LogInformation(
+                        "[DRY RUN] would ask the arr to import {Count} file(s) | {Title}",
+                        files.Count, record.Title
+                    );
+                }
 
                 return ForceImportOutcome.Deferred;
             }
+
+            SpendTry();
 
             pending.AddOrUpdate(
                 record.DownloadId,

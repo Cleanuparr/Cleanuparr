@@ -27,7 +27,8 @@ public interface IArrClient
     /// <summary>
     /// Makes the arr import files it refused to import on its own.
     /// </summary>
-    Task ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files);
+    /// <returns>True when the request was sent, false when dry run skipped it.</returns>
+    Task<bool> ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files);
 
     /// <summary>
     /// Counts the times the arr recorded an import for a download.

@@ -215,7 +215,7 @@ public abstract class ArrClient : IArrClient
     }
 
     /// <inheritdoc/>
-    public async Task ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files)
+    public async Task<bool> ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
@@ -234,6 +234,7 @@ public abstract class ArrClient : IArrClient
         {
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
             response?.Dispose();
+            return response is not null;
         }
         catch
         {
