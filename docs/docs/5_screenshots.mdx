@@ -16,58 +16,88 @@ Get a visual overview of Cleanuparr's interface and features.
 <ScreenshotGallery
   screenshots={[
     {
-      src: useBaseUrl('/img/screenshots/dashboard.png'),
+      src: useBaseUrl('/img/screenshots/dashboard.webp'),
       alt: 'Cleanuparr Dashboard',
       title: 'Dashboard Overview',
-      description: 'The main dashboard provides a quick overview of all your configured jobs, their status, and recent activity.'
+      description: 'The main dashboard shows items that need manual intervention and activity statistics over the last day, week, month or year.'
     },
     {
-      src: useBaseUrl('/img/screenshots/dashboard2.png'),
-      alt: 'Cleanuparr Dashboard Alternative View',
-      title: 'Dashboard - Manual intervention needed',
-      description: 'The dashboard highlights messages that require manual intervention, such as settings that need to be configured or items that need manual searching.'
+      src: useBaseUrl('/img/screenshots/dashboard2.webp'),
+      alt: 'Cleanuparr Dashboard Recent Activity',
+      title: 'Dashboard - Recent activity',
+      description: 'Live widgets show the latest logs, events and strikes, alongside custom format score progress and recent upgrades.'
     },
     {
-      src: useBaseUrl('/img/screenshots/download_clients.png'),
+      src: useBaseUrl('/img/screenshots/download_clients.webp'),
       alt: 'Download Clients Configuration',
       title: 'Download Clients',
       description: 'Configure and manage connections to your download clients.'
     },
     {
-      src: useBaseUrl('/img/screenshots/notifications.png'),
+      src: useBaseUrl('/img/screenshots/notifications.webp'),
       alt: 'Notification Configuration',
       title: 'Notifications',
       description: 'Set up notification providers like Apprise, Notifiarr, and Ntfy to stay informed about actions taken by Cleanuparr.'
     },
     {
-      src: useBaseUrl('/img/screenshots/events.png'),
+      src: useBaseUrl('/img/screenshots/settings_queue-cleaner.webp'),
+      alt: 'Queue Cleaner Settings',
+      title: 'Queue Cleaner',
+      description: 'Configure how stalled, slow and failed imports get struck and removed from your arr queues.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/settings_seeker.webp'),
+      alt: 'Seeker Settings',
+      title: 'Seeker',
+      description: 'Configure replacement searches and proactive searches for missing items and quality upgrades.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/events.webp'),
       alt: 'Events and Activity Log',
       title: 'Events & Activity',
       description: 'Track all actions taken by Cleanuparr including strikes issued, downloads removed, and searches triggered. Filter by event type, job, or time period to understand what happened and when.'
     },
     {
-      src: useBaseUrl('/img/screenshots/logs.png'),
-      alt: 'Application Logs',
-      title: 'Logs Viewer',
-      description: 'Access live application logs directly from the web interface (only the latest 100 entries are kept). Filter by log level, search for specific messages, and troubleshoot issues without accessing the server console.'
+      src: useBaseUrl('/img/screenshots/strikes.webp'),
+      alt: 'Strikes',
+      title: 'Strikes',
+      description: 'See every download with active strikes, the strike types it collected and whether it was removed.'
     },
     {
-      src: useBaseUrl('/img/screenshots/seeker-stats_searches.png'),
+      src: useBaseUrl('/img/screenshots/logs.webp'),
+      alt: 'Application Logs',
+      title: 'Logs Viewer',
+      description: 'Access live application logs directly from the web interface (the server keeps the latest 100 entries, and an open page collects up to 1000). Filter by log level, search for specific messages, and troubleshoot issues without accessing the server console.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/seeker-stats_searches.webp'),
       alt: 'Seeker stats - Searches',
       title: 'Seeker stats - Searches',
       description: 'Monitor all searches triggered by the Seeker, including which items were searched for and when.'
     },
     {
-      src: useBaseUrl('/img/screenshots/seeker-stats_quality.png'),
+      src: useBaseUrl('/img/screenshots/seeker-stats_quality.webp'),
       alt: 'Seeker stats - Quality Scores',
       title: 'Seeker stats - Quality Scores',
       description: 'View custom format score distributions across your library. See how your items score against your configured quality profiles to identify potential upgrade candidates.'
     },
     {
-      src: useBaseUrl('/img/screenshots/seeker-stats_upgrades.png'),
+      src: useBaseUrl('/img/screenshots/seeker-stats_upgrades.webp'),
       alt: 'Seeker stats - Upgrades',
       title: 'Seeker stats - Upgrades',
       description: 'Track custom format upgrades over time, showing which items were upgraded and the score improvements achieved. Helps you gauge how effectively the Seeker is improving your library quality.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/appearance.webp'),
+      alt: 'Appearance Settings',
+      title: 'Appearance',
+      description: 'Switch between dark and light themes and pick an accent color, from presets or any custom color.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/mobile.webp'),
+      alt: 'Cleanuparr on Mobile',
+      title: 'Mobile',
+      description: 'The interface adapts to phone screens, so you can check on Cleanuparr from anywhere.'
     },
   ]}
 />
