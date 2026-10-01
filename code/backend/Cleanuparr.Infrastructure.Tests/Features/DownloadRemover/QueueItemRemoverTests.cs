@@ -710,6 +710,30 @@ public class QueueItemRemoverTests : IDisposable
     #region Dry Run
 
     [Fact]
+    public async Task RemoveQueueItemAsync_Live_MarksDownloadRemoved()
+    {
+        // Arrange: a live run deletes for real, so the download leaves the arr queue
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "abc123def456",
+            Title = "Test Record",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert: the live run marks the download removed and clears the removal flag
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "abc123def456");
+        item.IsRemoved.ShouldBeTrue();
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task RemoveQueueItemAsync_DryRun_LeavesTheDownloadUnmarked()
     {
         // Arrange: dry run deletes nothing, download stays in the arr queue
