@@ -65,7 +65,7 @@ public sealed class DryRunPurgerTests : IDisposable
         var jobRun = new JobRun { Id = Guid.NewGuid(), Type = JobType.QueueCleaner };
         _eventsContext.JobRuns.Add(jobRun);
 
-        // Real strike plus a dry-run strike: purge clears the mark
+        // Real strike plus a dry-run strike: purge keeps the mark
         var touchedByDryRun = new DownloadItem
         {
             DownloadId = "touched-by-dry-run",
@@ -105,7 +105,7 @@ public sealed class DryRunPurgerTests : IDisposable
         (await _eventsContext.SeekerHistory.CountAsync()).ShouldBe(1);
 
         DownloadItem touched = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "touched-by-dry-run");
-        touched.IsMarkedForRemoval.ShouldBeFalse();
+        touched.IsMarkedForRemoval.ShouldBeTrue();
 
         // Real-run flags survive the purge
         DownloadItem real = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "real-only");

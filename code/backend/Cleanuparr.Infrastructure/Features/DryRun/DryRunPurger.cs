@@ -42,13 +42,6 @@ public sealed class DryRunPurger : IDryRunPurger
 
         try
         {
-            // Read before the purge deletes these strikes.
-            List<Guid> dryRunItemIds = await _eventsContext.Strikes
-                .Where(s => s.IsDryRun)
-                .Select(s => s.DownloadItemId)
-                .Distinct()
-                .ToListAsync();
-
             int deletedStrikes = await _eventsContext.Strikes
                 .Where(s => s.IsDryRun)
                 .ExecuteDeleteAsync();
@@ -62,21 +55,15 @@ public sealed class DryRunPurger : IDryRunPurger
                 .Where(d => !d.Strikes.Any())
                 .ExecuteDeleteAsync();
 
-            // Older releases marked items during dry run.
-            int clearedFlags = await _eventsContext.DownloadItems
-                .Where(d => dryRunItemIds.Contains(d.Id) && d.IsMarkedForRemoval)
-                .ExecuteUpdateAsync(setter => setter
-                    .SetProperty(d => d.IsMarkedForRemoval, false));
-
             int deletedHistory = await _eventsContext.SeekerHistory
                 .Where(h => h.IsDryRun)
                 .ExecuteDeleteAsync();
 
-            if (deletedStrikes + deletedEvents + deletedManualEvents + deletedItems + deletedHistory + clearedFlags > 0)
+            if (deletedStrikes + deletedEvents + deletedManualEvents + deletedItems + deletedHistory > 0)
             {
                 _logger.LogWarning(
-                    "Purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed, {Flags} removal marks cleared",
-                    deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, clearedFlags);
+                    "Purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed",
+                    deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory);
             }
 
             await transaction.CommitAsync();
