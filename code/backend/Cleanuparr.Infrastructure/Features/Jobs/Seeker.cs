@@ -975,16 +975,9 @@ public sealed class Seeker : IHandler
 
             if (existing is not null)
             {
-                if (isDryRun && !existing.IsDryRun)
+                if (SkipOrResetDryRunRow(existing, isDryRun, title))
                 {
-                    _logger.LogDebug("[DRY RUN] skipping search history update for live row | {Title}", title);
                     continue;
-                }
-
-                if (!isDryRun && existing.IsDryRun)
-                {
-                    existing.IsDryRun = false;
-                    existing.SearchCount = 0;
                 }
 
                 existing.LastSearchedAt = now;
@@ -1011,6 +1004,23 @@ public sealed class Seeker : IHandler
         }
 
         await _eventsContext.SaveChangesAsync();
+    }
+
+    private bool SkipOrResetDryRunRow(SeekerHistory existing, bool isDryRun, string title)
+    {
+        if (isDryRun && !existing.IsDryRun)
+        {
+            _logger.LogDebug("[DRY RUN] skipping search history update for live row | {Title}", title);
+            return true;
+        }
+
+        if (!isDryRun && existing.IsDryRun)
+        {
+            existing.IsDryRun = false;
+            existing.SearchCount = 0;
+        }
+
+        return false;
     }
 
     private async Task SaveCommandTrackerAsync(
