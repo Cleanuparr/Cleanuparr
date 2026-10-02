@@ -152,6 +152,9 @@ public sealed class ForceImportService : IForceImportService
         // Dry run keeps a separate try budget and give-up marker.
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
+        // A purge during the awaits below evicts this attempt's writes.
+        CancellationToken dryRunEvictionToken = _dryRunEviction.Token;
+
         string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url, isDryRun);
 
         if (_cache.TryGetValue(gaveUpKey, out DateTimeOffset gaveUpAt) && _timeProvider.GetUtcNow() - gaveUpAt < GaveUpWindow)
@@ -166,7 +169,7 @@ public sealed class ForceImportService : IForceImportService
 
         if (tries >= config.ForceImportMaxTries)
         {
-            SetCacheValue(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow, isDryRun);
+            SetCacheValue(gaveUpKey, _timeProvider.GetUtcNow(), GaveUpWindow, isDryRun, dryRunEvictionToken);
             _cache.Remove(triesKey);
 
             _logger.LogInformation("give up force import | {Tries} tries spent | {Title}", tries, record.Title);
@@ -186,7 +189,7 @@ public sealed class ForceImportService : IForceImportService
 
         void SpendTry()
         {
-            SetCacheValue(triesKey, tries + 1, TriesWindow, isDryRun);
+            SetCacheValue(triesKey, tries + 1, TriesWindow, isDryRun, dryRunEvictionToken);
         }
 
         int importedBefore;
@@ -338,13 +341,17 @@ public sealed class ForceImportService : IForceImportService
     /// <summary>
     /// Tags dry-run entries so <see cref="ForgetDryRun"/> can evict them.
     /// </summary>
-    private void SetCacheValue(string key, object value, TimeSpan window, bool isDryRun)
+    /// <remarks>
+    /// Pass the token read alongside the dry-run flag.
+    /// A fresh read lets a racing purge miss this write.
+    /// </remarks>
+    private void SetCacheValue(string key, object value, TimeSpan window, bool isDryRun, CancellationToken dryRunEvictionToken)
     {
         MemoryCacheEntryOptions options = new() { AbsoluteExpirationRelativeToNow = window };
 
         if (isDryRun)
         {
-            options.AddExpirationToken(new CancellationChangeToken(_dryRunEviction.Token));
+            options.AddExpirationToken(new CancellationChangeToken(dryRunEvictionToken));
         }
 
         _cache.Set(key, value, options);
