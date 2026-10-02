@@ -93,8 +93,7 @@ public class QueueItemRemoverTests : IDisposable
             _eventPublisher,
             _eventsContext,
             _dataContext,
-            _lazyLibrarianService,
-            _dryRunInterceptor
+            _lazyLibrarianService
         );
 
         // Clear static RecurringHashes before each test
@@ -161,7 +160,7 @@ public class QueueItemRemoverTests : IDisposable
         StubProgress(-1);
         _lazyLibrarianService
             .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
-            .Returns(Task.FromException(new Exception("lazylibrarian is down")));
+            .Returns(Task.FromException<bool>(new Exception("lazylibrarian is down")));
         QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
 
         // Act
@@ -603,7 +602,7 @@ public class QueueItemRemoverTests : IDisposable
         StubProgress(-1);
         _lazyLibrarianService
             .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
-            .Returns(Task.FromException(new Exception("lazylibrarian is down")));
+            .Returns(Task.FromException<bool>(new Exception("lazylibrarian is down")));
 
         // Act
         await Should.ThrowAsync<Exception>(
@@ -710,9 +709,12 @@ public class QueueItemRemoverTests : IDisposable
     #region Dry Run
 
     [Fact]
-    public async Task RemoveQueueItemAsync_Live_MarksDownloadRemoved()
+    public async Task RemoveQueueItemAsync_DeleteSent_MarksDownloadRemoved()
     {
-        // Arrange: the live delete takes the download out of the arr queue
+        // Arrange: the delete was sent
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(true);
         _eventsContext.DownloadItems.Add(new DownloadItem
         {
             DownloadId = "abc123def456",
@@ -734,10 +736,12 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveQueueItemAsync_DryRun_LeavesTheDownloadUnmarked()
+    public async Task RemoveQueueItemAsync_DeleteSkipped_LeavesTheDownloadUnmarked()
     {
-        // Arrange: dry run deletes nothing, download stays in the arr queue
-        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        // Arrange: dry run skipped the delete
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(false);
         _eventsContext.DownloadItems.Add(new DownloadItem
         {
             DownloadId = "abc123def456",
@@ -751,7 +755,7 @@ public class QueueItemRemoverTests : IDisposable
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
-        // Assert: dry run leaves the removal flag set without marking it removed
+        // Assert: the removal flag stays set
         DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
             .FirstAsync(x => x.DownloadId == "abc123def456");
         item.IsRemoved.ShouldBeFalse();
@@ -759,10 +763,68 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveQueueItemAsync_DryRun_LazyLibrarian_LeavesTheDownloadUnmarked()
+    public async Task RemoveQueueItemAsync_DeleteSentWhileDryRunFlagIsSet_StillMarksDownloadRemoved()
+    {
+        // Arrange: dry run turned on after the delete was sent
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(true);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "abc123def456",
+            Title = "Test Record",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "abc123def456");
+        item.IsRemoved.ShouldBeTrue();
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_ResetSent_MarksDownloadRemoved()
     {
         // Arrange
-        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        _lazyLibrarianService
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(true);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "hash1",
+            Title = "A Book",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "hash1");
+        item.IsRemoved.ShouldBeTrue();
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_ResetSkipped_LeavesTheDownloadUnmarked()
+    {
+        // Arrange: dry run skipped every reset
+        _lazyLibrarianService
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(false);
         _eventsContext.DownloadItems.Add(new DownloadItem
         {
             DownloadId = "hash1",
@@ -785,10 +847,12 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveQueueItemAsync_DryRun_StillAsksTheArrAndQueuesTheSearch()
+    public async Task RemoveQueueItemAsync_DeleteSkipped_StillQueuesTheSearch()
     {
-        // Arrange
-        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        // Arrange: dry run skipped the delete
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(false);
         QueueItemRemoveRequest request = CreateRemoveRequest();
 
         // Act

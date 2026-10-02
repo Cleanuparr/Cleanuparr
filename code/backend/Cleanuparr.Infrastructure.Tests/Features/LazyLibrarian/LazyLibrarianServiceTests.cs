@@ -16,6 +16,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.LazyLibrarian;
 public class LazyLibrarianServiceTests
 {
     private readonly FakeHttpMessageHandler _httpMessageHandler;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly LazyLibrarianService _service;
     private readonly ArrInstance _instance;
 
@@ -32,19 +33,19 @@ public class LazyLibrarianServiceTests
                 Arg.Any<Exception?>(),
                 Arg.Any<Func<object, Exception?, string>>()))
             .Do(ci => _loggedMessages.Add(ci.ArgAt<object>(2).ToString() ?? string.Empty));
-        IDryRunInterceptor dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         _httpMessageHandler = new FakeHttpMessageHandler();
 
         HttpClient httpClient = new(_httpMessageHandler);
         IHttpClientFactory httpClientFactory = Substitute.For<IHttpClientFactory>();
         httpClientFactory.CreateClient(Arg.Any<string>()).Returns(httpClient);
 
-        dryRunInterceptor.IsDryRunEnabled().Returns(false);
-        dryRunInterceptor
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        _dryRunInterceptor
             .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns(async ci => await ci.Arg<Func<Task<HttpResponseMessage>>>()());
 
-        _service = new LazyLibrarianService(logger, httpClientFactory, dryRunInterceptor);
+        _service = new LazyLibrarianService(logger, httpClientFactory, _dryRunInterceptor);
         _instance = new ArrInstance
         {
             Name = "lazylibrarian",
@@ -414,17 +415,34 @@ public class LazyLibrarianServiceTests
         });
 
         // Act
-        await _service.ResetItemAsync(_instance, CreateItem(
+        bool sent = await _service.ResetItemAsync(_instance, CreateItem(
         [
             new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
             new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
         ]));
 
         // Assert: the audio status is separate, so the audiobook carries the type parameter.
+        sent.ShouldBeTrue();
         requested.Select(uri => uri.Query).ShouldBe([
             $"?apikey={ApiKey}&cmd=queueBook&id=OL1W",
             $"?apikey={ApiKey}&cmd=queueBook&id=OL2W&type=AudioBook",
         ]);
+    }
+
+    [Fact]
+    public async Task ResetItemAsync_DryRunSkipsTheRequest_ReturnsFalse()
+    {
+        // Arrange: dry run skips every request
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .Returns((HttpResponseMessage?)null);
+
+        // Act
+        bool sent = await _service.ResetItemAsync(_instance, CreateItem());
+
+        // Assert
+        sent.ShouldBeFalse();
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
     }
 
     [Fact]

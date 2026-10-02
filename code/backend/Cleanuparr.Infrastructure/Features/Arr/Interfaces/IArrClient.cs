@@ -53,7 +53,8 @@ public interface IArrClient
     /// <param name="removeFromClient">When true, also delete the download from the download client. Ignored when <paramref name="changeCategory"/> is true.</param>
     /// <param name="changeCategory">When true, instructs the *arr to change the download's category to the post-import category instead of removing it from the download client. Mutually exclusive with <paramref name="removeFromClient"/>.</param>
     /// <param name="deleteReason">Reason for removal, used for logging and event publishing.</param>
-    Task DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, bool changeCategory, DeleteReason deleteReason);
+    /// <returns>True when the request was sent, false when dry run skipped it.</returns>
+    Task<bool> DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, bool changeCategory, DeleteReason deleteReason);
 
     /// <summary>
     /// Triggers a search for the specified items and returns the arr command IDs

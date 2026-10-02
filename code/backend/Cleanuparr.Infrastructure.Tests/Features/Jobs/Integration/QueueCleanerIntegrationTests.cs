@@ -91,7 +91,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         // Process the captured messages through the real QueueItemRemover pipeline
         _fixture.ArrClient.DeleteQueueItemAsync(
             Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
-            .Returns(Task.CompletedTask);
+            .Returns(true);
 
         await _fixture.ProcessCapturedRemoveRequestsAsync();
 
@@ -188,7 +188,7 @@ public class QueueCleanerIntegrationTests : IDisposable
 
         _fixture.ArrClient.DeleteQueueItemAsync(
             Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
-            .Returns(Task.CompletedTask);
+            .Returns(true);
 
         await _fixture.ProcessCapturedRemoveRequestsAsync();
 
@@ -279,7 +279,7 @@ public class QueueCleanerIntegrationTests : IDisposable
 
         _fixture.ArrClient.DeleteQueueItemAsync(
             Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
-            .Returns(Task.CompletedTask);
+            .Returns(true);
 
         await _fixture.ProcessCapturedRemoveRequestsAsync();
 

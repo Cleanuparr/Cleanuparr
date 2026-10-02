@@ -175,9 +175,10 @@ public class ArrClientTests
         _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
-        await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(42), removeFromClient: true, changeCategory: false, DeleteReason.FailedImport);
+        bool sent = await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(42), removeFromClient: true, changeCategory: false, DeleteReason.FailedImport);
 
         // Assert
+        sent.ShouldBeTrue();
         var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.Method.ShouldBe(HttpMethod.Delete);
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/queue/42");
@@ -233,9 +234,10 @@ public class ArrClientTests
             .Returns((HttpResponseMessage?)null);
 
         // Act
-        await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(1), removeFromClient: false, changeCategory: false, DeleteReason.Stalled);
+        bool sent = await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(1), removeFromClient: false, changeCategory: false, DeleteReason.Stalled);
 
         // Assert
+        sent.ShouldBeFalse();
         _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
     }
 

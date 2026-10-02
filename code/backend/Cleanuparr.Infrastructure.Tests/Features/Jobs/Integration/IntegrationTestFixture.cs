@@ -151,8 +151,7 @@ public class IntegrationTestFixture : IDisposable
             EventPublisher,
             EventsContext,
             DataContext,
-            LazyLibrarianService,
-            DryRunInterceptor);
+            LazyLibrarianService);
 
         SeedingRulesService = new SeedingRulesCleanupService(
             Substitute.For<ILogger<SeedingRulesCleanupService>>(),

@@ -11,7 +11,6 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
-using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
@@ -30,7 +29,6 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
     private readonly ILazyLibrarianService _lazyLibrarianService;
-    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
@@ -39,8 +37,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         IEventPublisher eventPublisher,
         EventsContext eventsContext,
         DataContext dataContext,
-        ILazyLibrarianService lazyLibrarianService,
-        IDryRunInterceptor dryRunInterceptor
+        ILazyLibrarianService lazyLibrarianService
     )
     {
         _logger = logger;
@@ -50,7 +47,6 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _eventsContext = eventsContext;
         _dataContext = dataContext;
         _lazyLibrarianService = lazyLibrarianService;
-        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task RemoveQueueItemAsync(QueueItemRemoveRequest request)
@@ -93,9 +89,9 @@ public sealed class QueueItemRemover : IQueueItemRemover
     {
         InstanceType instanceType = request.Instance.ArrConfig.Type;
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
-        await arrClient.DeleteQueueItemAsync(request.Instance, target.Record, target.RemoveFromClient, target.ChangeCategory, request.DeleteReason);
+        bool sent = await arrClient.DeleteQueueItemAsync(request.Instance, target.Record, target.RemoveFromClient, target.ChangeCategory, request.DeleteReason);
 
-        await MarkDownloadRemovedAsync(target.DownloadId);
+        await MarkDownloadRemovedAsync(target.DownloadId, sent);
 
         SetRemovalContext(request, target, instanceType);
         ContextProvider.Set(nameof(QueueRecord), target.Record);
@@ -131,8 +127,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         bool snatchCleared = await TryClearSnatchAsync(request, target);
 
-        await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
-        await MarkDownloadRemovedAsync(target.DownloadId);
+        bool sent = await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
+        await MarkDownloadRemovedAsync(target.DownloadId, sent);
 
         _logger.LogInformation(
             "queue item reset in LazyLibrarian with reason {Reason} | {Url} | {Title}",
@@ -215,12 +211,12 @@ public sealed class QueueItemRemover : IQueueItemRemover
     }
 
     /// <remarks>
-    /// A dry run leaves the download queued.
+    /// A skipped request leaves the download queued.
     /// Marking it removed would turn its next strike into a false return.
     /// </remarks>
-    private async Task MarkDownloadRemovedAsync(string downloadId)
+    private async Task MarkDownloadRemovedAsync(string downloadId, bool sent)
     {
-        if (await _dryRunInterceptor.IsDryRunEnabled())
+        if (!sent)
         {
             return;
         }

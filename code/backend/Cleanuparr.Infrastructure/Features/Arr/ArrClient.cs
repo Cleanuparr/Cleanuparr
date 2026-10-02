@@ -274,7 +274,7 @@ public abstract class ArrClient : IArrClient
     /// <inheritdoc/>
     public virtual ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) => null;
 
-    public virtual async Task DeleteQueueItemAsync(
+    public virtual async Task<bool> DeleteQueueItemAsync(
         ArrInstance arrInstance,
         QueueRecord record,
         bool removeFromClient,
@@ -317,6 +317,8 @@ public abstract class ArrClient : IArrClient
                 arrInstance.Url,
                 record.Title
             );
+
+            return response is not null;
         }
         catch
         {

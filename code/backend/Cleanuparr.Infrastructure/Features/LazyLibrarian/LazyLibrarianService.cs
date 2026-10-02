@@ -93,16 +93,20 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         return progress?.Data;
     }
 
-    public async Task ResetItemAsync(ArrInstance instance, LazyLibrarianQueueItem item)
+    public async Task<bool> ResetItemAsync(ArrInstance instance, LazyLibrarianQueueItem item)
     {
+        bool sent = false;
+
         foreach (LazyLibrarianBookRef book in item.Books)
         {
             Uri uri = book.IsAudioBook
                 ? BuildApiUri(instance, "queueBook", ("id", book.BookId), ("type", AudioBookLibrary))
                 : BuildApiUri(instance, "queueBook", ("id", book.BookId));
 
-            await SendCommandAsync(instance, uri, "queue item reset", item.Title);
+            sent |= await SendCommandAsync(instance, uri, "queue item reset", item.Title);
         }
+
+        return sent;
     }
 
     public async Task TriggerSearchAsync(ArrInstance instance, LazyLibrarianQueueItem item)
@@ -176,7 +180,8 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         return rows;
     }
 
-    private async Task SendCommandAsync(ArrInstance instance, Uri uri, string context, string title)
+    /// <returns>True when the request was sent, false when dry run skipped it.</returns>
+    private async Task<bool> SendCommandAsync(ArrInstance instance, Uri uri, string context, string title)
     {
         try
         {
@@ -186,7 +191,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
             if (response is null)
             {
-                return;
+                return false;
             }
 
             try
@@ -197,6 +202,8 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
             {
                 response.Dispose();
             }
+
+            return true;
         }
         catch (Exception exception)
         {
