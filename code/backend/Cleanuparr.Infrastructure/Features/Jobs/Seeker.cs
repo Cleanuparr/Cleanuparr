@@ -400,11 +400,31 @@ public sealed class Seeker : IHandler
         List<QueueRecord> queueRecords,
         CancellationToken cancellationToken)
     {
-        // Load search history for the current cycle
-        List<SeekerHistory> currentCycleHistory = await _eventsContext.SeekerHistory
+        // Dry run tracks its own cycle through dry history rows.
+        Guid effectiveCycleId;
+        List<SeekerHistory> currentCycleHistory;
+
+        if (isDryRun)
+        {
+            SeekerHistory? latestDryCycleRow = await _eventsContext.SeekerHistory
+                .AsNoTracking()
+                .Where(h => h.ArrInstanceId == arrInstance.Id
+                            && h.IsDryRun
+                            && h.CycleId != instanceConfig.CurrentCycleId)
+                .OrderByDescending(h => h.LastSearchedAt)
+                .FirstOrDefaultAsync();
+
+            effectiveCycleId = latestDryCycleRow?.CycleId ?? instanceConfig.CurrentCycleId;
+        }
+        else
+        {
+            effectiveCycleId = instanceConfig.CurrentCycleId;
+        }
+
+        currentCycleHistory = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id
-                        && h.CycleId == instanceConfig.CurrentCycleId
+                        && h.CycleId == effectiveCycleId
                         && (isDryRun || !h.IsDryRun))
             .ToListAsync();
 
@@ -434,7 +454,7 @@ public sealed class Seeker : IHandler
                 .Select(r => r.MovieId)
                 .ToHashSet();
 
-            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds, cancellationToken);
+            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, effectiveCycleId, isDryRun, queuedMovieIds, cancellationToken);
         }
         else
         {
@@ -443,7 +463,7 @@ public sealed class Seeker : IHandler
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
 
-            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, cancellationToken, queuedSeasons: queuedSeasons);
+            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, effectiveCycleId, isDryRun, cancellationToken, queuedSeasons: queuedSeasons);
         }
 
         if (result.Candidates.Count == 0)
@@ -473,11 +493,11 @@ public sealed class Seeker : IHandler
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
-                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, instanceConfig.CurrentCycleId, isDryRun);
+                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, result.CycleId, isDryRun);
 
             _logger.LogInformation("Search triggered for {Item} ({Reason}) | {InstanceUrl}", candidate.Name, candidate.Reason, arrInstance.Url);
 
-            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentCycleId,
+            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, result.CycleId,
                 [candidate.ItemId], [candidate.Name], candidate.SeasonNumber, isDryRun);
 
             if (!isDryRun)
@@ -501,6 +521,7 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTimeOffset> searchHistory,
+        Guid cycleId,
         bool isDryRun,
         HashSet<long> queuedMovieIds,
         CancellationToken cancellationToken)
@@ -565,7 +586,7 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
         }
 
         // Exclude movies already in the download queue
@@ -585,7 +606,7 @@ public sealed class Seeker : IHandler
 
             if (candidates.Count == 0)
             {
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
             }
         }
 
@@ -600,16 +621,22 @@ public sealed class Seeker : IHandler
                 _logger.LogDebug(
                     "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
                     instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
             }
 
             _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
                 candidates.Count, arrInstance.Name);
 
-            if (!isDryRun)
+            if (isDryRun)
+            {
+                // Live cycle id stays untouched.
+                cycleId = Guid.NewGuid();
+            }
+            else
             {
                 instanceConfig.CurrentCycleId = Guid.NewGuid();
                 await _dataContext.SaveChangesAsync();
+                cycleId = instanceConfig.CurrentCycleId;
             }
 
             searchHistory = new Dictionary<long, DateTimeOffset>();
@@ -651,7 +678,7 @@ public sealed class Seeker : IHandler
                 movie.Title, arrInstance.Name, reason);
         }
 
-        return new SeekerProcessResult { Candidates = searchCandidates, AllLibraryIds = allLibraryIds };
+        return new SeekerProcessResult { Candidates = searchCandidates, AllLibraryIds = allLibraryIds, CycleId = cycleId };
     }
 
     private async Task<SeekerProcessResult> ProcessSonarrAsync(
@@ -660,6 +687,7 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTimeOffset> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
+        Guid cycleId,
         bool isDryRun,
         CancellationToken cancellationToken,
         bool isRetry = false,
@@ -711,7 +739,7 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
         }
 
         // Pass all candidates — BuildSonarrSearchItemAsync handles season-level exclusion
@@ -764,6 +792,7 @@ public sealed class Seeker : IHandler
                             }
                         ],
                         AllLibraryIds = allLibraryIds,
+                        CycleId = cycleId,
                     };
                 }
 
@@ -789,23 +818,31 @@ public sealed class Seeker : IHandler
                 _logger.LogDebug(
                     "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
                     instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
             }
 
             _logger.LogInformation("All {Count} series on {InstanceName} searched in current cycle, starting new cycle",
                 candidates.Count, arrInstance.Name);
-            if (!isDryRun)
+
+            Guid newCycleId;
+            if (isDryRun)
+            {
+                // Live cycle id stays untouched.
+                newCycleId = Guid.NewGuid();
+            }
+            else
             {
                 instanceConfig.CurrentCycleId = Guid.NewGuid();
                 await _dataContext.SaveChangesAsync();
+                newCycleId = instanceConfig.CurrentCycleId;
             }
 
             // Retry with fresh cycle (only once to prevent infinite recursion)
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTimeOffset>(), [], isDryRun, cancellationToken, isRetry: true, queuedSeasons: queuedSeasons);
+                new Dictionary<long, DateTimeOffset>(), [], newCycleId, isDryRun, cancellationToken, isRetry: true, queuedSeasons: queuedSeasons);
         }
 
-        return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
+        return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
     }
 
     /// <summary>
