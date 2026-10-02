@@ -331,6 +331,83 @@ public class StrikerTests : IDisposable
     }
 
     [Fact]
+    public async Task ResetStrikeAsync_DryRun_KeepsLiveStrikes()
+    {
+        // Arrange - 2 live strikes and 1 dry run strike
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 5;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Act
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        List<Strike> remaining = await _strikerContext.Strikes.AsNoTracking()
+            .Where(s => s.DownloadItemId == item.Id)
+            .ToListAsync();
+        remaining.Count.ShouldBe(2);
+        remaining.ShouldAllBe(s => !s.IsDryRun);
+    }
+
+    [Fact]
+    public async Task ResetStrikeAsync_DryRun_NoDryStrikes_DoesNothing()
+    {
+        // Arrange - live strikes only, dry run on
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 5;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        int eventCountBefore = await _strikerContext.Events.CountAsync();
+
+        // Act
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert - no strikes deleted, no event
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        (await _strikerContext.Strikes.AsNoTracking().CountAsync(s => s.DownloadItemId == item.Id)).ShouldBe(2);
+        (await _strikerContext.Events.CountAsync()).ShouldBe(eventCountBefore);
+    }
+
+    [Fact]
+    public async Task ResetStrikeAsync_Live_DeletesAllStrikes()
+    {
+        // Arrange - a live strike and a dry run strike of the same type
+        const string hash = "abc123";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 5;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Act
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+
+        // Assert
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        (await _strikerContext.Strikes.AsNoTracking().CountAsync(s => s.DownloadItemId == item.Id)).ShouldBe(0);
+    }
+
+    [Fact]
     public async Task StrikeAndCheckLimit_ZeroMaxStrikes_ReturnsFalse()
     {
         // Arrange

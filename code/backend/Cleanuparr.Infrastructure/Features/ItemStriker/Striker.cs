@@ -106,8 +106,10 @@ public sealed class Striker : IStriker
             return;
         }
 
-        var strikesToDelete = await _context.Strikes
-            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType)
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
+        List<Strike> strikesToDelete = await _context.Strikes
+            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType && (!isDryRun || s.IsDryRun))
             .ToListAsync();
 
         if (strikesToDelete.Count is 0)
