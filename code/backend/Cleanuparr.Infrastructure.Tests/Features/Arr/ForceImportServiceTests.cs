@@ -23,6 +23,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
+[Collection(ForceImportDryRunCollection.Name)]
 public class ForceImportServiceTests : IDisposable
 {
     /// <summary>One of the reasons the service treats as safe to force past.</summary>

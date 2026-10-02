@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DryRun;
+using Cleanuparr.Infrastructure.Tests.Features.Arr;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -14,6 +15,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DryRun;
 
+[Collection(ForceImportDryRunCollection.Name)]
 public sealed class DryRunPurgerTests : IDisposable
 {
     private readonly DataContext _dataContext;
