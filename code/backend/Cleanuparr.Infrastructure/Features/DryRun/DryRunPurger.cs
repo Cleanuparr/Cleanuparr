@@ -67,13 +67,13 @@ public sealed class DryRunPurger : IDryRunPurger
             }
 
             await transaction.CommitAsync();
-
-            ForceImportService.ForgetDryRun();
         }
         catch
         {
             await transaction.RollbackAsync();
             throw;
         }
+
+        ForceImportService.ForgetDryRun();
     }
 }
