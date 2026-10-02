@@ -62,7 +62,7 @@ public sealed class DryRunPurger : IDryRunPurger
                 .Where(d => !d.Strikes.Any())
                 .ExecuteDeleteAsync();
 
-            // Only real removals set IsRemoved and IsReturning.
+            // Older releases marked items during dry run.
             int clearedFlags = await _eventsContext.DownloadItems
                 .Where(d => dryRunItemIds.Contains(d.Id) && d.IsMarkedForRemoval)
                 .ExecuteUpdateAsync(setter => setter

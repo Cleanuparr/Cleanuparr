@@ -530,6 +530,90 @@ public class StrikerTests : IDisposable
     }
 
     [Fact]
+    public async Task StrikeAndCheckLimit_DryRun_PreviouslyRemoved_DoesNotMutateRemovalFlags()
+    {
+        // Arrange - a real run removed the item
+        const string hash = "dry-run-flag-guard";
+        const string itemName = "Dry Run Flag Guard Item";
+        const ushort maxStrikes = 5;
+
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        DownloadItem downloadItem = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        downloadItem.IsRemoved = true;
+        await _strikerContext.SaveChangesAsync();
+
+        // Act - a dry run strikes the already-removed item again
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - removal flags unchanged
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        item.IsRemoved.ShouldBeTrue();
+        item.IsReturning.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_DryRun_ReachesMaxStrikes_DoesNotSetMarkedForRemoval()
+    {
+        // Arrange
+        const string hash = "dry-run-marked-guard";
+        const string itemName = "Dry Run Marked Guard Item";
+        const ushort maxStrikes = 1;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act
+        bool result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - reports the hit, leaves the item unmarked
+        result.ShouldBeTrue();
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_LiveRun_PreviouslyRemoved_SetsReturningFlags()
+    {
+        // Arrange - a prior run removed the item
+        const string hash = "live-run-returning";
+        const string itemName = "Live Run Returning Item";
+        const ushort maxStrikes = 5;
+
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        DownloadItem downloadItem = await _strikerContext.DownloadItems.SingleAsync(d => d.DownloadId == hash);
+        downloadItem.IsRemoved = true;
+        await _strikerContext.SaveChangesAsync();
+
+        // Act - a live run strikes the already-removed item again
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - item flagged as returning
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        item.IsRemoved.ShouldBeFalse();
+        item.IsReturning.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_LiveRun_ReachesMaxStrikes_SetsMarkedForRemoval()
+    {
+        // Arrange
+        const string hash = "live-run-marked";
+        const string itemName = "Live Run Marked Item";
+        const ushort maxStrikes = 1;
+
+        // Act
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        item.IsMarkedForRemoval.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task StrikeAndCheckLimit_StoresTitleOnDownloadItem()
     {
         // Arrange
