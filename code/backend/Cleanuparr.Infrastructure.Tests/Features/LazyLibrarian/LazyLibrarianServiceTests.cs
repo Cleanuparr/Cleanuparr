@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.Core;
 using Shouldly;
 using Xunit;
 
@@ -443,6 +444,60 @@ public class LazyLibrarianServiceTests
         // Assert
         sent.ShouldBeFalse();
         _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ResetItemAsync_DryRunSkipsOneBook_ReturnsFalse()
+    {
+        // Arrange: dry run skips the second book
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("OK", Encoding.UTF8, "text/plain"),
+        }));
+
+        int callCount = 0;
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .ReturnsForAnyArgs(async ci =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return await ci.Arg<Func<Task<HttpResponseMessage>>>()();
+                }
+                return null;
+            });
+
+        // Act
+        bool sent = await _service.ResetItemAsync(_instance, CreateItem(
+        [
+            new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
+            new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
+        ]));
+
+        // Assert: one request sent
+        sent.ShouldBeFalse();
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ResetItemAsync_NoBooks_ReturnsFalse()
+    {
+        // Arrange: item with no books
+        LazyLibrarianQueueItem item = new()
+        {
+            DownloadId = "HASH1",
+            Title = "A Book",
+            Books = [],
+            Source = LazyLibrarianSource.QBittorrent,
+            Origin = LazyLibrarianOrigin.New,
+        };
+
+        // Act
+        bool sent = await _service.ResetItemAsync(_instance, item);
+
+        // Assert
+        sent.ShouldBeFalse();
     }
 
     [Fact]

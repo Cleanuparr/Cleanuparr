@@ -95,7 +95,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
 
     public async Task<bool> ResetItemAsync(ArrInstance instance, LazyLibrarianQueueItem item)
     {
-        bool sent = false;
+        bool allSent = item.Books.Count > 0;
 
         foreach (LazyLibrarianBookRef book in item.Books)
         {
@@ -103,10 +103,11 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
                 ? BuildApiUri(instance, "queueBook", ("id", book.BookId), ("type", AudioBookLibrary))
                 : BuildApiUri(instance, "queueBook", ("id", book.BookId));
 
-            sent |= await SendCommandAsync(instance, uri, "queue item reset", item.Title);
+            bool sent = await SendCommandAsync(instance, uri, "queue item reset", item.Title);
+            allSent &= sent;
         }
 
-        return sent;
+        return allSent;
     }
 
     public async Task TriggerSearchAsync(ArrInstance instance, LazyLibrarianQueueItem item)

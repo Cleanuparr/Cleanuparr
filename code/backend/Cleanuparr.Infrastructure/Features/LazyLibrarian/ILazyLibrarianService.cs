@@ -27,7 +27,7 @@ public interface ILazyLibrarianService
     /// Sets the book back to wanted.
     /// The audio status is separate from the ebook status.
     /// </summary>
-    /// <returns>True when any reset request was sent.</returns>
+    /// <returns>True when every reset request was sent.</returns>
     Task<bool> ResetItemAsync(ArrInstance instance, LazyLibrarianQueueItem item);
 
     Task TriggerSearchAsync(ArrInstance instance, LazyLibrarianQueueItem item);
