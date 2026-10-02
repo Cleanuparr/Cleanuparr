@@ -149,11 +149,11 @@ public sealed class ForceImportService : IForceImportService
             return ForceImportOutcome.NotApplicable;
         }
 
+        // Read before the dry-run check so a purge during it still evicts this attempt.
+        CancellationToken dryRunEvictionToken = _dryRunEviction.Token;
+
         // Dry run keeps a separate try budget and give-up marker.
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
-
-        // A purge during the awaits below evicts this attempt's writes.
-        CancellationToken dryRunEvictionToken = _dryRunEviction.Token;
 
         string gaveUpKey = CacheKeys.ForceImportGaveUp(record.DownloadId, instance.Url, isDryRun);
 

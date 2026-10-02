@@ -637,6 +637,27 @@ public class ForceImportServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TryImportAsync_ForgetDryRunRacesTheDryRunCheck_EvictsTheDryTryWrite()
+    {
+        // Arrange: a purge fires while awaiting the dry-run check itself
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        _dryRunInterceptor.IsDryRunEnabled().Returns(_ =>
+        {
+            ForceImportService.ForgetDryRun();
+            return Task.FromResult(true);
+        });
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>()).Returns(_importedByTheArr);
+
+        // Act
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: the purge evicted the dry try and give-up marker
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url, true), out int _).ShouldBeFalse();
+        _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url, true), out DateTimeOffset _).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task TryImportAsync_TheGaveUpWindowPassed_TriesAgain()
     {
         // Arrange: whatever stopped the arr may be fixed by now
