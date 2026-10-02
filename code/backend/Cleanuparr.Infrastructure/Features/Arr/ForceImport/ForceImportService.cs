@@ -247,7 +247,7 @@ public sealed class ForceImportService : IForceImportService
             SpendTry();
 
             string prefix = isDryRun ? "[DRY RUN] " : string.Empty;
-            _logger.LogError(exception, prefix + "force import failed | try {Try} | {Title}", tries + 1, record.Title);
+            _logger.LogError(exception, "{Prefix}force import failed | try {Try} | {Title}", prefix, tries + 1, record.Title);
         }
         catch (Exception exception)
         {
