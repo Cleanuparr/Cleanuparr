@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 
 public class GotifyPayload
@@ -11,15 +9,4 @@ public class GotifyPayload
     public int Priority { get; set; } = 5;
 
     public GotifyExtras? Extras { get; set; }
-}
-
-public class GotifyExtras
-{
-    [JsonPropertyName("client::display")]
-    public GotifyClientDisplay? ClientDisplay { get; set; }
-}
-
-public class GotifyClientDisplay
-{
-    public string? ContentType { get; set; }
 }

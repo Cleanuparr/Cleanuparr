@@ -1,8 +1,10 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Api.Hubs;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
@@ -42,12 +44,14 @@ public sealed class GenericJob<T> : IJob
             var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>();
             var jobManagementService = scope.ServiceProvider.GetRequiredService<IJobManagementService>();
+            var dryRunInterceptor = scope.ServiceProvider.GetRequiredService<IDryRunInterceptor>();
 
             var jobRun = new JobRun { Id = jobRunId, Type = jobType };
             eventsContext.JobRuns.Add(jobRun);
             await eventsContext.SaveChangesAsync();
 
             ContextProvider.SetJobRunId(jobRunId);
+            ContextProvider.SetDryRun(await dryRunInterceptor.IsDryRunEnabled());
             using var __ = LogContext.PushProperty(LogProperties.JobRunId, jobRunId.ToString());
 
             await BroadcastJobStatus(hubContext, jobManagementService, jobType, false);
@@ -73,6 +77,19 @@ public sealed class GenericJob<T> : IJob
                 jobRun.CompletedAt = _timeProvider.GetUtcNow();
                 jobRun.Status = status;
                 await eventsContext.SaveChangesAsync();
+            }
+
+            if (ContextProvider.IsDryRunSticky())
+            {
+                try
+                {
+                    var dryRunPurger = finalScope.ServiceProvider.GetRequiredService<IDryRunPurger>();
+                    await dryRunPurger.PurgeIfDryRunOffAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "failed to purge dry-run data after {Name}", typeof(T).Name);
+                }
             }
         }
     }

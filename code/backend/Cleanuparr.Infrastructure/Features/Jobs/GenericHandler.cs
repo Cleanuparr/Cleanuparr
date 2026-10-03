@@ -189,6 +189,7 @@ public abstract class GenericHandler : IHandler
             JobRunId = ContextProvider.GetJobRunId(),
             SkipSearch = skipSearch,
             DownloadClient = downloadClient,
+            IsDryRun = await _dryRunInterceptor.IsDryRunEnabled(),
         };
 
         string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(target.DownloadId, instance.Url);

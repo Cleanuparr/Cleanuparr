@@ -93,14 +93,3 @@ public sealed record DownloadStatus
     [JsonPropertyName("download_location")]
     public string DownloadLocation { get; init; } = string.Empty;
 }
-
-/// <summary>
-/// A tracker of a torrent in Deluge.
-/// </summary>
-public sealed record Tracker
-{
-    /// <summary>
-    /// The address of the tracker.
-    /// </summary>
-    public string Url { get; init; } = string.Empty;
-}

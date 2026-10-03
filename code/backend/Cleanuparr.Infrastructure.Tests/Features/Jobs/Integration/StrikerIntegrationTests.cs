@@ -414,9 +414,9 @@ public class StrikerIntegrationTests : IDisposable
         events.Count.ShouldBe(1);
         events[0].IsDryRun.ShouldBe(true);
 
-        // Assert: DownloadItem marked for removal (striker still marks regardless of dry run)
+        // Assert: DownloadItem stays unmarked
         var downloadItems = await _fixture.EventsContext.DownloadItems.ToListAsync();
-        downloadItems[0].IsMarkedForRemoval.ShouldBe(true);
+        downloadItems[0].IsMarkedForRemoval.ShouldBe(false);
     }
 
     [Fact]

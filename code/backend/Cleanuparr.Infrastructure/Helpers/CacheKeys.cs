@@ -14,12 +14,12 @@ public static class CacheKeys
 
     public static string ForceImportPending(Uri url) => $"force_import_pending_{url}";
 
-    public static string ForceImportGaveUp(string hash, Uri url) => $"force_import_gave_up_{hash.ToLowerInvariant()}_{url}";
+    public static string ForceImportGaveUp(string hash, Uri url, bool isDryRun = false) => $"{(isDryRun ? "dry_run_" : "")}force_import_gave_up_{hash.ToLowerInvariant()}_{url}";
 
     public static string ForceImportFirstSeen(string hash, Uri url) => $"force_import_seen_{hash.ToLowerInvariant()}_{url}";
 
-    public static string ForceImportTries(string hash, Uri url) => $"force_import_tries_{hash.ToLowerInvariant()}_{url}";
-    
+    public static string ForceImportTries(string hash, Uri url, bool isDryRun = false) => $"{(isDryRun ? "dry_run_" : "")}force_import_tries_{hash.ToLowerInvariant()}_{url}";
+
     public static class UTorrent
     {
         public static string GetAuthTokenKey(string clientId) => $"utorrent:auth:token:{clientId}";

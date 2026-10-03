@@ -1,8 +1,11 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Events;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -107,5 +110,59 @@ public class EventCleanupServiceTests : IDisposable
 
         // Assert - should have logged stopped message
         _logger.HasLogContaining(LogLevel.Information, "stopped").ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task PerformCleanupAsync_DryRunOff_PurgesDryRunData()
+    {
+        // Arrange
+        IDryRunPurger dryRunPurger = Substitute.For<IDryRunPurger>();
+        IServiceProvider provider = BuildProviderWithGeneralConfig(dryRunOn: false, dryRunPurger);
+        var service = new EventCleanupService(_logger, provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System);
+
+        // Act
+        await service.PerformCleanupAsync();
+
+        // Assert
+        await dryRunPurger.Received(1).PurgeAsync();
+    }
+
+    [Fact]
+    public async Task PerformCleanupAsync_DryRunOn_DoesNotPurge()
+    {
+        // Arrange
+        IDryRunPurger dryRunPurger = Substitute.For<IDryRunPurger>();
+        IServiceProvider provider = BuildProviderWithGeneralConfig(dryRunOn: true, dryRunPurger);
+        var service = new EventCleanupService(_logger, provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System);
+
+        // Act
+        await service.PerformCleanupAsync();
+
+        // Assert
+        await dryRunPurger.DidNotReceive().PurgeAsync();
+    }
+
+    private IServiceProvider BuildProviderWithGeneralConfig(bool dryRunOn, IDryRunPurger dryRunPurger)
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        _services.AddDbContext<DataContext>(options => options.UseSqlite(connection));
+        _services.AddSingleton(dryRunPurger);
+        IServiceProvider provider = _services.BuildServiceProvider();
+
+        using IServiceScope scope = provider.CreateScope();
+        DataContext dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+        dataContext.Database.EnsureCreated();
+        dataContext.GeneralConfigs.Add(new GeneralConfig
+        {
+            Id = Guid.NewGuid(),
+            DryRun = dryRunOn,
+            IgnoredDownloads = [],
+            Log = new LoggingConfig(),
+        });
+        dataContext.SaveChanges();
+
+        return provider;
     }
 }

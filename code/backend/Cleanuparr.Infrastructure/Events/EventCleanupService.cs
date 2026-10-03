@@ -1,3 +1,4 @@
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Events;
@@ -69,6 +70,19 @@ public class EventCleanupService : BackgroundService
             GeneralConfig config = await dataContext.GeneralConfigs
                 .AsNoTracking()
                 .FirstAsync();
+
+            if (!config.DryRun)
+            {
+                try
+                {
+                    var dryRunPurger = scope.ServiceProvider.GetRequiredService<IDryRunPurger>();
+                    await dryRunPurger.PurgeAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to purge dry-run data");
+                }
+            }
 
             DateTimeOffset eventCutoff = _timeProvider.GetUtcNow().AddDays(-_eventRetentionDays);
 
