@@ -229,7 +229,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
 
         // Get the most recent strike for this download item (Stalled type) to check progress
         var mostRecentStrike = await _context.Strikes
-            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled && (isDryRun || !s.IsDryRun))
+            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled && s.IsDryRun == isDryRun)
             .OrderByDescending(s => s.CreatedAt)
             .FirstOrDefaultAsync();
 

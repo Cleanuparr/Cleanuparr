@@ -576,8 +576,10 @@ public class StrikerTests : IDisposable
         downloadItem.IsRemoved = true;
         await _strikerContext.SaveChangesAsync();
 
-        // Act - dry run strikes the same, already-removed, item again
+        // Act - two dry strikes on the removed item
+        // Dry run ignores the live strike
         _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
         var result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
 
         // Assert - item removed then regrabbed by the arr counts as recurring
@@ -705,6 +707,56 @@ public class StrikerTests : IDisposable
         var downloadItem = await _strikerContext.DownloadItems.FirstOrDefaultAsync(d => d.DownloadId == hash);
         downloadItem.ShouldNotBeNull();
         downloadItem.Title.ShouldBe(itemName);
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_DryRun_IgnoresLiveStrikes()
+    {
+        // Arrange - 2 live strikes, dry run on, max 3
+        const string hash = "dry-run-ignores-live";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 3;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Act
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        bool result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - live strikes ignored, dry count is 1
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_DryRun_ResetThenStrike_StartsFromFreshDrySlate()
+    {
+        // Arrange - 2 live strikes, dry run on, max 3
+        const string hash = "dry-run-fresh-slate";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 3;
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act - dry reset, then a dry strike
+        await _striker.ResetStrikeAsync(hash, itemName, StrikeType.Stalled);
+        bool result = await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - dry count is 1, live strikes untouched
+        result.ShouldBeFalse();
+        DownloadItem item = await _strikerContext.DownloadItems.AsNoTracking()
+            .SingleAsync(d => d.DownloadId == hash);
+        int dryCount = await _strikerContext.Strikes.AsNoTracking()
+            .CountAsync(s => s.DownloadItemId == item.Id && s.IsDryRun);
+        int liveCount = await _strikerContext.Strikes.AsNoTracking()
+            .CountAsync(s => s.DownloadItemId == item.Id && !s.IsDryRun);
+        dryCount.ShouldBe(1);
+        liveCount.ShouldBe(2);
     }
 
     [Fact]

@@ -913,6 +913,47 @@ public class QueueRuleEvaluatorTests : IDisposable
         await striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), StrikeType.Stalled);
     }
 
+    [Fact]
+    public async Task EvaluateStallRulesAsync_DryRun_IgnoresLiveStrikeProgress()
+    {
+        // Arrange - only a live strike exists, dry run is on
+        IQueueRuleManager ruleManager = Substitute.For<IQueueRuleManager>();
+        IStriker striker = Substitute.For<IStriker>();
+        ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        EventsContext context = CreateInMemoryEventsContext();
+        IDryRunInterceptor dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        DownloadItem downloadItem = new DownloadItem { DownloadId = "hash", Title = "Example Torrent" };
+        context.DownloadItems.Add(downloadItem);
+        await context.SaveChangesAsync();
+
+        Strike liveStrike = new Strike { DownloadItemId = downloadItem.Id, Type = StrikeType.Stalled, LastDownloadedBytes = 0, IsDryRun = false };
+        context.Strikes.Add(liveStrike);
+        await context.SaveChangesAsync();
+
+        QueueRuleEvaluator evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
+
+        StallRule stallRule = CreateStallRule("Dry Ignores Live", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
+
+        ruleManager
+            .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(stallRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>())
+            .Returns(false);
+
+        long downloadedBytes = ByteSize.Parse("1 KB").Bytes;
+        ITorrentItemWrapper torrent = CreateTorrentMock(downloadedBytesFactory: () => downloadedBytes);
+
+        // Act
+        await evaluator.EvaluateStallRulesAsync(torrent);
+
+        // Assert - no dry strike to compare, no reset
+        await striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), StrikeType.Stalled);
+    }
+
     private static ITorrentItemWrapper CreateTorrentMock(
         Func<long>? downloadedBytesFactory = null,
         bool isPrivate = false,
