@@ -412,7 +412,7 @@ public sealed class Seeker : IHandler
                             && h.IsDryRun
                             && h.CycleId != instanceConfig.CurrentCycleId)
                 .OrderByDescending(h => h.LastSearchedAt)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             effectiveCycleId = latestDryCycleRow?.CycleId ?? instanceConfig.CurrentCycleId;
         }
@@ -426,7 +426,7 @@ public sealed class Seeker : IHandler
             .Where(h => h.ArrInstanceId == arrInstance.Id
                         && h.CycleId == effectiveCycleId
                         && (isDryRun || !h.IsDryRun))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         // Load all history for stale cleanup
         List<long> allHistoryExternalIds = await _eventsContext.SeekerHistory
