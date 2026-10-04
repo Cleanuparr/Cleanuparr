@@ -29,6 +29,7 @@ public sealed class GenericJobTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
     private readonly IDryRunPurger _dryRunPurger;
+    private readonly DryRunActivity _dryRunActivity;
     private readonly ServiceProvider _serviceProvider;
     private readonly Seeker _handler = new();
 
@@ -37,6 +38,7 @@ public sealed class GenericJobTests : IDisposable
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
         _dryRunPurger = Substitute.For<IDryRunPurger>();
+        _dryRunActivity = new DryRunActivity();
 
         IJobManagementService jobManagementService = Substitute.For<IJobManagementService>();
         jobManagementService.GetJob(Arg.Any<JobType>()).Returns(new JobInfo { JobType = nameof(JobType.Seeker) });
@@ -64,7 +66,8 @@ public sealed class GenericJobTests : IDisposable
     private GenericJob<Seeker> BuildJob() => new(
         Substitute.For<ILogger<GenericJob<Seeker>>>(),
         _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-        new FakeTimeProvider(Now));
+        new FakeTimeProvider(Now),
+        _dryRunActivity);
 
     [Fact]
     public async Task Execute_StampsTheRunAsCompleted()
@@ -138,6 +141,51 @@ public sealed class GenericJobTests : IDisposable
     }
 
     [Fact]
+    public async Task Execute_WhenRunStartedDry_ExitsActivityBeforePurging()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+        bool activeDuringPurge = true;
+        _dryRunPurger
+            .When(x => x.PurgeIfDryRunOffAsync())
+            .Do(_ => activeDuringPurge = _dryRunActivity.IsActive);
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        activeDuringPurge.ShouldBeFalse();
+        _dryRunActivity.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Execute_WhenRunStartedDryAndHandlerThrows_ExitsActivity()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+        _handler.Throw = new InvalidOperationException("handler exploded");
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        _dryRunActivity.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Execute_WhenRunStartedLive_NeverEntersActivity()
+    {
+        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
+        config.DryRun = false;
+        await _dataContext.SaveChangesAsync();
+        bool activeDuringExecution = false;
+        _handler.OnExecute = () => activeDuringExecution = _dryRunActivity.IsActive;
+
+        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
+
+        activeDuringExecution.ShouldBeFalse();
+        _dryRunActivity.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Execute_WhenPurgeThrows_StillStampsTheRunAsCompleted()
     {
         GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
@@ -160,9 +208,12 @@ public sealed class GenericJobTests : IDisposable
 
         public bool ObservedDryRun { get; private set; }
 
+        public Action? OnExecute { get; set; }
+
         public Task ExecuteAsync(CancellationToken cancellationToken = default)
         {
             ObservedDryRun = ContextProvider.IsDryRunSticky();
+            OnExecute?.Invoke();
             return Throw is null ? Task.CompletedTask : Task.FromException(Throw);
         }
     }

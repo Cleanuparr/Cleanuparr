@@ -20,13 +20,15 @@ public sealed class DryRunPurgerTests : IDisposable
 {
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
+    private readonly DryRunActivity _dryRunActivity;
     private readonly DryRunPurger _purger;
 
     public DryRunPurgerTests()
     {
         _dataContext = TestDataContextFactory.Create();
         _eventsContext = TestDataContextFactory.CreateEvents();
-        _purger = new DryRunPurger(Substitute.For<ILogger<DryRunPurger>>(), _dataContext, _eventsContext);
+        _dryRunActivity = new DryRunActivity();
+        _purger = new DryRunPurger(Substitute.For<ILogger<DryRunPurger>>(), _dataContext, _eventsContext, _dryRunActivity);
     }
 
     public void Dispose()
@@ -112,6 +114,35 @@ public sealed class DryRunPurgerTests : IDisposable
         real.IsMarkedForRemoval.ShouldBeTrue();
         real.IsRemoved.ShouldBeTrue();
         real.IsReturning.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task PurgeAsync_DryRunActive_KeepsDryData()
+    {
+        // Arrange
+        await AddDryRunStrikeAsync();
+        _dryRunActivity.Enter();
+
+        // Act
+        await _purger.PurgeAsync();
+
+        // Assert
+        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task PurgeAsync_AfterDryRunExits_Purges()
+    {
+        // Arrange
+        await AddDryRunStrikeAsync();
+        _dryRunActivity.Enter();
+        _dryRunActivity.Exit();
+
+        // Act
+        await _purger.PurgeAsync();
+
+        // Assert
+        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);
     }
 
     [Fact]

@@ -12,12 +12,18 @@ public sealed class DryRunPurger : IDryRunPurger
     private readonly ILogger<DryRunPurger> _logger;
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
+    private readonly DryRunActivity _dryRunActivity;
 
-    public DryRunPurger(ILogger<DryRunPurger> logger, DataContext dataContext, EventsContext eventsContext)
+    public DryRunPurger(
+        ILogger<DryRunPurger> logger,
+        DataContext dataContext,
+        EventsContext eventsContext,
+        DryRunActivity dryRunActivity)
     {
         _logger = logger;
         _dataContext = dataContext;
         _eventsContext = eventsContext;
+        _dryRunActivity = dryRunActivity;
     }
 
     /// <inheritdoc/>
@@ -38,6 +44,13 @@ public sealed class DryRunPurger : IDryRunPurger
     /// <inheritdoc/>
     public async Task PurgeAsync()
     {
+        if (_dryRunActivity.IsActive)
+        {
+            // Skipped purges carry over if dry run turns back on.
+            _logger.LogDebug("skip dry-run purge | dry runs still active");
+            return;
+        }
+
         await using var transaction = await _eventsContext.Database.BeginTransactionAsync();
 
         try

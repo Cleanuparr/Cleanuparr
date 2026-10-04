@@ -46,6 +46,7 @@ public static class ServicesDI
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<IDryRunPurger, DryRunPurger>()
+            .AddSingleton<DryRunActivity>()
             .AddScoped<CertificateValidationService>()
             .AddScoped<ISonarrClient, SonarrClient>()
             .AddScoped<ISportarrClient, SportarrClient>()

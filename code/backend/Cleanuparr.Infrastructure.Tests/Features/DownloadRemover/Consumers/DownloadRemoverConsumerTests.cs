@@ -22,6 +22,7 @@ public class DownloadRemoverConsumerTests
     private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
     private readonly IDryRunPurger _dryRunPurger;
+    private readonly DryRunActivity _dryRunActivity;
     private readonly DownloadRemoverConsumer _consumer;
 
     public DownloadRemoverConsumerTests()
@@ -29,7 +30,8 @@ public class DownloadRemoverConsumerTests
         _logger = Substitute.For<ILogger<DownloadRemoverConsumer>>();
         _queueItemRemover = Substitute.For<IQueueItemRemover>();
         _dryRunPurger = Substitute.For<IDryRunPurger>();
-        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover, _dryRunPurger);
+        _dryRunActivity = new DryRunActivity();
+        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover, _dryRunPurger, _dryRunActivity);
     }
 
     #region Consume Tests
@@ -148,6 +150,68 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         await _dryRunPurger.DidNotReceive().PurgeIfDryRunOffAsync();
+    }
+
+    [Fact]
+    public async Task Consume_WithDryRunRequest_ExitsActivityBeforePurging()
+    {
+        // Arrange
+        QueueItemRemoveRequest request = CreateRemoveRequest() with { IsDryRun = true };
+        ConsumeContext<QueueItemRemoveRequest> context = CreateConsumeContext(request);
+        bool activeDuringPurge = true;
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .Returns(Task.CompletedTask);
+        _dryRunPurger
+            .When(x => x.PurgeIfDryRunOffAsync())
+            .Do(_ => activeDuringPurge = _dryRunActivity.IsActive);
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        activeDuringPurge.ShouldBeFalse();
+        _dryRunActivity.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Consume_WithDryRunRequest_WhenRemoverThrows_ExitsActivity()
+    {
+        // Arrange
+        QueueItemRemoveRequest request = CreateRemoveRequest() with { IsDryRun = true };
+        ConsumeContext<QueueItemRemoveRequest> context = CreateConsumeContext(request);
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .ThrowsAsync(new Exception("Remove failed"));
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        _dryRunActivity.IsActive.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Consume_WithLiveRequest_NeverEntersActivity()
+    {
+        // Arrange
+        QueueItemRemoveRequest request = CreateRemoveRequest() with { IsDryRun = false };
+        ConsumeContext<QueueItemRemoveRequest> context = CreateConsumeContext(request);
+        bool activeDuringRemoval = false;
+
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => activeDuringRemoval = _dryRunActivity.IsActive);
+
+        // Act
+        await _consumer.Consume(context);
+
+        // Assert
+        activeDuringRemoval.ShouldBeFalse();
+        _dryRunActivity.IsActive.ShouldBeFalse();
     }
 
     [Fact]

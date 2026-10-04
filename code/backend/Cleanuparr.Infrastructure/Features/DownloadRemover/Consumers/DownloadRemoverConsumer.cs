@@ -12,24 +12,46 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
     private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
     private readonly IDryRunPurger _dryRunPurger;
+    private readonly DryRunActivity _dryRunActivity;
 
     public DownloadRemoverConsumer(
         ILogger<DownloadRemoverConsumer> logger,
         IQueueItemRemover queueItemRemover,
-        IDryRunPurger dryRunPurger
+        IDryRunPurger dryRunPurger,
+        DryRunActivity dryRunActivity
     )
     {
         _logger = logger;
         _queueItemRemover = queueItemRemover;
         _dryRunPurger = dryRunPurger;
+        _dryRunActivity = dryRunActivity;
     }
 
     public async Task Consume(ConsumeContext<QueueItemRemoveRequest> context)
     {
+        bool trackedDryRun = false;
+
         try
         {
             ContextProvider.SetDryRun(context.Message.IsDryRun);
-            await _queueItemRemover.RemoveQueueItemAsync(context.Message);
+
+            if (context.Message.IsDryRun)
+            {
+                _dryRunActivity.Enter();
+                trackedDryRun = true;
+            }
+
+            try
+            {
+                await _queueItemRemover.RemoveQueueItemAsync(context.Message);
+            }
+            finally
+            {
+                if (trackedDryRun)
+                {
+                    _dryRunActivity.Exit();
+                }
+            }
 
             if (context.Message.IsDryRun)
             {

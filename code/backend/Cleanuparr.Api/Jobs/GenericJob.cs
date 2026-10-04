@@ -22,12 +22,18 @@ public sealed class GenericJob<T> : IJob
     private readonly ILogger<GenericJob<T>> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
+    private readonly DryRunActivity _dryRunActivity;
 
-    public GenericJob(ILogger<GenericJob<T>> logger, IServiceScopeFactory scopeFactory, TimeProvider timeProvider)
+    public GenericJob(
+        ILogger<GenericJob<T>> logger,
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider,
+        DryRunActivity dryRunActivity)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
         _timeProvider = timeProvider;
+        _dryRunActivity = dryRunActivity;
     }
 
     public async Task Execute(IJobExecutionContext context)
@@ -37,6 +43,7 @@ public sealed class GenericJob<T> : IJob
         Guid jobRunId = Guid.CreateVersion7();
         JobType jobType = Enum.Parse<JobType>(typeof(T).Name);
         JobRunStatus? status = null;
+        bool trackedDryRun = false;
 
         try
         {
@@ -51,7 +58,15 @@ public sealed class GenericJob<T> : IJob
             await eventsContext.SaveChangesAsync();
 
             ContextProvider.SetJobRunId(jobRunId);
-            ContextProvider.SetDryRun(await dryRunInterceptor.IsDryRunEnabled());
+            bool isDryRun = await dryRunInterceptor.IsDryRunEnabled();
+            ContextProvider.SetDryRun(isDryRun);
+
+            if (isDryRun)
+            {
+                _dryRunActivity.Enter();
+                trackedDryRun = true;
+            }
+
             using var __ = LogContext.PushProperty(LogProperties.JobRunId, jobRunId.ToString());
 
             await BroadcastJobStatus(hubContext, jobManagementService, jobType, false);
@@ -69,6 +84,12 @@ public sealed class GenericJob<T> : IJob
         }
         finally
         {
+            // Exit first so a failed job-run save can't leave the count stuck.
+            if (trackedDryRun)
+            {
+                _dryRunActivity.Exit();
+            }
+
             await using var finalScope = _scopeFactory.CreateAsyncScope();
             var eventsContext = finalScope.ServiceProvider.GetRequiredService<EventsContext>();
             var jobRun = await eventsContext.JobRuns.FindAsync(jobRunId);
