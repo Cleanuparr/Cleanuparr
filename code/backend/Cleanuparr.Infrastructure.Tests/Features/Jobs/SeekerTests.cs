@@ -4782,5 +4782,122 @@ public class SeekerTests : IDisposable
         liveRow.CycleId.ShouldBe(currentCycleId);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_DryRun_CycleComplete_ProgressesAcrossRuns()
+    {
+        // Arrange - both seasons searched live, min cycle time elapsed
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        DateTime now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Test Series"
+        });
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 2,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Test Series"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 20, EpisodeFileCount = 10 } }
+            ]));
+
+        DateTime pastDate = now.AddDays(-30);
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10)
+            .Returns(
+            [
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, HasFile = false, AirDateUtc = pastDate },
+                new SearchableEpisode { Id = 101, SeasonNumber = 2, EpisodeNumber = 1, Monitored = true, HasFile = false, AirDateUtc = pastDate }
+            ]);
+
+        List<long> searchedSeasons = [];
+        mockArrClient
+            .SearchItemAsync(sonarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                SeriesSearchItem searchItem = ci.ArgAt<SearchItem>(1) as SeriesSearchItem;
+                searchedSeasons.Add(searchItem.Id);
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act - two dry runs
+        await CreateSut().ExecuteAsync();
+        await CreateSut().ExecuteAsync();
+
+        // Assert - each run picked a different season
+        searchedSeasons.Count.ShouldBe(2);
+        searchedSeasons[0].ShouldNotBe(searchedSeasons[1]);
+        searchedSeasons.OrderBy(id => id).ShouldBe(new List<long> { 1L, 2L });
+
+        // Assert - dry rows share one new cycle
+        List<SeekerHistory> dryRows = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == sonarrInstance.Id && h.IsDryRun)
+            .ToListAsync();
+        dryRows.Count.ShouldBe(2);
+        dryRows.Select(h => h.CycleId).Distinct().Count().ShouldBe(1);
+        dryRows[0].CycleId.ShouldNotBe(currentCycleId);
+
+        // Assert - live rows untouched
+        List<SeekerHistory> liveRows = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == sonarrInstance.Id && !h.IsDryRun)
+            .ToListAsync();
+        liveRows.Count.ShouldBe(2);
+        liveRows.ShouldAllBe(h => h.CycleId == currentCycleId && h.SearchCount == 1);
+
+        // Assert - live cycle id unchanged
+        _fixture.DataContext.ChangeTracker.Clear();
+        SeekerInstanceConfig reloadedConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
+        reloadedConfig.CurrentCycleId.ShouldBe(currentCycleId);
+    }
+
     #endregion
 }
