@@ -44,6 +44,9 @@ public static class ContextProvider
 
     public static void SetJobRunId(Guid id) => Set(JobRunIdKey, id);
 
+    /// <summary>
+    /// Context key holding the run's dry-run flag.
+    /// </summary>
     public const string DryRunKey = "DryRun";
 
     /// <summary>
@@ -52,6 +55,9 @@ public static class ContextProvider
     /// </summary>
     public static bool IsDryRunSticky() => Get(DryRunKey) as bool? ?? false;
 
+    /// <summary>
+    /// Pins the run's dry-run flag.
+    /// </summary>
     public static void SetDryRun(bool isDryRun) => Set(DryRunKey, isDryRun);
 
     public static void SetDownloadClient(DownloadClientConfig config)
