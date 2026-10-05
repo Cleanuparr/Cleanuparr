@@ -156,7 +156,7 @@ public class GeneralConfigControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateGeneralConfig_DryRunDisabled_PurgesBeforeSaving()
+    public async Task UpdateGeneralConfig_DryRunDisabled_PurgesAfterSaving()
     {
         // Arrange
         var config = await _dataContext.GeneralConfigs.FirstAsync();
@@ -180,6 +180,41 @@ public class GeneralConfigControllerTests : IDisposable
 
         var saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
         saved.DryRun.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateGeneralConfig_DryRunDisabled_SavesBeforePurging()
+    {
+        // Arrange
+        GeneralConfig config = await _dataContext.GeneralConfigs.FirstAsync();
+        config.DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        bool? dryRunDuringPurge = null;
+        _dryRunPurger
+            .When(p => p.PurgeAsync())
+            .Do(_ =>
+            {
+                GeneralConfig duringPurge = _dataContext.GeneralConfigs
+                    .AsNoTracking()
+                    .First();
+                dryRunDuringPurge = duringPurge.DryRun;
+            });
+
+        UpdateGeneralConfigRequest request = new UpdateGeneralConfigRequest
+        {
+            DryRun = false,
+            HttpTimeout = 60,
+            StrikeInactivityWindowHours = 24,
+            Log = MatchingLogRequest(config.Log),
+            Auth = new UpdateAuthConfigRequest(),
+        };
+
+        // Act
+        await _controller.UpdateGeneralConfig(request);
+
+        // Assert
+        dryRunDuringPurge.ShouldBe(false);
     }
 
     [Fact]
@@ -207,16 +242,16 @@ public class GeneralConfigControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateGeneralConfig_PurgeFails_LeavesDryRunOnAndPropagates()
+    public async Task UpdateGeneralConfig_PurgeFails_StillSavesDryRunOffAndReturnsOk()
     {
         // Arrange
-        var config = await _dataContext.GeneralConfigs.FirstAsync();
+        GeneralConfig config = await _dataContext.GeneralConfigs.FirstAsync();
         config.DryRun = true;
         await _dataContext.SaveChangesAsync();
 
         _dryRunPurger.PurgeAsync().ThrowsAsync(new Exception("purge failed"));
 
-        var request = new UpdateGeneralConfigRequest
+        UpdateGeneralConfigRequest request = new UpdateGeneralConfigRequest
         {
             DryRun = false,
             HttpTimeout = 60,
@@ -225,11 +260,14 @@ public class GeneralConfigControllerTests : IDisposable
             Auth = new UpdateAuthConfigRequest(),
         };
 
-        // Act / Assert
-        await Should.ThrowAsync<Exception>(() => _controller.UpdateGeneralConfig(request));
+        // Act
+        IActionResult result = await _controller.UpdateGeneralConfig(request);
 
-        var saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
-        saved.DryRun.ShouldBeTrue();
+        // Assert
+        result.ShouldBeOfType<OkObjectResult>();
+
+        GeneralConfig saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
+        saved.DryRun.ShouldBeFalse();
     }
 
     [Fact]

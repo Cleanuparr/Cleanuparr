@@ -64,13 +64,21 @@ public sealed class GeneralConfigController : ControllerBase
 
             request.ApplyTo(config, HttpContext.RequestServices, _logger);
 
-            if (wasDryRun && !config.DryRun)
-            {
-                // A failed purge must leave dry run on.
-                await _dryRunPurger.PurgeAsync();
-            }
+            bool dryRunTurnedOff = wasDryRun && !config.DryRun;
 
             await _dataContext.SaveChangesAsync();
+
+            if (dryRunTurnedOff)
+            {
+                try
+                {
+                    await _dryRunPurger.PurgeAsync();
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(exception, "failed to purge dry-run data after disabling dry run");
+                }
+            }
 
             return Ok(new { Message = "General configuration updated successfully" });
         }
