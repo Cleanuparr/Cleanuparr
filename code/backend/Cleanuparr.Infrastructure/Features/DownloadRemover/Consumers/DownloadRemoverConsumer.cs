@@ -37,7 +37,7 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
 
             if (context.Message.IsDryRun)
             {
-                _dryRunActivity.Enter();
+                await _dryRunActivity.EnterAsync();
                 trackedDryRun = true;
             }
 

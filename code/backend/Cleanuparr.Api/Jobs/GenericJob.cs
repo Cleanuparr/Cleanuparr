@@ -63,7 +63,7 @@ public sealed class GenericJob<T> : IJob
 
             if (isDryRun)
             {
-                _dryRunActivity.Enter();
+                await _dryRunActivity.EnterAsync();
                 trackedDryRun = true;
             }
 

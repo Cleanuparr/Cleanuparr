@@ -121,7 +121,7 @@ public sealed class DryRunPurgerTests : IDisposable
     {
         // Arrange
         await AddDryRunStrikeAsync();
-        _dryRunActivity.Enter();
+        await _dryRunActivity.EnterAsync();
 
         // Act
         await _purger.PurgeAsync();
@@ -135,7 +135,7 @@ public sealed class DryRunPurgerTests : IDisposable
     {
         // Arrange
         await AddDryRunStrikeAsync();
-        _dryRunActivity.Enter();
+        await _dryRunActivity.EnterAsync();
         _dryRunActivity.Exit();
 
         // Act
