@@ -1,10 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿namespace Cleanuparr.Domain.Entities.Arr;
 
-namespace Cleanuparr.Domain.Entities.Arr;
-
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "$item")]
-[JsonDerivedType(typeof(SearchItem), "base")]
-[JsonDerivedType(typeof(SeriesSearchItem), "series")]
 public class SearchItem
 {
     public long Id { get; set; }
