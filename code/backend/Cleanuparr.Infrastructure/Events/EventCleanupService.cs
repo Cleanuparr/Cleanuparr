@@ -104,7 +104,7 @@ public class EventCleanupService : BackgroundService
             DataContext dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
             GeneralConfig config = await dataContext.GeneralConfigs
                 .AsNoTracking()
-                .FirstAsync();
+                .FirstAsync(ct);
 
             if (!config.DryRun)
             {
