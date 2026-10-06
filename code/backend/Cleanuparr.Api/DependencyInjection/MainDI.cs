@@ -9,7 +9,6 @@ using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Shared.Helpers;
-using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Cleanuparr.Api.DependencyInjection;
@@ -26,8 +25,7 @@ public static class MainDI
             .AddQuartzServices(configuration)
             .AddNotifications()
             .AddMessageQueue<QueueItemRemoveRequest, DownloadRemoverConsumer>()
-            .AddMessageQueue<NotificationMessage, NotificationConsumer>()
-            .AddMassTransit(config => config.DisableUsageTelemetry());
+            .AddMessageQueue<NotificationMessage, NotificationConsumer>();
 
     /// <summary>
     /// Registers an unbounded in-process queue for <typeparamref name="TMessage"/>,

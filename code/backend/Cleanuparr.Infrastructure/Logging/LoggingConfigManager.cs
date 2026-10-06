@@ -112,7 +112,6 @@ public static class LoggingConfigManager
 
         // Apply standard overrides
         logConfig
-            .MinimumLevel.Override("MassTransit", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.AspNetCore.DataProtection", LogEventLevel.Error)
