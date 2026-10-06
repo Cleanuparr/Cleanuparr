@@ -24,7 +24,7 @@ using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
-using MassTransit;
+using System.Threading.Channels;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
@@ -49,7 +49,7 @@ public class IntegrationTestFixture : IDisposable
     public FakeTimeProvider TimeProvider { get; private set; }
 
     // Mocks
-    public IBus MessageBus { get; private set; }
+    public Channel<QueueItemRemoveRequest> RemovalQueue { get; private set; }
     public IArrClientFactory ArrClientFactory { get; private set; }
     public IArrClient ArrClient { get; private set; }
     public IArrQueueReader ArrQueueReader { get; private set; }
@@ -83,7 +83,7 @@ public class IntegrationTestFixture : IDisposable
         Cache = new MemoryCache(new MemoryCacheOptions());
         TimeProvider = new FakeTimeProvider();
 
-        MessageBus = Substitute.For<IBus>();
+        RemovalQueue = Channel.CreateUnbounded<QueueItemRemoveRequest>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
         ArrClient = Substitute.For<IArrClient>();
         ArrQueueReader = Substitute.For<IArrQueueReader>();
@@ -111,10 +111,6 @@ public class IntegrationTestFixture : IDisposable
         // DryRunInterceptor returns false (not dry run) by default
         DryRunInterceptor.IsDryRunEnabled().Returns(false);
         DryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>()).ReturnsForAnyArgs(Task.CompletedTask);
-
-        MessageBus.Publish(default(QueueItemRemoveRequest)!, default)
-            .ReturnsForAnyArgs(Task.CompletedTask)
-            .AndDoes(ci => CapturedMessages.Add(ci[0]));
 
         // Seed a JobRun so EventPublisher FK constraints are satisfied
         JobRunId = Guid.NewGuid();
@@ -174,6 +170,11 @@ public class IntegrationTestFixture : IDisposable
 
     public List<QueueItemRemoveRequest> GetCapturedRemoveRequests()
     {
+        while (RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? request))
+        {
+            CapturedMessages.Add(request);
+        }
+
         return CapturedMessages
             .OfType<QueueItemRemoveRequest>()
             .DistinctBy(r => r.Target.DownloadId)
@@ -252,7 +253,7 @@ public class IntegrationTestFixture : IDisposable
         CapturedMessages.Clear();
 
         // Recreate all NSubstitute mocks to clear received call state
-        MessageBus = Substitute.For<IBus>();
+        RemovalQueue = Channel.CreateUnbounded<QueueItemRemoveRequest>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
         ArrClient = Substitute.For<IArrClient>();
         ArrQueueReader = Substitute.For<IArrQueueReader>();

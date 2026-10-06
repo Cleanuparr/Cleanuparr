@@ -42,7 +42,7 @@ public class QueueCleanerIntegrationTests : IDisposable
             Substitute.For<ILogger<QueueCleanerJob>>(),
             _fixture.DataContext,
             _fixture.Cache,
-            _fixture.MessageBus,
+            _fixture.RemovalQueue.Writer,
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,

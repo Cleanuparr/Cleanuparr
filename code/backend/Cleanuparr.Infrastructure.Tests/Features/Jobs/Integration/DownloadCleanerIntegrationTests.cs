@@ -51,7 +51,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             Substitute.For<ILogger<DownloadCleaner>>(),
             _fixture.DataContext,
             _fixture.Cache,
-            _fixture.MessageBus,
+            _fixture.RemovalQueue.Writer,
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
