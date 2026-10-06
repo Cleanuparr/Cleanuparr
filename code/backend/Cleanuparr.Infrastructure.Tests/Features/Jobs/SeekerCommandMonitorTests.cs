@@ -702,7 +702,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Publishes_completed_status_when_the_queue_cannot_be_inspected()
+    public async Task Defers_the_outcome_until_the_queue_can_be_read()
     {
         // Arrange
         ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
@@ -712,22 +712,49 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventsContext.SaveChangesAsync();
 
         StubCommandState(ArrCommandState.Completed);
+
+        int queueReadAttempts = 0;
+        TaskCompletionSource firstReadTcs = new();
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
-            .ThrowsAsync(new HttpRequestException("queue unavailable"));
+            .Returns<Task<QueueListResponse>>(_ =>
+            {
+                queueReadAttempts++;
+
+                if (queueReadAttempts == 1)
+                {
+                    firstReadTcs.TrySetResult();
+                    throw new HttpRequestException("queue unavailable");
+                }
+
+                return Task.FromResult(new QueueListResponse
+                {
+                    TotalRecords = 1,
+                    Records = [new QueueRecord { Id = 1, MovieId = 300, Title = "Test.Item.1080p", DownloadId = "HASH1", Protocol = "torrent", Status = "downloading" }]
+                });
+            });
 
         Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
 
-        // Act
+        // Act: the first poll hits a failing queue read
         await _sut.StartAsync(_cts.Token);
         _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await firstReadTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.Delay(100);
+
+        // Assert: the outcome is deferred, the tracker stays
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+        await WaitForTrackerCountAsync(1);
+
+        // Act: the second poll reads the queue successfully
+        _timeProvider.Advance(TimeSpan.FromSeconds(60));
         SearchCommandStatus publishedStatus = await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
 
-        // Assert
+        // Assert: the deferred outcome publishes with the grabbed item and the tracker is removed
         publishedStatus.ShouldBe(SearchCommandStatus.Completed);
-
         await _eventPublisher.Received(1).PublishSearchCompleted(
-            eventId, SearchCommandStatus.Completed, Arg.Any<InstanceType>(), Arg.Any<string>(), null);
-
+            eventId, SearchCommandStatus.Completed, Arg.Any<InstanceType>(), Arg.Any<string>(),
+            Arg.Is<List<string>?>(items => items != null && items.Count == 1 && items[0] == "Test.Item.1080p"));
         await WaitForTrackerCountAsync(0);
     }
 

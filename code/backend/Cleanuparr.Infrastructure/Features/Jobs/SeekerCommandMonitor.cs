@@ -291,13 +291,12 @@ public class SeekerCommandMonitor : BackgroundService
         foreach (Guid instanceId in instanceIds)
         {
             ArrInstance arrInstance = instancesById[instanceId];
-            List<QueueRecord> records = [];
 
             try
             {
                 IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
 
-                records = await queueReader.ReadAllAsync(arrClient, arrInstance);
+                snapshots[instanceId] = await queueReader.ReadAllAsync(arrClient, arrInstance);
             }
             catch (OperationCanceledException)
             {
@@ -307,8 +306,6 @@ public class SeekerCommandMonitor : BackgroundService
             {
                 _logger.LogWarning(ex, "Failed to inspect the download queue on {Instance}", arrInstance.Name);
             }
-
-            snapshots[instanceId] = records;
         }
 
         return snapshots;
@@ -343,7 +340,14 @@ public class SeekerCommandMonitor : BackgroundService
                 return true;
             }
 
-            IReadOnlyList<QueueRecord> queue = queueSnapshots.GetValueOrDefault(tracker.ArrInstanceId, []);
+            if (!queueSnapshots.TryGetValue(tracker.ArrInstanceId, out IReadOnlyList<QueueRecord>? queue))
+            {
+                _logger.LogDebug(
+                    "Deferring outcome of search command {CommandId} for '{Title}' until the queue on {Instance} can be read (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, arrInstance.Name, tracker.EventId);
+                return false;
+            }
+
             List<string>? grabbedItems = FindGrabbedItems(tracker, arrInstance, queue);
             await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
             _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);
