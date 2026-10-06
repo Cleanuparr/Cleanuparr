@@ -294,11 +294,7 @@ public sealed class Seeker : IHandler
 
         try
         {
-            await _arrQueueIterator.Iterate(arrClient, arrInstance, records =>
-            {
-                queueRecords.AddRange(records);
-                return Task.CompletedTask;
-            });
+            queueRecords = await _arrQueueIterator.ReadAllAsync(arrClient, arrInstance);
         }
         catch (Exception ex)
         {

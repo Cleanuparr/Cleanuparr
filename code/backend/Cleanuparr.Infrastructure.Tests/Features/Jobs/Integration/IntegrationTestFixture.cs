@@ -192,20 +192,12 @@ public class IntegrationTestFixture : IDisposable
     }
 
     /// <summary>
-    /// Configures the IArrQueueIterator to invoke the callback with the given records
-    /// when Iterate is called for any instance.
+    /// Configures the IArrQueueIterator to return the given records for any instance.
     /// </summary>
     public void SetupArrQueueIterator(params QueueRecord[] records)
     {
-        ArrQueueIterator.Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci =>
-            {
-                var callback = ci.Arg<Func<IReadOnlyList<QueueRecord>, Task>>();
-                return callback(records);
-            });
+        ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns(records.ToList());
     }
 
     /// <summary>

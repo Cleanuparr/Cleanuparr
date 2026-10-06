@@ -14,12 +14,12 @@ public sealed class ArrQueueIterator : IArrQueueIterator
         _logger = logger;
     }
     
-    public async Task Iterate(IArrClient arrClient, ArrInstance arrInstance, Func<IReadOnlyList<QueueRecord>, Task> action)
+    public async Task<List<QueueRecord>> ReadAllAsync(IArrClient arrClient, ArrInstance arrInstance)
     {
         const ushort maxPage = 100;
         ushort page = 1;
         int totalRecords = 0;
-        int processedRecords = 0;
+        List<QueueRecord> records = [];
 
         do
         {
@@ -39,16 +39,16 @@ public sealed class ArrQueueIterator : IArrQueueIterator
                 break;
             }
             
-            await action(queueResponse.Records);
+            records.AddRange(queueResponse.Records);
 
-            processedRecords += queueResponse.Records.Count;
-
-            if (processedRecords >= totalRecords)
+            if (records.Count >= totalRecords)
             {
                 break;
             }
 
             page++;
-        } while (processedRecords < totalRecords && page < maxPage);
+        } while (records.Count < totalRecords && page < maxPage);
+
+        return records;
     }
 }

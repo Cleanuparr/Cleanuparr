@@ -255,16 +255,8 @@ public class DownloadCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                return callback([queueRecord]);
-            });
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var sut = CreateSut();
 
@@ -312,12 +304,8 @@ public class DownloadCleanerTests : IDisposable
             .Returns(mockArrClient);
 
         _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(Task.CompletedTask);
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -663,16 +651,8 @@ public class DownloadCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Iterate(
-                mockArrClient,
-                Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                return callback(queueRecords);
-            });
+            .ReadAllAsync(mockArrClient, Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id))
+            .Returns(queueRecords);
 
         var sut = CreateSut();
 
@@ -680,11 +660,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert - verify the iterator was called
-        await _fixture.ArrQueueIterator.Received(1).Iterate(
-            mockArrClient,
-            Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id),
-            Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-        );
+        await _fixture.ArrQueueIterator.Received(1).ReadAllAsync(mockArrClient, Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id));
     }
 
     #endregion
@@ -973,11 +949,7 @@ public class DownloadCleanerTests : IDisposable
 
         // Make the arr queue iterator throw an exception
         _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .ThrowsAsync(new InvalidOperationException("Arr connection failed"));
 
         var sut = CreateSut();

@@ -5,5 +5,8 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
 public interface IArrQueueIterator
 {
-    Task Iterate(IArrClient arrClient, ArrInstance arrInstance, Func<IReadOnlyList<QueueRecord>, Task> action);
+    /// <summary>
+    /// Reads every page of the queue, so records sharing a download id are never split across pages.
+    /// </summary>
+    Task<List<QueueRecord>> ReadAllAsync(IArrClient arrClient, ArrInstance arrInstance);
 }

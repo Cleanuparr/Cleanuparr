@@ -145,14 +145,8 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(mockDownloadService);
 
         // No arr-managed downloads
-        _fixture.ArrQueueIterator.Iterate(
-                Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci =>
-            {
-                var callback = ci.Arg<Func<IReadOnlyList<QueueRecord>, Task>>();
-                return callback(Array.Empty<QueueRecord>());
-            });
+        _fixture.ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -219,14 +213,8 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(mockDownloadService);
 
         // No arr-managed downloads
-        _fixture.ArrQueueIterator.Iterate(
-                Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci =>
-            {
-                var callback = ci.Arg<Func<IReadOnlyList<QueueRecord>, Task>>();
-                return callback(Array.Empty<QueueRecord>());
-            });
+        _fixture.ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -297,14 +285,8 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(mockDownloadService);
 
         // No arr-managed downloads
-        _fixture.ArrQueueIterator.Iterate(
-                Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci =>
-            {
-                var callback = ci.Arg<Func<IReadOnlyList<QueueRecord>, Task>>();
-                return callback(Array.Empty<QueueRecord>());
-            });
+        _fixture.ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 

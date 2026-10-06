@@ -297,11 +297,7 @@ public class SeekerCommandMonitor : BackgroundService
             {
                 IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
 
-                await queueIterator.Iterate(arrClient, arrInstance, pageRecords =>
-                {
-                    records.AddRange(pageRecords);
-                    return Task.CompletedTask;
-                });
+                records = await queueIterator.ReadAllAsync(arrClient, arrInstance);
             }
             catch (OperationCanceledException)
             {
