@@ -10,6 +10,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Events;
@@ -343,8 +344,8 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? request).ShouldBeTrue();
-        request!.IsDryRun.ShouldBeTrue();
+        QueueItemRemoveRequest request = _fixture.RemovalQueue.ShouldHaveSingle();
+        request.IsDryRun.ShouldBeTrue();
     }
 
     [Fact]

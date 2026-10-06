@@ -922,8 +922,8 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.DeleteReason == DeleteReason.FailedImport).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.DeleteReason.ShouldBe(DeleteReason.FailedImport);
     }
 
     [Fact]
@@ -1026,9 +1026,9 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - SkipSearch must be true because the item has no content ID
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.SkipSearch == true &&
-                r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.SkipSearch.ShouldBeTrue();
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     #endregion
@@ -1218,10 +1218,10 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest (not SeriesSearchItem)
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Instance.ArrConfig.Type == InstanceType.Radarr &&
-                r.ArrTarget().SearchItem.Id == 42 &&
-                r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.Instance.ArrConfig.Type.ShouldBe(InstanceType.Radarr);
+        r.ArrTarget().SearchItem.Id.ShouldBe(42);
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     [Fact]
@@ -1277,10 +1277,10 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest with AlbumId
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Instance.ArrConfig.Type == InstanceType.Lidarr &&
-                r.ArrTarget().SearchItem.Id == 123 &&
-                r.DeleteReason == DeleteReason.SlowSpeed).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.Instance.ArrConfig.Type.ShouldBe(InstanceType.Lidarr);
+        r.ArrTarget().SearchItem.Id.ShouldBe(123);
+        r.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
     }
 
     [Fact]
@@ -1336,10 +1336,10 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest with BookId
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Instance.ArrConfig.Type == InstanceType.Readarr &&
-                r.ArrTarget().SearchItem.Id == 456 &&
-                r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.Instance.ArrConfig.Type.ShouldBe(InstanceType.Readarr);
+        r.ArrTarget().SearchItem.Id.ShouldBe(456);
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     [Fact]
@@ -1396,12 +1396,12 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.ArrTarget().SearchItem.Id == 100 && // EpisodeId
-                r.SeriesItem().SeriesId == 10 &&
-                r.SeriesItem().SearchType == SeriesSearchType.Episode &&
-                r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.Instance.ArrConfig.Type.ShouldBe(InstanceType.Whisparr);
+        r.ArrTarget().SearchItem.Id.ShouldBe(100); // EpisodeId
+        r.SeriesItem().SeriesId.ShouldBe(10);
+        r.SeriesItem().SearchType.ShouldBe(SeriesSearchType.Episode);
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     [Fact]
@@ -1457,10 +1457,10 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest with MovieId
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.ArrTarget().SearchItem.Id == 42 && // MovieId
-                r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.Instance.ArrConfig.Type.ShouldBe(InstanceType.Whisparr);
+        r.ArrTarget().SearchItem.Id.ShouldBe(42); // MovieId
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     [Fact]
@@ -1530,12 +1530,12 @@ public class QueueCleanerTests : IDisposable
 
         // Assert - should publish QueueItemRemoveRequest with Season search type
         // because multiple records with the same download ID indicate a pack
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                r.ArrTarget().SearchItem.Id == 3 && // SeasonNumber
-                r.SeriesItem().SeriesId == 10 &&
-                r.SeriesItem().SearchType == SeriesSearchType.Season &&
-                r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.Instance.ArrConfig.Type.ShouldBe(InstanceType.Whisparr);
+        r.ArrTarget().SearchItem.Id.ShouldBe(3); // SeasonNumber
+        r.SeriesItem().SeriesId.ShouldBe(10);
+        r.SeriesItem().SearchType.ShouldBe(SeriesSearchType.Season);
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     #endregion
@@ -1606,10 +1606,10 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.DeleteReason == DeleteReason.FailedImport &&
-                r.ArrTarget().ChangeCategory == true &&
-                r.ArrTarget().RemoveFromClient == false).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.DeleteReason.ShouldBe(DeleteReason.FailedImport);
+        r.ArrTarget().ChangeCategory.ShouldBeTrue();
+        r.ArrTarget().RemoveFromClient.ShouldBeFalse();
     }
 
     [Fact]
@@ -1667,10 +1667,10 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.DeleteReason == DeleteReason.Stalled &&
-                r.ArrTarget().ChangeCategory == true &&
-                r.ArrTarget().RemoveFromClient == false).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
+        r.ArrTarget().ChangeCategory.ShouldBeTrue();
+        r.ArrTarget().RemoveFromClient.ShouldBeFalse();
     }
 
     #endregion
@@ -1740,10 +1740,10 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await downloadService.Received(1).DeleteDownload(torrent, true);
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.LazyTarget().RemovedFromClient
-                && r.LazyTarget().Item.Books.Single().BookId == "OL7353617M"
-                && r.DeleteReason == DeleteReason.Stalled).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.LazyTarget().RemovedFromClient.ShouldBeTrue();
+        r.LazyTarget().Item.Books.Single().BookId.ShouldBe("OL7353617M");
+        r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
     [Fact]
@@ -1759,8 +1759,8 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         await downloadService.DidNotReceive().DeleteDownload(Arg.Any<ITorrentItemWrapper>(), Arg.Any<bool>());
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (!r.LazyTarget().RemovedFromClient).ShouldBeTrue();
+        QueueItemRemoveRequest r = _fixture.RemovalQueue.ShouldHaveSingle();
+        r.LazyTarget().RemovedFromClient.ShouldBeFalse();
     }
 
     [Fact]
