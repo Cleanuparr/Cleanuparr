@@ -11,12 +11,13 @@ import {
 
 # Download Client
 
-Configure download client connections for torrents. Cleanuparr supports the latest versions of the following download clients:
+Configure download client connections for torrents and Usenet. Cleanuparr supports the latest versions of the following download clients:
 - qBittorrent
 - Deluge
 - Transmission
 - µTorrent
 - rTorrent
+- SABnzbd
 
 <ElementNavigator />
 
@@ -142,6 +143,14 @@ Password for download client authentication.
 
 </ConfigSection>
 
+<ConfigSection
+  title="API Key"
+>
+
+API key for download client authentication, for clients that use one instead of a username/password. Required for SABnzbd; found under SABnzbd's own Config &gt; General page.
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>
@@ -196,6 +205,41 @@ Both clients report paths under the same `/downloads` prefix, but Cleanuparr mou
 - **Deluge** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-deluge/movie.mkv`
   - Download Directory Source: `/downloads`
   - Download Directory Target: `/downloads-deluge`
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>
+  Usenet (SABnzbd)
+</SectionTitle>
+
+<ConfigSection
+  title="What's supported"
+>
+
+Failed imports are handled regardless of the download client, so Usenet users benefit from that regardless of the client below.
+
+SABnzbd is supported as a download client (add it under Settings &gt; Download Clients, using an API key instead of username/password). It covers:
+- Detecting jobs SABnzbd itself gave up on (moved to history as "Failed") and removing them so the *arr re-searches. Paused jobs, whether paused individually or by pausing the whole queue, are never struck.
+- Orphaned files: entries in the scan directories that belong to no queued or finished job are moved away.
+- A post-download variant of the malware blocker: since SABnzbd has no API to skip individual files before a job finishes (unlike torrents, the whole NZB is already fetched from Usenet), it instead scans a completed job's output files on disk and deletes blocklist matches before the *arr imports them.
+
+Other Usenet clients (e.g. NZBGet) are not supported.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Known limitations"
+>
+
+Due to what the SABnzbd API actually exposes:
+- Usenet has no seeding concept, so seeding rules, unlinked downloads and dead torrents do not apply to a SABnzbd client.
+- Slow-speed and stall detection do not apply to SABnzbd; it fails a job that stops progressing on its own, and that's the signal relied on.
+- SABnzbd categories must already exist in SABnzbd itself. The same is true when configuring SABnzbd as a download client directly in Sonarr/Radarr/etc.: the *arr apps don't create SABnzbd categories either, they just assign an existing one to each job. Create the category once under SABnzbd's Config &gt; Categories page.
+- Category changes only work while a job is still in SABnzbd's queue. Once a job finishes and moves to history, SABnzbd's API has no way to change its category, so Cleanuparr skips the change (logging a warning) instead of silently failing.
 
 </ConfigSection>
 

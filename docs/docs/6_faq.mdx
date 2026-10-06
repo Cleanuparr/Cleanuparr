@@ -2,9 +2,15 @@
 sidebar_position: 7
 ---
 
-import Link from '@docusaurus/Link';
-import { ConfigSection, Note, Important, ElementNavigator, styles } from '@site/src/components/documentation';
-import Image from '@theme/IdealImage';
+import Link from "@docusaurus/Link";
+import {
+  ConfigSection,
+  Note,
+  Important,
+  ElementNavigator,
+  styles,
+} from "@site/src/components/documentation";
+import Image from "@theme/IdealImage";
 
 # Frequently Asked Questions
 
@@ -22,7 +28,7 @@ Common questions and answers about Cleanuparr.
   badge="General"
 >
 
-The name `Cleanuparr` reflects its purpose: to clean up your *arr applications. The `arr` suffix is a nod to the [Servarr](https://wiki.servarr.com/) ecosystem that it supports.
+The name `Cleanuparr` reflects its purpose: to clean up your \*arr applications. The `arr` suffix is a nod to the [Servarr](https://wiki.servarr.com/) ecosystem that it supports.
 Other names were already taken or I just didn't like them.
 
 It's pronounced like "cleanuper", someone who does the cleanup, in the same way a driver is someone who drives. The correct spelling is `Cleanuparr`, not `CleanupArr` or `CleanUpArr`.
@@ -42,31 +48,9 @@ Configurations such as never removing private torrents are available, but a dire
 However, you should still be cautious with aggressive strike rules and make sure your configuration is appropriate for your use case.
 
 <Important>
-Always test your configuration in dry run mode first, especially when setting up strike rules or malware blocking patterns.
+  Always test your configuration in dry run mode first, especially when setting
+  up strike rules or malware blocking patterns.
 </Important>
-
-</ConfigSection>
-
-<ConfigSection
-  id="usenet-support"
-  title="Is Usenet supported?"
-  badge="General"
->
-
-Failed imports are handled regardless of the download client, so Usenet users benefit from that regardless of the client below.
-
-SABnzbd is supported as a download client (add it under Settings &gt; Download Clients, using an API key instead of username/password). It covers:
-- Detecting jobs SABnzbd itself gave up on (moved to history as "Failed") and removing them so the *arr re-searches. Paused jobs, whether paused individually or by pausing the whole queue, are never struck.
-- Category changes and deleting jobs from the queue or history.
-- Orphaned/hardlink file scanning against a completed job's output directory.
-- A post-download variant of the malware blocker: since SABnzbd has no API to skip individual files before a job finishes (unlike torrents, the whole NZB is already fetched from Usenet), it instead scans a completed job's output files on disk and deletes blocklist matches before the *arr imports them.
-
-Known limitations, due to what the SABnzbd API actually exposes:
-- Usenet has no seeding concept, so seeding rules never apply to a SABnzbd client.
-- Slow-speed and stall detection do not apply to SABnzbd; it fails a job that stops progressing on its own, and that's the signal relied on.
-- SABnzbd has no documented, version-stable way to create a category via its API; a missing category logs a warning instead of being created automatically - create it in SABnzbd's own settings first.
-
-Other Usenet clients (e.g. NZBGet) are not supported.
 
 </ConfigSection>
 
@@ -159,6 +143,7 @@ Dry run mode simulates what Cleanuparr would do **without actually doing it**:
 - Actions are logged as `[DRY RUN]`
 
 **When to use it**:
+
 - Testing new configuration
 - Validating strike rules
 - Checking what would be affected by changes
@@ -168,7 +153,8 @@ Dry run mode simulates what Cleanuparr would do **without actually doing it**:
 **How to enable**: Go to Settings → General → Enable Dry Run
 
 <Note>
-Always test configuration changes in dry run mode first, especially for critical production systems.
+  Always test configuration changes in dry run mode first, especially for
+  critical production systems.
 </Note>
 
 </ConfigSection>
