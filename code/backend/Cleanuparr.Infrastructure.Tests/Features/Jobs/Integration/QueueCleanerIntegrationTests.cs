@@ -44,7 +44,7 @@ public class QueueCleanerIntegrationTests : IDisposable
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
@@ -63,7 +63,7 @@ public class QueueCleanerIntegrationTests : IDisposable
 
         var record = CreateQueueRecord(movieId: 42);
 
-        _fixture.SetupArrQueueIterator(record);
+        _fixture.SetupArrQueueReader(record);
         _fixture.ArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
         _fixture.ArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
@@ -160,7 +160,7 @@ public class QueueCleanerIntegrationTests : IDisposable
 
         var record = CreateQueueRecord(movieId: 99);
 
-        _fixture.SetupArrQueueIterator(record);
+        _fixture.SetupArrQueueReader(record);
         _fixture.ArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
         _fixture.ArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
         _fixture.ArrClient.ShouldRemoveFromQueue(
@@ -226,7 +226,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         generalConfig.IgnoredDownloads.Add("IGNORED_HASH_123");
         await _fixture.DataContext.SaveChangesAsync();
 
-        _fixture.SetupArrQueueIterator(record);
+        _fixture.SetupArrQueueReader(record);
         _fixture.ArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
         _fixture.ArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
@@ -252,7 +252,7 @@ public class QueueCleanerIntegrationTests : IDisposable
 
         var record = CreateQueueRecord(movieId: 50);
 
-        _fixture.SetupArrQueueIterator(record);
+        _fixture.SetupArrQueueReader(record);
         _fixture.ArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
         _fixture.ArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 

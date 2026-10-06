@@ -9,16 +9,16 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
-public class ArrQueueIteratorTests
+public class ArrQueueReaderTests
 {
-    private readonly ILogger<ArrQueueIterator> _logger;
+    private readonly ILogger<ArrQueueReader> _logger;
     private readonly IArrClient _arrClient;
     private readonly ArrInstance _arrInstance;
-    private readonly ArrQueueIterator _iterator;
+    private readonly ArrQueueReader _reader;
 
-    public ArrQueueIteratorTests()
+    public ArrQueueReaderTests()
     {
-        _logger = Substitute.For<ILogger<ArrQueueIterator>>();
+        _logger = Substitute.For<ILogger<ArrQueueReader>>();
         _arrClient = Substitute.For<IArrClient>();
         _arrInstance = new ArrInstance
         {
@@ -26,76 +26,57 @@ public class ArrQueueIteratorTests
             Url = new Uri("http://localhost:8989"),
             ApiKey = "key",
         };
-        _iterator = new ArrQueueIterator(_logger);
+        _reader = new ArrQueueReader(_logger);
     }
 
     [Fact]
-    public async Task Iterate_EmptyQueue_DoesNotInvokeAction()
+    public async Task ReadAllAsync_EmptyQueue_ReturnsEmptyList()
     {
         // Arrange
         _arrClient.GetQueueItemsAsync(_arrInstance, Arg.Any<int>())
             .Returns(new QueueListResponse { TotalRecords = 0, Records = Array.Empty<QueueRecord>() });
-        int invocations = 0;
 
         // Act
-        await _iterator.Iterate(_arrClient, _arrInstance, _ =>
-        {
-            invocations++;
-            return Task.CompletedTask;
-        });
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
-        invocations.ShouldBe(0);
+        result.ShouldBeEmpty();
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 1);
     }
 
     [Fact]
-    public async Task Iterate_SinglePage_InvokesActionOnce()
+    public async Task ReadAllAsync_SinglePage_ReturnsAllRecords()
     {
         // Arrange
-        var records = new[] { BuildRecord(1), BuildRecord(2) };
+        QueueRecord[] records = [BuildRecord(1), BuildRecord(2)];
         _arrClient.GetQueueItemsAsync(_arrInstance, 1)
             .Returns(new QueueListResponse { TotalRecords = records.Length, Records = records });
-        int invocations = 0;
-        IReadOnlyList<QueueRecord>? captured = null;
 
         // Act
-        await _iterator.Iterate(_arrClient, _arrInstance, batch =>
-        {
-            invocations++;
-            captured = batch;
-            return Task.CompletedTask;
-        });
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
-        invocations.ShouldBe(1);
-        captured.ShouldNotBeNull();
-        captured!.Count.ShouldBe(2);
+        result.Count.ShouldBe(2);
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 1);
         await _arrClient.DidNotReceive().GetQueueItemsAsync(_arrInstance, 2);
     }
 
     [Fact]
-    public async Task Iterate_MultiPage_AdvancesPageAndInvokesActionPerPage()
+    public async Task ReadAllAsync_MultiPage_ReturnsConcatenatedRecords()
     {
-        // Arrange — 5 total records, 2 per page
+        // Arrange: 5 total records, 2 per page
         _arrClient.GetQueueItemsAsync(_arrInstance, 1)
             .Returns(new QueueListResponse { TotalRecords = 5, Records = new[] { BuildRecord(1), BuildRecord(2) } });
         _arrClient.GetQueueItemsAsync(_arrInstance, 2)
             .Returns(new QueueListResponse { TotalRecords = 5, Records = new[] { BuildRecord(3), BuildRecord(4) } });
         _arrClient.GetQueueItemsAsync(_arrInstance, 3)
             .Returns(new QueueListResponse { TotalRecords = 5, Records = new[] { BuildRecord(5) } });
-        int invocations = 0;
 
         // Act
-        await _iterator.Iterate(_arrClient, _arrInstance, _ =>
-        {
-            invocations++;
-            return Task.CompletedTask;
-        });
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
-        invocations.ShouldBe(3);
+        result.Select(r => r.Id).ShouldBe(new long[] { 1, 2, 3, 4, 5 });
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 1);
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 2);
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 3);
@@ -103,69 +84,78 @@ public class ArrQueueIteratorTests
     }
 
     [Fact]
-    public async Task Iterate_StopsWhenProcessedReachesTotal()
+    public async Task ReadAllAsync_DownloadIdSpansPages_BothRecordsAppearInResult()
     {
-        // Arrange — total reported as 2, server returns 2 on page 1; iterator must not request page 2
+        // Arrange: same download id split across page 1 and page 2
+        QueueRecord page1Record = BuildRecord(1, downloadId: "shared-download");
+        QueueRecord page2Record = BuildRecord(2, downloadId: "shared-download");
+        _arrClient.GetQueueItemsAsync(_arrInstance, 1)
+            .Returns(new QueueListResponse { TotalRecords = 2, Records = new[] { page1Record } });
+        _arrClient.GetQueueItemsAsync(_arrInstance, 2)
+            .Returns(new QueueListResponse { TotalRecords = 2, Records = new[] { page2Record } });
+
+        // Act
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
+
+        // Assert
+        result.Count(r => r.DownloadId == "shared-download").ShouldBe(2);
+        result.Select(r => r.Id).ShouldBe(new long[] { 1, 2 });
+    }
+
+    [Fact]
+    public async Task ReadAllAsync_StopsWhenProcessedReachesTotal()
+    {
+        // Arrange: total reported as 2, server returns 2 on page 1; reader must not request page 2
         _arrClient.GetQueueItemsAsync(_arrInstance, 1)
             .Returns(new QueueListResponse { TotalRecords = 2, Records = new[] { BuildRecord(1), BuildRecord(2) } });
 
         // Act
-        await _iterator.Iterate(_arrClient, _arrInstance, _ => Task.CompletedTask);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
+        result.Count.ShouldBe(2);
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, Arg.Any<int>());
     }
 
     [Fact]
-    public async Task Iterate_EmptyMidPagination_BreaksWithoutCallingAction()
+    public async Task ReadAllAsync_EmptyMidPagination_StopsWithoutFurtherPages()
     {
-        // Arrange — first page has records, second page is empty (should stop without invoking action again)
+        // Arrange: first page has records, second page is empty (should stop without requesting a third page)
         _arrClient.GetQueueItemsAsync(_arrInstance, 1)
             .Returns(new QueueListResponse { TotalRecords = 99, Records = new[] { BuildRecord(1) } });
         _arrClient.GetQueueItemsAsync(_arrInstance, 2)
             .Returns(new QueueListResponse { TotalRecords = 99, Records = Array.Empty<QueueRecord>() });
-        int invocations = 0;
 
         // Act
-        await _iterator.Iterate(_arrClient, _arrInstance, _ =>
-        {
-            invocations++;
-            return Task.CompletedTask;
-        });
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
-        invocations.ShouldBe(1);
+        result.Count.ShouldBe(1);
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 1);
         await _arrClient.Received(1).GetQueueItemsAsync(_arrInstance, 2);
         await _arrClient.DidNotReceive().GetQueueItemsAsync(_arrInstance, 3);
     }
 
     [Fact]
-    public async Task Iterate_PassesRecordsToActionWithoutMutation()
+    public async Task ReadAllAsync_ReturnsRecordsInOrderWithoutMutation()
     {
         // Arrange
-        var records = new[] { BuildRecord(7), BuildRecord(8) };
+        QueueRecord[] records = [BuildRecord(7), BuildRecord(8)];
         _arrClient.GetQueueItemsAsync(_arrInstance, 1)
             .Returns(new QueueListResponse { TotalRecords = 2, Records = records });
-        IReadOnlyList<QueueRecord>? observed = null;
 
         // Act
-        await _iterator.Iterate(_arrClient, _arrInstance, batch =>
-        {
-            observed = batch;
-            return Task.CompletedTask;
-        });
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
-        observed.ShouldNotBeNull();
-        observed!.Select(r => r.Id).ShouldBe(new long[] { 7, 8 });
+        result.Select(r => r.Id).ShouldBe(new long[] { 7, 8 });
     }
 
-    private static QueueRecord BuildRecord(long id) => new()
+    private static QueueRecord BuildRecord(long id, string? downloadId = null) => new()
     {
         Id = id,
         Title = $"item-{id}",
-        DownloadId = id.ToString(),
+        DownloadId = downloadId ?? id.ToString(),
         Protocol = "torrent",
     };
 }

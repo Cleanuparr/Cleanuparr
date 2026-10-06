@@ -45,7 +45,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
@@ -708,12 +708,12 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             IMemoryCache cache,
             IBus messageBus,
             IArrClientFactory arrClientFactory,
-            IArrQueueIterator arrQueueIterator,
+            IArrQueueReader arrQueueReader,
             IDownloadServiceFactory downloadServiceFactory,
             IEventPublisher eventPublisher,
             IDryRunInterceptor dryRunInterceptor,
             IForceImportService forceImportService)
-            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
+            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
         {
         }
 

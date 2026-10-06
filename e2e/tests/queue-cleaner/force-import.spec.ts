@@ -16,6 +16,7 @@ const SERIES_ID = 7;
 const EPISODE_ID = 9;
 
 const createdInstances: string[] = [];
+let savedQueueCleanerConfig: Record<string, unknown> | undefined;
 
 function emptyQueueBody(): string {
   return JSON.stringify({ page: 1, pageSize: 50, totalRecords: 0, records: [] });
@@ -86,6 +87,7 @@ async function arrange(
   await mocks.arr.stub(ArrStubs.arrCommandListStub([]));
 
   const current = await (await api.queueCleaner.getConfig()).json();
+  savedQueueCleanerConfig = current;
   const updated = await api.queueCleaner.updateConfig({
     ...current,
     failedImport: {
@@ -173,6 +175,12 @@ test.describe.serial('QueueCleaner force import', () => {
   test.afterEach(async ({ api }) => {
     for (const id of createdInstances.splice(0)) {
       await api.arr.deleteInstance('sonarr', id);
+    }
+
+    if (savedQueueCleanerConfig) {
+      const restored = await api.queueCleaner.updateConfig(savedQueueCleanerConfig);
+      expect(restored.ok).toBe(true);
+      savedQueueCleanerConfig = undefined;
     }
   });
 

@@ -69,7 +69,7 @@ public class SeekerCommandMonitor : BackgroundService
         var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
         var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
         var arrClientFactory = scope.ServiceProvider.GetRequiredService<IArrClientFactory>();
-        var queueIterator = scope.ServiceProvider.GetRequiredService<IArrQueueIterator>();
+        var queueReader = scope.ServiceProvider.GetRequiredService<IArrQueueReader>();
         var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
         DateTimeOffset now = _timeProvider.GetUtcNow();
@@ -139,7 +139,7 @@ public class SeekerCommandMonitor : BackgroundService
         await eventsContext.SaveChangesAsync(stoppingToken);
 
         Dictionary<Guid, IReadOnlyList<QueueRecord>> queueSnapshots = await BuildQueueSnapshotsAsync(
-            trackers, instancesById, arrClientFactory, queueIterator);
+            trackers, instancesById, arrClientFactory, queueReader);
 
         foreach (SeekerCommandTracker tracker in trackers.Where(t => IsTerminal(t.Status)))
         {
@@ -277,7 +277,7 @@ public class SeekerCommandMonitor : BackgroundService
         List<SeekerCommandTracker> trackers,
         Dictionary<Guid, ArrInstance> instancesById,
         IArrClientFactory arrClientFactory,
-        IArrQueueIterator queueIterator)
+        IArrQueueReader queueReader)
     {
         Dictionary<Guid, IReadOnlyList<QueueRecord>> snapshots = [];
 
@@ -291,17 +291,12 @@ public class SeekerCommandMonitor : BackgroundService
         foreach (Guid instanceId in instanceIds)
         {
             ArrInstance arrInstance = instancesById[instanceId];
-            List<QueueRecord> records = [];
 
             try
             {
                 IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
 
-                await queueIterator.Iterate(arrClient, arrInstance, pageRecords =>
-                {
-                    records.AddRange(pageRecords);
-                    return Task.CompletedTask;
-                });
+                snapshots[instanceId] = await queueReader.ReadAllAsync(arrClient, arrInstance);
             }
             catch (OperationCanceledException)
             {
@@ -311,8 +306,6 @@ public class SeekerCommandMonitor : BackgroundService
             {
                 _logger.LogWarning(ex, "Failed to inspect the download queue on {Instance}", arrInstance.Name);
             }
-
-            snapshots[instanceId] = records;
         }
 
         return snapshots;
@@ -347,7 +340,14 @@ public class SeekerCommandMonitor : BackgroundService
                 return true;
             }
 
-            IReadOnlyList<QueueRecord> queue = queueSnapshots.GetValueOrDefault(tracker.ArrInstanceId, []);
+            if (!queueSnapshots.TryGetValue(tracker.ArrInstanceId, out IReadOnlyList<QueueRecord>? queue))
+            {
+                _logger.LogDebug(
+                    "Deferring outcome of search command {CommandId} for '{Title}' until the queue on {Instance} can be read (event {EventId})",
+                    tracker.CommandId, tracker.ItemTitle, arrInstance.Name, tracker.EventId);
+                return false;
+            }
+
             List<string>? grabbedItems = FindGrabbedItems(tracker, arrInstance, queue);
             await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
             _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);

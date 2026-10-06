@@ -54,7 +54,7 @@ public sealed class Seeker : IHandler
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly IArrClientFactory _arrClientFactory;
-    private readonly IArrQueueIterator _arrQueueIterator;
+    private readonly IArrQueueReader _arrQueueReader;
     private readonly IEventPublisher _eventPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IHostEnvironment _environment;
@@ -68,7 +68,7 @@ public sealed class Seeker : IHandler
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         IArrClientFactory arrClientFactory,
-        IArrQueueIterator arrQueueIterator,
+        IArrQueueReader arrQueueReader,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
         IHostEnvironment environment,
@@ -81,7 +81,7 @@ public sealed class Seeker : IHandler
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _arrClientFactory = arrClientFactory;
-        _arrQueueIterator = arrQueueIterator;
+        _arrQueueReader = arrQueueReader;
         _eventPublisher = eventPublisher;
         _dryRunInterceptor = dryRunInterceptor;
         _environment = environment;
@@ -290,20 +290,21 @@ public sealed class Seeker : IHandler
 
         // Fetch queue once for both active download limit check and queue cross-referencing
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
-        List<QueueRecord> queueRecords = [];
+        List<QueueRecord> queueRecords;
 
         try
         {
-            await _arrQueueIterator.Iterate(arrClient, arrInstance, records =>
-            {
-                queueRecords.AddRange(records);
-                return Task.CompletedTask;
-            });
+            queueRecords = await _arrQueueReader.ReadAllAsync(arrClient, arrInstance);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch queue for {InstanceName}, proceeding without queue cross-referencing",
+            _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, failed to read queue",
                 arrInstance.Name);
+            return false;
         }
 
         // Check active download limit using the fetched queue data

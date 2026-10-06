@@ -76,6 +76,22 @@ export function arrRawQueueStub(body: string): Mapping {
   };
 }
 
+/** Same as {@link arrRawQueueStub}, but scoped to one `page` query value, for multi-page queue tests. */
+export function arrRawQueuePageStub(page: number, body: string): Mapping {
+  return {
+    request: {
+      method: 'GET',
+      urlPath: '/api/v3/queue',
+      queryParameters: { page: { equalTo: String(page) } },
+    },
+    response: {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    },
+  };
+}
+
 export function arrQueueStub(records: QueueRecord[]): Mapping {
   return {
     request: { method: 'GET', urlPath: '/api/v3/queue' },
