@@ -290,16 +290,21 @@ public sealed class Seeker : IHandler
 
         // Fetch queue once for both active download limit check and queue cross-referencing
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
-        List<QueueRecord> queueRecords = [];
+        List<QueueRecord> queueRecords;
 
         try
         {
             queueRecords = await _arrQueueReader.ReadAllAsync(arrClient, arrInstance);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch queue for {InstanceName}, proceeding without queue cross-referencing",
+            _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, failed to read queue",
                 arrInstance.Name);
+            return false;
         }
 
         // Check active download limit using the fetched queue data

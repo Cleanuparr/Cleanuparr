@@ -788,9 +788,9 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_QueueFetchFails_ProceedsWithoutFiltering()
+    public async Task ExecuteAsync_QueueFetchFails_SkipsInstanceWithoutSearching()
     {
-        // Arrange — queue fetch throws, but search should still proceed
+        // Arrange — queue fetch throws, instance should be skipped for this run
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
@@ -835,9 +835,17 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — search still proceeded despite queue fetch failure
-        await mockArrClient.Received(1)
-            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+        // Assert — instance skipped entirely, no search sent or recorded
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+
+        await _fixture.EventPublisher.DidNotReceive()
+            .PublishSearchTriggered(
+                Arg.Any<string>(),
+                SeekerSearchType.Proactive,
+                Arg.Any<SeekerSearchReason>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     #endregion
