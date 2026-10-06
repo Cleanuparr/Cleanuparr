@@ -409,11 +409,30 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
         string key = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
 
+        MarkOrderSpyChannelWriter spyWriter = new(
+            _fixture.RemovalQueue.Writer,
+            () => _fixture.Cache.TryGetValue(key, out bool _));
+
+        TestHandler handler = new(
+            Substitute.For<ILogger<GenericHandler>>(),
+            _fixture.DataContext,
+            _fixture.Cache,
+            spyWriter,
+            _fixture.ArrClientFactory,
+            _fixture.ArrQueueIterator,
+            _fixture.DownloadServiceFactory,
+            _fixture.EventPublisher,
+            _fixture.DryRunInterceptor,
+            _fixture.ForceImportService);
+
         // Act
-        await _handler.PublicPublishQueueItemRemoveRequest(
+        await handler.PublicPublishQueueItemRemoveRequest(
             instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
-        // Assert: a successful write leaves the mark set
+        // Assert: the mark was already set at the moment of the write
+        spyWriter.MarkWasSetAtWrite.ShouldBe(true);
+
+        // Assert: a successful write leaves the mark set afterwards too
         _fixture.Cache.TryGetValue(key, out bool _).ShouldBeTrue();
     }
 
@@ -616,6 +635,32 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             AlbumId = albumId,
             BookId = bookId,
         };
+    }
+
+    /// <summary>
+    /// Wraps a real channel writer and records, at the moment of the write, whether the given probe is true.
+    /// </summary>
+    private sealed class MarkOrderSpyChannelWriter : ChannelWriter<QueueItemRemoveRequest>
+    {
+        private readonly ChannelWriter<QueueItemRemoveRequest> _inner;
+        private readonly Func<bool> _probe;
+
+        public bool? MarkWasSetAtWrite { get; private set; }
+
+        public MarkOrderSpyChannelWriter(ChannelWriter<QueueItemRemoveRequest> inner, Func<bool> probe)
+        {
+            _inner = inner;
+            _probe = probe;
+        }
+
+        public override bool TryWrite(QueueItemRemoveRequest item)
+        {
+            MarkWasSetAtWrite = _probe();
+            return _inner.TryWrite(item);
+        }
+
+        public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = default) =>
+            _inner.WaitToWriteAsync(cancellationToken);
     }
 
     /// <summary>
