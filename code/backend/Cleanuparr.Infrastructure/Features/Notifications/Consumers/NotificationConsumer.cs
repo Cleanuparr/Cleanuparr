@@ -1,9 +1,12 @@
+using Cleanuparr.Infrastructure.Features.Messaging;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
-using MassTransit;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Consumers;
 
-public sealed class NotificationConsumer : IConsumer<NotificationMessage>
+/// <summary>
+/// Sends one queued notification to its configured providers.
+/// </summary>
+public sealed class NotificationConsumer : IMessageHandler<NotificationMessage>
 {
     private readonly NotificationService _notificationService;
 
@@ -12,6 +15,7 @@ public sealed class NotificationConsumer : IConsumer<NotificationMessage>
         _notificationService = notificationService;
     }
 
-    public Task Consume(ConsumeContext<NotificationMessage> context) =>
-        _notificationService.SendNotificationAsync(context.Message.EventType, context.Message.Context);
+    /// <inheritdoc />
+    public Task HandleAsync(NotificationMessage message) =>
+        _notificationService.SendNotificationAsync(message.EventType, message.Context);
 }

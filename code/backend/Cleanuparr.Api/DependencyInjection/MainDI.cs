@@ -1,10 +1,10 @@
 ﻿using System.Threading.Channels;
-using Cleanuparr.Api.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.Messaging;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
@@ -26,29 +26,8 @@ public static class MainDI
             .AddQuartzServices(configuration)
             .AddNotifications()
             .AddMessageQueue<QueueItemRemoveRequest, DownloadRemoverConsumer>()
-            .AddMassTransit(config =>
-            {
-                config.DisableUsageTelemetry();
-
-                config.AddConsumer<NotificationConsumer>();
-
-                config.UsingInMemory((context, cfg) =>
-                {
-                    cfg.ConfigureJsonSerializerOptions(options =>
-                    {
-                        CleanuparrJsonConfiguration.ConfigureCore(options);
-
-                        return options;
-                    });
-
-                    cfg.ReceiveEndpoint("notification-queue", e =>
-                    {
-                        e.ConfigureConsumer<NotificationConsumer>(context);
-                        e.ConcurrentMessageLimit = 1;
-                        e.PrefetchCount = 1;
-                    });
-                });
-            });
+            .AddMessageQueue<NotificationMessage, NotificationConsumer>()
+            .AddMassTransit(config => config.DisableUsageTelemetry());
 
     /// <summary>
     /// Registers an unbounded in-process queue for <typeparamref name="TMessage"/>,
