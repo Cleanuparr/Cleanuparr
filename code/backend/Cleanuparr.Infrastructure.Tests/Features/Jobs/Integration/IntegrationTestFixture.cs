@@ -52,7 +52,7 @@ public class IntegrationTestFixture : IDisposable
     public IBus MessageBus { get; private set; }
     public IArrClientFactory ArrClientFactory { get; private set; }
     public IArrClient ArrClient { get; private set; }
-    public IArrQueueIterator ArrQueueIterator { get; private set; }
+    public IArrQueueReader ArrQueueReader { get; private set; }
     public IDownloadServiceFactory DownloadServiceFactory { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
@@ -86,7 +86,7 @@ public class IntegrationTestFixture : IDisposable
         MessageBus = Substitute.For<IBus>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
         ArrClient = Substitute.For<IArrClient>();
-        ArrQueueIterator = Substitute.For<IArrQueueIterator>();
+        ArrQueueReader = Substitute.For<IArrQueueReader>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
@@ -192,11 +192,11 @@ public class IntegrationTestFixture : IDisposable
     }
 
     /// <summary>
-    /// Configures the IArrQueueIterator to return the given records for any instance.
+    /// Configures the IArrQueueReader to return the given records for any instance.
     /// </summary>
-    public void SetupArrQueueIterator(params QueueRecord[] records)
+    public void SetupArrQueueReader(params QueueRecord[] records)
     {
-        ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+        ArrQueueReader.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns(records.ToList());
     }
 
@@ -255,7 +255,7 @@ public class IntegrationTestFixture : IDisposable
         MessageBus = Substitute.For<IBus>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
         ArrClient = Substitute.For<IArrClient>();
-        ArrQueueIterator = Substitute.For<IArrQueueIterator>();
+        ArrQueueReader = Substitute.For<IArrQueueReader>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         ForceImportService = Substitute.For<IForceImportService>();

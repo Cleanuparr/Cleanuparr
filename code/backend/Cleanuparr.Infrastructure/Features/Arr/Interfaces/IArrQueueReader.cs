@@ -3,7 +3,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
-public interface IArrQueueIterator
+public interface IArrQueueReader
 {
     /// <summary>
     /// Reads every page of the queue, so records sharing a download id are never split across pages.

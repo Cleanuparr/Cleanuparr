@@ -5,11 +5,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public sealed class ArrQueueIterator : IArrQueueIterator
+public sealed class ArrQueueReader : IArrQueueReader
 {
-    private readonly ILogger<ArrQueueIterator> _logger;
+    private readonly ILogger<ArrQueueReader> _logger;
     
-    public ArrQueueIterator(ILogger<ArrQueueIterator> logger)
+    public ArrQueueReader(ILogger<ArrQueueReader> logger)
     {
         _logger = logger;
     }

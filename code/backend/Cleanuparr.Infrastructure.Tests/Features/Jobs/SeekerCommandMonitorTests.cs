@@ -47,8 +47,8 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         serviceProvider.GetService(typeof(DataContext)).Returns(_dataContext);
         serviceProvider.GetService(typeof(EventsContext)).Returns(_eventsContext);
         serviceProvider.GetService(typeof(IArrClientFactory)).Returns(arrClientFactory);
-        serviceProvider.GetService(typeof(IArrQueueIterator))
-            .Returns(new ArrQueueIterator(Substitute.For<ILogger<ArrQueueIterator>>()));
+        serviceProvider.GetService(typeof(IArrQueueReader))
+            .Returns(new ArrQueueReader(Substitute.For<ILogger<ArrQueueReader>>()));
         serviceProvider.GetService(typeof(IEventPublisher)).Returns(_eventPublisher);
 
         var scope = Substitute.For<IServiceScope>();

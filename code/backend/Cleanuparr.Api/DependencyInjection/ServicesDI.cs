@@ -75,7 +75,7 @@ public static class ServicesDI
             .AddScoped<IHardLinkFileService, HardLinkFileService>()
             .AddScoped<IUnixHardLinkFileService, UnixHardLinkFileService>()
             .AddScoped<IWindowsHardLinkFileService, WindowsHardLinkFileService>()
-            .AddScoped<IArrQueueIterator, ArrQueueIterator>()
+            .AddScoped<IArrQueueReader, ArrQueueReader>()
             .AddScoped<IDownloadServiceFactory, DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
             .AddScoped<IForceImportService, ForceImportService>()

@@ -53,7 +53,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.TimeProvider,
@@ -98,7 +98,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         _fixture.DownloadServiceFactory.GetDownloadService(Arg.Any<DownloadClientConfig>())
             .Returns(mockDownloadService);
 
-        // Setup arr queue iterator to return the arr-managed hash
+        // Setup arr queue reader to return the arr-managed hash
         var queueRecord = new QueueRecord
         {
             Id = 1,
@@ -106,7 +106,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             Protocol = "torrent",
             DownloadId = arrManagedHash
         };
-        _fixture.SetupArrQueueIterator(queueRecord);
+        _fixture.SetupArrQueueReader(queueRecord);
 
         var sut = CreateSut();
 
@@ -145,7 +145,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(mockDownloadService);
 
         // No arr-managed downloads
-        _fixture.ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+        _fixture.ArrQueueReader.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
         var sut = CreateSut();
@@ -213,7 +213,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(mockDownloadService);
 
         // No arr-managed downloads
-        _fixture.ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+        _fixture.ArrQueueReader.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
         var sut = CreateSut();
@@ -285,7 +285,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(mockDownloadService);
 
         // No arr-managed downloads
-        _fixture.ArrQueueIterator.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+        _fixture.ArrQueueReader.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
         var sut = CreateSut();
@@ -467,7 +467,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             .Returns(downloadService);
 
         // No arr-managed downloads
-        _fixture.SetupArrQueueIterator();
+        _fixture.SetupArrQueueReader();
 
         return downloadService;
     }

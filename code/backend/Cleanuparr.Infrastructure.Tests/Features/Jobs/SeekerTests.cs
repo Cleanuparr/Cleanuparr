@@ -85,7 +85,7 @@ public class SeekerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.EventPublisher,
             _dryRunInterceptor,
             _hostingEnvironment,
@@ -284,7 +284,7 @@ public class SeekerTests : IDisposable
             new() { Id = 1, Title = "Download 1", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, TrackedDownloadState = "downloading" },
             new() { Id = 2, Title = "Download 2", DownloadId = "hash2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(activeDownloads.ToList());
 
@@ -340,7 +340,7 @@ public class SeekerTests : IDisposable
             new() { Id = 1, Title = "Episode 1", DownloadId = "same-hash", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, TrackedDownloadState = "downloading" },
             new() { Id = 2, Title = "Episode 2", DownloadId = "same-hash", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(activeDownloads.ToList());
 
@@ -389,7 +389,7 @@ public class SeekerTests : IDisposable
             new() { Id = 1, Title = "Pending 1", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, Status = "delay" },
             new() { Id = 2, Title = "Pending 2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, Status = "delay" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(pendingReleases.ToList());
 
@@ -449,7 +449,7 @@ public class SeekerTests : IDisposable
         [
             new() { Id = 1, Title = "Movie 2 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 2, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(queuedRecords.ToList());
 
@@ -510,7 +510,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -549,7 +549,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -600,7 +600,7 @@ public class SeekerTests : IDisposable
         [
             new() { Id = 1, Title = "Movie 1 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 0, MovieId = 1, TrackedDownloadState = "importFailed" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(queuedRecords.ToList());
 
@@ -657,7 +657,7 @@ public class SeekerTests : IDisposable
         [
             new() { Id = 1, Title = "Series Episode", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, SeriesId = 10, SeasonNumber = 1, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(queuedRecords.ToList());
 
@@ -727,7 +727,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -811,7 +811,7 @@ public class SeekerTests : IDisposable
         var mockArrClient = Substitute.For<IArrClient>();
 
         // Queue fetch fails
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .ThrowsAsync(new HttpRequestException("Connection refused"));
 
@@ -868,7 +868,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -928,7 +928,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -998,7 +998,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1078,7 +1078,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1143,7 +1143,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1204,7 +1204,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1288,7 +1288,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1360,7 +1360,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1432,7 +1432,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1564,7 +1564,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1643,7 +1643,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1716,7 +1716,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1786,7 +1786,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1864,7 +1864,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -1965,7 +1965,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2060,7 +2060,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2147,7 +2147,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2211,7 +2211,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2276,7 +2276,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2330,7 +2330,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2383,7 +2383,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2453,7 +2453,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2546,7 +2546,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2639,7 +2639,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2701,7 +2701,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2759,7 +2759,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2825,7 +2825,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2894,7 +2894,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -2996,7 +2996,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3063,7 +3063,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3128,7 +3128,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3202,7 +3202,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3274,7 +3274,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3333,7 +3333,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3392,7 +3392,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3463,7 +3463,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3533,7 +3533,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3603,7 +3603,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3658,7 +3658,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3720,7 +3720,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -3824,7 +3824,7 @@ public class SeekerTests : IDisposable
             new() { Id = 2, Title = "DL 2", DownloadId = "h2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" },
             new() { Id = 3, Title = "DL 3", DownloadId = "h3", Protocol = "torrent", SizeLeft = 3000, MovieId = 30, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(activeDownloads.ToList());
 
@@ -4103,7 +4103,7 @@ public class SeekerTests : IDisposable
             })
             .ToArray();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns(queueRecords.ToList());
 
@@ -4216,7 +4216,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -4485,7 +4485,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -4562,7 +4562,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -4659,7 +4659,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -4746,7 +4746,7 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -4830,7 +4830,7 @@ public class SeekerTests : IDisposable
 
         IArrClient mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .Returns([]);
 

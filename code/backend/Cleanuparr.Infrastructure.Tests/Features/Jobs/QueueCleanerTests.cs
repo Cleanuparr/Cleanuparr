@@ -56,7 +56,7 @@ public class QueueCleanerTests : IDisposable
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
@@ -83,7 +83,7 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         _logger.HasLogContaining(LogLevel.Warning, "no internet connectivity").ShouldBeTrue();
-        await _fixture.ArrQueueIterator
+        await _fixture.ArrQueueReader
             .DidNotReceive()
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>());
     }
@@ -100,7 +100,7 @@ public class QueueCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -138,7 +138,7 @@ public class QueueCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -176,7 +176,7 @@ public class QueueCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -223,7 +223,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -266,7 +266,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -308,7 +308,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -352,7 +352,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -403,7 +403,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -463,7 +463,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -528,7 +528,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -584,7 +584,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -643,7 +643,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -690,7 +690,7 @@ public class QueueCleanerTests : IDisposable
             new() { Id = 2, DownloadId = "second", Title = "Second", Protocol = "torrent", SeriesId = 1, EpisodeId = 2 },
         ];
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns(page.ToList());
 
@@ -737,7 +737,7 @@ public class QueueCleanerTests : IDisposable
         QueueRecord otherDownload = new() { Id = 2, DownloadId = "other-download-id", Title = "Other Download", Protocol = "torrent", SeriesId = 1, EpisodeId = 20 };
         QueueRecord packEp3 = new() { Id = 3, DownloadId = "pack-download-id", Title = "Pack S01E03", Protocol = "torrent", SeriesId = 1, EpisodeId = 3 };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([packEp2, otherDownload, packEp3]);
 
@@ -785,7 +785,7 @@ public class QueueCleanerTests : IDisposable
         QueueRecord otherDownload = new() { Id = 2, DownloadId = "other-download-id", Title = "Other Download", Protocol = "torrent", SeriesId = 1, EpisodeId = 20 };
         QueueRecord packEp3 = new() { Id = 3, DownloadId = "pack-download-id", Title = "Pack S01E03", Protocol = "torrent", SeriesId = 1, EpisodeId = 3 };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([packEp2, otherDownload, packEp3]);
 
@@ -836,7 +836,7 @@ public class QueueCleanerTests : IDisposable
         QueueRecord otherDownload = new() { Id = 2, DownloadId = "other-download-id", Title = "Other Download", Protocol = "torrent", SeriesId = 1, EpisodeId = 20, SeasonNumber = 1 };
         QueueRecord packEp3 = new() { Id = 3, DownloadId = "pack-download-id", Title = "Pack S01E03", Protocol = "torrent", SeriesId = 1, EpisodeId = 3, SeasonNumber = 1 };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([packEp2, otherDownload, packEp3]);
 
@@ -902,7 +902,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -955,7 +955,7 @@ public class QueueCleanerTests : IDisposable
             Protocol = "torrent"
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1006,7 +1006,7 @@ public class QueueCleanerTests : IDisposable
             Protocol = "torrent"
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1079,7 +1079,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1162,7 +1162,7 @@ public class QueueCleanerTests : IDisposable
             .GetDownloadService(Arg.Any<DownloadClientConfig>())
             .Returns(mockDownloadService);
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1205,7 +1205,7 @@ public class QueueCleanerTests : IDisposable
             MovieId = 42
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1268,7 +1268,7 @@ public class QueueCleanerTests : IDisposable
             AlbumId = 123
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1331,7 +1331,7 @@ public class QueueCleanerTests : IDisposable
             BookId = 456
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1395,7 +1395,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 100
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1460,7 +1460,7 @@ public class QueueCleanerTests : IDisposable
             MovieId = 42
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1536,7 +1536,7 @@ public class QueueCleanerTests : IDisposable
             SeasonNumber = 3
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([record1, record2]);
 
@@ -1621,7 +1621,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1681,7 +1681,7 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -1894,7 +1894,7 @@ public class QueueCleanerTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueIterator()
+    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueReader()
     {
         // Arrange
         StubLazyLibrarianDecision();
@@ -1904,7 +1904,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        await _fixture.ArrQueueIterator.DidNotReceive().ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>());
+        await _fixture.ArrQueueReader.DidNotReceive().ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>());
     }
 
     #endregion

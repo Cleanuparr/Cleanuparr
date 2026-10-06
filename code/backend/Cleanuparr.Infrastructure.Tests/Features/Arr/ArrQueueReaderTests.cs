@@ -9,16 +9,16 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
-public class ArrQueueIteratorTests
+public class ArrQueueReaderTests
 {
-    private readonly ILogger<ArrQueueIterator> _logger;
+    private readonly ILogger<ArrQueueReader> _logger;
     private readonly IArrClient _arrClient;
     private readonly ArrInstance _arrInstance;
-    private readonly ArrQueueIterator _iterator;
+    private readonly ArrQueueReader _reader;
 
-    public ArrQueueIteratorTests()
+    public ArrQueueReaderTests()
     {
-        _logger = Substitute.For<ILogger<ArrQueueIterator>>();
+        _logger = Substitute.For<ILogger<ArrQueueReader>>();
         _arrClient = Substitute.For<IArrClient>();
         _arrInstance = new ArrInstance
         {
@@ -26,7 +26,7 @@ public class ArrQueueIteratorTests
             Url = new Uri("http://localhost:8989"),
             ApiKey = "key",
         };
-        _iterator = new ArrQueueIterator(_logger);
+        _reader = new ArrQueueReader(_logger);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class ArrQueueIteratorTests
             .Returns(new QueueListResponse { TotalRecords = 0, Records = Array.Empty<QueueRecord>() });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.ShouldBeEmpty();
@@ -53,7 +53,7 @@ public class ArrQueueIteratorTests
             .Returns(new QueueListResponse { TotalRecords = records.Length, Records = records });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.Count.ShouldBe(2);
@@ -73,7 +73,7 @@ public class ArrQueueIteratorTests
             .Returns(new QueueListResponse { TotalRecords = 5, Records = new[] { BuildRecord(5) } });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.Select(r => r.Id).ShouldBe(new long[] { 1, 2, 3, 4, 5 });
@@ -95,7 +95,7 @@ public class ArrQueueIteratorTests
             .Returns(new QueueListResponse { TotalRecords = 2, Records = new[] { page2Record } });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.Count(r => r.DownloadId == "shared-download").ShouldBe(2);
@@ -105,12 +105,12 @@ public class ArrQueueIteratorTests
     [Fact]
     public async Task ReadAllAsync_StopsWhenProcessedReachesTotal()
     {
-        // Arrange: total reported as 2, server returns 2 on page 1; iterator must not request page 2
+        // Arrange: total reported as 2, server returns 2 on page 1; reader must not request page 2
         _arrClient.GetQueueItemsAsync(_arrInstance, 1)
             .Returns(new QueueListResponse { TotalRecords = 2, Records = new[] { BuildRecord(1), BuildRecord(2) } });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.Count.ShouldBe(2);
@@ -127,7 +127,7 @@ public class ArrQueueIteratorTests
             .Returns(new QueueListResponse { TotalRecords = 99, Records = Array.Empty<QueueRecord>() });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -145,7 +145,7 @@ public class ArrQueueIteratorTests
             .Returns(new QueueListResponse { TotalRecords = 2, Records = records });
 
         // Act
-        List<QueueRecord> result = await _iterator.ReadAllAsync(_arrClient, _arrInstance);
+        List<QueueRecord> result = await _reader.ReadAllAsync(_arrClient, _arrInstance);
 
         // Assert
         result.Select(r => r.Id).ShouldBe(new long[] { 7, 8 });

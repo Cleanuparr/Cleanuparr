@@ -47,7 +47,7 @@ public class DownloadCleanerTests : IDisposable
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.TimeProvider,
@@ -254,7 +254,7 @@ public class DownloadCleanerTests : IDisposable
             Protocol = "torrent"
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([queueRecord]);
 
@@ -303,7 +303,7 @@ public class DownloadCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .Returns([]);
 
@@ -650,7 +650,7 @@ public class DownloadCleanerTests : IDisposable
             new() { Id = 2, DownloadId = "hash2", Title = "Download 2", Protocol = "torrent" }
         };
 
-        _fixture.ArrQueueIterator
+        _fixture.ArrQueueReader
             .ReadAllAsync(mockArrClient, Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id))
             .Returns(queueRecords);
 
@@ -659,8 +659,8 @@ public class DownloadCleanerTests : IDisposable
         // Act
         await ExecuteWithTimeAdvance(sut);
 
-        // Assert - verify the iterator was called
-        await _fixture.ArrQueueIterator.Received(1).ReadAllAsync(mockArrClient, Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id));
+        // Assert - verify the reader was called
+        await _fixture.ArrQueueReader.Received(1).ReadAllAsync(mockArrClient, Arg.Is<ArrInstance>(i => i.Id == sonarrInstance.Id));
     }
 
     #endregion
@@ -914,7 +914,7 @@ public class DownloadCleanerTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessArrConfigAsync_WhenArrIteratorThrows_LogsErrorAndRethrows()
+    public async Task ProcessArrConfigAsync_WhenArrQueueReaderThrows_LogsErrorAndRethrows()
     {
         // Arrange - DownloadCleaner calls ProcessArrConfigAsync with throwOnFailure=true
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
@@ -947,8 +947,8 @@ public class DownloadCleanerTests : IDisposable
             .GetClient(InstanceType.Sonarr, Arg.Any<float>())
             .Returns(mockArrClient);
 
-        // Make the arr queue iterator throw an exception
-        _fixture.ArrQueueIterator
+        // Make the arr queue reader throw an exception
+        _fixture.ArrQueueReader
             .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
             .ThrowsAsync(new InvalidOperationException("Arr connection failed"));
 

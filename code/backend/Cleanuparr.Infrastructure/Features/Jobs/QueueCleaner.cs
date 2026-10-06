@@ -34,7 +34,7 @@ public sealed class QueueCleaner : GenericHandler
         IMemoryCache cache,
         IBus messageBus,
         IArrClientFactory arrClientFactory,
-        IArrQueueIterator arrArrQueueIterator,
+        IArrQueueReader arrQueueReader,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
@@ -43,7 +43,7 @@ public sealed class QueueCleaner : GenericHandler
         [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
+        arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor,
         forceImportService
     )
     {
@@ -140,7 +140,7 @@ public sealed class QueueCleaner : GenericHandler
 
         HashSet<string> queuedDownloadIds = new(StringComparer.InvariantCultureIgnoreCase);
 
-        List<QueueRecord> queueRecords = await _arrArrQueueIterator.ReadAllAsync(arrClient, instance);
+        List<QueueRecord> queueRecords = await _arrQueueReader.ReadAllAsync(arrClient, instance);
 
         List<IGrouping<string, QueueRecord>> groups = queueRecords
             .GroupBy(x => x.DownloadId)
