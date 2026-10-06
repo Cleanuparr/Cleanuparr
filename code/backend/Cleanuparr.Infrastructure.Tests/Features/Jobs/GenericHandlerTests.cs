@@ -420,7 +420,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             _fixture.Cache,
             spyWriter,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,

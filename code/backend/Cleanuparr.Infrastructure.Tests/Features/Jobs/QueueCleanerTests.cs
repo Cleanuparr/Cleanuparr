@@ -860,12 +860,16 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - the pack flag true branch builds a season SearchItem instead of an episode one
-        await _fixture.MessageBus.Received(1).Publish(
-            Arg.Is<QueueItemRemoveRequest>(r =>
-                r.SeriesItem().SearchType == SeriesSearchType.Season &&
-                r.SeriesItem().Id == 1
-            ),
-            Arg.Any<CancellationToken>()
+        List<QueueItemRemoveRequest> requests = [];
+
+        while (_fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? request))
+        {
+            requests.Add(request);
+        }
+
+        requests.ShouldContain(r =>
+            r.SeriesItem().SearchType == SeriesSearchType.Season &&
+            r.SeriesItem().Id == 1
         );
     }
 
