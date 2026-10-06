@@ -29,9 +29,7 @@ public sealed class ArrQueueReader : IArrQueueReader
             {
                 totalRecords = queueResponse.TotalRecords;
                 
-                _logger.LogDebug(
-                    "{Items} items found in queue | {url}",
-                    queueResponse.TotalRecords, arrInstance.Url);
+                _logger.LogDebug("{Items} items found in queue | {Url}", queueResponse.TotalRecords, arrInstance.Url);
             }
 
             if (queueResponse.Records.Count is 0)
