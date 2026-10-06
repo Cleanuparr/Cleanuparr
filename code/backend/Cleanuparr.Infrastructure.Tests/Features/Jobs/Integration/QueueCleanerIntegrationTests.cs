@@ -84,7 +84,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert Phase 1: IBus received a remove request
+        // Assert Phase 1: removal queue received a remove request
         var removeRequests = _fixture.GetCapturedRemoveRequests();
         removeRequests.Count.ShouldBe(1);
 

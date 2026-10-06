@@ -54,7 +54,7 @@ public class NotificationConsumerTests
 
 
     [Fact]
-    public async Task Consume_WithConfiguredProviders_SendsToAll()
+    public async Task HandleAsync_WithConfiguredProviders_SendsToAll()
     {
         NotificationProviderDto providerDto1 = CreateProviderDto("Provider1");
         NotificationProviderDto providerDto2 = CreateProviderDto("Provider2");
@@ -75,7 +75,7 @@ public class NotificationConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WhenOneProviderThrows_OthersStillReceiveNotification()
+    public async Task HandleAsync_WhenOneProviderThrows_OthersStillReceiveNotification()
     {
         NotificationProviderDto providerDto1 = CreateProviderDto("Provider1");
         NotificationProviderDto providerDto2 = CreateProviderDto("Provider2");
@@ -98,7 +98,7 @@ public class NotificationConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WhenNoProvidersConfigured_DoesNotCreateAnyProvider()
+    public async Task HandleAsync_WhenNoProvidersConfigured_DoesNotCreateAnyProvider()
     {
         NotificationMessage message = new(NotificationEventType.QueueItemDeleted, CreateContext(NotificationEventType.QueueItemDeleted));
 
@@ -111,7 +111,7 @@ public class NotificationConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WhenProviderLookupThrows_DoesNotThrow()
+    public async Task HandleAsync_WhenProviderLookupThrows_DoesNotThrow()
     {
         NotificationMessage message = new(NotificationEventType.QueueItemDeleted, CreateContext(NotificationEventType.QueueItemDeleted));
 

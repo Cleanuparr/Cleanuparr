@@ -34,7 +34,7 @@ public class DownloadRemoverConsumerTests
     #region HandleAsync Tests
 
     [Fact]
-    public async Task Consume_CallsRemoveQueueItemAsync()
+    public async Task HandleAsync_CallsRemoveQueueItemAsync()
     {
         // Arrange
         var request = CreateRemoveRequest();
@@ -51,7 +51,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WhenRemoverThrows_LogsErrorAndDoesNotRethrow()
+    public async Task HandleAsync_WhenRemoverThrows_LogsErrorAndDoesNotRethrow()
     {
         // Arrange
         var request = CreateRemoveRequest();
@@ -68,7 +68,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_PassesCorrectRequestToRemover()
+    public async Task HandleAsync_PassesCorrectRequestToRemover()
     {
         // Arrange
         var request = CreateRemoveRequest();
@@ -91,7 +91,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithDryRunRequest_SetsStickyDryRunBeforeRemoving()
+    public async Task HandleAsync_WithDryRunRequest_SetsStickyDryRunBeforeRemoving()
     {
         // Arrange
         var request = CreateRemoveRequest() with { IsDryRun = true };
@@ -110,7 +110,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithDryRunRequest_RequestsAPurgeAfterRemoving()
+    public async Task HandleAsync_WithDryRunRequest_RequestsAPurgeAfterRemoving()
     {
         // Arrange
         var request = CreateRemoveRequest() with { IsDryRun = true };
@@ -127,7 +127,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithLiveRequest_RequestsNoPurge()
+    public async Task HandleAsync_WithLiveRequest_RequestsNoPurge()
     {
         // Arrange
         var request = CreateRemoveRequest() with { IsDryRun = false };
@@ -146,7 +146,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithDryRunRequest_WhenRemoverThrows_ExitsActivity()
+    public async Task HandleAsync_WithDryRunRequest_WhenRemoverThrows_ExitsActivity()
     {
         // Arrange
         QueueItemRemoveRequest request = CreateRemoveRequest() with { IsDryRun = true };
@@ -163,7 +163,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithLiveRequest_NeverEntersActivity()
+    public async Task HandleAsync_WithLiveRequest_NeverEntersActivity()
     {
         // Arrange
         QueueItemRemoveRequest request = CreateRemoveRequest() with { IsDryRun = false };
@@ -183,7 +183,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithRemoveFromClientTrue_PassesCorrectly()
+    public async Task HandleAsync_WithRemoveFromClientTrue_PassesCorrectly()
     {
         // Arrange
         var request = new QueueItemRemoveRequest
@@ -215,7 +215,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithDifferentDeleteReasons_HandlesCorrectly()
+    public async Task HandleAsync_WithDifferentDeleteReasons_HandlesCorrectly()
     {
         // Arrange
         var request = new QueueItemRemoveRequest
@@ -246,7 +246,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithDifferentInstanceTypes_HandlesCorrectly()
+    public async Task HandleAsync_WithDifferentInstanceTypes_HandlesCorrectly()
     {
         // Arrange
         var request = new QueueItemRemoveRequest
