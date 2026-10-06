@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
@@ -40,7 +41,8 @@ public class EventCleanupLogicTests : IDisposable
         _service = new EventCleanupService(
             Substitute.For<ILogger<EventCleanupService>>(),
             _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
-            new FakeTimeProvider(Now));
+            new FakeTimeProvider(Now),
+            new DryRunActivity());
     }
 
     public void Dispose()

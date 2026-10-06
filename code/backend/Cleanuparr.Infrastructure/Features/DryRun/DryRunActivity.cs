@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+
 namespace Cleanuparr.Infrastructure.Features.DryRun;
 
 /// <summary>
@@ -6,6 +8,8 @@ namespace Cleanuparr.Infrastructure.Features.DryRun;
 public sealed class DryRunActivity
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Channel<bool> _purgeRequests = Channel.CreateBounded<bool>(
+        new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropWrite });
     private int _active;
 
     /// <summary>
@@ -33,10 +37,31 @@ public sealed class DryRunActivity
 
     /// <summary>
     /// Marks the end of a dry run.
+    /// Requests a purge once no dry run is left active.
     /// </summary>
     public void Exit()
     {
-        Interlocked.Decrement(ref _active);
+        if (Interlocked.Decrement(ref _active) == 0)
+        {
+            RequestPurge();
+        }
+    }
+
+    /// <summary>
+    /// Requests a purge.
+    /// Buffers at most one pending request.
+    /// </summary>
+    public void RequestPurge()
+    {
+        _purgeRequests.Writer.TryWrite(true);
+    }
+
+    /// <summary>
+    /// Waits for a pending purge request.
+    /// </summary>
+    public ValueTask<bool> WaitForPurgeRequestAsync(CancellationToken ct)
+    {
+        return _purgeRequests.Reader.ReadAsync(ct);
     }
 
     /// <summary>

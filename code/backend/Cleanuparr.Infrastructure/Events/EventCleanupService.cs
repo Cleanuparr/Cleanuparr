@@ -1,7 +1,6 @@
 using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
-using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,20 +16,28 @@ public class EventCleanupService : BackgroundService
     private readonly ILogger<EventCleanupService> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
+    private readonly DryRunActivity _dryRunActivity;
     private readonly TimeSpan _cleanupInterval = TimeSpan.FromHours(4); // Run every 4 hours
     private readonly int _eventRetentionDays = 30; // Keep events for 30 days
 
-    public EventCleanupService(ILogger<EventCleanupService> logger, IServiceScopeFactory scopeFactory, TimeProvider timeProvider)
+    public EventCleanupService(
+        ILogger<EventCleanupService> logger,
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider,
+        DryRunActivity dryRunActivity)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
         _timeProvider = timeProvider;
+        _dryRunActivity = dryRunActivity;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Event cleanup service started. Interval: {interval}, Retention: {retention} days", 
+        _logger.LogInformation("Event cleanup service started. Interval: {Interval}, Retention: {Retention} days",
             _cleanupInterval, _eventRetentionDays);
+
+        int purgeFailures = 0;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -41,9 +48,11 @@ public class EventCleanupService : BackgroundService
                     break;
                 }
 
-                await PerformCleanupAsync();
-                
-                await Task.Delay(_cleanupInterval, _timeProvider, stoppingToken);
+                bool purgeFailed = await PerformCleanupAsync();
+                purgeFailures = purgeFailed ? purgeFailures + 1 : 0;
+                TimeSpan wait = purgeFailed ? GetRetryDelay(purgeFailures) : _cleanupInterval;
+
+                await WaitForNextRunAsync(wait, stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -59,8 +68,84 @@ public class EventCleanupService : BackgroundService
         _logger.LogInformation("Event cleanup service stopped");
     }
 
-    internal async Task PerformCleanupAsync()
+    /// <summary>
+    /// Waits for the next run.
+    /// Returns early when a purge request arrives and dry run is already off.
+    /// </summary>
+    internal async Task WaitForNextRunAsync(TimeSpan wait, CancellationToken ct)
     {
+        DateTimeOffset deadline = _timeProvider.GetUtcNow() + wait;
+
+        while (true)
+        {
+            TimeSpan remaining = deadline - _timeProvider.GetUtcNow();
+
+            if (remaining <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            Task delayTask = Task.Delay(remaining, _timeProvider, cts.Token);
+            Task<bool> signalTask = _dryRunActivity.WaitForPurgeRequestAsync(cts.Token).AsTask();
+
+            Task winner = await Task.WhenAny(delayTask, signalTask);
+            await cts.CancelAsync();
+
+            if (winner == delayTask)
+            {
+                await ObserveLoserAsync(signalTask);
+                return;
+            }
+
+            await ObserveLoserAsync(delayTask);
+
+            await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+            DataContext dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+            GeneralConfig config = await dataContext.GeneralConfigs
+                .AsNoTracking()
+                .FirstAsync();
+
+            if (!config.DryRun)
+            {
+                return;
+            }
+        }
+    }
+
+    private static async Task ObserveLoserAsync(Task loser)
+    {
+        try
+        {
+            await loser;
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled because the other task won
+        }
+    }
+
+    /// <summary>
+    /// Retry delay after a failed purge, capped at 5 minutes.
+    /// </summary>
+    internal static TimeSpan GetRetryDelay(int failures)
+    {
+        return failures switch
+        {
+            <= 1 => TimeSpan.FromSeconds(30),
+            2 => TimeSpan.FromMinutes(1),
+            _ => TimeSpan.FromMinutes(5),
+        };
+    }
+
+    /// <summary>
+    /// Runs one cleanup pass.
+    /// </summary>
+    /// <returns>True when the dry-run purge threw.</returns>
+    internal async Task<bool> PerformCleanupAsync()
+    {
+        bool purgeFailed = false;
+
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
@@ -81,6 +166,7 @@ public class EventCleanupService : BackgroundService
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to purge dry-run data");
+                    purgeFailed = true;
                 }
             }
 
@@ -101,6 +187,8 @@ public class EventCleanupService : BackgroundService
         {
             _logger.LogError(ex, "Failed to perform event cleanup");
         }
+
+        return purgeFailed;
     }
 
     internal async Task DeleteResolvedManualEventsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
