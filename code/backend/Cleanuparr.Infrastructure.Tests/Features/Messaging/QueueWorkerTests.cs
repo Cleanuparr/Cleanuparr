@@ -161,11 +161,16 @@ public class QueueWorkerTests : IAsyncDisposable
             _marker = marker;
         }
 
-        public async Task HandleAsync(TestMessage message)
+        public Task HandleAsync(TestMessage message)
         {
             _recorder.ObservedContextAtStart.Add(ContextProvider.Get(ContextKey));
             ContextProvider.Set(ContextKey, message.Id);
 
+            return HandleAsyncCore(message);
+        }
+
+        private async Task HandleAsyncCore(TestMessage message)
+        {
             int concurrent = Interlocked.Increment(ref _recorder.Concurrent);
             _recorder.MaxConcurrent = Math.Max(_recorder.MaxConcurrent, concurrent);
 
