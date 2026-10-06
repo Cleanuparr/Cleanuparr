@@ -1,6 +1,5 @@
 using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,35 +9,17 @@ namespace Cleanuparr.Infrastructure.Features.DryRun;
 public sealed class DryRunPurger : IDryRunPurger
 {
     private readonly ILogger<DryRunPurger> _logger;
-    private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
     private readonly DryRunActivity _dryRunActivity;
 
     public DryRunPurger(
         ILogger<DryRunPurger> logger,
-        DataContext dataContext,
         EventsContext eventsContext,
         DryRunActivity dryRunActivity)
     {
         _logger = logger;
-        _dataContext = dataContext;
         _eventsContext = eventsContext;
         _dryRunActivity = dryRunActivity;
-    }
-
-    /// <inheritdoc/>
-    public async Task PurgeIfDryRunOffAsync()
-    {
-        GeneralConfig config = await _dataContext.GeneralConfigs
-            .AsNoTracking()
-            .FirstAsync();
-
-        if (config.DryRun)
-        {
-            return;
-        }
-
-        await PurgeAsync();
     }
 
     /// <inheritdoc/>

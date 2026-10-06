@@ -10,10 +10,4 @@ public interface IDryRunPurger
     /// Skips while dry runs are active.
     /// </summary>
     Task PurgeAsync();
-
-    /// <summary>
-    /// Purges only when the stored setting has dry run off.
-    /// Ignores the run's sticky value.
-    /// </summary>
-    Task PurgeIfDryRunOffAsync();
 }

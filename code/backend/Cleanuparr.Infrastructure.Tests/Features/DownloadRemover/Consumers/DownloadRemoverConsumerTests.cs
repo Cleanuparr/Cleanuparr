@@ -21,7 +21,6 @@ public class DownloadRemoverConsumerTests
 {
     private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
-    private readonly IDryRunPurger _dryRunPurger;
     private readonly DryRunActivity _dryRunActivity;
     private readonly DownloadRemoverConsumer _consumer;
 
@@ -29,9 +28,8 @@ public class DownloadRemoverConsumerTests
     {
         _logger = Substitute.For<ILogger<DownloadRemoverConsumer>>();
         _queueItemRemover = Substitute.For<IQueueItemRemover>();
-        _dryRunPurger = Substitute.For<IDryRunPurger>();
         _dryRunActivity = new DryRunActivity();
-        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover, _dryRunPurger, _dryRunActivity);
+        _consumer = new DownloadRemoverConsumer(_logger, _queueItemRemover, _dryRunActivity);
     }
 
     #region Consume Tests
@@ -117,7 +115,7 @@ public class DownloadRemoverConsumerTests
     }
 
     [Fact]
-    public async Task Consume_WithDryRunRequest_PurgesAfterRemoving()
+    public async Task Consume_WithDryRunRequest_RequestsAPurgeAfterRemoving()
     {
         // Arrange
         var request = CreateRemoveRequest() with { IsDryRun = true };
@@ -131,11 +129,11 @@ public class DownloadRemoverConsumerTests
         await _consumer.Consume(context);
 
         // Assert
-        await _dryRunPurger.Received(1).PurgeIfDryRunOffAsync();
+        (await _dryRunActivity.WaitForPurgeRequestAsync(CancellationToken.None)).ShouldBeTrue();
     }
 
     [Fact]
-    public async Task Consume_WithLiveRequest_DoesNotPurge()
+    public async Task Consume_WithLiveRequest_RequestsNoPurge()
     {
         // Arrange
         var request = CreateRemoveRequest() with { IsDryRun = false };
@@ -149,30 +147,9 @@ public class DownloadRemoverConsumerTests
         await _consumer.Consume(context);
 
         // Assert
-        await _dryRunPurger.DidNotReceive().PurgeIfDryRunOffAsync();
-    }
-
-    [Fact]
-    public async Task Consume_WithDryRunRequest_ExitsActivityBeforePurging()
-    {
-        // Arrange
-        QueueItemRemoveRequest request = CreateRemoveRequest() with { IsDryRun = true };
-        ConsumeContext<QueueItemRemoveRequest> context = CreateConsumeContext(request);
-        bool activeDuringPurge = true;
-
-        _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
-            .Returns(Task.CompletedTask);
-        _dryRunPurger
-            .When(x => x.PurgeIfDryRunOffAsync())
-            .Do(_ => activeDuringPurge = _dryRunActivity.IsActive);
-
-        // Act
-        await _consumer.Consume(context);
-
-        // Assert
-        activeDuringPurge.ShouldBeFalse();
-        _dryRunActivity.IsActive.ShouldBeFalse();
+        Task<bool> waitTask = _dryRunActivity.WaitForPurgeRequestAsync(CancellationToken.None).AsTask();
+        await Task.Yield();
+        waitTask.IsCompleted.ShouldBeFalse();
     }
 
     [Fact]
@@ -212,27 +189,6 @@ public class DownloadRemoverConsumerTests
         // Assert
         activeDuringRemoval.ShouldBeFalse();
         _dryRunActivity.IsActive.ShouldBeFalse();
-    }
-
-    [Fact]
-    public async Task Consume_WhenPurgeThrows_LogsErrorAndDoesNotRethrow()
-    {
-        // Arrange
-        var request = CreateRemoveRequest() with { IsDryRun = true };
-        var context = CreateConsumeContext(request);
-
-        _queueItemRemover
-            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest>())
-            .Returns(Task.CompletedTask);
-        _dryRunPurger
-            .PurgeIfDryRunOffAsync()
-            .ThrowsAsync(new Exception("Purge failed"));
-
-        // Act - Should not throw
-        await _consumer.Consume(context);
-
-        // Assert
-        _logger.HasLogContaining(LogLevel.Error, "failed to purge dry-run data").ShouldBeTrue();
     }
 
     [Fact]

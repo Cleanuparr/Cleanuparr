@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Shouldly;
 using Xunit;
 
@@ -24,7 +23,7 @@ public class GeneralConfigControllerTests : IDisposable
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
     private readonly IDynamicHttpClientFactory _dynamicHttpClientFactory;
-    private readonly IDryRunPurger _dryRunPurger;
+    private readonly DryRunActivity _dryRunActivity;
     private readonly GeneralConfigController _controller;
 
     public GeneralConfigControllerTests()
@@ -32,10 +31,10 @@ public class GeneralConfigControllerTests : IDisposable
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         _dynamicHttpClientFactory = Substitute.For<IDynamicHttpClientFactory>();
-        _dryRunPurger = Substitute.For<IDryRunPurger>();
+        _dryRunActivity = new DryRunActivity();
 
         var logger = Substitute.For<ILogger<GeneralConfigController>>();
-        _controller = new GeneralConfigController(logger, _dataContext, _dryRunPurger);
+        _controller = new GeneralConfigController(logger, _dataContext, _dryRunActivity);
 
         // Mount a DefaultHttpContext with a ServiceProvider that resolves IDynamicHttpClientFactory
         var services = new ServiceCollection();
@@ -156,7 +155,7 @@ public class GeneralConfigControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateGeneralConfig_DryRunDisabled_PurgesAfterSaving()
+    public async Task UpdateGeneralConfig_DryRunDisabled_RequestsAPurgeAfterSaving()
     {
         // Arrange
         var config = await _dataContext.GeneralConfigs.FirstAsync();
@@ -176,49 +175,14 @@ public class GeneralConfigControllerTests : IDisposable
         await _controller.UpdateGeneralConfig(request);
 
         // Assert
-        await _dryRunPurger.Received(1).PurgeAsync();
+        (await _dryRunActivity.WaitForPurgeRequestAsync(CancellationToken.None)).ShouldBeTrue();
 
         var saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
         saved.DryRun.ShouldBeFalse();
     }
 
     [Fact]
-    public async Task UpdateGeneralConfig_DryRunDisabled_SavesBeforePurging()
-    {
-        // Arrange
-        GeneralConfig config = await _dataContext.GeneralConfigs.FirstAsync();
-        config.DryRun = true;
-        await _dataContext.SaveChangesAsync();
-
-        bool? dryRunDuringPurge = null;
-        _dryRunPurger
-            .When(p => p.PurgeAsync())
-            .Do(_ =>
-            {
-                GeneralConfig duringPurge = _dataContext.GeneralConfigs
-                    .AsNoTracking()
-                    .First();
-                dryRunDuringPurge = duringPurge.DryRun;
-            });
-
-        UpdateGeneralConfigRequest request = new UpdateGeneralConfigRequest
-        {
-            DryRun = false,
-            HttpTimeout = 60,
-            StrikeInactivityWindowHours = 24,
-            Log = MatchingLogRequest(config.Log),
-            Auth = new UpdateAuthConfigRequest(),
-        };
-
-        // Act
-        await _controller.UpdateGeneralConfig(request);
-
-        // Assert
-        dryRunDuringPurge.ShouldBe(false);
-    }
-
-    [Fact]
-    public async Task UpdateGeneralConfig_DryRunStaysOnOrStaysOff_DoesNotPurge()
+    public async Task UpdateGeneralConfig_DryRunStaysOnOrStaysOff_RequestsNoPurge()
     {
         // Arrange - dry run stays on
         var config = await _dataContext.GeneralConfigs.FirstAsync();
@@ -238,36 +202,9 @@ public class GeneralConfigControllerTests : IDisposable
         await _controller.UpdateGeneralConfig(request);
 
         // Assert
-        await _dryRunPurger.DidNotReceive().PurgeAsync();
-    }
-
-    [Fact]
-    public async Task UpdateGeneralConfig_PurgeFails_StillSavesDryRunOffAndReturnsOk()
-    {
-        // Arrange
-        GeneralConfig config = await _dataContext.GeneralConfigs.FirstAsync();
-        config.DryRun = true;
-        await _dataContext.SaveChangesAsync();
-
-        _dryRunPurger.PurgeAsync().ThrowsAsync(new Exception("purge failed"));
-
-        UpdateGeneralConfigRequest request = new UpdateGeneralConfigRequest
-        {
-            DryRun = false,
-            HttpTimeout = 60,
-            StrikeInactivityWindowHours = 24,
-            Log = MatchingLogRequest(config.Log),
-            Auth = new UpdateAuthConfigRequest(),
-        };
-
-        // Act
-        IActionResult result = await _controller.UpdateGeneralConfig(request);
-
-        // Assert
-        result.ShouldBeOfType<OkObjectResult>();
-
-        GeneralConfig saved = await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync();
-        saved.DryRun.ShouldBeFalse();
+        Task<bool> waitTask = _dryRunActivity.WaitForPurgeRequestAsync(CancellationToken.None).AsTask();
+        await Task.Yield();
+        waitTask.IsCompleted.ShouldBeFalse();
     }
 
     [Fact]

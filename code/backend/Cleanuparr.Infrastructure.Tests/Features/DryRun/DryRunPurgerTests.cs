@@ -1,10 +1,8 @@
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Tests.Features.Arr;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
@@ -18,30 +16,20 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DryRun;
 [Collection(ForceImportDryRunCollection.Name)]
 public sealed class DryRunPurgerTests : IDisposable
 {
-    private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
     private readonly DryRunActivity _dryRunActivity;
     private readonly DryRunPurger _purger;
 
     public DryRunPurgerTests()
     {
-        _dataContext = TestDataContextFactory.Create();
         _eventsContext = TestDataContextFactory.CreateEvents();
         _dryRunActivity = new DryRunActivity();
-        _purger = new DryRunPurger(Substitute.For<ILogger<DryRunPurger>>(), _dataContext, _eventsContext, _dryRunActivity);
+        _purger = new DryRunPurger(Substitute.For<ILogger<DryRunPurger>>(), _eventsContext, _dryRunActivity);
     }
 
     public void Dispose()
     {
-        _dataContext.Dispose();
         _eventsContext.Dispose();
-    }
-
-    private async Task SetDbDryRun(bool value)
-    {
-        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
-        config.DryRun = value;
-        await _dataContext.SaveChangesAsync();
     }
 
     private async Task AddDryRunStrikeAsync()
@@ -140,49 +128,6 @@ public sealed class DryRunPurgerTests : IDisposable
 
         // Act
         await _purger.PurgeAsync();
-
-        // Assert
-        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task PurgeIfDryRunOffAsync_DbDryRunTrue_DoesNotPurge()
-    {
-        // Arrange
-        await SetDbDryRun(true);
-        await AddDryRunStrikeAsync();
-
-        // Act
-        await _purger.PurgeIfDryRunOffAsync();
-
-        // Assert
-        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task PurgeIfDryRunOffAsync_DbDryRunFalse_Purges()
-    {
-        // Arrange
-        await SetDbDryRun(false);
-        await AddDryRunStrikeAsync();
-
-        // Act
-        await _purger.PurgeIfDryRunOffAsync();
-
-        // Assert
-        (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task PurgeIfDryRunOffAsync_IgnoresStickyValue_UsesRawDbRead()
-    {
-        // Arrange - sticky says on, database says off
-        await SetDbDryRun(false);
-        ContextProvider.SetDryRun(true);
-        await AddDryRunStrikeAsync();
-
-        // Act
-        await _purger.PurgeIfDryRunOffAsync();
 
         // Assert
         (await _eventsContext.Strikes.CountAsync(x => x.IsDryRun)).ShouldBe(0);

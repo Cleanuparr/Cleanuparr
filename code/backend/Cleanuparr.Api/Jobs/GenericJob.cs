@@ -99,19 +99,6 @@ public sealed class GenericJob<T> : IJob
                 jobRun.Status = status;
                 await eventsContext.SaveChangesAsync();
             }
-
-            if (ContextProvider.IsDryRunSticky())
-            {
-                try
-                {
-                    var dryRunPurger = finalScope.ServiceProvider.GetRequiredService<IDryRunPurger>();
-                    await dryRunPurger.PurgeIfDryRunOffAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "failed to purge dry-run data after {Name}", typeof(T).Name);
-                }
-            }
         }
     }
 

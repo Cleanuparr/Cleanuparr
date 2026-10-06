@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,16 +20,16 @@ public sealed class GeneralConfigController : ControllerBase
 {
     private readonly ILogger<GeneralConfigController> _logger;
     private readonly DataContext _dataContext;
-    private readonly IDryRunPurger _dryRunPurger;
+    private readonly DryRunActivity _dryRunActivity;
 
     public GeneralConfigController(
         ILogger<GeneralConfigController> logger,
         DataContext dataContext,
-        IDryRunPurger dryRunPurger)
+        DryRunActivity dryRunActivity)
     {
         _logger = logger;
         _dataContext = dataContext;
-        _dryRunPurger = dryRunPurger;
+        _dryRunActivity = dryRunActivity;
     }
 
     [HttpGet("general")]
@@ -70,14 +69,7 @@ public sealed class GeneralConfigController : ControllerBase
 
             if (dryRunTurnedOff)
             {
-                try
-                {
-                    await _dryRunPurger.PurgeAsync();
-                }
-                catch (Exception exception)
-                {
-                    _logger.LogError(exception, "failed to purge dry-run data after disabling dry run");
-                }
+                _dryRunActivity.RequestPurge();
             }
 
             return Ok(new { Message = "General configuration updated successfully" });

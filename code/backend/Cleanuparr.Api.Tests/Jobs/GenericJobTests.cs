@@ -17,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Quartz;
 using Shouldly;
 using Xunit;
@@ -28,7 +27,6 @@ public sealed class GenericJobTests : IDisposable
 {
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
-    private readonly IDryRunPurger _dryRunPurger;
     private readonly DryRunActivity _dryRunActivity;
     private readonly ServiceProvider _serviceProvider;
     private readonly Seeker _handler = new();
@@ -37,7 +35,6 @@ public sealed class GenericJobTests : IDisposable
     {
         _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
-        _dryRunPurger = Substitute.For<IDryRunPurger>();
         _dryRunActivity = new DryRunActivity();
 
         IJobManagementService jobManagementService = Substitute.For<IJobManagementService>();
@@ -48,7 +45,6 @@ public sealed class GenericJobTests : IDisposable
         services.AddSingleton(Substitute.For<IHubContext<AppHub>>());
         services.AddSingleton(jobManagementService);
         services.AddSingleton(_handler);
-        services.AddSingleton(_dryRunPurger);
         services.AddScoped<IDryRunInterceptor>(_ =>
             new DryRunInterceptor(Substitute.For<ILogger<DryRunInterceptor>>(), _dataContext));
         _serviceProvider = services.BuildServiceProvider();
@@ -117,7 +113,7 @@ public sealed class GenericJobTests : IDisposable
     }
 
     [Fact]
-    public async Task Execute_WhenRunStartedDry_PurgesAfterFinishing()
+    public async Task Execute_WhenRunStartedDry_RequestsAPurgeOnceFinished()
     {
         GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
         config.DryRun = true;
@@ -125,11 +121,11 @@ public sealed class GenericJobTests : IDisposable
 
         await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
 
-        await _dryRunPurger.Received(1).PurgeIfDryRunOffAsync();
+        (await _dryRunActivity.WaitForPurgeRequestAsync(CancellationToken.None)).ShouldBeTrue();
     }
 
     [Fact]
-    public async Task Execute_WhenRunStartedLive_DoesNotPurge()
+    public async Task Execute_WhenRunStartedLive_RequestsNoPurge()
     {
         GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
         config.DryRun = false;
@@ -137,24 +133,10 @@ public sealed class GenericJobTests : IDisposable
 
         await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
 
-        await _dryRunPurger.DidNotReceive().PurgeIfDryRunOffAsync();
-    }
+        Task<bool> waitTask = _dryRunActivity.WaitForPurgeRequestAsync(CancellationToken.None).AsTask();
+        await Task.Yield();
 
-    [Fact]
-    public async Task Execute_WhenRunStartedDry_ExitsActivityBeforePurging()
-    {
-        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
-        config.DryRun = true;
-        await _dataContext.SaveChangesAsync();
-        bool activeDuringPurge = true;
-        _dryRunPurger
-            .When(x => x.PurgeIfDryRunOffAsync())
-            .Do(_ => activeDuringPurge = _dryRunActivity.IsActive);
-
-        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
-
-        activeDuringPurge.ShouldBeFalse();
-        _dryRunActivity.IsActive.ShouldBeFalse();
+        waitTask.IsCompleted.ShouldBeFalse();
     }
 
     [Fact]
@@ -183,20 +165,6 @@ public sealed class GenericJobTests : IDisposable
 
         activeDuringExecution.ShouldBeFalse();
         _dryRunActivity.IsActive.ShouldBeFalse();
-    }
-
-    [Fact]
-    public async Task Execute_WhenPurgeThrows_StillStampsTheRunAsCompleted()
-    {
-        GeneralConfig config = await _dataContext.GeneralConfigs.SingleAsync();
-        config.DryRun = true;
-        await _dataContext.SaveChangesAsync();
-        _dryRunPurger.PurgeIfDryRunOffAsync().ThrowsAsync(new Exception("purge failed"));
-
-        await BuildJob().Execute(Substitute.For<IJobExecutionContext>());
-
-        JobRun run = await _eventsContext.JobRuns.SingleAsync();
-        run.Status.ShouldBe(JobRunStatus.Completed);
     }
 
     /// <summary>

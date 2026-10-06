@@ -28,7 +28,7 @@ public class GeneralConfigResponseContractTests : IDisposable
         _controller = new GeneralConfigController(
             Substitute.For<ILogger<GeneralConfigController>>(),
             _dataContext,
-            Substitute.For<IDryRunPurger>());
+            new DryRunActivity());
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
