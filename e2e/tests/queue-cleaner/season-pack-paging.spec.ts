@@ -16,6 +16,7 @@ const PAGE_SIZE = 200;
 const TOTAL_RECORDS = 401;
 
 const createdInstances: string[] = [];
+let savedQueueCleanerConfig: Record<string, unknown> | undefined;
 
 /** A healthy download that no check strikes. */
 function fillerRecord(id: number): Record<string, unknown> {
@@ -70,6 +71,12 @@ test.describe('QueueCleaner season pack across queue pages', () => {
     for (const id of createdInstances.splice(0)) {
       await api.arr.deleteInstance('sonarr', id);
     }
+
+    if (savedQueueCleanerConfig) {
+      const restored = await api.queueCleaner.updateConfig(savedQueueCleanerConfig);
+      expect(restored.ok).toBe(true);
+      savedQueueCleanerConfig = undefined;
+    }
   });
 
   test('strikes a pack split across pages once per run, not once per page', async ({ api, mocks }) => {
@@ -89,6 +96,7 @@ test.describe('QueueCleaner season pack across queue pages', () => {
     await mocks.arr.stub(ArrStubs.arrRawQueuePageStub(3, pageBody(3, [packRecord(1002, PACK_EPISODE_IDS[2])])));
 
     const current = await (await api.queueCleaner.getConfig()).json();
+    savedQueueCleanerConfig = current;
     const updated = await api.queueCleaner.updateConfig({
       ...current,
       failedImport: {
