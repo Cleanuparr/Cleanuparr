@@ -245,7 +245,7 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         public async Task QueueItem_CallsChangeCategoryAsync()
         {
             var sut = _fixture.CreateSut();
-            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" });
+            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" }, 0);
 
             await sut.ChangeTorrentCategoryAsync(torrent, "target", false);
 

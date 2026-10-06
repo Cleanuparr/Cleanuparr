@@ -1,6 +1,5 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Sabnzbd;
-using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Sabnzbd;
@@ -93,25 +92,27 @@ public partial class SabnzbdService
     {
         SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
 
-        if (string.IsNullOrEmpty(sabnzbdItem.SavePath) || !Directory.Exists(sabnzbdItem.SavePath))
+        if (string.IsNullOrEmpty(sabnzbdItem.SavePath))
         {
             return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(null);
         }
 
-        IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildScanItems()
-        {
-            foreach (string file in Directory.EnumerateFiles(sabnzbdItem.SavePath, "*", SearchOption.AllDirectories))
-            {
-                string filePath = PathHelper.NormalizeAndRemap(
-                    file,
-                    _downloadClientConfig.DownloadDirectorySource,
-                    _downloadClientConfig.DownloadDirectoryTarget);
+        string savePath = RemapAndTrim(sabnzbdItem.SavePath);
 
-                yield return (filePath, HardLinkScanAction.CheckHardLinks);
-            }
+        if (!Directory.Exists(savePath))
+        {
+            return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(null);
         }
 
-        return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(BuildScanItems());
+        return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(BuildHardLinkScanItems(savePath));
+    }
+
+    private static IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildHardLinkScanItems(string savePath)
+    {
+        foreach (string file in Directory.EnumerateFiles(savePath, "*", SearchOption.AllDirectories))
+        {
+            yield return (file, HardLinkScanAction.CheckHardLinks);
+        }
     }
 
     /// <summary>

@@ -50,14 +50,16 @@ public partial class SabnzbdService
             return result;
         }
 
-        if (!Directory.Exists(historySlot.Storage))
+        string storagePath = RemapAndTrim(historySlot.Storage);
+
+        if (!Directory.Exists(storagePath))
         {
             _logger.LogDebug("skip files check | storage directory not found | {Name}", torrent.Name);
             return result;
         }
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
-        string[] files = Directory.GetFiles(historySlot.Storage, "*", SearchOption.AllDirectories);
+        string[] files = Directory.GetFiles(storagePath, "*", SearchOption.AllDirectories);
 
         if (files.Length is 0)
         {
@@ -65,27 +67,26 @@ public partial class SabnzbdService
             return result;
         }
 
-        Dictionary<int, string> filesByIndex = [];
-
-        IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems()
-        {
-            for (int i = 0; i < files.Length; i++)
-            {
-                filesByIndex[i] = files[i];
-                yield return (i, Path.GetFileName(files[i]), files[i], FileBlockAction.CheckBlocklist);
-            }
-        }
-
-        await ApplyFileBlockingAsync(result, torrent.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, unwantedIndices =>
-        {
-            foreach (int index in unwantedIndices)
-            {
-                TryDeleteFiles(filesByIndex[index], failOnNotFound: false);
-            }
-
-            return Task.CompletedTask;
-        });
+        await ApplyFileBlockingAsync(result, torrent.Name, BuildScanItems(files), malwareBlockerConfig.DeleteIfAnyFileBlocked, unwantedIndices => DeleteUnwantedFiles(files, unwantedIndices));
 
         return result;
+    }
+
+    private static IEnumerable<(int Index, string ValidationName, string LogName, FileBlockAction Action)> BuildScanItems(string[] files)
+    {
+        for (int i = 0; i < files.Length; i++)
+        {
+            yield return (i, Path.GetFileName(files[i]), files[i], FileBlockAction.CheckBlocklist);
+        }
+    }
+
+    private Task DeleteUnwantedFiles(string[] files, List<int> unwantedIndices)
+    {
+        foreach (int index in unwantedIndices)
+        {
+            TryDeleteFiles(files[index], failOnNotFound: false);
+        }
+
+        return Task.CompletedTask;
     }
 }
