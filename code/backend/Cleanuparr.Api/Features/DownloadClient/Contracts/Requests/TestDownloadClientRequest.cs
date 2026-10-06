@@ -19,6 +19,8 @@ public sealed record TestDownloadClientRequest
 
     public string? Password { get; init; }
 
+    public string? ApiKey { get; init; }
+
     public string? UrlBase { get; init; }
 
     public Guid? ClientId { get; init; }
@@ -34,15 +36,26 @@ public sealed record TestDownloadClientRequest
         {
             throw new ValidationException("Host is not a valid URL");
         }
+
+        if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey) && !ApiKey.IsPlaceholder())
+        {
+            throw new ValidationException("API key cannot be empty");
+        }
     }
 
-    public DownloadClientConfig ToTestConfig(string? resolvedPassword = null)
+    public DownloadClientConfig ToTestConfig(string? resolvedPassword = null, string? resolvedApiKey = null)
     {
         var password = resolvedPassword ?? Password;
+        var apiKey = resolvedApiKey ?? ApiKey;
 
         if (password.IsPlaceholder())
         {
             throw new ValidationException("Password cannot be a placeholder value");
+        }
+
+        if (apiKey.IsPlaceholder())
+        {
+            throw new ValidationException("API key cannot be a placeholder value");
         }
 
         return new()
@@ -55,6 +68,7 @@ public sealed record TestDownloadClientRequest
             Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
             Username = Username,
             Password = password,
+            ApiKey = apiKey,
             UrlBase = UrlBase,
         };
     }

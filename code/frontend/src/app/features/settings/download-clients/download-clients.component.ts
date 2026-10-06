@@ -23,11 +23,33 @@ const TYPE_OPTIONS: SelectOption[] = [
   { label: 'Transmission', value: DownloadClientTypeName.Transmission },
   { label: 'uTorrent', value: DownloadClientTypeName.uTorrent },
   { label: 'rTorrent', value: DownloadClientTypeName.rTorrent },
+  { label: 'SABnzbd', value: DownloadClientTypeName.Sabnzbd },
 ];
+
+function typeForTypeName(typeName: DownloadClientTypeName): DownloadClientType {
+  switch (typeName) {
+    case DownloadClientTypeName.Sabnzbd:
+      return DownloadClientType.Usenet;
+    default:
+      return DownloadClientType.Torrent;
+  }
+}
 
 const AUTOFILL_URL_BASES: Partial<Record<DownloadClientTypeName, string>> = {
   [DownloadClientTypeName.Transmission]: 'transmission',
   [DownloadClientTypeName.rTorrent]: 'plugins/httprpc/action.php',
+};
+
+type AuthField = 'username' | 'password' | 'apiKey';
+
+/** Which credential fields a client type's connection form asks for. */
+const AUTH_FIELDS: Record<DownloadClientTypeName, AuthField[]> = {
+  [DownloadClientTypeName.qBittorrent]: ['username', 'password'],
+  [DownloadClientTypeName.Deluge]: ['password'],
+  [DownloadClientTypeName.Transmission]: ['username', 'password'],
+  [DownloadClientTypeName.uTorrent]: ['username', 'password'],
+  [DownloadClientTypeName.rTorrent]: ['username', 'password'],
+  [DownloadClientTypeName.Sabnzbd]: ['apiKey'],
 };
 
 interface DownloadClientFormModel {
@@ -37,6 +59,7 @@ interface DownloadClientFormModel {
   host: string;
   username: string;
   password: string;
+  apiKey: string;
   urlBase: string;
   externalUrl: string;
   downloadDirectorySource: string;
@@ -81,7 +104,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
 
   readonly clientModel = signal<DownloadClientFormModel>({
     enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
-    host: '', username: '', password: '', urlBase: '', externalUrl: '',
+    host: '', username: '', password: '', apiKey: '', urlBase: '', externalUrl: '',
     downloadDirectorySource: '', downloadDirectoryTarget: '',
   });
   readonly clientForm = form(this.clientModel, (p) => {
@@ -96,11 +119,13 @@ export class DownloadClientsComponent implements HasPendingChanges {
   private readonly modalDirty = computed(() =>
     this.modalVisible() && JSON.stringify(this.clientModel()) !== this.openSnapshot());
 
-  readonly showUsernameField = computed(() => {
-    return this.clientModel().typeName !== DownloadClientTypeName.Deluge;
-  });
+  readonly showUsernameField = computed(() => AUTH_FIELDS[this.clientModel().typeName].includes('username'));
 
-  readonly showPasswordField = computed(() => true);
+  readonly showPasswordField = computed(() => AUTH_FIELDS[this.clientModel().typeName].includes('password'));
+
+  readonly showApiKeyField = computed(() => AUTH_FIELDS[this.clientModel().typeName].includes('apiKey'));
+
+  readonly apiKeyHint = 'API key from SABnzbd > Config > General';
 
   readonly usernameHint = computed(() => {
     if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
@@ -129,8 +154,15 @@ export class DownloadClientsComponent implements HasPendingChanges {
     const newType = value as DownloadClientTypeName;
     const m = this.clientModel();
     const patch: Partial<DownloadClientFormModel> = {};
-    if (newType === DownloadClientTypeName.Deluge && m.username !== '') {
+    const fields = AUTH_FIELDS[newType];
+    if (!fields.includes('username') && m.username !== '') {
       patch.username = '';
+    }
+    if (!fields.includes('password') && m.password !== '') {
+      patch.password = '';
+    }
+    if (!fields.includes('apiKey') && m.apiKey !== '') {
+      patch.apiKey = '';
     }
     const autofill = AUTOFILL_URL_BASES[newType];
     const replaceable = m.urlBase === '' || Object.values(AUTOFILL_URL_BASES).includes(m.urlBase);
@@ -150,7 +182,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
     this.editingClient.set(null);
     this.clientModel.set({
       enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
-      host: '', username: '', password: '', urlBase: '', externalUrl: '',
+      host: '', username: '', password: '', apiKey: '', urlBase: '', externalUrl: '',
       downloadDirectorySource: '', downloadDirectoryTarget: '',
     });
     this.openSnapshot.set(JSON.stringify(this.clientModel()));
@@ -166,6 +198,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
       host: client.host,
       username: client.username,
       password: client.password ?? '',
+      apiKey: client.apiKey ?? '',
       urlBase: client.urlBase,
       externalUrl: client.externalUrl ?? '',
       downloadDirectorySource: client.downloadDirectorySource ?? '',
@@ -179,10 +212,11 @@ export class DownloadClientsComponent implements HasPendingChanges {
     const m = this.clientModel();
     const request: TestDownloadClientRequest = {
       typeName: m.typeName,
-      type: DownloadClientType.Torrent,
+      type: typeForTypeName(m.typeName),
       host: m.host,
       username: m.username,
       password: m.password,
+      apiKey: m.apiKey,
       urlBase: m.urlBase,
       clientId: this.editingClient()?.id,
     };
@@ -212,10 +246,12 @@ export class DownloadClientsComponent implements HasPendingChanges {
         ...editing,
         enabled: m.enabled,
         name: m.name,
+        type: typeForTypeName(m.typeName),
         typeName: m.typeName,
         host: m.host,
         username: m.username,
         password: m.password || undefined,
+        apiKey: m.apiKey || undefined,
         urlBase: m.urlBase,
         externalUrl: m.externalUrl || undefined,
         downloadDirectorySource: m.downloadDirectorySource || null,
@@ -237,11 +273,12 @@ export class DownloadClientsComponent implements HasPendingChanges {
       const dto: CreateDownloadClientDto = {
         enabled: m.enabled,
         name: m.name,
-        type: DownloadClientType.Torrent,
+        type: typeForTypeName(m.typeName),
         typeName: m.typeName,
         host: m.host,
         username: m.username,
         password: m.password,
+        apiKey: m.apiKey,
         urlBase: m.urlBase,
         externalUrl: m.externalUrl || undefined,
         downloadDirectorySource: m.downloadDirectorySource || null,

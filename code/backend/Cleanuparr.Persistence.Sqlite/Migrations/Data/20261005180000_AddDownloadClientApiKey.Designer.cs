@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20261005180000_AddDownloadClientApiKey")]
+    partial class AddDownloadClientApiKey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -1192,10 +1195,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_failed_import_strike");
 
-                    b.Property<bool>("OnForceImported")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_force_imported");
-
                     b.Property<bool>("OnQueueItemDeleted")
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_queue_item_deleted");
@@ -1445,14 +1444,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                             b1.Property<bool>("DeletePrivate")
                                 .HasColumnType("INTEGER")
                                 .HasColumnName("failed_import_delete_private");
-
-                            b1.Property<bool>("ForceImport")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("failed_import_force_import");
-
-                            b1.Property<ushort>("ForceImportMaxTries")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("failed_import_force_import_max_tries");
 
                             b1.Property<bool>("IgnorePrivate")
                                 .HasColumnType("INTEGER")

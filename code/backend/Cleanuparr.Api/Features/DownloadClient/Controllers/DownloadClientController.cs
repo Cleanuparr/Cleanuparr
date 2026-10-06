@@ -153,8 +153,9 @@ public sealed class DownloadClientController : ControllerBase
             request.Validate();
 
             string? resolvedPassword = null;
+            string? resolvedApiKey = null;
 
-            if (request.Password.IsPlaceholder() && request.ClientId.HasValue)
+            if ((request.Password.IsPlaceholder() || request.ApiKey.IsPlaceholder()) && request.ClientId.HasValue)
             {
                 var existingClient = await _dataContext.DownloadClients
                     .AsNoTracking()
@@ -166,9 +167,10 @@ public sealed class DownloadClientController : ControllerBase
                 }
 
                 resolvedPassword = existingClient.Password;
+                resolvedApiKey = existingClient.ApiKey;
             }
 
-            var testConfig = request.ToTestConfig(resolvedPassword);
+            var testConfig = request.ToTestConfig(resolvedPassword, resolvedApiKey);
             using var downloadService = _downloadServiceFactory.GetDownloadService(testConfig);
             var healthResult = await downloadService.HealthCheckAsync();
 

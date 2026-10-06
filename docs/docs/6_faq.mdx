@@ -49,15 +49,24 @@ Always test your configuration in dry run mode first, especially when setting up
 
 <ConfigSection
   id="usenet-support"
-  title="Is Usenet supported? Will it be supported in the future?"
+  title="Is Usenet supported?"
   badge="General"
 >
 
-Failed imports are handled regardless of the download client, so Usenet users can benefit from using it.
+Failed imports are handled regardless of the download client, so Usenet users benefit from that regardless of the client below.
 
-But on a broader spectrum, Cleanuparr <b><i>will not</i></b> be adding native Usenet support, mainly because:
-- I am not using Usenet myself, so I can't properly test or maintain it.
-- People asking for Usenet support offered no help with development or testing, as seen [here](https://github.com/Cleanuparr/Cleanuparr/issues/137) and [here](https://github.com/Cleanuparr/Cleanuparr/issues/226).
+SABnzbd is supported as a download client (add it under Settings &gt; Download Clients, using an API key instead of username/password). It covers:
+- Detecting jobs SABnzbd itself gave up on (moved to history as "Failed") and removing them so the *arr re-searches. Paused jobs, whether paused individually or by pausing the whole queue, are never struck.
+- Category changes and deleting jobs from the queue or history.
+- Orphaned/hardlink file scanning against a completed job's output directory.
+- A post-download variant of the malware blocker: since SABnzbd has no API to skip individual files before a job finishes (unlike torrents, the whole NZB is already fetched from Usenet), it instead scans a completed job's output files on disk and deletes blocklist matches before the *arr imports them.
+
+Known limitations, due to what the SABnzbd API actually exposes:
+- Usenet has no seeding concept, so seeding rules never apply to a SABnzbd client.
+- Slow-speed and stall detection do not apply to SABnzbd; it fails a job that stops progressing on its own, and that's the signal relied on.
+- SABnzbd has no documented, version-stable way to create a category via its API; a missing category logs a warning instead of being created automatically - create it in SABnzbd's own settings first.
+
+Other Usenet clients (e.g. NZBGet) are not supported.
 
 </ConfigSection>
 

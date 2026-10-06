@@ -110,6 +110,7 @@ public class DownloadClientResponseContractTests : IDisposable
 
     private static readonly string[] ClientKeys =
     [
+        "apiKey",
         "downloadDirectorySource",
         "downloadDirectoryTarget",
         "enabled",

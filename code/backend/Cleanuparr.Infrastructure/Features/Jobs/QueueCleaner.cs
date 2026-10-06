@@ -133,9 +133,12 @@ public sealed class QueueCleaner : GenericHandler
         }
 
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
-        bool hasEnabledTorrentClients = ContextProvider
-            .Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig))
+        List<DownloadClientConfig> configuredClients = ContextProvider.Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig));
+        bool hasEnabledTorrentClients = configuredClients
             .Where(x => x.Type == DownloadClientType.Torrent)
+            .Any(x => x.Enabled);
+        bool hasEnabledUsenetClients = configuredClients
+            .Where(x => x.Type == DownloadClientType.Usenet)
             .Any(x => x.Enabled);
 
         HashSet<string> queuedDownloadIds = new(StringComparer.InvariantCultureIgnoreCase);
@@ -190,22 +193,24 @@ public sealed class QueueCleaner : GenericHandler
 
                 DownloadCheckResult downloadCheckResult = new();
                 bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
+                bool isUsenet = record.Protocol.Contains("usenet", StringComparison.InvariantCultureIgnoreCase);
                 DownloadClientConfig? foundInClient = null;
 
-                if (isTorrent)
+                if (isTorrent || isUsenet)
                 {
-                    var torrentClients = downloadServices
-                        .Where(x => x.ClientConfig.Type is DownloadClientType.Torrent)
+                    DownloadClientType clientType = isTorrent ? DownloadClientType.Torrent : DownloadClientType.Usenet;
+                    var matchingClients = downloadServices
+                        .Where(x => x.ClientConfig.Type == clientType)
                         .ToList();
 
-                    if (torrentClients.Count > 0)
+                    if (matchingClients.Count > 0)
                     {
                         // Check each download client for the download item
-                        foreach (var downloadService in torrentClients)
+                        foreach (var downloadService in matchingClients)
                         {
                             try
                             {
-                                // Get torrent info from download service for rule evaluation
+                                // Get download info from download service for rule evaluation
                                 downloadCheckResult = await downloadService
                                     .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
 
@@ -224,7 +229,7 @@ public sealed class QueueCleaner : GenericHandler
 
                         if (!downloadCheckResult.Found)
                         {
-                            _logger.LogWarning("Download not found in any torrent client | {title}", record.Title);
+                            _logger.LogWarning("Download not found in any {clientType} client | {title}", isTorrent ? "torrent" : "usenet", record.Title);
                         }
                     }
                 }
@@ -257,10 +262,12 @@ public sealed class QueueCleaner : GenericHandler
                     continue;
                 }
 
-                // Skip failed import check if torrent is not found in client and skipIfNotFoundInClient is enabled
-                if (isTorrent && hasEnabledTorrentClients && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
+                // Skip failed import check if the download is not found in any client of its protocol and skipIfNotFoundInClient is enabled
+                bool skipIfNotFoundInClient = (isTorrent && hasEnabledTorrentClients) || (isUsenet && hasEnabledUsenetClients);
+
+                if (skipIfNotFoundInClient && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
                 {
-                    _logger.LogInformation("skip | torrent not found in any torrent client | {title}", record.Title);
+                    _logger.LogInformation("skip | download not found in any client | {title}", record.Title);
                     continue;
                 }
 

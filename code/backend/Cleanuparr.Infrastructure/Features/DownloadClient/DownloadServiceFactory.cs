@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using DelugeService = Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.DelugeService;
 using QBitService = Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent.QBitService;
 using RTorrentService = Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent.RTorrentService;
+using SabnzbdService = Cleanuparr.Infrastructure.Features.DownloadClient.Sabnzbd.SabnzbdService;
 using TransmissionService = Cleanuparr.Infrastructure.Features.DownloadClient.Transmission.TransmissionService;
 using UTorrentService = Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.UTorrentService;
 
@@ -46,6 +47,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
             DownloadClientTypeName.Transmission => ActivatorUtilities.CreateInstance<TransmissionService>(_serviceProvider, downloadClientConfig),
             DownloadClientTypeName.uTorrent => ActivatorUtilities.CreateInstance<UTorrentService>(_serviceProvider, downloadClientConfig),
             DownloadClientTypeName.rTorrent => ActivatorUtilities.CreateInstance<RTorrentService>(_serviceProvider, downloadClientConfig),
+            DownloadClientTypeName.Sabnzbd => ActivatorUtilities.CreateInstance<SabnzbdService>(_serviceProvider, downloadClientConfig),
             _ => throw new NotSupportedException($"Download client type {downloadClientConfig.TypeName} is not supported")
         };
     }

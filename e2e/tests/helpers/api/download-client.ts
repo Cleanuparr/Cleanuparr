@@ -5,7 +5,8 @@ export type DownloadClientType =
   | 'transmission'
   | 'deluge'
   | 'utorrent'
-  | 'rtorrent';
+  | 'rtorrent'
+  | 'sabnzbd';
 
 export type DownloadClientCategory = 'Torrent' | 'Usenet';
 
@@ -19,6 +20,7 @@ export interface DownloadClientPayload {
   host: string;
   username?: string;
   password?: string;
+  apiKey?: string;
   urlBase?: string;
   externalUrl?: string;
   enabled?: boolean;
@@ -30,6 +32,7 @@ const TYPE_NAME_MAP: Record<DownloadClientType, string> = {
   deluge: 'Deluge',
   utorrent: 'uTorrent',
   rtorrent: 'rTorrent',
+  sabnzbd: 'Sabnzbd',
 };
 
 export function buildDownloadClientPayload(
@@ -37,7 +40,7 @@ export function buildDownloadClientPayload(
   overrides: Partial<DownloadClientPayload> & { host: string; name: string },
 ): DownloadClientPayload {
   return {
-    type: 'Torrent',
+    type: type === 'sabnzbd' ? 'Usenet' : 'Torrent',
     typeName: TYPE_NAME_MAP[type],
     enabled: true,
     ...overrides,

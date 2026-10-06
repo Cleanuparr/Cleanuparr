@@ -26,6 +26,9 @@ public sealed record DownloadClientConfigResponse
     [SensitiveData]
     public string? Password { get; init; }
 
+    [SensitiveData]
+    public string? ApiKey { get; init; }
+
     public string? UrlBase { get; init; }
 
     public Uri? ExternalUrl { get; init; }
@@ -44,6 +47,7 @@ public sealed record DownloadClientConfigResponse
         Host = config.Host,
         Username = config.Username,
         Password = config.Password,
+        ApiKey = config.ApiKey,
         UrlBase = config.UrlBase,
         ExternalUrl = config.ExternalUrl,
         DownloadDirectorySource = config.DownloadDirectorySource,

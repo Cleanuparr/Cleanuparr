@@ -158,6 +158,7 @@ describe('DownloadClientsComponent', () => {
       host: '',
       username: '',
       password: '',
+      apiKey: '',
       urlBase: '',
       externalUrl: '',
       downloadDirectorySource: '',
@@ -196,6 +197,58 @@ describe('DownloadClientsComponent', () => {
     expect(component.showUsernameField()).toBe(false);
     expect(fieldLabels(fixture)).not.toContain('Username');
     expect(fieldLabels(fixture)).toContain('Password');
+  });
+
+  it('hides username/password and shows a required API key field for SABnzbd', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'SABnzbd');
+
+    expect(component.clientModel().typeName).toBe(DownloadClientTypeName.Sabnzbd);
+    expect(component.showUsernameField()).toBe(false);
+    expect(component.showPasswordField()).toBe(false);
+    expect(component.showApiKeyField()).toBe(true);
+    expect(fieldLabels(fixture)).not.toContain('Username');
+    expect(fieldLabels(fixture)).not.toContain('Password');
+    expect(fieldLabels(fixture)).toContain('API Key');
+  });
+
+  it('does not show the API key field for clients that do not use one', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    expect(component.clientModel().typeName).toBe(DownloadClientTypeName.qBittorrent);
+    expect(component.showApiKeyField()).toBe(false);
+    expect(fieldLabels(fixture)).not.toContain('API Key');
+  });
+
+  it('saves a SABnzbd client with the Usenet client type', () => {
+    const { fixture, component, api } = setup();
+
+    component.openAddModal();
+    component.clientForm.name().value.set('SAB box');
+    component.clientForm.host().value.set('http://localhost:8080');
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'SABnzbd');
+    component.clientForm.apiKey().value.set('sab-key');
+    fixture.detectChanges();
+
+    component.saveClient();
+    fixture.detectChanges();
+
+    expect(api.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: DownloadClientType.Usenet,
+        typeName: DownloadClientTypeName.Sabnzbd,
+        apiKey: 'sab-key',
+      }),
+    );
   });
 
   it('autofills the url base and switches the hints to HTTP Basic Auth for rTorrent', () => {
@@ -265,6 +318,7 @@ describe('DownloadClientsComponent', () => {
       host: 'http://localhost:8112',
       username: 'legacy',
       password: '',
+      apiKey: '',
       urlBase: '',
       externalUrl: '',
       downloadDirectorySource: '',
@@ -295,6 +349,7 @@ describe('DownloadClientsComponent', () => {
       host: 'http://localhost:9091',
       username: '',
       password: '',
+      apiKey: '',
       urlBase: 'transmission',
       externalUrl: undefined,
       downloadDirectorySource: null,
@@ -328,6 +383,7 @@ describe('DownloadClientsComponent', () => {
       host: 'http://localhost:8080',
       username: 'admin',
       password: undefined,
+      apiKey: undefined,
       urlBase: '',
       externalUrl: undefined,
       downloadDirectorySource: null,
@@ -368,6 +424,7 @@ describe('DownloadClientsComponent', () => {
       host: 'http://localhost:8080',
       username: 'admin',
       password: 'secret',
+      apiKey: '',
       urlBase: '',
       clientId: 'client-qb',
     });

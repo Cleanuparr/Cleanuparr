@@ -657,6 +657,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ApiKey")
+                        .HasColumnType("text")
+                        .HasColumnName("api_key");
+
                     b.Property<string>("DownloadDirectorySource")
                         .HasColumnType("text")
                         .HasColumnName("download_directory_source");

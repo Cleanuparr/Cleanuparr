@@ -9,6 +9,7 @@ export interface ClientConfig {
   host: string;
   username: string;
   password?: string;
+  apiKey?: string;
   urlBase: string;
   externalUrl?: string;
   downloadDirectorySource?: string | null;
@@ -27,6 +28,7 @@ export interface CreateDownloadClientDto {
   host?: string;
   username?: string;
   password?: string;
+  apiKey?: string;
   urlBase?: string;
   externalUrl?: string;
   downloadDirectorySource?: string | null;
@@ -39,6 +41,7 @@ export interface TestDownloadClientRequest {
   host?: string;
   username?: string;
   password?: string;
+  apiKey?: string;
   urlBase?: string;
   clientId?: string;
 }

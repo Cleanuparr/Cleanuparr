@@ -53,7 +53,13 @@ public sealed record DownloadClientConfig
     /// </summary>
     [SensitiveData]
     public string? Password { get; set; }
-    
+
+    /// <summary>
+    /// API key for authentication, for clients that use one instead of a username/password.
+    /// </summary>
+    [SensitiveData]
+    public string? ApiKey { get; set; }
+
     /// <summary>
     /// The base URL path component, used by clients like Transmission and Deluge
     /// </summary>
