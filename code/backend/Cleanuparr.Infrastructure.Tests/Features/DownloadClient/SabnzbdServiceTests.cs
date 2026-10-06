@@ -235,6 +235,35 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
     }
 
+    public class ChangeTorrentCategoryAsync_Scenarios : SabnzbdServiceTests
+    {
+        public ChangeTorrentCategoryAsync_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task QueueItem_CallsChangeCategoryAsync()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" });
+
+            await sut.ChangeTorrentCategoryAsync(torrent, "target", false);
+
+            await _fixture.ClientWrapper.Received(1).ChangeCategoryAsync("nzo2", "target");
+        }
+
+        [Fact]
+        public async Task HistoryItem_SkipsWithWarning_NeverCallsChangeCategoryAsync()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed" });
+
+            await sut.ChangeTorrentCategoryAsync(torrent, "target", false);
+
+            await _fixture.ClientWrapper.DidNotReceive().ChangeCategoryAsync(Arg.Any<string>(), Arg.Any<string>());
+        }
+    }
+
     public class BlockUnwantedFilesAsync_Scenarios : SabnzbdServiceTests
     {
         public BlockUnwantedFilesAsync_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)

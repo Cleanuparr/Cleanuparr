@@ -114,7 +114,22 @@ public partial class SabnzbdService
         return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(BuildScanItems());
     }
 
+    /// <summary>
+    /// SABnzbd's change_cat only works on jobs still in the queue; history has no equivalent API.
+    /// </summary>
     /// <inheritdoc/>
-    protected override async Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
+    protected override async Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
+    {
+        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
+
+        if (sabnzbdItem.IsInHistory)
+        {
+            _logger.LogWarning(
+                "Cannot change category for {Name} because it already finished in SABnzbd; create a separate category per *arr instance instead | {ClientName}",
+                torrent.Name, _downloadClientConfig.Name);
+            return;
+        }
+
         await _client.ChangeCategoryAsync(torrent.Hash, targetCategory);
+    }
 }
