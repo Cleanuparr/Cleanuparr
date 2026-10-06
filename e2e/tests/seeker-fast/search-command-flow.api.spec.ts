@@ -221,6 +221,13 @@ test.describe('Seeker: search command status flow', () => {
 
       const event = await findSearchEvent(api, instanceId, title);
       expect(event?.searchStatus ?? null).toBeNull();
+
+      // Turning dry run off purges the dry search event.
+      await api.general.updateConfig({ ...general, dryRun: false });
+
+      await expect
+        .poll(async () => findSearchEvent(api, instanceId, title), { timeout: TRANSITION_TIMEOUT })
+        .toBe(undefined);
     } finally {
       await api.general.updateConfig(general);
     }

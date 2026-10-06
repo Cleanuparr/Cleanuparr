@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cleanuparr.Api.Features.General.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,8 @@ public class GeneralConfigResponseContractTests : IDisposable
 
         _controller = new GeneralConfigController(
             Substitute.For<ILogger<GeneralConfigController>>(),
-            _dataContext);
+            _dataContext,
+            new DryRunActivity());
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 

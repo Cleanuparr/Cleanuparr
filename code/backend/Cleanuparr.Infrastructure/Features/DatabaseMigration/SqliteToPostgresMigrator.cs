@@ -12,8 +12,6 @@ using Npgsql;
 
 namespace Cleanuparr.Infrastructure.Features.DatabaseMigration;
 
-public sealed record MigrationResult(bool Success, string? Error, IReadOnlyDictionary<string, int> TableCounts);
-
 public sealed class SqliteToPostgresMigrator
 {
     private readonly ModelDataCopier _copier = new();

@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
@@ -48,8 +49,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = new StallRule
         {
@@ -115,8 +118,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         ruleManager
             .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
@@ -137,8 +142,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Stall Apply", resetOnProgress: false, maxStrikes: 5);
 
@@ -166,8 +173,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Stall Remove", resetOnProgress: false, maxStrikes: 6);
 
@@ -194,8 +203,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var failingRule = CreateStallRule("Failing", resetOnProgress: false, maxStrikes: 4);
 
@@ -221,8 +232,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         ruleManager
             .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
@@ -243,8 +256,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule("Slow Apply", resetOnProgress: false, maxStrikes: 3);
 
@@ -271,8 +286,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule("Slow Remove", resetOnProgress: false, maxStrikes: 8);
 
@@ -299,8 +316,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule("Slow Progress", resetOnProgress: true, maxStrikes: 4);
 
@@ -326,8 +345,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var failingRule = CreateSlowRule("Failing Slow", resetOnProgress: false, maxStrikes: 4);
 
@@ -353,8 +374,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Speed Rule",
@@ -387,8 +410,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Both Rule",
@@ -420,8 +445,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         // Neither minSpeed nor maxTime set (maxTimeHours = 0, minSpeed = null)
         var slowRule = CreateSlowRule(
@@ -450,8 +477,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Speed Reset",
@@ -482,8 +511,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Speed No Reset",
@@ -510,8 +541,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Time No Reset",
@@ -538,8 +571,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Speed Strike",
@@ -572,8 +607,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             name: "Time Strike",
@@ -606,8 +643,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         IStriker striker = Substitute.For<IStriker>();
         ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         EventsContext context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger, dryRunInterceptor);
 
         SlowRule slowRule = CreateSlowRule(
             name: "Ignore When Throttled",
@@ -641,8 +680,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         IStriker striker = Substitute.For<IStriker>();
         ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         EventsContext context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger, dryRunInterceptor);
 
         SlowRule slowRule = CreateSlowRule(
             name: "Strike When Throttled",
@@ -677,8 +718,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         IStriker striker = Substitute.For<IStriker>();
         ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         EventsContext context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger, dryRunInterceptor);
 
         SlowRule slowRule = CreateSlowRule(
             name: "Opt In But Not Throttled",
@@ -713,8 +756,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         IStriker striker = Substitute.For<IStriker>();
         ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         EventsContext context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger);
+        QueueRuleEvaluator evaluator = new(ruleManager, striker, context, logger, dryRunInterceptor);
 
         SlowRule slowRule = CreateSlowRule(
             name: "No Opt In",
@@ -755,8 +800,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("No Reset", resetOnProgress: false, maxStrikes: 3);
 
@@ -788,6 +835,8 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
         // Seed database with a DownloadItem and initial strike (simulating first observation at 0 bytes)
         var downloadItem = new DownloadItem { DownloadId = "hash", Title = "Example Torrent" };
@@ -798,7 +847,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         context.Strikes.Add(initialStrike);
         await context.SaveChangesAsync();
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Reset No Minimum", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
 
@@ -821,6 +870,88 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         // Assert
         await striker.Received(1).ResetStrikeAsync("hash", "Example Torrent", StrikeType.Stalled);
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_LiveRun_IgnoresDryRunStrikeProgress()
+    {
+        // Arrange - only a dry-run strike exists
+        var ruleManager = Substitute.For<IQueueRuleManager>();
+        var striker = Substitute.For<IStriker>();
+        var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
+
+        var downloadItem = new DownloadItem { DownloadId = "hash", Title = "Example Torrent" };
+        context.DownloadItems.Add(downloadItem);
+        await context.SaveChangesAsync();
+
+        var dryRunStrike = new Strike { DownloadItemId = downloadItem.Id, Type = StrikeType.Stalled, LastDownloadedBytes = 0, IsDryRun = true };
+        context.Strikes.Add(dryRunStrike);
+        await context.SaveChangesAsync();
+
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
+
+        var stallRule = CreateStallRule("Live Ignores Dry Run", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
+
+        ruleManager
+            .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(stallRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>())
+            .Returns(false);
+
+        long downloadedBytes = ByteSize.Parse("1 KB").Bytes;
+        var torrent = CreateTorrentMock(downloadedBytesFactory: () => downloadedBytes);
+
+        // Act
+        await evaluator.EvaluateStallRulesAsync(torrent);
+
+        // Assert - no live strike to compare, no reset
+        await striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), StrikeType.Stalled);
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_DryRun_IgnoresLiveStrikeProgress()
+    {
+        // Arrange - only a live strike exists, dry run is on
+        IQueueRuleManager ruleManager = Substitute.For<IQueueRuleManager>();
+        IStriker striker = Substitute.For<IStriker>();
+        ILogger<QueueRuleEvaluator> logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        EventsContext context = CreateInMemoryEventsContext();
+        IDryRunInterceptor dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        DownloadItem downloadItem = new DownloadItem { DownloadId = "hash", Title = "Example Torrent" };
+        context.DownloadItems.Add(downloadItem);
+        await context.SaveChangesAsync();
+
+        Strike liveStrike = new Strike { DownloadItemId = downloadItem.Id, Type = StrikeType.Stalled, LastDownloadedBytes = 0, IsDryRun = false };
+        context.Strikes.Add(liveStrike);
+        await context.SaveChangesAsync();
+
+        QueueRuleEvaluator evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
+
+        StallRule stallRule = CreateStallRule("Dry Ignores Live", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
+
+        ruleManager
+            .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(stallRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>())
+            .Returns(false);
+
+        long downloadedBytes = ByteSize.Parse("1 KB").Bytes;
+        ITorrentItemWrapper torrent = CreateTorrentMock(downloadedBytesFactory: () => downloadedBytes);
+
+        // Act
+        await evaluator.EvaluateStallRulesAsync(torrent);
+
+        // Assert - no dry strike to compare, no reset
+        await striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), StrikeType.Stalled);
     }
 
     private static ITorrentItemWrapper CreateTorrentMock(
@@ -903,8 +1034,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         ruleManager
             .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
@@ -926,8 +1059,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Test Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
@@ -955,8 +1090,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Delete True Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
@@ -984,8 +1121,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Delete False Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false);
 
@@ -1013,8 +1152,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         ruleManager
             .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
@@ -1036,8 +1177,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule("Slow Delete True", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
@@ -1065,8 +1208,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule("Slow Delete False", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: false);
 
@@ -1094,8 +1239,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             "Speed Delete True",
@@ -1130,8 +1277,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule("Test Slow Rule", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
@@ -1161,8 +1310,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Stall Change Category", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true, changeCategory: true);
 
@@ -1191,8 +1342,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var stallRule = CreateStallRule("Stall Default", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false, changeCategory: false);
 
@@ -1219,8 +1372,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             "Slow Speed Change Category",
@@ -1257,8 +1412,10 @@ public class QueueRuleEvaluatorTests : IDisposable
         var striker = Substitute.For<IStriker>();
         var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
-        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger, dryRunInterceptor);
 
         var slowRule = CreateSlowRule(
             "Slow Time Change Category",

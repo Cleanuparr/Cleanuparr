@@ -12,6 +12,7 @@ using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
@@ -44,6 +45,8 @@ public static class ServicesDI
             .AddScoped<IEventPublisher, EventPublisher>()
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
+            .AddScoped<IDryRunPurger, DryRunPurger>()
+            .AddSingleton<DryRunActivity>()
             .AddScoped<CertificateValidationService>()
             .AddScoped<ISonarrClient, SonarrClient>()
             .AddScoped<ISportarrClient, SportarrClient>()

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.ManualImport;
@@ -8,6 +9,8 @@ using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,7 +23,8 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
-public class ForceImportServiceTests
+[Collection(ForceImportDryRunCollection.Name)]
+public class ForceImportServiceTests : IDisposable
 {
     /// <summary>One of the reasons the service treats as safe to force past.</summary>
     private const string SafeReason = "Unable to determine if file is a sample";
@@ -30,6 +34,7 @@ public class ForceImportServiceTests
     private readonly IEventPublisher _eventPublisher;
     private readonly IMemoryCache _cache;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly ForceImportService _sut;
     private readonly ArrInstance _instance;
 
@@ -43,8 +48,11 @@ public class ForceImportServiceTests
         _eventPublisher = Substitute.For<IEventPublisher>();
         _cache = new MemoryCache(new MemoryCacheOptions());
         _timeProvider = new FakeTimeProvider();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
         _sut = new ForceImportService(
-            Substitute.For<ILogger<ForceImportService>>(), _cache, _striker, _eventPublisher, _timeProvider);
+            Substitute.For<ILogger<ForceImportService>>(), _cache, _striker, _eventPublisher, _timeProvider,
+            _dryRunInterceptor);
 
         _instance = new ArrInstance
         {
@@ -58,7 +66,7 @@ public class ForceImportServiceTests
             .Returns(_ =>
             {
                 _importedByTheArr++;
-                return Task.CompletedTask;
+                return Task.FromResult(true);
             });
 
         _arrClient.SupportsForceImport.Returns(true);
@@ -72,6 +80,9 @@ public class ForceImportServiceTests
 
         SetConfig();
     }
+
+    // Resets the static dry-run eviction token between tests.
+    public void Dispose() => ForceImportService.ForgetDryRun();
 
     [Fact]
     public async Task TryImportAsync_AsksTheArrAndSaysNothingYet()
@@ -340,7 +351,7 @@ public class ForceImportServiceTests
     {
         // Arrange: an unreachable arr is transient, so the download waits instead of collecting a strike
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
-            .Returns(Task.FromException(new HttpRequestException("boom")));
+            .Returns(Task.FromException<bool>(new HttpRequestException("boom")));
         StubCandidates(BuildCandidate(SafeReason));
 
         // Act
@@ -358,7 +369,7 @@ public class ForceImportServiceTests
         // Arrange
         SetConfig(maxTries: 1);
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
-            .Returns(Task.FromException(new HttpRequestException("down")));
+            .Returns(Task.FromException<bool>(new HttpRequestException("down")));
         StubCandidates(BuildCandidate(SafeReason));
         QueueRecord record = BuildRecord(state: "importBlocked");
 
@@ -378,7 +389,7 @@ public class ForceImportServiceTests
         // Arrange: an arr that keeps refusing must not hold the download out of the strike path forever
         SetConfig(maxTries: 1);
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
-            .Returns(Task.FromException(new HttpRequestException("bad request", null, HttpStatusCode.BadRequest)));
+            .Returns(Task.FromException<bool>(new HttpRequestException("bad request", null, HttpStatusCode.BadRequest)));
         StubCandidates(BuildCandidate(SafeReason));
         QueueRecord record = BuildRecord(state: "importBlocked");
 
@@ -403,7 +414,7 @@ public class ForceImportServiceTests
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
-            .Returns(Task.FromException(new HttpRequestException("bad request", null, HttpStatusCode.BadRequest)));
+            .Returns(Task.FromException<bool>(new HttpRequestException("bad request", null, HttpStatusCode.BadRequest)));
 
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
@@ -475,6 +486,175 @@ public class ForceImportServiceTests
         // Assert
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRunTurnsOnMidRun_RegistersNoPendingAndSpendsNoTry()
+    {
+        // Arrange: dry run turns on after the service reads it
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>()).Returns(false);
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: no try spent, no pending import
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url), out int _).ShouldBeFalse();
+        _cache.TryGetValue(CacheKeys.ForceImportPending(_instance.Url), out ConcurrentDictionary<string, PendingForceImport>? pending);
+        (pending is null || pending.IsEmpty).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRun_SpendsADryTry()
+    {
+        // Arrange
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        // Act
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: dry run spends its own budget, live budget stays empty
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+        await _arrClient.Received(1).ForceImportAsync(_instance, Arg.Any<List<ManualImportFile>>());
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url, true), out int dryTries).ShouldBeTrue();
+        dryTries.ShouldBe(1);
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url), out int _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRun_LeavesTheFullBudgetForALiveRun()
+    {
+        // Arrange
+        SetConfig(maxTries: 2);
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>()).Returns(true);
+
+        // Act
+        ForceImportOutcome first = await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome second = await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome third = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: the dry run leaves the live try budget untouched
+        first.ShouldBe(ForceImportOutcome.Deferred);
+        second.ShouldBe(ForceImportOutcome.Deferred);
+        third.ShouldBe(ForceImportOutcome.NotApplicable);
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRun_AtTheTryLimit_SetsTheDryGiveUpMarker()
+    {
+        // Arrange: the dry run spends its only try
+        SetConfig(maxTries: 1);
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act: a second dry run hits the try limit and gives up
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: dry run gives up and sets its own give-up marker
+        outcome.ShouldBe(ForceImportOutcome.NotApplicable);
+        _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url, true), out DateTimeOffset _)
+            .ShouldBeTrue();
+
+        // Dry run leaves the live marker alone
+        _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url), out DateTimeOffset _)
+            .ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRun_ForgetDryRun_ClearsGiveUpMarkerAndTriesAgain()
+    {
+        // Arrange: the dry run gives up
+        SetConfig(maxTries: 1);
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+        ForceImportOutcome gaveUp = await _sut.TryImportAsync(_arrClient, _instance, record);
+        gaveUp.ShouldBe(ForceImportOutcome.NotApplicable);
+
+        // Act: turning dry run off drops the dry budget and its give-up marker
+        ForceImportService.ForgetDryRun();
+
+        // Assert: marker gone, a fresh dry run tries again
+        _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url, true), out DateTimeOffset _)
+            .ShouldBeFalse();
+
+        ForceImportOutcome outcome = await _sut.TryImportAsync(_arrClient, _instance, record);
+        outcome.ShouldBe(ForceImportOutcome.Deferred);
+    }
+
+    [Fact]
+    public async Task TryImportAsync_DryRun_RegistersNoPendingImport()
+    {
+        // Arrange
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Act: the download leaves the queue and the arr's history has grown
+        await _sut.ReconcileAsync(_arrClient, _instance, new HashSet<string>());
+
+        // Assert: no arr call means no import gets claimed
+        await _striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
+        await _eventPublisher.DidNotReceive().PublishForceImported(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task TryImportAsync_ForgetDryRunRacesTheAttempt_EvictsTheDryTryWrite()
+    {
+        // Arrange: a purge fires mid-attempt
+        EnableDryRun();
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>())
+            .Returns(_ =>
+            {
+                ForceImportService.ForgetDryRun();
+                return _importedByTheArr;
+            });
+
+        // Act
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: the purge evicted the dry try
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url, true), out int _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task TryImportAsync_ForgetDryRunRacesTheDryRunCheck_EvictsTheDryTryWrite()
+    {
+        // Arrange: a purge fires while awaiting the dry-run check itself
+        QueueRecord record = BuildRecord(state: "importBlocked");
+        StubCandidates(BuildCandidate(SafeReason));
+        _dryRunInterceptor.IsDryRunEnabled().Returns(_ =>
+        {
+            ForceImportService.ForgetDryRun();
+            return Task.FromResult(true);
+        });
+        _arrClient.GetImportedCountAsync(Arg.Any<ArrInstance>(), Arg.Any<string>()).Returns(_importedByTheArr);
+
+        // Act
+        await _sut.TryImportAsync(_arrClient, _instance, record);
+
+        // Assert: the purge evicted the dry try and give-up marker
+        _cache.TryGetValue(CacheKeys.ForceImportTries(record.DownloadId, _instance.Url, true), out int _).ShouldBeFalse();
+        _cache.TryGetValue(CacheKeys.ForceImportGaveUp(record.DownloadId, _instance.Url, true), out DateTimeOffset _).ShouldBeFalse();
     }
 
     [Fact]
@@ -621,7 +801,7 @@ public class ForceImportServiceTests
 
         // The arr imports nothing more, because the first request already covered the files.
         _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>())
-            .Returns(Task.CompletedTask);
+            .Returns(Task.FromResult(true));
 
         await _sut.TryImportAsync(_arrClient, _instance, record);
 
@@ -793,6 +973,13 @@ public class ForceImportServiceTests
         // Assert
         outcome.ShouldBe(ForceImportOutcome.Deferred);
         await _arrClient.DidNotReceive().ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>());
+    }
+
+    // The real ArrClient skips the send under dry run.
+    private void EnableDryRun()
+    {
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        _arrClient.ForceImportAsync(Arg.Any<ArrInstance>(), Arg.Any<List<ManualImportFile>>()).Returns(false);
     }
 
     private static void SetConfig(bool forceImport = true, ushort maxTries = 3)

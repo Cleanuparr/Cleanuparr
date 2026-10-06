@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -16,17 +17,20 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
     private readonly IStriker _striker;
     private readonly EventsContext _context;
     private readonly ILogger<QueueRuleEvaluator> _logger;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public QueueRuleEvaluator(
         IQueueRuleManager queueRuleManager,
         IStriker striker,
         EventsContext context,
-        ILogger<QueueRuleEvaluator> logger)
+        ILogger<QueueRuleEvaluator> logger,
+        IDryRunInterceptor dryRunInterceptor)
     {
         _queueRuleManager = queueRuleManager;
         _striker = striker;
         _context = context;
         _logger = logger;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent)
@@ -221,9 +225,11 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
             return (false, 0, currentDownloaded);
         }
 
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
         // Get the most recent strike for this download item (Stalled type) to check progress
         var mostRecentStrike = await _context.Strikes
-            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled)
+            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled && s.IsDryRun == isDryRun)
             .OrderByDescending(s => s.CreatedAt)
             .FirstOrDefaultAsync();
 

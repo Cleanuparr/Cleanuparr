@@ -4,16 +4,6 @@ using Cleanuparr.Infrastructure.Utilities;
 namespace Cleanuparr.Infrastructure.Models;
 
 /// <summary>
-/// Represents the unit of time for job scheduling intervals
-/// </summary>
-public enum ScheduleUnit
-{
-    Seconds,
-    Minutes,
-    Hours
-}
-
-/// <summary>
 /// Represents a user-friendly job schedule format
 /// </summary>
 public class JobSchedule
@@ -36,7 +26,7 @@ public class JobSchedule
     {
         return CronExpressionConverter.ConvertToCronExpression(this);
     }
-    
+
     /// <summary>
     /// Validates the job schedule against the predefined valid values
     /// </summary>

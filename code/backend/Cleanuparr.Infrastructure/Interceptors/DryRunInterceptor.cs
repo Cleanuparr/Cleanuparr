@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +60,11 @@ public partial class DryRunInterceptor : IDryRunInterceptor
 
     public async Task<bool> IsDryRunEnabled()
     {
+        if (ContextProvider.IsDryRunSticky())
+        {
+            return true;
+        }
+
         GeneralConfig config = await _dataContext.GeneralConfigs
             .AsNoTracking()
             .FirstAsync();
@@ -68,11 +74,7 @@ public partial class DryRunInterceptor : IDryRunInterceptor
 
     private bool IsDryRun(string? expression)
     {
-        GeneralConfig config = _dataContext.GeneralConfigs
-            .AsNoTracking()
-            .First();
-
-        if (!config.DryRun)
+        if (!ContextProvider.IsDryRunSticky() && !_dataContext.GeneralConfigs.AsNoTracking().First().DryRun)
         {
             return false;
         }

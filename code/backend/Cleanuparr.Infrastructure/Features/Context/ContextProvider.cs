@@ -44,6 +44,22 @@ public static class ContextProvider
 
     public static void SetJobRunId(Guid id) => Set(JobRunIdKey, id);
 
+    /// <summary>
+    /// Context key holding the run's dry-run flag.
+    /// </summary>
+    public const string DryRunKey = "DryRun";
+
+    /// <summary>
+    /// True when the current run started in dry run.
+    /// A later toggle of the setting leaves it unchanged.
+    /// </summary>
+    public static bool IsDryRunSticky() => Get(DryRunKey) as bool? ?? false;
+
+    /// <summary>
+    /// Pins the run's dry-run flag.
+    /// </summary>
+    public static void SetDryRun(bool isDryRun) => Set(DryRunKey, isDryRun);
+
     public static void SetDownloadClient(DownloadClientConfig config)
     {
         Set(Keys.DownloadClientUrl, config.ExternalOrInternalUrl);

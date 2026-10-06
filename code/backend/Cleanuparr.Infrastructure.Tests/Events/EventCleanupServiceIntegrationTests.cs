@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
@@ -87,7 +88,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
+        EventCleanupService service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System, new DryRunActivity());
         var cts = new CancellationTokenSource();
 
         // Act
@@ -110,7 +111,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         // Note: In-memory provider doesn't support ExecuteDeleteAsync,
         // so the cleanup will fail. This test verifies the service handles errors gracefully.
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System);
+        EventCleanupService service = new EventCleanupService(_logger, scopeFactory, TimeProvider.System, new DryRunActivity());
         var cts = new CancellationTokenSource();
 
         // Act

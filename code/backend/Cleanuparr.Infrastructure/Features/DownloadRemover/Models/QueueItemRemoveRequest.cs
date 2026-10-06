@@ -17,4 +17,9 @@ public sealed record QueueItemRemoveRequest
     public bool SkipSearch { get; init; }
 
     public DownloadClientConfig? DownloadClient { get; init; }
+
+    /// <summary>
+    /// Whether the run that published this request started in dry run.
+    /// </summary>
+    public required bool IsDryRun { get; init; }
 }
