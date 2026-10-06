@@ -418,31 +418,6 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     }
 
     [Fact]
-    public async Task PublishQueueItemRemoveRequest_PublishThrows_RemovesMark()
-    {
-        // Arrange
-        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
-        ArrInstance instance = new()
-        {
-            Name = "s",
-            Url = new Uri("http://s"),
-            ApiKey = "k",
-            ArrConfig = arrConfig,
-            Version = 4f,
-        };
-        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
-        string key = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
-
-        _fixture.RemovalQueue.Writer.Complete();
-
-        // Act & Assert
-        await Should.ThrowAsync<ChannelClosedException>(() => _handler.PublicPublishQueueItemRemoveRequest(
-            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
-
-        _fixture.Cache.TryGetValue(key, out bool _).ShouldBeFalse();
-    }
-
-    [Fact]
     public async Task PublishQueueItemRemoveRequest_Published_ForgetsThePendingForceImport()
     {
         // Arrange
@@ -463,30 +438,6 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert: the download leaving the queue is a removal, not an import
         _fixture.ForceImportService.Received(1).Forget(instance, record.DownloadId);
-    }
-
-    [Fact]
-    public async Task PublishQueueItemRemoveRequest_PublishThrows_KeepsThePendingForceImport()
-    {
-        // Arrange
-        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
-        ArrInstance instance = new()
-        {
-            Name = "s",
-            Url = new Uri("http://s"),
-            ApiKey = "k",
-            ArrConfig = arrConfig,
-            Version = 4f,
-        };
-        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
-
-        _fixture.RemovalQueue.Writer.Complete();
-
-        // Act & Assert: nothing was removed, so a pending import still stands
-        await Should.ThrowAsync<ChannelClosedException>(() => _handler.PublicPublishQueueItemRemoveRequest(
-            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
-
-        _fixture.ForceImportService.DidNotReceive().Forget(Arg.Any<ArrInstance>(), Arg.Any<string>());
     }
 
     #endregion

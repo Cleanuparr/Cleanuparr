@@ -195,15 +195,7 @@ public abstract class GenericHandler : IHandler
         string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(target.DownloadId, instance.Url);
         _cache.Set(downloadRemovalKey, true);
 
-        try
-        {
-            await _removalQueue.WriteAsync(removeRequest);
-        }
-        catch
-        {
-            _cache.Remove(downloadRemovalKey);
-            throw;
-        }
+        await _removalQueue.WriteAsync(removeRequest);
 
         // The mark above lives only while the removal is in flight, and its absence must not read as an import.
         _forceImportService.Forget(instance, target.DownloadId);

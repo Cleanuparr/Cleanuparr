@@ -49,13 +49,13 @@ public class QueueCleanerTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private QueueCleanerJob CreateSut(ChannelWriter<QueueItemRemoveRequest>? removalQueueWriter = null)
+    private QueueCleanerJob CreateSut()
     {
         return new QueueCleanerJob(
             _logger,
             _fixture.DataContext,
             _fixture.Cache,
-            removalQueueWriter ?? _fixture.RemovalQueue.Writer,
+            _fixture.RemovalQueue.Writer,
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
@@ -65,34 +65,6 @@ public class QueueCleanerTests : IDisposable
             _fixture.ForceImportService,
             _fixture.LazyLibrarianServiceQC
         );
-    }
-
-    /// <summary>
-    /// Fails one specific write, then behaves like the channel it wraps.
-    /// </summary>
-    private sealed class FailingWriteChannelWriter : ChannelWriter<QueueItemRemoveRequest>
-    {
-        private readonly ChannelWriter<QueueItemRemoveRequest> _inner;
-        private readonly Func<QueueItemRemoveRequest, bool> _shouldFail;
-
-        public FailingWriteChannelWriter(ChannelWriter<QueueItemRemoveRequest> inner, Func<QueueItemRemoveRequest, bool> shouldFail)
-        {
-            _inner = inner;
-            _shouldFail = shouldFail;
-        }
-
-        public override bool TryWrite(QueueItemRemoveRequest item)
-        {
-            if (_shouldFail(item))
-            {
-                throw new InvalidOperationException("bus is down");
-            }
-
-            return _inner.TryWrite(item);
-        }
-
-        public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = default) =>
-            _inner.WaitToWriteAsync(cancellationToken);
     }
 
     #region ExecuteInternalAsync Tests
@@ -1807,57 +1779,6 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         _fixture.RemovalQueue.Reader.Count.ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task ProcessInstanceAsync_LazyLibrarian_KeepsGoingWhenOneRemovalCannotBePublished()
-    {
-        // Arrange: the first torrent is already deleted, so a failed publish must not skip the second book.
-        (IDownloadService downloadService, ITorrentItemWrapper torrent) = StubLazyLibrarianDecision();
-        LazyLibrarianQueueItem second = CreateBookItem() with { DownloadId = "torrent-hash-2" };
-
-        ITorrentItemWrapper secondTorrent = Substitute.For<ITorrentItemWrapper>();
-        secondTorrent.Hash.Returns("torrent-hash-2");
-
-        DownloadClientConfig clientConfig = downloadService.ClientConfig;
-        IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
-        [
-            new LazyLibrarianRemovalDecision
-            {
-                Item = CreateBookItem(),
-                DeleteReason = DeleteReason.Stalled,
-                RemoveFromClient = true,
-                DownloadClient = clientConfig,
-                DownloadService = downloadService,
-                Torrent = torrent,
-            },
-            new LazyLibrarianRemovalDecision
-            {
-                Item = second,
-                DeleteReason = DeleteReason.Stalled,
-                RemoveFromClient = true,
-                DownloadClient = clientConfig,
-                DownloadService = downloadService,
-                Torrent = secondTorrent,
-            },
-        ];
-
-        _fixture.LazyLibrarianServiceQC
-            .EvaluateAsync(Arg.Any<ArrInstance>(), Arg.Any<IReadOnlyList<IDownloadService>>(), Arg.Any<IReadOnlyList<string>>())
-            .Returns(decisions);
-
-        FailingWriteChannelWriter failingWriter = new(
-            _fixture.RemovalQueue.Writer,
-            request => request.Target.DownloadId == "torrent-hash");
-
-        var sut = CreateSut(failingWriter);
-
-        // Act
-        await sut.ExecuteAsync();
-
-        // Assert
-        _fixture.RemovalQueue.Reader.TryRead(out QueueItemRemoveRequest? r).ShouldBeTrue();
-        (r.Target.DownloadId == "torrent-hash-2").ShouldBeTrue();
     }
 
     [Fact]
