@@ -30,7 +30,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
             .AsReadOnly());
     }
 
-    public string Hash => Info.Hash ?? string.Empty;
+    public string DownloadId => Info.Hash ?? string.Empty;
     
     public string Name => Info.Name ?? string.Empty;
 
@@ -140,7 +140,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
 
         foreach (string pattern in ignoredDownloads)
         {
-            if (Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase))
+            if (DownloadId.Equals(pattern, StringComparison.InvariantCultureIgnoreCase))
             {
                 return true;
             }

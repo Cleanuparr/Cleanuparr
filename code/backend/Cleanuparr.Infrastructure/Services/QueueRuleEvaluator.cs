@@ -52,7 +52,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
 
         long currentDownloaded = Math.Max(0, torrent.DownloadedBytes);
         bool shouldRemove = await _striker.StrikeAndCheckLimit(
-            torrent.Hash,
+            torrent.DownloadId,
             torrent.Name,
             (ushort)rule.MaxStrikes,
             StrikeType.Stalled,
@@ -96,7 +96,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
             if (currentSpeed.Bytes < minSpeed.Bytes)
             {
                 bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                    torrent.Hash,
+                    torrent.DownloadId,
                     torrent.Name,
                     (ushort)rule.MaxStrikes,
                     StrikeType.SlowSpeed
@@ -121,7 +121,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
             if (currentTime.Time.TotalSeconds > maxTime.Time.TotalSeconds && maxTime.Time.TotalSeconds > 0)
             {
                 bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                    torrent.Hash,
+                    torrent.DownloadId,
                     torrent.Name,
                     (ushort)rule.MaxStrikes,
                     StrikeType.SlowTime
@@ -192,7 +192,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
             );
         }
 
-        await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, StrikeType.Stalled);
+        await _striker.ResetStrikeAsync(torrent.DownloadId, torrent.Name, StrikeType.Stalled);
     }
 
     private async Task ResetSlowStrikesAsync(
@@ -206,7 +206,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
             return;
         }
 
-        await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, strikeType);
+        await _striker.ResetStrikeAsync(torrent.DownloadId, torrent.Name, strikeType);
     }
 
     private async Task<(bool HasProgress, long PreviousDownloaded, long CurrentDownloaded)> GetDownloadProgressAsync(ITorrentItemWrapper torrent)
@@ -214,7 +214,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
         long currentDownloaded = Math.Max(0, torrent.DownloadedBytes);
 
         var downloadItem = await _context.DownloadItems
-            .FirstOrDefaultAsync(d => d.DownloadId == torrent.Hash);
+            .FirstOrDefaultAsync(d => d.DownloadId == torrent.DownloadId);
 
         if (downloadItem is null)
         {

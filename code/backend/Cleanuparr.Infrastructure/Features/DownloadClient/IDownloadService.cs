@@ -1,110 +1,29 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Persistence.Models.Configuration;
-using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 
+/// <summary>
+/// Base contract every download client implements, regardless of protocol or capabilities.
+/// Protocol-specific behaviour lives behind the <c>I*Capable</c> interfaces.
+/// </summary>
 public interface IDownloadService : IDisposable
 {
     DownloadClientConfig ClientConfig { get; }
 
-    public Task LoginAsync();
+    Task LoginAsync();
 
     /// <summary>
     /// Performs a health check on the download client
     /// </summary>
     /// <returns>The health check result</returns>
-    public Task<HealthCheckResult> HealthCheckAsync();
-
-    /// <summary>
-    /// Checks whether the download should be removed from the *arr queue.
-    /// </summary>
-    /// <param name="hash">The download hash.</param>
-    /// <param name="ignoredDownloads">Downloads to ignore from processing.</param>
-    public Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads);
-
-    /// <summary>
-    /// Fetches all seeding downloads.
-    /// </summary>
-    /// <returns>A list of downloads that are seeding.</returns>
-    Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
-
-    /// <summary>
-    /// Fetches all torrents regardless of their state, without per-torrent tracker or properties calls.
-    /// Used by the orphaned files cleanup to identify which paths are claimed by active torrents.
-    /// </summary>
-    /// <returns>A list of all torrents.</returns>
-    Task<List<ITorrentItemWrapper>> GetAllTorrentsLite();
-
-    /// <summary>
-    /// Resolves the on-disk paths claimed by the given torrents.
-    /// </summary>
-    /// <returns>The distinct, remapped paths claimed by the torrents.</returns>
-    Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents);
-
-    /// <summary>
-    /// Filters downloads that should be cleaned.
-    /// </summary>
-    /// <param name="downloads">The downloads to filter.</param>
-    /// <param name="seedingRules">The seeding rules by which to filter the downloads.</param>
-    /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
-
-    /// <summary>
-    /// Filters downloads that should have their category changed.
-    /// </summary>
-    /// <param name="downloads">The downloads to filter.</param>
-    /// <param name="unlinkedConfig">The unlinked config for this download client.</param>
-    /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
-
-    /// <summary>
-    /// Cleans the downloads.
-    /// </summary>
-    /// <param name="downloads">The downloads to clean.</param>
-    /// <param name="seedingRules">The seeding rules.</param>
-    Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
-
-    /// <summary>
-    /// Changes the category for downloads that have no hardlinks.
-    /// </summary>
-    /// <param name="downloads">The downloads to change.</param>
-    /// <param name="unlinkedConfig">The unlinked config for this download client.</param>
-    Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
-
-    /// <summary>
-    /// Moves a single torrent to the target category, or adds it as a tag/label when <paramref name="useTag"/> is set.
-    /// </summary>
-    /// <param name="torrent">The torrent to move.</param>
-    /// <param name="targetCategory">The target category/tag.</param>
-    /// <param name="useTag">When true, add a tag/label instead of changing the category (qBittorrent and Transmission).</param>
-    Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag);
+    Task<HealthCheckResult> HealthCheckAsync();
 
     /// <summary>
     /// Deletes a download item.
     /// </summary>
-    /// <param name="torrent">The torrent item.</param>
-    /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent. Defaults to true.</param>
-    public Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
-
-    /// <summary>
-    /// Stops a download, leaving it in the client.
-    /// </summary>
-    /// <param name="torrent">The torrent item.</param>
-    public Task StopDownload(ITorrentItemWrapper torrent);
-
-    /// <summary>
-    /// Creates a category.
-    /// </summary>
-    /// <param name="name">The category name.</param>
-    public Task CreateCategoryAsync(string name);
-
-    /// <summary>
-    /// Blocks unwanted files from being fully downloaded.
-    /// </summary>
-    /// <param name="hash">The torrent hash.</param>
-    /// <param name="ignoredDownloads">Downloads to ignore from processing.</param>
-    /// <returns>True if all files have been blocked; otherwise false.</returns>
-    public Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads);
+    /// <param name="item">The download item.</param>
+    /// <param name="deleteSourceFiles">Whether to delete the source files along with the download. Defaults to true.</param>
+    Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles);
 }

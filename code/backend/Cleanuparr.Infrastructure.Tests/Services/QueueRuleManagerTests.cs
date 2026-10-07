@@ -373,7 +373,7 @@ public class QueueRuleManagerTests
         string size = "100 MB")
     {
         var torrent = Substitute.For<ITorrentItemWrapper>();
-        torrent.Hash.Returns("test-hash");
+        torrent.DownloadId.Returns("test-hash");
         torrent.Name.Returns("Test Torrent");
         torrent.IsPrivate.Returns(isPrivate);
         torrent.CompletionPercentage.Returns(completionPercentage);

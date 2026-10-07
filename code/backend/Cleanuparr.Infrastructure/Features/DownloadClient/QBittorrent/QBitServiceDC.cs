@@ -41,7 +41,7 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
         IReadOnlyList<TorrentInfo>? torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
         if (torrentList is null)
@@ -49,9 +49,9 @@ public partial class QBitService
             throw new InvalidOperationException("qBittorrent returned no torrent list");
         }
 
-        List<ITorrentItemWrapper> torrents = torrentList
+        List<IDownloadItem> torrents = torrentList
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(ITorrentItemWrapper (t) => new QBitItemWrapper(t, [], false))
+            .Select(IDownloadItem (t) => new QBitItemWrapper(t, [], false))
             .ToList();
 
         ThrowIfTorrentListCollapsed(torrentList.Count, torrents.Count);
@@ -60,22 +60,22 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents) =>
         BuildClaimedPathsAsync(torrents, async torrent =>
         {
-            if (string.IsNullOrEmpty(torrent.Hash))
+            if (string.IsNullOrEmpty(torrent.DownloadId))
             {
                 return [];
             }
 
-            IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(torrent.Hash);
+            IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(torrent.DownloadId);
             return files?.Select(f => f.Name).Where(name => !string.IsNullOrEmpty(name)).ToList() ?? [];
         });
 
     /// <inheritdoc/>
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
-            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+            ?.Where(x => !string.IsNullOrEmpty(x.DownloadId))
             .Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
             .ToList();
 
@@ -83,7 +83,7 @@ public partial class QBitService
     public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
     {
         return downloads
-            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+            ?.Where(x => !string.IsNullOrEmpty(x.DownloadId))
             .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .Where(x =>
             {
@@ -99,15 +99,15 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
     {
-        await _client.DeleteAsync([torrent.Hash], deleteSourceFiles);
+        await _client.DeleteAsync([torrent.DownloadId], deleteSourceFiles);
     }
 
     /// <inheritdoc/>
-    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    public override async Task StopDownload(IDownloadItem torrent)
     {
-        await _client.PauseAsync([torrent.Hash]);
+        await _client.PauseAsync([torrent.DownloadId]);
     }
 
     public override async Task CreateCategoryAsync(string name)
@@ -128,7 +128,7 @@ public partial class QBitService
     protected override async Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
     {
         QBitItemWrapper qBitTorrent = (QBitItemWrapper)torrent;
-        IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(qBitTorrent.Hash);
+        IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(qBitTorrent.DownloadId);
 
         if (files is null)
         {
@@ -166,7 +166,7 @@ public partial class QBitService
 
     /// <inheritdoc/>
     protected override async Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
-        await ChangeCategory(torrent.Hash, targetCategory, useTag);
+        await ChangeCategory(torrent.DownloadId, targetCategory, useTag);
 
     protected async Task CreateCategory(string name)
     {

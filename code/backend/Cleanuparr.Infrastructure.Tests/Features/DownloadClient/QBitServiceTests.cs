@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -343,7 +344,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             // Assert
             result.Found.ShouldBeTrue();
-            result.Torrent!.TrackerDomains.ShouldBeEmpty();
+            ((ITorrentItemWrapper)result.Item!).TrackerDomains.ShouldBeEmpty();
         }
     }
 

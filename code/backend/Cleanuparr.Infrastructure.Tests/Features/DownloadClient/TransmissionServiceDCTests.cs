@@ -49,7 +49,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert
             result.Count.ShouldBe(2);
-            foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
+            foreach (var item in result) { item.DownloadId.ShouldNotBeNull(); }
         }
 
         [Fact]
@@ -93,7 +93,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -141,7 +141,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -192,7 +192,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
     }
 
@@ -304,7 +304,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -344,7 +344,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -385,7 +385,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash2");
+            result[0].DownloadId.ShouldBe("hash2");
         }
 
         [Fact]
@@ -407,7 +407,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash2");
+            result[0].DownloadId.ShouldBe("hash2");
         }
     }
 

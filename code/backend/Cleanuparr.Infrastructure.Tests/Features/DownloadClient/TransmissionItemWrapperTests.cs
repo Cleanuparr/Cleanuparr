@@ -24,7 +24,7 @@ public class TransmissionItemWrapperTests
         var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(expectedHash);
@@ -38,7 +38,7 @@ public class TransmissionItemWrapperTests
         var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(string.Empty);

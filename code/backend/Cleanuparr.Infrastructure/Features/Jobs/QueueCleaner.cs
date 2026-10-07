@@ -199,14 +199,15 @@ public sealed class QueueCleaner : GenericHandler
                 if (isTorrent || isUsenet)
                 {
                     DownloadClientType clientType = isTorrent ? DownloadClientType.Torrent : DownloadClientType.Usenet;
-                    var matchingClients = downloadServices
+                    List<IQueueCheckCapable> matchingClients = downloadServices
+                        .OfType<IQueueCheckCapable>()
                         .Where(x => x.ClientConfig.Type == clientType)
                         .ToList();
 
                     if (matchingClients.Count > 0)
                     {
                         // Check each download client for the download item
-                        foreach (var downloadService in matchingClients)
+                        foreach (IQueueCheckCapable downloadService in matchingClients)
                         {
                             try
                             {

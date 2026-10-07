@@ -11,30 +11,30 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 public partial class UTorrentService
 {
     /// <inheritdoc/>
-    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
-        hash = hash.ToLowerInvariant();
+        downloadId = downloadId.ToLowerInvariant();
 
-        UTorrentItem? download = await _client.GetTorrentAsync(hash);
+        UTorrentItem? download = await _client.GetTorrentAsync(downloadId);
         BlockFilesResult result = new();
-        
+
         if (download?.Hash is null)
         {
-            _logger.LogDebug("Failed to find torrent {Hash} in the download client", hash);
+            _logger.LogDebug("Failed to find torrent {DownloadId} in the download client", downloadId);
             return result;
         }
-        
-        UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(hash);
+
+        UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(downloadId);
 
         if (properties is null)
         {
-            _logger.LogDebug("Failed to find torrent {Hash} in the download client", hash);
+            _logger.LogDebug("Failed to find torrent {DownloadId} in the download client", downloadId);
             return result;
         }
 
         result.IsPrivate = properties.IsPrivate;
         result.Found = true;
-        result.Torrent = new UTorrentItemWrapper(download, properties, _timeProvider);
+        result.Item = new UTorrentItemWrapper(download, properties, _timeProvider);
         SetDownloadClientContext();
 
         if (ignoredDownloads.Count > 0 &&
@@ -53,7 +53,7 @@ public partial class UTorrentService
             return result;
         }
         
-        List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(hash);
+        List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(downloadId);
 
         if (files?.Count is null or 0)
         {
@@ -74,7 +74,7 @@ public partial class UTorrentService
 
         await ApplyFileBlockingAsync(result, download.Name, BuildScanItems(), malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            await _client.SetFilesPriorityAsync(hash, unwantedIndices, 0);
+            await _client.SetFilesPriorityAsync(downloadId, unwantedIndices, 0);
         });
 
         return result;

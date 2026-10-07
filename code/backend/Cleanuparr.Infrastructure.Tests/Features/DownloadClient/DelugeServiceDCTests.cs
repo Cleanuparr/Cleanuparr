@@ -48,7 +48,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             result.Count.ShouldBe(2);
-            foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
+            foreach (var item in result) { item.DownloadId.ShouldNotBeNull(); }
         }
 
         [Fact]
@@ -89,7 +89,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -112,7 +112,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -135,7 +135,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -202,7 +202,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
     }
 
@@ -314,7 +314,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -354,7 +354,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -452,7 +452,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")), true)
@@ -473,7 +473,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .DeleteTorrents(Arg.Any<List<string>>(), true)
@@ -494,7 +494,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")), false)
@@ -522,7 +522,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             DelugeService sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .PauseTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")))
@@ -543,7 +543,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             DelugeService sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .PauseTorrents(Arg.Any<List<string>>())
@@ -563,7 +563,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             DelugeService sut = _fixture.CreateSut();
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("TEST-HASH");
+            mockTorrent.DownloadId.Returns("TEST-HASH");
 
             _fixture.ClientWrapper
                 .PauseTorrents(Arg.Any<List<string>>())

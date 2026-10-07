@@ -26,7 +26,7 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
             .AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>());
     }
 
-    public string Hash => Info.HashString ?? string.Empty;
+    public string DownloadId => Info.HashString ?? string.Empty;
     
     public string Name => Info.Name ?? string.Empty;
 
@@ -153,7 +153,7 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 
         foreach (string pattern in ignoredDownloads)
         {
-            if (Hash?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            if (DownloadId?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
             {
                 return true;
             }

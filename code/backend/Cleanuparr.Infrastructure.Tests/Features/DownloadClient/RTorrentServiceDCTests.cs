@@ -57,7 +57,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             // Assert - only torrents with State=1 AND Complete=1 should be returned
             result.Count.ShouldBe(2);
-            foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
+            foreach (var item in result) { item.DownloadId.ShouldNotBeNull(); }
         }
 
         [Fact]
@@ -102,7 +102,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("HASH1");
+            result[0].DownloadId.ShouldBe("HASH1");
         }
 
         [Fact]
@@ -295,7 +295,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("HASH1");
+            result[0].DownloadId.ShouldBe("HASH1");
         }
 
         [Fact]
@@ -334,7 +334,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var sut = _fixture.CreateSut();
             var hash = "lowercase";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
             mockTorrent.SavePath.Returns("/test/path");
 
             _fixture.ClientWrapper
@@ -375,7 +375,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var sut = _fixture.CreateSut(config);
 
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("hash");
+            mockTorrent.DownloadId.Returns("hash");
             mockTorrent.SavePath.Returns("/downloads/seed-rule-tracker");
 
             try
@@ -408,7 +408,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Arrange
             RTorrentService sut = _fixture.CreateSut();
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("lowercase");
+            mockTorrent.DownloadId.Returns("lowercase");
             mockTorrent.SavePath.Returns("/test/path");
 
             _fixture.ClientWrapper
@@ -429,7 +429,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Arrange
             RTorrentService sut = _fixture.CreateSut();
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("LOWERCASE");
+            mockTorrent.DownloadId.Returns("LOWERCASE");
             mockTorrent.SavePath.Returns("/test/path");
 
             _fixture.ClientWrapper
@@ -454,7 +454,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await File.WriteAllTextAsync(Path.Combine(savePath, "file.mkv"), "content");
 
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("HASH1");
+            mockTorrent.DownloadId.Returns("HASH1");
             mockTorrent.SavePath.Returns(savePath);
 
             _fixture.ClientWrapper

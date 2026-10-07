@@ -39,7 +39,7 @@ public class UTorrentItemWrapperTests
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties, TimeProvider.System);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(expectedHash);

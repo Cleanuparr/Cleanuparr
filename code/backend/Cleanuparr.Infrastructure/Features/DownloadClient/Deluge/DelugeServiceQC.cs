@@ -9,28 +9,28 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 public partial class DelugeService
 {
     /// <inheritdoc/>
-    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
-        hash = hash.ToLowerInvariant();
-        
+        downloadId = downloadId.ToLowerInvariant();
+
         DelugeContents? contents = null;
         DownloadCheckResult result = new();
 
-        DownloadStatus? download = await _client.GetTorrentStatus(hash);
-        
+        DownloadStatus? download = await _client.GetTorrentStatus(downloadId);
+
         if (download?.Hash is null)
         {
-            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
-        
+
         result.IsPrivate = download.Private;
         result.Found = true;
         SetDownloadClientContext();
 
         // Create ITorrentItem wrapper for consistent interface usage
         DelugeItemWrapper torrent = new(download);
-        result.Torrent = torrent;
+        result.Item = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
@@ -40,7 +40,7 @@ public partial class DelugeService
 
         try
         {
-            contents = await _client.GetTorrentFiles(hash);
+            contents = await _client.GetTorrentFiles(downloadId);
         }
         catch (Exception exception)
         {

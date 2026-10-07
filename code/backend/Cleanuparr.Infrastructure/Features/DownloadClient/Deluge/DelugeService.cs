@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 
-public partial class DelugeService : DownloadService
+public partial class DelugeService : TorrentDownloadService, IDeadTorrentCapable
 {
     private readonly IDelugeClientWrapper _client;
 

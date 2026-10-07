@@ -9,24 +9,24 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 public partial class UTorrentService
 {
     /// <inheritdoc/>
-    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
         List<UTorrentFile>? files = null;
         DownloadCheckResult result = new();
 
-        UTorrentItem? download = await _client.GetTorrentAsync(hash);
+        UTorrentItem? download = await _client.GetTorrentAsync(downloadId);
 
         if (download?.Hash is null)
         {
-            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
-        UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(hash);
+        UTorrentProperties? properties = await _client.GetTorrentPropertiesAsync(downloadId);
 
         if (properties is null)
         {
-            _logger.LogDebug("Failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
@@ -36,7 +36,7 @@ public partial class UTorrentService
 
         // Create ITorrentItem wrapper for consistent interface usage
         UTorrentItemWrapper torrent = new(download, properties, _timeProvider);
-        result.Torrent = torrent;
+        result.Item = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
@@ -46,11 +46,11 @@ public partial class UTorrentService
 
         try
         {
-            files = await _client.GetTorrentFilesAsync(hash);
+            files = await _client.GetTorrentFilesAsync(downloadId);
         }
         catch (Exception exception)
         {
-            _logger.LogWarning(exception, "Failed to get files for torrent {Hash} in the download client", hash);
+            _logger.LogWarning(exception, "Failed to get files for torrent {DownloadId} in the download client", downloadId);
         }
 
         bool shouldRemove = files?.Count > 0;

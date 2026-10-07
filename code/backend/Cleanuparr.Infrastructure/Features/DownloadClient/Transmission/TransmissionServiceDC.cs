@@ -21,7 +21,7 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
         TransmissionTorrents? result = await _client.TorrentGetAsync(Fields);
         if (result?.Torrents is null)
@@ -29,9 +29,9 @@ public partial class TransmissionService
             throw new InvalidOperationException("Transmission returned no torrent list");
         }
 
-        List<ITorrentItemWrapper> torrents = result.Torrents
+        List<IDownloadItem> torrents = result.Torrents
             .Where(x => !string.IsNullOrEmpty(x.HashString))
-            .Select(ITorrentItemWrapper (x) => new TransmissionItemWrapper(x))
+            .Select(IDownloadItem (x) => new TransmissionItemWrapper(x))
             .ToList();
 
         ThrowIfTorrentListCollapsed(result.Torrents.Length, torrents.Count);
@@ -40,7 +40,7 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents) =>
         BuildClaimedPathsAsync(torrents, torrent =>
         {
             IReadOnlyCollection<string> files = torrent is TransmissionItemWrapper { Info.Files.Length: > 0 } wrapper
@@ -56,7 +56,7 @@ public partial class TransmissionService
     public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
     {
         return downloads
-            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+            ?.Where(x => !string.IsNullOrEmpty(x.DownloadId))
             .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .Where(x =>
             {
@@ -72,14 +72,14 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
     {
         var transmissionTorrent = (TransmissionItemWrapper)torrent;
         await _client.TorrentRemoveAsync([transmissionTorrent.Info.Id], deleteSourceFiles);
     }
 
     /// <inheritdoc/>
-    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    public override async Task StopDownload(IDownloadItem torrent)
     {
         TransmissionItemWrapper transmissionTorrent = (TransmissionItemWrapper)torrent;
         await _client.TorrentStopAsync([transmissionTorrent.Info.Id]);

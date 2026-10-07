@@ -10,22 +10,22 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 public partial class DelugeService
 {
     /// <inheritdoc/>
-    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
-        hash = hash.ToLowerInvariant();
+        downloadId = downloadId.ToLowerInvariant();
 
-        DownloadStatus? download = await _client.GetTorrentStatus(hash);
+        DownloadStatus? download = await _client.GetTorrentStatus(downloadId);
         BlockFilesResult result = new();
-        
+
         if (download?.Hash is null || download?.Name is null)
         {
-            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
-        
+
         result.IsPrivate = download.Private;
         result.Found = true;
-        result.Torrent = new DelugeItemWrapper(download);
+        result.Item = new DelugeItemWrapper(download);
         SetDownloadClientContext();
 
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
@@ -47,7 +47,7 @@ public partial class DelugeService
 
         try
         {
-            contents = await _client.GetTorrentFiles(hash);
+            contents = await _client.GetTorrentFiles(downloadId);
         }
         catch (Exception exception)
         {
@@ -79,7 +79,7 @@ public partial class DelugeService
                 .Select(x => unwantedLookup.Contains(x.Key) ? 0 : x.Value)
                 .ToList();
 
-            await _client.ChangeFilesPriority(hash, sortedPriorities);
+            await _client.ChangeFilesPriority(downloadId, sortedPriorities);
         });
 
         return result;

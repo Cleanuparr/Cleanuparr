@@ -11,5 +11,5 @@ public interface ISeedingRulesCleanupService
     /// <summary>
     /// Evaluates the seeding rules against the client's downloads and removes those that match.
     /// </summary>
-    Task CleanAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads);
+    Task CleanAsync(ISeedingCleanupCapable downloadService, List<ITorrentItemWrapper> clientDownloads);
 }

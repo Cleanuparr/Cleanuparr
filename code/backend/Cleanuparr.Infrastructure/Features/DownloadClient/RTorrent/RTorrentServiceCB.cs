@@ -9,17 +9,17 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 public partial class RTorrentService
 {
     /// <inheritdoc/>
-    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
         // rTorrent uses uppercase hashes
-        hash = hash.ToUpperInvariant();
+        downloadId = downloadId.ToUpperInvariant();
 
-        RTorrentTorrent? download = await _client.GetTorrentAsync(hash);
+        RTorrentTorrent? download = await _client.GetTorrentAsync(downloadId);
         BlockFilesResult result = new();
 
         if (download?.Hash is null)
         {
-            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
@@ -28,9 +28,9 @@ public partial class RTorrentService
         SetDownloadClientContext();
 
         // Get trackers for ignore check
-        var trackers = await _client.GetTrackersAsync(hash);
+        var trackers = await _client.GetTrackersAsync(downloadId);
         var torrentWrapper = new RTorrentItemWrapper(download, trackers, _timeProvider);
-        result.Torrent = torrentWrapper;
+        result.Item = torrentWrapper;
 
         if (ignoredDownloads.Count > 0 && torrentWrapper.IsIgnored(ignoredDownloads))
         {
@@ -50,7 +50,7 @@ public partial class RTorrentService
 
         try
         {
-            files = await _client.GetTorrentFilesAsync(hash);
+            files = await _client.GetTorrentFilesAsync(downloadId);
         }
         catch (Exception exception)
         {
@@ -77,7 +77,7 @@ public partial class RTorrentService
         {
             foreach (int index in unwantedIndices)
             {
-                await _client.SetFilePriorityAsync(hash, index, 0);
+                await _client.SetFilePriorityAsync(downloadId, index, 0);
             }
         });
 

@@ -15,5 +15,5 @@ public interface IDeadTorrentService
     /// </summary>
     /// <param name="downloadService">Download-client service for the current client.</param>
     /// <param name="clientDownloads">The client's torrent items to evaluate.</param>
-    Task ProcessAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads);
+    Task ProcessAsync(IDeadTorrentCapable downloadService, List<ITorrentItemWrapper> clientDownloads);
 }
