@@ -145,10 +145,7 @@ test.describe('SignalR — app hub', () => {
 
     await ArrStubs.applyArrDefaults(mocks.arr);
     await mocks.arr.stub(ArrStubs.arrRawQueueStub(QUEUE_BODY));
-    await mocks.arr.stub({
-      request: { method: 'DELETE', urlPathPattern: '/api/v3/queue/.*' },
-      response: { status: 200, jsonBody: {} },
-    });
+    await mocks.arr.stub(ArrStubs.arrQueueDeleteStub());
 
     const current = await (await api.queueCleaner.getConfig()).json();
     const qc = await api.queueCleaner.updateConfig({
