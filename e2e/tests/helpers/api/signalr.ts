@@ -59,3 +59,36 @@ export async function waitForEvent<T = unknown>(
     }
   });
 }
+
+/**
+ * Polls `GetRecentEvents` over SignalR until an event matching the given item hash and
+ * delete reason shows up, or the timeout elapses. Matching is case-insensitive on the hash.
+ */
+export async function findEventWithDeleteReason(
+  token: string,
+  itemHash: string,
+  deleteReason: string,
+  timeoutMs: number,
+): Promise<Record<string, unknown> | undefined> {
+  const connection = buildHubConnection({ accessToken: token, hubUrl: '/api/hubs/app' });
+  await connection.start();
+
+  try {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const received = waitForEvent<Array<Record<string, unknown>>>(connection, 'EventsReceived');
+      await connection.invoke('GetRecentEvents', 20);
+      const events = await received;
+      const match = events.find(
+        (e) => String(e.itemHash).toLowerCase() === itemHash.toLowerCase() && e.deleteReason === deleteReason,
+      );
+      if (match) {
+        return match;
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return undefined;
+  } finally {
+    await connection.stop();
+  }
+}

@@ -12,6 +12,23 @@ export enum DownloadClientTypeName {
   Sabnzbd = 'Sabnzbd',
 }
 
+export enum DownloadClientAuthField {
+  Username = 'Username',
+  Password = 'Password',
+  ApiKey = 'ApiKey',
+}
+
+export enum DownloadClientCapability {
+  QueueCheck = 'QueueCheck',
+  FileBlocking = 'FileBlocking',
+  OrphanClaims = 'OrphanClaims',
+  SeedingCleanup = 'SeedingCleanup',
+  Unlinked = 'Unlinked',
+  TagFiltering = 'TagFiltering',
+  SeedersFiltering = 'SeedersFiltering',
+  DeadTorrent = 'DeadTorrent',
+}
+
 export enum NotificationProviderType {
   Notifiarr = 'Notifiarr',
   Apprise = 'Apprise',
@@ -123,6 +140,7 @@ export enum DeleteReason {
   AllFilesSkippedByQBit = 'AllFilesSkippedByQBit',
   AllFilesBlocked = 'AllFilesBlocked',
   AtLeastOneFileBlocked = 'AtLeastOneFileBlocked',
+  DownloadFailed = 'DownloadFailed',
 }
 
 export enum InstanceType {

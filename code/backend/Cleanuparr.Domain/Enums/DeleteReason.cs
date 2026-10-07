@@ -12,4 +12,5 @@ public enum DeleteReason
     AllFilesSkippedByQBit,
     AllFilesBlocked,
     AtLeastOneFileBlocked,
+    DownloadFailed,
 }

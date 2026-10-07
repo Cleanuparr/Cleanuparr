@@ -1,10 +1,13 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Sabnzbd;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Sabnzbd;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using NSubstitute;
 using Shouldly;
@@ -45,7 +48,7 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
-        public async Task FoundInHistoryAsFailed_RemovesWithStalledReason_DeletesFromClient()
+        public async Task FoundInHistoryAsFailed_RemovesWithDownloadFailedReason_DeletesFromClient()
         {
             const string nzoId = "SABnzbd_nzo_failed";
             var sut = _fixture.CreateSut();
@@ -64,7 +67,7 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             result.Found.ShouldBeTrue();
             result.IsPrivate.ShouldBeFalse();
             result.ShouldRemove.ShouldBeTrue();
-            result.DeleteReason.ShouldBe(DeleteReason.Stalled);
+            result.DeleteReason.ShouldBe(DeleteReason.DownloadFailed);
             result.DeleteFromClient.ShouldBeTrue();
         }
 
@@ -104,7 +107,6 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
 
-            await _fixture.RuleEvaluator.DidNotReceive().EvaluateStallRulesAsync(Arg.Any<SabnzbdItemWrapper>());
             await _fixture.ClientWrapper.DidNotReceive().GetHistoryAsync(Arg.Any<string>());
         }
 
@@ -124,8 +126,6 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(nzoId, Array.Empty<string>());
 
             result.ShouldRemove.ShouldBeFalse();
-
-            await _fixture.RuleEvaluator.DidNotReceive().EvaluateStallRulesAsync(Arg.Any<SabnzbdItemWrapper>());
         }
 
         [Fact]
@@ -144,12 +144,10 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(nzoId, Array.Empty<string>());
 
             result.ShouldRemove.ShouldBeFalse();
-
-            await _fixture.RuleEvaluator.DidNotReceive().EvaluateStallRulesAsync(Arg.Any<SabnzbdItemWrapper>());
         }
 
         [Fact]
-        public async Task QueuedDownloadingWithSpeed_NeverEvaluatesSlowRules()
+        public async Task QueuedDownloadingWithSpeed_DoesNotRemove()
         {
             const string nzoId = "SABnzbd_nzo_downloading";
             var sut = _fixture.CreateSut();
@@ -163,8 +161,6 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(nzoId, Array.Empty<string>());
 
             result.ShouldRemove.ShouldBeFalse();
-
-            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<SabnzbdItemWrapper>());
         }
 
         [Fact]
@@ -182,25 +178,395 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
 
             result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
-
-            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<SabnzbdItemWrapper>());
         }
     }
 
-    public class GetSeedingDownloads_Scenarios : SabnzbdServiceTests
+    public class GetClaimedPathsAsync_Scenarios : SabnzbdServiceTests
     {
-        public GetSeedingDownloads_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)
+        public GetClaimedPathsAsync_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)
         {
         }
 
         [Fact]
-        public async Task AlwaysReturnsEmptyList()
+        public async Task HistoryItem_ClaimsStoragePath()
         {
             var sut = _fixture.CreateSut();
+            var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
 
-            var result = await sut.GetSeedingDownloads();
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
 
-            result.ShouldBeEmpty();
+            claimed.ShouldContain("/downloads/complete/Test");
+        }
+
+        [Fact]
+        public async Task HistoryItem_RemapsStoragePath()
+        {
+            string targetRoot = Directory.CreateTempSubdirectory("sabnzbd-claim-test-").FullName;
+
+            try
+            {
+                DownloadClientConfig config = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Test Client",
+                    TypeName = Domain.Enums.DownloadClientTypeName.Sabnzbd,
+                    Type = Domain.Enums.DownloadClientType.Usenet,
+                    Enabled = true,
+                    Host = new Uri("http://localhost:8080"),
+                    ApiKey = "test-api-key",
+                    UrlBase = "",
+                    DownloadDirectorySource = "/downloads",
+                    DownloadDirectoryTarget = targetRoot,
+                };
+                var sut = _fixture.CreateSut(config);
+                var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "Test"));
+            }
+            finally
+            {
+                Directory.Delete(targetRoot, true);
+            }
+        }
+
+        [Fact]
+        public async Task BusyQueue_ClaimsEveryEntryInDownloadDir()
+        {
+            // SAB can rename a folder on a clash, so a busy queue claims every entry, not just name lookalikes.
+            string downloadDir = Directory.CreateTempSubdirectory("sabnzbd-incomplete-").FullName;
+
+            try
+            {
+                string jobFolder = Directory.CreateDirectory(Path.Combine(downloadDir, "Downloading.Release")).FullName;
+                string renamedFolder = Directory.CreateDirectory(Path.Combine(downloadDir, "Downloading.Release.1")).FullName;
+
+                var sut = _fixture.CreateSut();
+                _fixture.ClientWrapper.GetDownloadDirAsync().Returns(downloadDir);
+                var item = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Downloading.Release", Status = "Downloading", Mb = 100, MbLeft = 50 });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldContain(jobFolder);
+                claimed.ShouldContain(renamedFolder);
+            }
+            finally
+            {
+                Directory.Delete(downloadDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task EmptyQueue_ClaimsNothingFromDownloadDir()
+        {
+            // Nothing is downloading, so download_dir leftovers count as orphans, not claims.
+            string downloadDir = Directory.CreateTempSubdirectory("sabnzbd-incomplete-").FullName;
+
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(downloadDir, "Leftover.Release"));
+
+                var sut = _fixture.CreateSut();
+                _fixture.ClientWrapper.GetDownloadDirAsync().Returns(downloadDir);
+                var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldNotContain(Path.Combine(downloadDir, "Leftover.Release"));
+            }
+            finally
+            {
+                Directory.Delete(downloadDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task HistoryOnlyPostProcessing_ClaimsEveryEntryInDownloadDir()
+        {
+            // SAB moves a job to history before post-processing finishes, so an empty queue with a busy history item must still claim.
+            string downloadDir = Directory.CreateTempSubdirectory("sabnzbd-incomplete-").FullName;
+
+            try
+            {
+                string jobFolder = Directory.CreateDirectory(Path.Combine(downloadDir, "Extracting.Release")).FullName;
+
+                var sut = _fixture.CreateSut();
+                _fixture.ClientWrapper.GetDownloadDirAsync().Returns(downloadDir);
+                var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Extracting.Release", Status = "Extracting" });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldContain(jobFolder);
+            }
+            finally
+            {
+                Directory.Delete(downloadDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task HistoryOnlyCompleted_ClaimsNothingFromDownloadDir()
+        {
+            string downloadDir = Directory.CreateTempSubdirectory("sabnzbd-incomplete-").FullName;
+
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(downloadDir, "Leftover.Release"));
+
+                var sut = _fixture.CreateSut();
+                _fixture.ClientWrapper.GetDownloadDirAsync().Returns(downloadDir);
+                var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldNotContain(Path.Combine(downloadDir, "Leftover.Release"));
+            }
+            finally
+            {
+                Directory.Delete(downloadDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task BusyQueue_DownloadDirMissingOnDisk_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetDownloadDirAsync().Returns("/does/not/exist/on/disk");
+            var item = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Downloading.Release", Status = "Downloading", Mb = 100, MbLeft = 50 });
+
+            await Should.ThrowAsync<InvalidOperationException>(() => sut.GetClaimedPathsAsync([item]));
+        }
+
+        [Fact]
+        public async Task BusyQueue_EmptyDownloadDir_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetDownloadDirAsync().Returns((string?)null);
+            var item = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Downloading.Release", Status = "Downloading", Mb = 100, MbLeft = 50 });
+
+            await Should.ThrowAsync<InvalidOperationException>(() => sut.GetClaimedPathsAsync([item]));
+        }
+
+        [Fact]
+        public async Task BusyQueue_RelativeDownloadDir_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetDownloadDirAsync().Returns("incomplete");
+            var item = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Downloading.Release", Status = "Downloading", Mb = 100, MbLeft = 50 });
+
+            await Should.ThrowAsync<InvalidOperationException>(() => sut.GetClaimedPathsAsync([item]));
+        }
+
+        [Fact]
+        public async Task IdleClient_MissingDownloadDir_ReturnsNoClaimsWithoutThrowing()
+        {
+            // The client isn't busy (the only item is Completed), so BuildIncompleteClaimsAsync never runs.
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetDownloadDirAsync().Returns((string?)null);
+            var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+            claimed.ShouldContain("/downloads/complete/Test");
+            await _fixture.ClientWrapper.DidNotReceive().GetDownloadDirAsync();
+        }
+
+        [Fact]
+        public async Task BusyQueue_WindowsDownloadDirRemappedToExistingLinuxDir_ClaimsItsEntries()
+        {
+            // Remap happens before the rooted check, so a Windows SAB dir resolves through a configured remap.
+            string targetRoot = Directory.CreateTempSubdirectory("sabnzbd-incomplete-remap-").FullName;
+
+            try
+            {
+                string jobFolder = Directory.CreateDirectory(Path.Combine(targetRoot, "Downloading.Release")).FullName;
+
+                DownloadClientConfig config = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Test Client",
+                    TypeName = Domain.Enums.DownloadClientTypeName.Sabnzbd,
+                    Type = Domain.Enums.DownloadClientType.Usenet,
+                    Enabled = true,
+                    Host = new Uri("http://localhost:8080"),
+                    ApiKey = "test-api-key",
+                    UrlBase = "",
+                    DownloadDirectorySource = "D:\\incomplete",
+                    DownloadDirectoryTarget = targetRoot,
+                };
+                var sut = _fixture.CreateSut(config);
+                _fixture.ClientWrapper.GetDownloadDirAsync().Returns("D:\\incomplete");
+                var item = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Downloading.Release", Status = "Downloading", Mb = 100, MbLeft = 50 });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldContain(jobFolder);
+            }
+            finally
+            {
+                Directory.Delete(targetRoot, true);
+            }
+        }
+
+        [Fact]
+        public async Task HistoryOnly_NeverFetchesDownloadDir()
+        {
+            var sut = _fixture.CreateSut();
+            var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
+
+            await sut.GetClaimedPathsAsync([item]);
+
+            await _fixture.ClientWrapper.DidNotReceive().GetDownloadDirAsync();
+        }
+
+        [Fact]
+        public async Task CategorySubfolderHistoryItem_ClaimsTheJobFolderAndItsAncestors()
+        {
+            string targetRoot = Directory.CreateTempSubdirectory("sabnzbd-claim-test-").FullName;
+
+            try
+            {
+                DownloadClientConfig config = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Test Client",
+                    TypeName = Domain.Enums.DownloadClientTypeName.Sabnzbd,
+                    Type = Domain.Enums.DownloadClientType.Usenet,
+                    Enabled = true,
+                    Host = new Uri("http://localhost:8080"),
+                    ApiKey = "test-api-key",
+                    UrlBase = "",
+                    DownloadDirectorySource = "/downloads",
+                    DownloadDirectoryTarget = targetRoot,
+                };
+                var sut = _fixture.CreateSut(config);
+                var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot
+                {
+                    NzoId = "nzo1", Name = "Job", Status = "Completed", Storage = "/downloads/complete/tv/Job"
+                });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "tv", "Job"));
+                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "tv"));
+                claimed.ShouldContain(Path.Combine(targetRoot, "complete"));
+            }
+            finally
+            {
+                Directory.Delete(targetRoot, true);
+            }
+        }
+
+        [Fact]
+        public async Task SingleFileHistoryItem_StorageIsTheFile_ClaimsItsJobFolder()
+        {
+            // A single-file job reports `storage` as the file itself, one level under its job folder.
+            string targetRoot = Directory.CreateTempSubdirectory("sabnzbd-claim-test-").FullName;
+
+            try
+            {
+                DownloadClientConfig config = new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Test Client",
+                    TypeName = Domain.Enums.DownloadClientTypeName.Sabnzbd,
+                    Type = Domain.Enums.DownloadClientType.Usenet,
+                    Enabled = true,
+                    Host = new Uri("http://localhost:8080"),
+                    ApiKey = "test-api-key",
+                    UrlBase = "",
+                    DownloadDirectorySource = "/downloads",
+                    DownloadDirectoryTarget = targetRoot,
+                };
+                var sut = _fixture.CreateSut(config);
+                var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot
+                {
+                    NzoId = "nzo1", Name = "Job", Status = "Completed", Storage = "/downloads/complete/Job/file.mkv"
+                });
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "Job"));
+            }
+            finally
+            {
+                Directory.Delete(targetRoot, true);
+            }
+        }
+
+        [Fact]
+        public async Task AbsoluteCategoryHistoryItem_ClaimsTheJobFolderOutsideCompleteDir()
+        {
+            // No download_dir mapping covers this storage path, so it needs no remapping.
+            var sut = _fixture.CreateSut();
+            var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot
+            {
+                NzoId = "nzo1", Name = "Job", Status = "Completed", Storage = "/data/tv/Job"
+            });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
+
+            claimed.ShouldContain("/data/tv/Job");
+        }
+    }
+
+    public class GetAllDownloadsLite_Scenarios : SabnzbdServiceTests
+    {
+        public GetAllDownloadsLite_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task NullQueue_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetQueueAsync().Returns((SabnzbdQueueData?)null);
+            _fixture.ClientWrapper.GetHistoryAsync().Returns(new SabnzbdHistoryData { Slots = [] });
+
+            await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
+        }
+
+        [Fact]
+        public async Task NullHistory_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetQueueAsync().Returns(new SabnzbdQueueData { Slots = [] });
+            _fixture.ClientWrapper.GetHistoryAsync().Returns((SabnzbdHistoryData?)null);
+
+            await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
+        }
+
+        [Fact]
+        public async Task BlankNzoId_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetQueueAsync().Returns(new SabnzbdQueueData
+            {
+                Slots = [new SabnzbdQueueSlot { NzoId = "", Filename = "Blank.Release", Status = "Downloading" }]
+            });
+            _fixture.ClientWrapper.GetHistoryAsync().Returns(new SabnzbdHistoryData { Slots = [] });
+
+            await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
+        }
+
+        [Fact]
+        public async Task HealthyResponse_ReturnsEveryRow()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetQueueAsync().Returns(new SabnzbdQueueData
+            {
+                Slots = [new SabnzbdQueueSlot { NzoId = "nzo1", Filename = "Queued.Release", Status = "Downloading" }]
+            });
+            _fixture.ClientWrapper.GetHistoryAsync().Returns(new SabnzbdHistoryData
+            {
+                Slots = [new SabnzbdHistorySlot { NzoId = "nzo2", Name = "Done.Release", Status = "Completed" }]
+            });
+
+            List<IDownloadItem> items = await sut.GetAllDownloadsLite();
+
+            items.Count.ShouldBe(2);
+            items.Select(x => x.DownloadId).ShouldBe(["nzo1", "nzo2"], ignoreOrder: true);
         }
     }
 
@@ -226,41 +592,148 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         public async Task QueueItem_CallsDeleteFromQueueAsync()
         {
             var sut = _fixture.CreateSut();
-            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" }, 0);
+            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" });
 
             await sut.DeleteDownload(torrent, false);
 
             await _fixture.ClientWrapper.Received(1).DeleteFromQueueAsync("nzo2", false);
             await _fixture.ClientWrapper.DidNotReceive().DeleteFromHistoryAsync(Arg.Any<string>(), Arg.Any<bool>());
         }
-    }
 
-    public class ChangeTorrentCategoryAsync_Scenarios : SabnzbdServiceTests
-    {
-        public ChangeTorrentCategoryAsync_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)
+        [Fact]
+        public async Task CompletedWithDeleteFiles_DeletesStorageFolderFromDisk()
         {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = tempDir });
+
+                await sut.DeleteDownload(torrent, true);
+
+                Directory.Exists(tempDir).ShouldBeFalse();
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
         }
 
         [Fact]
-        public async Task QueueItem_CallsChangeCategoryAsync()
+        public async Task CompletedSingleFileJob_WithDeleteFiles_DeletesJobFolder()
         {
+            // SAB reports `storage` as the file itself for a single-file job, one level under its job folder.
             var sut = _fixture.CreateSut();
-            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" }, 0);
+            string jobFolder = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+            string storagePath = Path.Combine(jobFolder, "file.mkv");
+            await File.WriteAllTextAsync(storagePath, "x");
 
-            await sut.ChangeTorrentCategoryAsync(torrent, "target", false);
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = storagePath });
 
-            await _fixture.ClientWrapper.Received(1).ChangeCategoryAsync("nzo2", "target");
+                await sut.DeleteDownload(torrent, true);
+
+                Directory.Exists(jobFolder).ShouldBeFalse();
+            }
+            finally
+            {
+                if (Directory.Exists(jobFolder))
+                {
+                    Directory.Delete(jobFolder, true);
+                }
+            }
         }
 
         [Fact]
-        public async Task HistoryItem_SkipsWithWarning_NeverCallsChangeCategoryAsync()
+        public async Task FailedStatus_DoesNotDeleteFromDisk()
         {
             var sut = _fixture.CreateSut();
-            var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed" });
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
 
-            await sut.ChangeTorrentCategoryAsync(torrent, "target", false);
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Failed", Storage = tempDir });
 
-            await _fixture.ClientWrapper.DidNotReceive().ChangeCategoryAsync(Arg.Any<string>(), Arg.Any<string>());
+                await sut.DeleteDownload(torrent, true);
+
+                Directory.Exists(tempDir).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteFilesFalse_DoesNotDeleteFromDisk()
+        {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = tempDir });
+
+                await sut.DeleteDownload(torrent, false);
+
+                Directory.Exists(tempDir).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task QueueItem_NeverDeletesFromDisk()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Test", Status = "Downloading" });
+
+            await sut.DeleteDownload(torrent, true);
+
+            await _fixture.DryRunInterceptor.DidNotReceive().InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>());
+        }
+
+        [Fact]
+        public async Task MissingStoragePath_DoesNotThrow()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = null });
+
+            await Should.NotThrowAsync(() => sut.DeleteDownload(torrent, true));
+
+            await _fixture.ClientWrapper.Received(1).DeleteFromHistoryAsync("nzo1", true);
+        }
+
+        [Fact]
+        public async Task DryRun_SkipsDiskDelete_ButStillDeletesFromHistory()
+        {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = tempDir });
+
+                _fixture.DryRunInterceptor
+                    .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+                    .Returns(Task.CompletedTask);
+
+                await sut.DeleteDownload(torrent, true);
+
+                Directory.Exists(tempDir).ShouldBeTrue();
+                await _fixture.ClientWrapper.Received(1).DeleteFromHistoryAsync("nzo1", true);
+            }
+            finally
+            {
+                Directory.Delete(tempDir, true);
+            }
         }
     }
 
@@ -373,6 +846,83 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
                     Directory.Delete(tempDir, true);
                 }
             }
+        }
+
+        [Fact]
+        public async Task CompletedSingleFileJob_WithMalwareFile_DeletesFileAndMarksAllFilesBlocked()
+        {
+            const string nzoId = "SABnzbd_nzo_malware_singlefile";
+            SabnzbdService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-cb-test-").FullName;
+            try
+            {
+                string malwarePath = Path.Combine(tempDir, "malware.exe");
+                await File.WriteAllTextAsync(malwarePath, "dummy");
+
+                _fixture.ClientWrapper.GetHistoryAsync(nzoId).Returns(new SabnzbdHistoryData
+                {
+                    Slots = [new SabnzbdHistorySlot { NzoId = nzoId, Name = "Test", Status = "Completed", Storage = malwarePath }]
+                });
+
+                _fixture.FilenameEvaluator
+                    .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                    .Returns(false);
+
+                BlockFilesResult result = await sut.BlockUnwantedFilesAsync(nzoId, Array.Empty<string>());
+
+                result.Found.ShouldBeTrue();
+                result.ShouldRemove.ShouldBeTrue();
+                result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+                File.Exists(malwarePath).ShouldBeFalse();
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+    }
+
+    public class LoginAndHealthCheck_Scenarios : SabnzbdServiceTests
+    {
+        public LoginAndHealthCheck_Scenarios(SabnzbdServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task LoginAsync_ValidatesTheApiKey()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.ValidateApiKeyAsync().Returns(Task.CompletedTask);
+
+            await sut.LoginAsync();
+
+            await _fixture.ClientWrapper.Received(1).ValidateApiKeyAsync();
+        }
+
+        [Fact]
+        public async Task LoginAsync_RejectedApiKey_Throws()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.ValidateApiKeyAsync().Returns(Task.FromException(new SabnzbdClientException("SABnzbd request failed for mode 'queue': Forbidden API Key Incorrect")));
+
+            await Should.ThrowAsync<SabnzbdClientException>(() => sut.LoginAsync());
+        }
+
+        [Fact]
+        public async Task HealthCheckAsync_RejectedApiKey_ReportsUnhealthy()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.ValidateApiKeyAsync().Returns(Task.FromException(new SabnzbdClientException("SABnzbd request failed for mode 'queue': Forbidden API Key Incorrect")));
+
+            var result = await sut.HealthCheckAsync();
+
+            result.IsHealthy.ShouldBeFalse();
+            result.ErrorMessage.ShouldContain("API Key Incorrect");
         }
     }
 }

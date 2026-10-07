@@ -13,14 +13,14 @@ public partial class SabnzbdService
     /// deletes the ones that match the blocklist, reusing the same scanning engine every other client uses.
     /// </summary>
     /// <inheritdoc/>
-    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
         BlockFilesResult result = new();
-        (SabnzbdQueueSlot? queueSlot, SabnzbdHistorySlot? historySlot, double serverKbPerSec, bool queuePaused) = await FindAsync(hash);
+        (SabnzbdQueueSlot? queueSlot, SabnzbdHistorySlot? historySlot) = await FindAsync(downloadId);
 
         if (queueSlot is null && historySlot is null)
         {
-            _logger.LogDebug("Failed to find download {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find download {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
@@ -30,18 +30,18 @@ public partial class SabnzbdService
         {
             result.Found = true;
             result.IsPrivate = false;
-            result.Torrent = queueSlot is not null
-                ? new SabnzbdItemWrapper(queueSlot, serverKbPerSec, queuePaused)
+            result.Item = queueSlot is not null
+                ? new SabnzbdItemWrapper(queueSlot)
                 : new SabnzbdItemWrapper(historySlot!);
             SetDownloadClientContext();
-            _logger.LogDebug("skip | download is not a completed SABnzbd history item | {Hash}", hash);
+            _logger.LogDebug("skip | download is not a completed SABnzbd history item | {DownloadId}", downloadId);
             return result;
         }
 
         SabnzbdItemWrapper torrent = new(historySlot);
         result.Found = true;
         result.IsPrivate = false;
-        result.Torrent = torrent;
+        result.Item = torrent;
         SetDownloadClientContext();
 
         if (ignoredDownloads.Count > 0 && torrent.IsIgnored(ignoredDownloads))
@@ -51,15 +51,23 @@ public partial class SabnzbdService
         }
 
         string storagePath = RemapAndTrim(historySlot.Storage);
+        string[] files;
 
-        if (!Directory.Exists(storagePath))
+        if (File.Exists(storagePath))
         {
-            _logger.LogDebug("skip files check | storage directory not found | {Name}", torrent.Name);
+            files = [storagePath];
+        }
+        else if (Directory.Exists(storagePath))
+        {
+            files = Directory.GetFiles(storagePath, "*", SearchOption.AllDirectories);
+        }
+        else
+        {
+            _logger.LogDebug("skip files check | storage not found | {Name}", torrent.Name);
             return result;
         }
 
-        var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
-        string[] files = Directory.GetFiles(storagePath, "*", SearchOption.AllDirectories);
+        ContentBlockerConfig malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
 
         if (files.Length is 0)
         {

@@ -11,27 +11,27 @@ public sealed class SabnzbdClientWrapper : ISabnzbdClientWrapper
         _client = client;
     }
 
-    public Task<string?> GetVersionAsync()
-        => _client.GetVersionAsync();
+    /// <inheritdoc/>
+    public Task ValidateApiKeyAsync()
+        => _client.ValidateApiKeyAsync();
 
+    /// <inheritdoc/>
     public Task<SabnzbdQueueData?> GetQueueAsync(string? nzoId = null)
         => _client.GetQueueAsync(nzoId);
 
+    /// <inheritdoc/>
     public Task<SabnzbdHistoryData?> GetHistoryAsync(string? nzoId = null)
         => _client.GetHistoryAsync(nzoId);
 
-    public Task<IReadOnlyList<string>> GetCategoriesAsync()
-        => _client.GetCategoriesAsync();
+    /// <inheritdoc/>
+    public Task<string?> GetDownloadDirAsync()
+        => _client.GetDownloadDirAsync();
 
+    /// <inheritdoc/>
     public Task DeleteFromQueueAsync(string nzoId, bool deleteFiles)
         => _client.DeleteFromQueueAsync(nzoId, deleteFiles);
 
+    /// <inheritdoc/>
     public Task DeleteFromHistoryAsync(string nzoId, bool deleteFiles)
         => _client.DeleteFromHistoryAsync(nzoId, deleteFiles);
-
-    public Task PauseAsync(string nzoId)
-        => _client.PauseAsync(nzoId);
-
-    public Task ChangeCategoryAsync(string nzoId, string category)
-        => _client.ChangeCategoryAsync(nzoId, category);
 }

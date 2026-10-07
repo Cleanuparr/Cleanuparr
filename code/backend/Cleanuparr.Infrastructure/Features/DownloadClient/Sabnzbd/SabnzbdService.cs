@@ -1,11 +1,9 @@
 using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
-using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
-using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -18,19 +16,15 @@ public partial class SabnzbdService : DownloadService
     public SabnzbdService(
         ILogger<SabnzbdService> logger,
         IFilenameEvaluator filenameEvaluator,
-        IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
-        IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IQueueRuleEvaluator queueRuleEvaluator,
-        ISeedingRuleEvaluator seedingRuleEvaluator,
         TimeProvider timeProvider
     ) : base(
-        logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator, timeProvider
+        logger, filenameEvaluator, dryRunInterceptor,
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, timeProvider
     )
     {
         var sabnzbdClient = new SabnzbdClient(downloadClientConfig, _httpClient);
@@ -41,20 +35,16 @@ public partial class SabnzbdService : DownloadService
     internal SabnzbdService(
         ILogger<SabnzbdService> logger,
         IFilenameEvaluator filenameEvaluator,
-        IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
-        IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IQueueRuleEvaluator queueRuleEvaluator,
-        ISeedingRuleEvaluator seedingRuleEvaluator,
         TimeProvider timeProvider,
         ISabnzbdClientWrapper clientWrapper
     ) : base(
-        logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator, timeProvider
+        logger, filenameEvaluator, dryRunInterceptor,
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, timeProvider
     )
     {
         _client = clientWrapper;
@@ -64,7 +54,7 @@ public partial class SabnzbdService : DownloadService
     {
         try
         {
-            await _client.GetVersionAsync();
+            await _client.ValidateApiKeyAsync();
             _logger.LogDebug("Successfully connected to SABnzbd client {ClientId}", _downloadClientConfig.Id);
         }
         catch (Exception ex)
@@ -80,7 +70,7 @@ public partial class SabnzbdService : DownloadService
 
         try
         {
-            await _client.GetVersionAsync();
+            await _client.ValidateApiKeyAsync();
             stopwatch.Stop();
 
             return new HealthCheckResult

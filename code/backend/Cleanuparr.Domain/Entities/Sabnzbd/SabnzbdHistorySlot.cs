@@ -14,7 +14,8 @@ public sealed record SabnzbdHistorySlot
     public string? Name { get; init; }
 
     /// <summary>
-    /// "Completed" or "Failed" once a job leaves the queue.
+    /// "Completed" or "Failed" once post-processing (verify/repair/extract/move) finishes; until then one of
+    /// Queued/QuickCheck/Verifying/Repairing/Fetching/Extracting/Moving/Running.
     /// </summary>
     [JsonPropertyName("status")]
     public string? Status { get; init; }

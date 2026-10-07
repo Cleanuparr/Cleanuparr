@@ -6,32 +6,24 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Sabnzbd;
 
 public partial class SabnzbdService
 {
-    /// <summary>
-    /// Usenet downloads do not seed - there is nothing for the seeding rules to evaluate.
-    /// </summary>
     /// <inheritdoc/>
-    public override Task<List<ITorrentItemWrapper>> GetSeedingDownloads() =>
-        Task.FromResult(new List<ITorrentItemWrapper>());
-
-    /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
-        SabnzbdQueueData? queue = await _client.GetQueueAsync();
-        SabnzbdHistoryData? history = await _client.GetHistoryAsync();
+        Task<SabnzbdQueueData?> queueTask = _client.GetQueueAsync();
+        Task<SabnzbdHistoryData?> historyTask = _client.GetHistoryAsync();
+        await Task.WhenAll(queueTask, historyTask);
 
-        List<ITorrentItemWrapper> items = [];
+        SabnzbdQueueData? queue = await queueTask;
+        SabnzbdHistoryData? history = await historyTask;
 
-        foreach (SabnzbdQueueSlot slot in queue?.Slots ?? [])
+        if (queue is null || history is null)
         {
-            if (string.IsNullOrEmpty(slot.NzoId))
-            {
-                continue;
-            }
-
-            items.Add(new SabnzbdItemWrapper(slot, queue?.KbPerSec ?? 0, queue?.Paused ?? false));
+            throw new InvalidOperationException("SABnzbd returned no queue/history");
         }
 
-        foreach (SabnzbdHistorySlot slot in history?.Slots ?? [])
+        List<IDownloadItem> items = [];
+
+        foreach (SabnzbdQueueSlot slot in queue.Slots)
         {
             if (string.IsNullOrEmpty(slot.NzoId))
             {
@@ -41,96 +33,144 @@ public partial class SabnzbdService
             items.Add(new SabnzbdItemWrapper(slot));
         }
 
+        foreach (SabnzbdHistorySlot slot in history.Slots)
+        {
+            if (string.IsNullOrEmpty(slot.NzoId))
+            {
+                continue;
+            }
+
+            items.Add(new SabnzbdItemWrapper(slot));
+        }
+
+        ThrowIfTorrentListCollapsed(queue.Slots.Count + history.Slots.Count, items.Count);
+
         return items;
     }
 
+    /// <summary>
+    /// Claims each history job's storage path and every ancestor folder above it, plus, while the client is busy
+    /// (queued or post-processing), every top-level entry under SABnzbd's incomplete <c>download_dir</c>.
+    /// </summary>
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
-        BuildClaimedPathsAsync(torrents, _ => Task.FromResult<IReadOnlyCollection<string>>([]));
-
-    /// <inheritdoc/>
-    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents)
     {
-        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
+        HashSet<string> claimed = new(BuildHistoryClaims(torrents), StringComparer.OrdinalIgnoreCase);
 
-        if (sabnzbdItem.IsInHistory)
+        bool clientIsBusy = torrents.Any(t => t is SabnzbdItemWrapper { IsInHistory: false } or SabnzbdItemWrapper { Status: not ("Completed" or "Failed") });
+
+        if (clientIsBusy)
         {
-            await _client.DeleteFromHistoryAsync(torrent.Hash, deleteSourceFiles);
-            return;
+            foreach (string claim in await BuildIncompleteClaimsAsync())
+            {
+                claimed.Add(claim);
+            }
         }
 
-        await _client.DeleteFromQueueAsync(torrent.Hash, deleteSourceFiles);
-    }
-
-    /// <inheritdoc/>
-    public override async Task StopDownload(ITorrentItemWrapper torrent)
-    {
-        await _client.PauseAsync(torrent.Hash);
+        return claimed.ToList();
     }
 
     /// <summary>
-    /// SABnzbd categories are normally defined in its own config; the API offers no documented, version-stable
-    /// way to create one, so this only warns when the category is missing instead of failing the run.
+    /// Claims a history job's <c>storage</c> path plus every ancestor folder above it. A single-file job's
+    /// <c>storage</c> names the file itself, one level under its job folder; a category subfolder or an absolute
+    /// category path moves the job's top-level entry further up than one hop. Claiming the whole ancestor chain
+    /// covers all three without needing to know <c>complete_dir</c>.
+    /// </summary>
+    private IEnumerable<string> BuildHistoryClaims(IReadOnlyList<IDownloadItem> torrents)
+    {
+        List<string> claims = [];
+
+        foreach (IDownloadItem torrent in torrents)
+        {
+            if (string.IsNullOrEmpty(torrent.SavePath))
+            {
+                continue;
+            }
+
+            claims.AddRange(PathAndAncestors(RemapAndTrim(torrent.SavePath)));
+        }
+
+        return claims;
+    }
+
+    private static IEnumerable<string> PathAndAncestors(string path)
+    {
+        for (string? current = path; !string.IsNullOrEmpty(current); current = Path.GetDirectoryName(current))
+        {
+            yield return current;
+        }
+    }
+
+    /// <summary>
+    /// SAB sanitizes job names for incomplete folders and appends ".1"/".2" on a clash, so download_dir plus the job name can miss the real folder.
+    /// Claiming every entry while the client is busy (queued or post-processing) protects active downloads instead; an idle client claims nothing, so leftovers stay cleanable.
+    /// A busy client that can't resolve a usable download_dir throws instead, since silently claiming nothing would let the orphan scan move an in-progress job.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> BuildIncompleteClaimsAsync()
+    {
+        string? downloadDir = await _client.GetDownloadDirAsync();
+
+        if (string.IsNullOrEmpty(downloadDir))
+        {
+            throw new InvalidOperationException("SABnzbd download_dir is empty, skipping orphan scan while jobs are active");
+        }
+
+        string remappedDir = RemapAndTrim(downloadDir);
+
+        if (!Path.IsPathRooted(remappedDir))
+        {
+            throw new InvalidOperationException($"SABnzbd download_dir '{downloadDir}' is relative, skipping orphan scan while jobs are active");
+        }
+
+        if (!Directory.Exists(remappedDir))
+        {
+            throw new InvalidOperationException($"SABnzbd download_dir '{remappedDir}' does not exist, skipping orphan scan while jobs are active");
+        }
+
+        return Directory.EnumerateFileSystemEntries(remappedDir).ToList();
+    }
+
+    /// <summary>
+    /// History delete always archives off (<c>archive=0</c> on the client call), so the job disappears for good.
+    /// SABnzbd's own <c>del_files</c> only deletes a <b>Failed</b> job's files; for a Completed job we delete the
+    /// storage folder ourselves, the same way Sonarr does for its own usenet clients.
     /// </summary>
     /// <inheritdoc/>
-    public override async Task CreateCategoryAsync(string name)
+    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
     {
-        IReadOnlyList<string> existingCategories = await _client.GetCategoriesAsync();
+        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
 
-        if (existingCategories.Contains(name, StringComparer.InvariantCultureIgnoreCase))
+        if (!sabnzbdItem.IsInHistory)
         {
+            await _client.DeleteFromQueueAsync(torrent.DownloadId, deleteSourceFiles);
             return;
         }
 
-        _logger.LogWarning(
-            "Category {Name} does not exist in SABnzbd and cannot be created automatically; create it in SABnzbd's own settings first | {ClientName}",
-            name, _downloadClientConfig.Name);
-    }
+        await _client.DeleteFromHistoryAsync(torrent.DownloadId, deleteSourceFiles);
 
-    /// <inheritdoc/>
-    protected override Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
-    {
-        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
+        if (!deleteSourceFiles || sabnzbdItem.Status != "Completed")
+        {
+            return;
+        }
 
         if (string.IsNullOrEmpty(sabnzbdItem.SavePath))
         {
-            return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(null);
-        }
-
-        string savePath = RemapAndTrim(sabnzbdItem.SavePath);
-
-        if (!Directory.Exists(savePath))
-        {
-            return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(null);
-        }
-
-        return Task.FromResult<IEnumerable<(string FilePath, HardLinkScanAction Action)>?>(BuildHardLinkScanItems(savePath));
-    }
-
-    private static IEnumerable<(string FilePath, HardLinkScanAction Action)> BuildHardLinkScanItems(string savePath)
-    {
-        foreach (string file in Directory.EnumerateFiles(savePath, "*", SearchOption.AllDirectories))
-        {
-            yield return (file, HardLinkScanAction.CheckHardLinks);
-        }
-    }
-
-    /// <summary>
-    /// SABnzbd's change_cat only works on jobs still in the queue; history has no equivalent API.
-    /// </summary>
-    /// <inheritdoc/>
-    protected override async Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
-    {
-        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
-
-        if (sabnzbdItem.IsInHistory)
-        {
-            _logger.LogWarning(
-                "Cannot change category for {Name} because it already finished in SABnzbd; create a separate category per *arr instance instead | {ClientName}",
-                torrent.Name, _downloadClientConfig.Name);
+            _logger.LogDebug("skip disk delete | no storage path | {Name}", sabnzbdItem.Name);
             return;
         }
 
-        await _client.ChangeCategoryAsync(torrent.Hash, targetCategory);
+        string storagePath = RemapAndTrim(sabnzbdItem.SavePath);
+
+        // A single-file job reports `storage` as the file itself, one level under its job folder.
+        if (File.Exists(storagePath))
+        {
+            storagePath = Path.GetDirectoryName(storagePath) ?? storagePath;
+        }
+
+        await _dryRunInterceptor.InterceptAsync(() =>
+        {
+            TryDeleteFiles(storagePath, failOnNotFound: false);
+            return Task.CompletedTask;
+        });
     }
 }

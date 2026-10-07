@@ -7,14 +7,14 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Sabnzbd;
 public partial class SabnzbdService
 {
     /// <inheritdoc/>
-    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
         DownloadCheckResult result = new();
-        (SabnzbdQueueSlot? queueSlot, SabnzbdHistorySlot? historySlot, double serverKbPerSec, bool queuePaused) = await FindAsync(hash);
+        (SabnzbdQueueSlot? queueSlot, SabnzbdHistorySlot? historySlot) = await FindAsync(downloadId);
 
         if (queueSlot is null && historySlot is null)
         {
-            _logger.LogDebug("Failed to find download {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find download {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
@@ -23,9 +23,9 @@ public partial class SabnzbdService
         SetDownloadClientContext();
 
         SabnzbdItemWrapper torrent = queueSlot is not null
-            ? new SabnzbdItemWrapper(queueSlot, serverKbPerSec, queuePaused)
+            ? new SabnzbdItemWrapper(queueSlot)
             : new SabnzbdItemWrapper(historySlot!);
-        result.Torrent = torrent;
+        result.Item = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
@@ -38,7 +38,7 @@ public partial class SabnzbdService
         {
             _logger.LogInformation("download failed in SABnzbd history | {Reason} | {Name}", historySlot.FailMessage, torrent.Name);
             result.ShouldRemove = true;
-            result.DeleteReason = DeleteReason.Stalled;
+            result.DeleteReason = DeleteReason.DownloadFailed;
             result.DeleteFromClient = true;
         }
 
@@ -48,19 +48,19 @@ public partial class SabnzbdService
     /// <summary>
     /// Looks up a job by its SABnzbd <c>nzo_id</c>, checking the active queue first, then history.
     /// </summary>
-    private async Task<(SabnzbdQueueSlot? Queue, SabnzbdHistorySlot? History, double ServerKbPerSec, bool QueuePaused)> FindAsync(string nzoId)
+    private async Task<(SabnzbdQueueSlot? Queue, SabnzbdHistorySlot? History)> FindAsync(string nzoId)
     {
         SabnzbdQueueData? queue = await _client.GetQueueAsync(nzoId);
         SabnzbdQueueSlot? queueSlot = queue?.Slots.FirstOrDefault(s => string.Equals(s.NzoId, nzoId, StringComparison.OrdinalIgnoreCase));
 
         if (queueSlot is not null)
         {
-            return (queueSlot, null, queue?.KbPerSec ?? 0, queue?.Paused ?? false);
+            return (queueSlot, null);
         }
 
         SabnzbdHistoryData? history = await _client.GetHistoryAsync(nzoId);
         SabnzbdHistorySlot? historySlot = history?.Slots.FirstOrDefault(s => string.Equals(s.NzoId, nzoId, StringComparison.OrdinalIgnoreCase));
 
-        return (null, historySlot, 0, false);
+        return (null, historySlot);
     }
 }
