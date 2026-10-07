@@ -233,4 +233,17 @@ test.describe('Queue Cleaner UI', () => {
     await enabled.click();
     await expectNoGuardOnLeave(page);
   });
+
+  test('Usenet toggle is always checked and cannot be toggled off', async ({ page }) => {
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    const usenetToggle = toggle(page, 'Remove failed SABnzbd downloads');
+    await ensureAccordionExpanded(page, 'Usenet', usenetToggle);
+
+    await expect(usenetToggle).toHaveAttribute('aria-checked', 'true');
+    await expect(usenetToggle).toBeDisabled();
+
+    await usenetToggle.click({ force: true });
+    await expect(usenetToggle).toHaveAttribute('aria-checked', 'true');
+  });
 });

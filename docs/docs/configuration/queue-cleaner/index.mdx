@@ -121,7 +121,7 @@ Number of strikes before a failed import download is removed from the queue. Set
 When enabled, private torrents will be skipped during failed import cleaning. This is useful if you want to preserve private tracker content even when imports fail.
 
 <Important>
-This setting needs a download client to be configured.
+This setting needs a download client of the matching protocol to be configured.
 </Important>
 
 </ConfigSection>
@@ -149,7 +149,7 @@ Setting this to true means private torrents will be permanently deleted, potenti
 </Warning>
 
 <Important>
-This setting needs a download client to be configured.
+This setting needs a download client of the matching protocol to be configured.
 </Important>
 
 </ConfigSection>
@@ -158,10 +158,10 @@ This setting needs a download client to be configured.
   title="Skip If Not Found In Client"
 >
 
-When enabled, torrents that are not found in any enabled torrent client will skip the failed import check. This is useful when the connection between Cleanuparr and your download client is temporarily broken or when the download client is down, preventing accidental removal of private torrents when their privacy status cannot be determined.
+When enabled, a download that is not found in any enabled client of its protocol skips the failed import check. A torrent is looked up in your torrent clients, a usenet download in your usenet clients. This is useful when the connection between Cleanuparr and your download client is temporarily broken or when the download client is down, preventing accidental removal of private torrents when their privacy status cannot be determined.
 
 <Important>
-This setting needs a download client to be configured.
+This setting needs a download client of the matching protocol to be configured.
 </Important>
 
 </ConfigSection>
@@ -615,6 +615,30 @@ When enabled, private torrents that reach the maximum strikes will be deleted fr
 <Warning>
 Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
 </Warning>
+
+</ConfigSection>
+
+</div>
+</PrefixedSection>
+
+<PrefixedSection prefix="usenet">
+<div className={styles.section}>
+
+<SectionTitle>Usenet</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Behaviour specific to Usenet download clients such as SABnzbd.
+</p>
+
+<ConfigSection
+  title="Remove Failed SABnzbd Downloads"
+>
+
+Jobs SABnzbd marks as `Failed` are removed from the *arr queue and from SABnzbd, then searched again.
+
+<Important>
+Requires a SABnzbd download client. This is always on and is not configurable.
+</Important>
 
 </ConfigSection>
 

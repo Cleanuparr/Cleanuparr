@@ -469,6 +469,26 @@ describe('QueueCleanerComponent', () => {
     expect(api.getConfig).toHaveBeenCalledTimes(2);
   });
 
+  it('renders the Usenet toggle checked and disabled, hides it when Enabled is off, and stays clean', () => {
+    const { fixture, component } = setup();
+
+    const usenetAccordion = fixture.nativeElement.querySelector('app-accordion:last-of-type');
+    expect(usenetAccordion?.textContent).toContain('Usenet');
+
+    component.usenetExpanded.set(true);
+    fixture.detectChanges();
+
+    const usenetToggle = fixture.nativeElement.querySelector('app-toggle[helpkey="queue-cleaner:usenet.removeFailed"] button');
+    expect(usenetToggle.getAttribute('aria-checked')).toBe('true');
+    expect(usenetToggle.disabled).toBe(true);
+    expect(component.dirty()).toBe(false);
+
+    component.qcForm.enabled().value.set(false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-toggle[helpkey="queue-cleaner:usenet.removeFailed"]')).toBeNull();
+  });
+
   it('toasts which rule load failed alongside the backend message', () => {
     const api = createApi(CONFIG, STALL_RULES, SLOW_RULES);
     api.getStallRules.mockReturnValue(throwError(() => new ApiError('stall boom')));

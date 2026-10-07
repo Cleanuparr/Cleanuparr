@@ -45,6 +45,7 @@ export class DocumentationService {
       'slowRule.ignoreWhileAltSpeedActive': 'slow-ignore-while-alternate-speed-active',
       'slowRule.deletePrivateTorrentsFromClient': 'slow-delete-private-from-client',
       'slowRule.changeCategory': 'slow-change-category',
+      'usenet.removeFailed': 'usenet-remove-failed-sabnzbd-downloads',
     },
     'general': {
       'displaySupportBanner': 'display-support-banner',

@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DownloadClientApi } from '@core/api/download-client.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
-import { ClientConfig, DownloadClientConfig } from '@shared/models/download-client-config.model';
-import { DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
+import { ClientConfig, DownloadClientConfig, DownloadClientTypesResponse } from '@shared/models/download-client-config.model';
+import { DownloadClientAuthField, DownloadClientCapability, DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
 import { DownloadClientsComponent } from './download-clients.component';
 
 const QBIT: ClientConfig = {
@@ -38,13 +38,49 @@ const DELUGE: ClientConfig = {
 
 const CONFIG: DownloadClientConfig = { clients: [QBIT, DELUGE] };
 
-function createApi(config: DownloadClientConfig = CONFIG) {
+const TYPES: DownloadClientTypesResponse = {
+  types: [
+    {
+      typeName: DownloadClientTypeName.qBittorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup, DownloadClientCapability.TagFiltering],
+    },
+    {
+      typeName: DownloadClientTypeName.Deluge,
+      authFields: [DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup],
+    },
+    {
+      typeName: DownloadClientTypeName.Transmission,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup, DownloadClientCapability.TagFiltering],
+    },
+    {
+      typeName: DownloadClientTypeName.uTorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup],
+    },
+    {
+      typeName: DownloadClientTypeName.rTorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [],
+    },
+    {
+      typeName: DownloadClientTypeName.Sabnzbd,
+      authFields: [DownloadClientAuthField.ApiKey],
+      capabilities: [DownloadClientCapability.OrphanClaims],
+    },
+  ],
+};
+
+function createApi(config: DownloadClientConfig = CONFIG, types: DownloadClientTypesResponse = TYPES) {
   return {
     getConfig: vi.fn(() => of(config)),
     create: vi.fn(() => of(QBIT)),
     update: vi.fn(() => of(QBIT)),
     delete: vi.fn(() => of(undefined)),
     test: vi.fn(() => of({ message: 'Connected to qBittorrent 4.6.0' })),
+    getTypes: vi.fn(() => of(types)),
   };
 }
 
@@ -216,6 +252,30 @@ describe('DownloadClientsComponent', () => {
     expect(fieldLabels(fixture)).toContain('API Key');
   });
 
+  it('shows no auth fields while the types endpoint is still loading', async () => {
+    const types$ = new Subject<DownloadClientTypesResponse>();
+    const api = createApi();
+    api.getTypes.mockReturnValue(types$);
+    const { fixture, component } = setup(api);
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    expect(component.showUsernameField()).toBe(false);
+    expect(component.showPasswordField()).toBe(false);
+    expect(component.showApiKeyField()).toBe(false);
+    expect(fieldLabels(fixture)).not.toContain('Username');
+    expect(fieldLabels(fixture)).not.toContain('Password');
+
+    types$.next(TYPES);
+    types$.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.showUsernameField()).toBe(true);
+    expect(component.showPasswordField()).toBe(true);
+  });
+
   it('does not show the API key field for clients that do not use one', () => {
     const { fixture, component } = setup();
 
@@ -244,7 +304,6 @@ describe('DownloadClientsComponent', () => {
 
     expect(api.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: DownloadClientType.Usenet,
         typeName: DownloadClientTypeName.Sabnzbd,
         apiKey: 'sab-key',
       }),
@@ -344,7 +403,6 @@ describe('DownloadClientsComponent', () => {
     expect(api.create).toHaveBeenCalledWith({
       enabled: true,
       name: 'New client',
-      type: DownloadClientType.Torrent,
       typeName: DownloadClientTypeName.Transmission,
       host: 'http://localhost:9091',
       username: '',
@@ -376,9 +434,7 @@ describe('DownloadClientsComponent', () => {
 
     expect(api.update).toHaveBeenCalledWith('client-qb', {
       enabled: true,
-      id: 'client-qb',
       name: 'Renamed',
-      type: DownloadClientType.Torrent,
       typeName: DownloadClientTypeName.qBittorrent,
       host: 'http://localhost:8080',
       username: 'admin',
@@ -420,7 +476,6 @@ describe('DownloadClientsComponent', () => {
 
     expect(api.test).toHaveBeenCalledWith({
       typeName: DownloadClientTypeName.qBittorrent,
-      type: DownloadClientType.Torrent,
       host: 'http://localhost:8080',
       username: 'admin',
       password: 'secret',
@@ -510,6 +565,24 @@ describe('DownloadClientsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
 
     api.getConfig.mockReturnValue(of(CONFIG));
+    component.retry();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(text(fixture, '.item-row__name')).toEqual(['qBit box', 'Deluge box']);
+  });
+
+  it('shows the connection error state when the types endpoint fails and recovers on retry', () => {
+    const api = createApi();
+    api.getTypes.mockReturnValue(throwError(() => new Error('offline')));
+    const { fixture, component, toast } = setup(api);
+
+    expect(component.loadError()).toBe(true);
+    expect(component.clients()).toEqual([]);
+    expect(toast.error).toHaveBeenCalledWith('Failed to load download clients: offline');
+    expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
+
+    api.getTypes.mockReturnValue(of(TYPES));
     component.retry();
     fixture.detectChanges();
 

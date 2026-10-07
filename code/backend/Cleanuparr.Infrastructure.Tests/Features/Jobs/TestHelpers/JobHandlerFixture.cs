@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 ﻿using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -116,15 +117,17 @@ public class JobHandlerFixture : IDisposable
     /// <summary>
     /// Creates a mock download service
     /// </summary>
-    public IDownloadService CreateMockDownloadService(string clientName = "Test Client")
+    public IMockDownloadService CreateMockDownloadService(
+        string clientName = "Test Client",
+        Domain.Enums.DownloadClientTypeName typeName = Domain.Enums.DownloadClientTypeName.qBittorrent)
     {
-        var mock = Substitute.For<IDownloadService>();
+        var mock = Substitute.For<IMockDownloadService>();
         mock.ClientConfig.Returns(new Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig
         {
             Id = Guid.NewGuid(),
             Name = clientName,
-            Type = Domain.Enums.DownloadClientType.Torrent,
-            TypeName = Domain.Enums.DownloadClientTypeName.qBittorrent,
+            Type = typeName.ClientType(),
+            TypeName = typeName,
             Enabled = true,
             Host = new Uri("http://localhost:8080")
         });

@@ -284,7 +284,7 @@ public static class TestDataContextFactory
             Id = Guid.NewGuid(),
             Name = name,
             TypeName = typeName,
-            Type = DownloadClientType.Torrent,
+            Type = typeName.ClientType(),
             Enabled = enabled,
             Host = new Uri("http://localhost:8080"),
             Username = "admin",
