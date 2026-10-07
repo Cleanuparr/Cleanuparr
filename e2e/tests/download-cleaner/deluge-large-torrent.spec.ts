@@ -123,7 +123,6 @@ test.describe.serial('Deluge unlinked cleanup with a large torrent', () => {
       enabled: true,
       name: 'Deluge large torrent e2e',
       typeName: deluge.typeName,
-      type: 'Torrent',
       host: deluge.cleanuparrHost,
       username: deluge.username,
       password: deluge.password,

@@ -69,9 +69,9 @@ public class DeadTorrentConfigController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
-            if (dto.Enabled && client.TypeName is DownloadClientTypeName.rTorrent)
+            if (dto.Enabled && !client.TypeName.SupportsCapability(DownloadClientCapability.DeadTorrent))
             {
-                return this.ProblemResult(StatusCodes.Status400BadRequest, "Dead torrent handling is not supported for rTorrent (no seeder count available)");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, $"Dead torrent handling is not supported for {client.TypeName} (no seeder count available)");
             }
 
             var existing = await _dataContext.DeadTorrentConfigs

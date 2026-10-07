@@ -7,6 +7,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -184,13 +185,32 @@ public class UnlinkedConfigControllerTests : IDisposable
             () => _controller.UpdateUnlinkedConfig(client.Id, dto));
     }
 
-    private DownloadClientConfig AddDownloadClient()
+    [Fact]
+    public async Task UpdateUnlinkedConfig_EnabledForSabnzbd_ReturnsBadRequest()
+    {
+        // Arrange: Sabnzbd has no hardlink concept, so unlinked handling cannot apply to it
+        var client = AddDownloadClient(DownloadClientTypeName.Sabnzbd);
+        var dto = new UnlinkedConfigRequest
+        {
+            Enabled = true,
+            TargetCategory = "unlinked-cat",
+            Categories = new List<string> { "movies" },
+        };
+
+        // Act
+        var result = await _controller.UpdateUnlinkedConfig(client.Id, dto);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
+    }
+
+    private DownloadClientConfig AddDownloadClient(DownloadClientTypeName typeName = DownloadClientTypeName.qBittorrent)
     {
         var client = new DownloadClientConfig
         {
             Id = Guid.NewGuid(),
             Name = "test-client",
-            TypeName = DownloadClientTypeName.qBittorrent,
+            TypeName = typeName,
             Type = DownloadClientType.Torrent,
         };
         _dataContext.DownloadClients.Add(client);

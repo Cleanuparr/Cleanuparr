@@ -107,7 +107,6 @@ test.describe.serial('Orphaned files cleanup — cross-device move', () => {
       enabled: true,
       name: 'qBittorrent cross-device',
       typeName: driver.typeName,
-      type: 'Torrent',
       host: driver.cleanuparrHost,
       username: driver.username ?? '',
       password: driver.password ?? '',

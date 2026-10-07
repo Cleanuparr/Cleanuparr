@@ -11,8 +11,6 @@ public sealed record TestDownloadClientRequest
 {
     public DownloadClientTypeName TypeName { get; init; }
 
-    public DownloadClientType Type { get; init; }
-
     public string? Host { get; init; }
 
     public string? Username { get; init; }
@@ -27,6 +25,11 @@ public sealed record TestDownloadClientRequest
 
     public void Validate()
     {
+        if (TypeName is DownloadClientTypeName.Unknown || !Enum.IsDefined(TypeName))
+        {
+            throw new ValidationException("Unsupported download client type");
+        }
+
         if (string.IsNullOrWhiteSpace(Host))
         {
             throw new ValidationException("Host cannot be empty");
@@ -64,7 +67,7 @@ public sealed record TestDownloadClientRequest
             Enabled = true,
             Name = "Test Client",
             TypeName = TypeName,
-            Type = Type,
+            Type = TypeName.ClientType(),
             Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
             Username = Username,
             Password = password,

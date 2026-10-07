@@ -20,7 +20,6 @@ test.describe.serial('Dead Torrent Config API', () => {
       enabled: false,
       name: 'e2e-dead-qbit',
       typeName: 'qBittorrent',
-      type: 'Torrent',
       host: 'http://localhost:9999',
     });
     expect(res.status).toBe(201);
@@ -30,7 +29,6 @@ test.describe.serial('Dead Torrent Config API', () => {
       enabled: false,
       name: 'e2e-dead-rtorrent',
       typeName: 'rTorrent',
-      type: 'Torrent',
       host: 'http://localhost:9998',
     });
     expect(rt.status).toBe(201);

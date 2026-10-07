@@ -208,6 +208,17 @@ public class SeedingRulesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateSeedingRule_ClientWithoutSeedingCleanupCapability_ReturnsBadRequest()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext, DownloadClientTypeName.Sabnzbd, "Test Sabnzbd");
+        var request = CreateValidRequest();
+
+        var result = await _controller.CreateSeedingRule(client.Id, request);
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
     public async Task CreateSeedingRule_SetsMaxInactiveDays()
     {
         var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);

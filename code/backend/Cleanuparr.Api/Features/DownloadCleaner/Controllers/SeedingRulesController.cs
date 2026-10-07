@@ -68,6 +68,11 @@ public class SeedingRulesController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
+            if (!client.TypeName.SupportsCapability(DownloadClientCapability.SeedingCleanup))
+            {
+                return this.ProblemResult(StatusCodes.Status400BadRequest, $"Seeding rules are not supported for {client.TypeName}");
+            }
+
             var existingRules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
             if (ruleDto.Priority.HasValue && existingRules.Any(r => r.Priority == ruleDto.Priority.Value))
