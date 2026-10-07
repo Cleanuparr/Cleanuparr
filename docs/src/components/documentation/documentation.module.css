@@ -732,6 +732,333 @@
   text-decoration: underline;
 }
 
+/* Capability Matrix */
+.capabilityMatrixSection {
+  margin: var(--doc-spacing-lg) 0;
+  scroll-margin-top: 100px;
+}
+
+.capabilityLegend {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin: 0 0 var(--doc-spacing-md) 0;
+  font-size: 0.85rem;
+  color: var(--doc-text-secondary);
+}
+
+.capabilityLegendText {
+  justify-self: start;
+}
+
+.capabilityTableWrapper {
+  overflow-x: auto;
+  border-radius: var(--doc-radius-md);
+  box-shadow: var(--doc-shadow-sm);
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--doc-bg-secondary);
+  background-image:
+    linear-gradient(to right, var(--doc-bg-secondary) 0, rgba(0, 0, 0, 0) 24px),
+    linear-gradient(to left, var(--doc-bg-secondary) 0, rgba(0, 0, 0, 0) 24px),
+    linear-gradient(to right, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0) 16px),
+    linear-gradient(to left, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0) 16px);
+  background-repeat: no-repeat;
+  background-size: 24px 100%, 24px 100%, 16px 100%, 16px 100%;
+  background-position: 0 0, 100% 0, 0 0, 100% 0;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.capabilityTable {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* outranks .markdown table, whose overflow:hidden breaks sticky */
+.capabilityTableWrapper .capabilityTable {
+  overflow: visible;
+  margin: 0;
+}
+
+/* outranks the .markdown table th/td padding */
+.capabilityTableWrapper .capabilityTable th,
+.capabilityTableWrapper .capabilityTable td {
+  padding: 0.5rem 0.15rem;
+  border-bottom: 1px solid var(--doc-border-color);
+  text-align: left;
+}
+
+.capabilityTable .capabilityClientHeader {
+  width: calc((100% - 200px) / 6);
+  background: var(--doc-bg-primary);
+  color: var(--doc-text-primary);
+  text-align: center;
+  text-transform: none;
+  vertical-align: bottom;
+  font-weight: 600;
+  font-size: 0.72rem;
+  border-bottom: 2px solid var(--doc-border-hover);
+}
+
+.capabilityClientHeaderInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.capabilityClientIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.capabilityClientName {
+  white-space: nowrap;
+}
+
+.capabilityTableWrapper .capabilityTable .capabilityCornerCell {
+  width: 200px;
+  padding: 0.5rem 0.75rem;
+  background: var(--doc-bg-primary);
+  color: var(--doc-text-primary);
+  text-transform: none;
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  border-bottom: 2px solid var(--doc-border-hover);
+}
+
+.capabilityGroupHeader {
+  background: var(--doc-bg-primary);
+  color: var(--doc-text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.capabilityTableWrapper .capabilityTable .capabilityGroupHeader {
+  padding-left: 0;
+}
+
+/* padding lives here because sticky left:0 ignores the th's padding */
+.capabilityGroupHeaderLabel {
+  display: inline-block;
+  position: sticky;
+  left: 0;
+  z-index: 11;
+  padding: 0 0.75rem 0 0.75rem;
+}
+
+.capabilityTableWrapper .capabilityTable .capabilityFeatureCell {
+  position: sticky;
+  left: 0;
+  z-index: 11;
+  background: var(--doc-bg-secondary);
+  font-weight: 500;
+  text-transform: none;
+  white-space: normal;
+  min-width: 200px;
+  padding: 0.5rem 0.75rem;
+}
+
+.capabilityTableWrapper .capabilityTable .capabilityCell {
+  text-align: center;
+}
+
+.capabilityCellContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+}
+
+.capabilityPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.22rem;
+  border-radius: 50px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.capabilityYes {
+  background: rgba(40, 167, 69, 0.15);
+  color: #1e7e34;
+}
+
+.capabilityPartial {
+  background: rgba(255, 193, 7, 0.22);
+  color: #8a6400;
+}
+
+.capabilityNo {
+  background: rgba(220, 53, 69, 0.15);
+  color: #a71d2a;
+}
+
+.capabilityNa {
+  background: rgba(128, 128, 128, 0.18);
+  color: #595959;
+}
+
+[data-theme='dark'] .capabilityYes {
+  background: rgba(40, 167, 69, 0.25);
+  color: #4ade80;
+}
+
+[data-theme='dark'] .capabilityPartial {
+  background: rgba(255, 193, 7, 0.25);
+  color: #ffd84d;
+}
+
+[data-theme='dark'] .capabilityNo {
+  background: rgba(220, 53, 69, 0.28);
+  color: #ff8a93;
+}
+
+[data-theme='dark'] .capabilityNa {
+  background: rgba(160, 160, 160, 0.22);
+  color: #c2c2c2;
+}
+
+/* stays below the sticky cells while scrolled */
+.capabilityNoteWrap {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.capabilityNoteMarker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--doc-border-color);
+  color: var(--doc-text-primary);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.capabilityNoteMarker:hover,
+.capabilityNoteMarker:focus-visible {
+  background: var(--doc-primary);
+  color: white;
+  text-decoration: none;
+  outline: 2px solid var(--doc-primary-light);
+  outline-offset: 2px;
+}
+
+.capabilityTooltip {
+  position: absolute;
+  bottom: 140%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: 0;
+  overflow: hidden;
+  background: var(--doc-text-primary);
+  color: var(--doc-bg-primary);
+  padding: 0;
+  border-radius: var(--doc-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  text-align: left;
+  box-shadow: var(--doc-shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 20;
+}
+
+/* hidden tooltips stay zero-width so they don't widen the scroll area */
+.capabilityNoteWrap:hover .capabilityTooltip,
+.capabilityNoteMarker:focus-visible + .capabilityTooltip {
+  width: 220px;
+  overflow: visible;
+  padding: 0.5rem 0.75rem;
+}
+
+.capabilityNoteWrap:hover .capabilityTooltip,
+.capabilityNoteMarker:focus-visible + .capabilityTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.capabilityNotesList {
+  margin: var(--doc-spacing-md) 0 0 0;
+  padding-left: 1.5rem;
+  color: var(--doc-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.capabilityNotesList li {
+  margin: 0.4rem 0;
+  scroll-margin-top: 100px;
+}
+
+.capabilityNotesList li:target {
+  color: var(--doc-text-primary);
+  font-weight: 600;
+}
+
+.capabilityScrollHint {
+  display: none;
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8rem;
+  color: var(--doc-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .capabilityLegend {
+    font-size: 0.8rem;
+  }
+
+  .capabilityNoteWrap:hover .capabilityTooltip,
+  .capabilityNoteMarker:focus-visible + .capabilityTooltip {
+    width: 180px;
+  }
+
+  .capabilityScrollHint {
+    display: block;
+  }
+
+  .capabilityTableWrapper .capabilityTable .capabilityCornerCell {
+    width: 130px;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .capabilityTableWrapper .capabilityTable .capabilityFeatureCell {
+    min-width: 130px;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .capabilityGroupHeaderLabel {
+    padding: 0 0.6rem 0 0.6rem;
+  }
+
+  .capabilityTable .capabilityClientHeader {
+    width: calc((100% - 130px) / 6);
+  }
+}
+
 /* Enhanced Admonitions */
 .enhancedAdmonition {
   margin: 0.75rem 0;

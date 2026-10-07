@@ -9,6 +9,7 @@ export { default as QuickNav } from './QuickNav';
 export { default as EnhancedAdmonition, Note, Important, Warning, EnhancedNote, EnhancedImportant, EnhancedWarning } from './EnhancedAdmonition';
 export { default as ElementNavigator } from './ElementNavigator';
 export { default as AppCard } from './AppCard';
+export { default as CapabilityMatrix } from './CapabilityMatrix';
 export { ScreenshotGallery } from './ScreenshotGallery';
 export { ClickableImage } from './ClickableImage';
 
