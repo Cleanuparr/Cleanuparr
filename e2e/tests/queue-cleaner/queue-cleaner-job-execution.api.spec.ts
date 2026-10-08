@@ -10,6 +10,14 @@ function sabQueueRecord(record: QueueRecord): QueueRecord & { seriesId: number; 
   return { seriesId: 1, episodeId: 1, ...record };
 }
 
+// Setup resets app state only between spec folders, and every leftover instance reads the same arr mock.
+test.afterEach(async ({ api }) => {
+  const config: { instances?: Array<{ id: string }> } = await (await api.arr.getConfig('sonarr')).json();
+  for (const instance of config.instances ?? []) {
+    await api.arr.deleteInstance('sonarr', instance.id);
+  }
+});
+
 test.describe('QueueCleaner — job execution end-to-end', () => {
   test('manual trigger is accepted', async ({ api, mocks }) => {
     await ArrStubs.applyArrDefaults(mocks.arr);
