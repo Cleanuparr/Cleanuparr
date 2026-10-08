@@ -26,7 +26,7 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
     protected readonly ISeedingRuleEvaluator _seedingRuleEvaluator;
 
     protected TorrentDownloadService(
-        ILogger<DownloadService> logger,
+        ILogger<TorrentDownloadService> logger,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -381,13 +381,13 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
 
         if (seedingRule.MinSeedTime > 0 && seedingTime < minSeedingTime)
         {
-            _logger.LogDebug("skip | download has not reached MIN_SEED_TIME | {name}", downloadName);
+            _logger.LogDebug("skip | download has not reached MIN_SEED_TIME | {Name}", downloadName);
             return false;
         }
 
         if (ratio < seedingRule.MaxRatio)
         {
-            _logger.LogDebug("skip | download has not reached MAX_RATIO | {name}", downloadName);
+            _logger.LogDebug("skip | download has not reached MAX_RATIO | {Name}", downloadName);
             return false;
         }
 
@@ -406,7 +406,7 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
 
         if (!seederCount.HasValue)
         {
-            _logger.LogDebug("skip | download seeder count is unavailable | {name}", downloadName);
+            _logger.LogDebug("skip | download seeder count is unavailable | {Name}", downloadName);
             return true;
         }
 
@@ -416,7 +416,7 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
         }
 
         _logger.LogDebug(
-            "skip | download has fewer seeders than minimum | {seeders}/{minSeeders} | {name}",
+            "skip | download has fewer seeders than minimum | {Seeders}/{MinSeeders} | {Name}",
             seederCount.Value,
             seedersFilterable.MinSeeders,
             downloadName);
@@ -435,7 +435,7 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
 
         if (lastActivity is null || lastActivity <= DateTime.UnixEpoch)
         {
-            _logger.LogDebug("skip | download last activity is unavailable | {name}", downloadName);
+            _logger.LogDebug("skip | download last activity is unavailable | {Name}", downloadName);
             return true;
         }
 
@@ -443,7 +443,7 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
 
         if (inactiveDays < inactivityRule.MaxInactiveDays)
         {
-            _logger.LogDebug("skip | download still active within MAX_INACTIVE_DAYS | {name}", downloadName);
+            _logger.LogDebug("skip | download still active within MAX_INACTIVE_DAYS | {Name}", downloadName);
             return true;
         }
 
@@ -462,7 +462,7 @@ public abstract class TorrentDownloadService : DownloadService, ISeedingCleanupC
 
         if (seedingRule.MaxSeedTime > 0 && seedingTime < maxSeedingTime)
         {
-            _logger.LogDebug("skip | download has not reached MAX_SEED_TIME | {name}", downloadName);
+            _logger.LogDebug("skip | download has not reached MAX_SEED_TIME | {Name}", downloadName);
             return false;
         }
 

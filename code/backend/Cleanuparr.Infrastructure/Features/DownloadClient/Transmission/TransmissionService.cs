@@ -202,10 +202,6 @@ public partial class TransmissionService : TorrentDownloadService, IDeadTorrentC
         return _altSpeedLimitActive.Value;
     }
 
-    public override void Dispose()
-    {
-    }
-
     private async Task<TorrentInfo?> GetTorrentAsync(string hash)
     {
         return (await _client.TorrentGetAsync(Fields, hash))

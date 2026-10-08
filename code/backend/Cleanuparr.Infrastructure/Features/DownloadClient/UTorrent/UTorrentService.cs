@@ -86,10 +86,6 @@ public partial class UTorrentService : TorrentDownloadService, IDeadTorrentCapab
         _client = clientWrapper;
     }
 
-    public override void Dispose()
-    {
-    }
-
     /// <summary>
     /// Authenticates with µTorrent Web UI
     /// </summary>

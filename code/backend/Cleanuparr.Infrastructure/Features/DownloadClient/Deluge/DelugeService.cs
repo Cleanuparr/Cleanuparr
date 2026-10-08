@@ -146,8 +146,4 @@ public partial class DelugeService : TorrentDownloadService, IDeadTorrentCapable
             }
         }
     }
-
-    public override void Dispose()
-    {
-    }
 }

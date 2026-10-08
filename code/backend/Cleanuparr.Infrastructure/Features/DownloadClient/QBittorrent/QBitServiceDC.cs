@@ -60,8 +60,8 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents) =>
-        BuildClaimedPathsAsync(torrents, async torrent =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
+        BuildClaimedPathsAsync(downloads, async torrent =>
         {
             if (string.IsNullOrEmpty(torrent.DownloadId))
             {
@@ -99,15 +99,15 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        await _client.DeleteAsync([torrent.DownloadId], deleteSourceFiles);
+        await _client.DeleteAsync([item.DownloadId], deleteSourceFiles);
     }
 
     /// <inheritdoc/>
-    public override async Task StopDownload(IDownloadItem torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        await _client.PauseAsync([torrent.DownloadId]);
+        await _client.PauseAsync([item.DownloadId]);
     }
 
     public override async Task CreateCategoryAsync(string name)

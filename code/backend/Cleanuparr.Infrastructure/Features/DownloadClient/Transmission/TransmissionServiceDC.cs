@@ -40,8 +40,8 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents) =>
-        BuildClaimedPathsAsync(torrents, torrent =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
+        BuildClaimedPathsAsync(downloads, torrent =>
         {
             IReadOnlyCollection<string> files = torrent is TransmissionItemWrapper { Info.Files.Length: > 0 } wrapper
                 ? wrapper.Info.Files
@@ -72,16 +72,16 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        var transmissionTorrent = (TransmissionItemWrapper)torrent;
+        var transmissionTorrent = (TransmissionItemWrapper)item;
         await _client.TorrentRemoveAsync([transmissionTorrent.Info.Id], deleteSourceFiles);
     }
 
     /// <inheritdoc/>
-    public override async Task StopDownload(IDownloadItem torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        TransmissionItemWrapper transmissionTorrent = (TransmissionItemWrapper)torrent;
+        TransmissionItemWrapper transmissionTorrent = (TransmissionItemWrapper)item;
         await _client.TorrentStopAsync([transmissionTorrent.Info.Id]);
     }
 

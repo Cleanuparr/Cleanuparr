@@ -17,7 +17,7 @@ using QBittorrent.Client;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 
-public partial class QBitService : TorrentDownloadService, IDisposable, IDeadTorrentCapable
+public partial class QBitService : TorrentDownloadService, IDeadTorrentCapable
 {
     protected readonly IQBittorrentClientWrapper _client;
     private bool? _altSpeedLimitActive;
@@ -184,8 +184,13 @@ public partial class QBitService : TorrentDownloadService, IDisposable, IDeadTor
         return _altSpeedLimitActive.Value;
     }
 
-    public override void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        _client.Dispose();
+        if (disposing)
+        {
+            _client.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

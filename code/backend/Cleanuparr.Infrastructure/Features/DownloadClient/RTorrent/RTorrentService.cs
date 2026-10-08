@@ -102,8 +102,4 @@ public partial class RTorrentService : TorrentDownloadService
             };
         }
     }
-
-    public override void Dispose()
-    {
-    }
 }

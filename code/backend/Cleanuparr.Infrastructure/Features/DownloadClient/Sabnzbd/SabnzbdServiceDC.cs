@@ -53,11 +53,11 @@ public partial class SabnzbdService
     /// (queued or post-processing), every top-level entry under SABnzbd's incomplete <c>download_dir</c>.
     /// </summary>
     /// <inheritdoc/>
-    public override async Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents)
+    public override async Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads)
     {
-        HashSet<string> claimed = new(BuildHistoryClaims(torrents), StringComparer.OrdinalIgnoreCase);
+        HashSet<string> claimed = new(BuildHistoryClaims(downloads), StringComparer.OrdinalIgnoreCase);
 
-        bool clientIsBusy = torrents.Any(t => t is SabnzbdItemWrapper { IsInHistory: false } or SabnzbdItemWrapper { Status: not ("Completed" or "Failed") });
+        bool clientIsBusy = downloads.Any(t => t is SabnzbdItemWrapper { IsInHistory: false } or SabnzbdItemWrapper { Status: not ("Completed" or "Failed") });
 
         if (clientIsBusy)
         {
@@ -76,21 +76,11 @@ public partial class SabnzbdService
     /// category path moves the job's top-level entry further up than one hop. Claiming the whole ancestor chain
     /// covers all three without needing to know <c>complete_dir</c>.
     /// </summary>
-    private IEnumerable<string> BuildHistoryClaims(IReadOnlyList<IDownloadItem> torrents)
+    private IEnumerable<string> BuildHistoryClaims(IReadOnlyList<IDownloadItem> downloads)
     {
-        List<string> claims = [];
-
-        foreach (IDownloadItem torrent in torrents)
-        {
-            if (string.IsNullOrEmpty(torrent.SavePath))
-            {
-                continue;
-            }
-
-            claims.AddRange(PathAndAncestors(RemapAndTrim(torrent.SavePath)));
-        }
-
-        return claims;
+        return downloads
+            .Where(x => !string.IsNullOrEmpty(x.SavePath))
+            .SelectMany(x => PathAndAncestors(RemapAndTrim(x.SavePath)));
     }
 
     private static IEnumerable<string> PathAndAncestors(string path)
@@ -136,17 +126,17 @@ public partial class SabnzbdService
     /// storage folder ourselves, the same way Sonarr does for its own usenet clients.
     /// </summary>
     /// <inheritdoc/>
-    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)torrent;
+        SabnzbdItemWrapper sabnzbdItem = (SabnzbdItemWrapper)item;
 
         if (!sabnzbdItem.IsInHistory)
         {
-            await _client.DeleteFromQueueAsync(torrent.DownloadId, deleteSourceFiles);
+            await _client.DeleteFromQueueAsync(item.DownloadId, deleteSourceFiles);
             return;
         }
 
-        await _client.DeleteFromHistoryAsync(torrent.DownloadId, deleteSourceFiles);
+        await _client.DeleteFromHistoryAsync(item.DownloadId, deleteSourceFiles);
 
         if (!deleteSourceFiles || sabnzbdItem.Status != "Completed")
         {

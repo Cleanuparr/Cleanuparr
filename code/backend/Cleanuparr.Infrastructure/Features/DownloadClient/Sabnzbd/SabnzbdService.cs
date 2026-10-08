@@ -93,8 +93,4 @@ public partial class SabnzbdService : DownloadService
             };
         }
     }
-
-    public override void Dispose()
-    {
-    }
 }

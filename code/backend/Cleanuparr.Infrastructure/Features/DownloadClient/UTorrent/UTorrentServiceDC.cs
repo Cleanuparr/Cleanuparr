@@ -46,8 +46,8 @@ public partial class UTorrentService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents) =>
-        BuildClaimedPathsAsync(torrents, async torrent =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
+        BuildClaimedPathsAsync(downloads, async torrent =>
         {
             if (string.IsNullOrEmpty(torrent.DownloadId))
             {
@@ -59,15 +59,15 @@ public partial class UTorrentService
         });
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        string hash = torrent.DownloadId.ToLowerInvariant();
+        string hash = item.DownloadId.ToLowerInvariant();
         await _client.RemoveTorrentsAsync([hash], deleteSourceFiles);
     }
 
-    public override async Task StopDownload(IDownloadItem torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        string hash = torrent.DownloadId.ToLowerInvariant();
+        string hash = item.DownloadId.ToLowerInvariant();
         await _client.StopTorrentsAsync([hash]);
     }
 

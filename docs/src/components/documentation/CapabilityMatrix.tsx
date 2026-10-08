@@ -53,7 +53,7 @@ function normalizeCell(cell: CapabilityCellInput): CapabilityCell {
   return typeof cell === 'string' ? { status: cell } : cell;
 }
 
-export default function CapabilityMatrix({ id, clients, groups, notes, legend = true }: CapabilityMatrixProps) {
+export default function CapabilityMatrix({ id, clients, groups, notes, legend = true }: Readonly<CapabilityMatrixProps>) {
   const iconBase = useBaseUrl('/img/icons/');
   const noteIds = notes
     ? Object.keys(notes)
@@ -123,7 +123,7 @@ export default function CapabilityMatrix({ id, clients, groups, notes, legend = 
                         ? `${id}-tooltip-${groupIndex}-${rowIndex}-${cellIndex}`
                         : undefined;
                       return (
-                        <td key={cellIndex} className={styles.capabilityCell}>
+                        <td key={clients[cellIndex].name} className={styles.capabilityCell}>
                           <span className={styles.capabilityCellContent}>
                             <span className={`${styles.capabilityPill} ${STATUS_CLASS[cell.status]}`}>
                               {STATUS_LABEL[cell.status]}

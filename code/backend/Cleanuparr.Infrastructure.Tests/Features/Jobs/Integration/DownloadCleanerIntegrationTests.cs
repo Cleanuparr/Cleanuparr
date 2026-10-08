@@ -445,7 +445,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         httpClientProvider.CreateClient(Arg.Any<DownloadClientConfig>()).Returns(new HttpClient());
 
         RecordingDownloadService downloadService = new(
-            Substitute.For<ILogger<DownloadService>>(),
+            Substitute.For<ILogger<TorrentDownloadService>>(),
             Substitute.For<IFilenameEvaluator>(),
             Substitute.For<IStriker>(),
             _fixture.DryRunInterceptor,
@@ -481,7 +481,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         private readonly List<ITorrentItemWrapper> _seedingDownloads;
 
         public RecordingDownloadService(
-            ILogger<DownloadService> logger,
+            ILogger<TorrentDownloadService> logger,
             IFilenameEvaluator filenameEvaluator,
             IStriker striker,
             IDryRunInterceptor dryRunInterceptor,
@@ -505,16 +505,16 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         public List<string> StoppedHashes { get; } = [];
 
-        public override Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
+        public override Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
         {
-            DeletedHashes.Add(torrent.DownloadId);
+            DeletedHashes.Add(item.DownloadId);
 
             return Task.CompletedTask;
         }
 
-        public override Task StopDownload(IDownloadItem torrent)
+        public override Task StopDownload(IDownloadItem item)
         {
-            StoppedHashes.Add(torrent.DownloadId);
+            StoppedHashes.Add(item.DownloadId);
 
             return Task.CompletedTask;
         }
@@ -533,14 +533,10 @@ public class DownloadCleanerIntegrationTests : IDisposable
         public override Task<List<IDownloadItem>> GetAllDownloadsLite() =>
             Task.FromResult(_seedingDownloads.Cast<IDownloadItem>().ToList());
 
-        public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents) =>
+        public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
             Task.FromResult<IReadOnlyList<string>>([]);
 
         public override Task LoginAsync() => Task.CompletedTask;
-
-        public override void Dispose()
-        {
-        }
 
         public override Task<HealthCheckResult> HealthCheckAsync() => throw new NotSupportedException();
 

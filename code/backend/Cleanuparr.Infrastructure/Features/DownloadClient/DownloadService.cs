@@ -19,7 +19,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 /// Base download client implementation, shared by every protocol.
 /// Torrent-only behaviour (seeding, hardlinks, slow/stall rules) lives in <see cref="TorrentDownloadService"/>.
 /// </summary>
-public abstract class DownloadService : IDownloadService, IQueueCheckCapable, IFileBlockingCapable, IOrphanClaimsCapable
+public abstract class DownloadService : IQueueCheckCapable, IFileBlockingCapable, IOrphanClaimsCapable
 {
     protected readonly ILogger<DownloadService> _logger;
     protected readonly IFilenameEvaluator _filenameEvaluator;
@@ -58,7 +58,15 @@ public abstract class DownloadService : IDownloadService, IQueueCheckCapable, IF
         ContextProvider.SetDownloadClient(_downloadClientConfig);
     }
 
-    public abstract void Dispose();
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+    }
 
     public abstract Task LoginAsync();
 

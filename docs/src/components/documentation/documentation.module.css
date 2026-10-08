@@ -890,12 +890,12 @@
 
 .capabilityYes {
   background: rgba(40, 167, 69, 0.15);
-  color: #1e7e34;
+  color: #14591f;
 }
 
 .capabilityPartial {
   background: rgba(255, 193, 7, 0.22);
-  color: #8a6400;
+  color: #5c4300;
 }
 
 .capabilityNo {
@@ -992,10 +992,6 @@
   width: 220px;
   overflow: visible;
   padding: 0.5rem 0.75rem;
-}
-
-.capabilityNoteWrap:hover .capabilityTooltip,
-.capabilityNoteMarker:focus-visible + .capabilityTooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);

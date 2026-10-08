@@ -230,7 +230,7 @@ public sealed class QueueCleaner : GenericHandler
 
                     if (!downloadCheckResult.Found)
                     {
-                        _logger.LogWarning("Download not found in any {clientType} client | {title}", isTorrent ? "torrent" : "usenet", record.Title);
+                        _logger.LogWarning("Download not found in any {ClientType} client | {Title}", isTorrent ? "torrent" : "usenet", record.Title);
                     }
                 }
             }
@@ -268,7 +268,7 @@ public sealed class QueueCleaner : GenericHandler
 
             if (skipIfNotFoundInClient && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
             {
-                _logger.LogInformation("skip | download not found in any client | {title}", record.Title);
+                _logger.LogInformation("skip | download not found in any client | {Title}", record.Title);
                 continue;
             }
 

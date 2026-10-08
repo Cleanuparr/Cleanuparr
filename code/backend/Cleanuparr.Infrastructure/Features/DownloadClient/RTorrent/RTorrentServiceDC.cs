@@ -39,11 +39,11 @@ public partial class RTorrentService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> torrents)
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads)
     {
         HashSet<string> claimed = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (IDownloadItem torrent in torrents)
+        foreach (IDownloadItem torrent in downloads)
         {
             if (torrent is not RTorrentItemWrapper wrapper)
             {
@@ -65,29 +65,29 @@ public partial class RTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(IDownloadItem torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        string hash = torrent.DownloadId.ToUpperInvariant();
+        string hash = item.DownloadId.ToUpperInvariant();
         await _client.DeleteTorrentAsync(hash);
 
         if (deleteSourceFiles)
         {
             string savePath = PathHelper.NormalizeAndRemap(
-                torrent.SavePath,
+                item.SavePath,
                 _downloadClientConfig.DownloadDirectorySource,
                 _downloadClientConfig.DownloadDirectoryTarget);
 
             if (!TryDeleteFiles(savePath, true))
             {
-                _logger.LogWarning("Failed to delete files | {name}", torrent.Name);
+                _logger.LogWarning("Failed to delete files | {name}", item.Name);
             }
         }
     }
 
     /// <inheritdoc/>
-    public override async Task StopDownload(IDownloadItem torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        string hash = torrent.DownloadId.ToUpperInvariant();
+        string hash = item.DownloadId.ToUpperInvariant();
         await _client.StopTorrentAsync(hash);
     }
 

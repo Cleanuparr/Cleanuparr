@@ -8,12 +8,11 @@ import {
   type SelectOption,
 } from '@ui';
 import { DownloadClientApi, indexClientTypes } from '@core/api/download-client.api';
-import { DownloadClientTypeInfo } from '@shared/models/download-client-config.model';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
-  ClientConfig, CreateDownloadClientDto, UpdateDownloadClientDto, TestDownloadClientRequest,
+  DownloadClientTypeInfo, ClientConfig, CreateDownloadClientDto, UpdateDownloadClientDto, TestDownloadClientRequest,
 } from '@shared/models/download-client-config.model';
 import { DownloadClientAuthField, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
