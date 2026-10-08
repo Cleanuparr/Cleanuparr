@@ -34,15 +34,9 @@ public sealed class QueueWorker<TMessage> : BackgroundService
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        try
+        await foreach (TMessage message in _channel.Reader.ReadAllAsync(stoppingToken))
         {
-            await foreach (TMessage message in _channel.Reader.ReadAllAsync(stoppingToken))
-            {
-                await HandleAsync(message);
-            }
-        }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-        {
+            await HandleAsync(message);
         }
     }
 
