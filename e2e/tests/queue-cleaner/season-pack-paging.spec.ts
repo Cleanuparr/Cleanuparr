@@ -82,6 +82,14 @@ test.describe('QueueCleaner season pack across queue pages', () => {
   test('strikes a pack split across pages once per run, not once per page', async ({ api, mocks }) => {
     test.setTimeout(120_000);
 
+    // Earlier specs in this folder leave instances and a lowered strike limit, and each instance would strike the pack again.
+    const sonarr: { instances?: Array<{ id: string }> } = await (await api.arr.getConfig('sonarr')).json();
+    for (const instance of sonarr.instances ?? []) {
+      await api.arr.deleteInstance('sonarr', instance.id);
+    }
+    const arrConfig = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: -1 });
+    expect(arrConfig.ok, `arr updateConfig: ${arrConfig.status}`).toBe(true);
+
     await ArrStubs.applyArrDefaults(mocks.arr);
 
     const page1Fillers = Array.from({ length: 199 }, (_, i) => fillerRecord(i + 1));
