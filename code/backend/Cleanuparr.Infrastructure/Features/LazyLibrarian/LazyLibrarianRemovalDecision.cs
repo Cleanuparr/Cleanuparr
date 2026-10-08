@@ -22,5 +22,5 @@ public sealed record LazyLibrarianRemovalDecision
 
     public IDownloadService? DownloadService { get; init; }
 
-    public ITorrentItemWrapper? Torrent { get; init; }
+    public IDownloadItem? Download { get; init; }
 }

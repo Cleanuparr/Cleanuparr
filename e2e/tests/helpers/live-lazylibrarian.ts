@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import type { CleanuparrApi } from './api';
@@ -6,6 +7,7 @@ import { buildDownloadClientPayload } from './api/download-client';
 import { TEST_CONFIG, farFutureCron } from './test-config';
 import { buildMultiFileTorrent, buildSingleFileTorrent, type GeneratedTorrent } from './torrent-fixtures';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
+import { buildMissingSegmentNzb, type SabnzbdDriver } from './usenet-clients/sabnzbd';
 import { WireMockClient, type Mapping } from './mocks/wiremock-client';
 
 /**
@@ -47,6 +49,9 @@ export type BookLibrary = 'eBook' | 'AudioBook';
  * LazyLibrarian asks for its own default of 8000,8010 and never filters on it.
  */
 export const TORZNAB_BOOK_CATEGORY = 8010;
+
+/** Newznab's ebook category, which LazyLibrarian asks for alongside 7000. */
+const NEWZNAB_BOOK_CATEGORY = 7020;
 
 /** Outside the qBittorrent save path, so the grabbed torrent stalls. */
 const TORRENT_SOURCE_DIR = resolve(__dirname, '..', '..', 'test-data', 'torznab-src');
@@ -151,9 +156,19 @@ export const liveLazyLibrarian = new LiveLazyLibrarian(
 export const indexerMock = new WireMockClient(TEST_CONFIG.mocks.indexerAdminUrl);
 export const qbittorrent = new QBittorrentDriver();
 
-function bookFeed(title: string, file: string): string {
+/** LazyLibrarian drops a Newznab result that carries seeders, so only the Torznab feed sends them. */
+function bookFeed(title: string, file: string, protocol: 'torrent' | 'usenet'): string {
+  const ns = protocol === 'torrent' ? 'torznab' : 'newznab';
+  const schema = protocol === 'torrent' ? 'http://torznab.com/schemas/2015/feed' : 'http://www.newznab.com/DTD/2010/feeds/attributes/';
+  const type = protocol === 'torrent' ? 'application/x-bittorrent' : 'application/x-nzb';
+  const attrs = protocol === 'torrent'
+    ? `<torznab:attr name="category" value="${TORZNAB_BOOK_CATEGORY}" />
+      <torznab:attr name="seeders" value="20" />
+      <torznab:attr name="peers" value="25" />`
+    : `<newznab:attr name="category" value="${NEWZNAB_BOOK_CATEGORY}" />`;
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:${ns}="${schema}">
   <channel>
     <title>E2E Indexer</title>
     <link>${TEST_CONFIG.mocks.indexerUrl}/</link>
@@ -164,10 +179,8 @@ function bookFeed(title: string, file: string): string {
       <link>${TEST_CONFIG.mocks.indexerUrl}/dl/${file}</link>
       <pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate>
       <size>${ADVERTISED_SIZE_BYTES}</size>
-      <enclosure url="${TEST_CONFIG.mocks.indexerUrl}/dl/${file}" length="${ADVERTISED_SIZE_BYTES}" type="application/x-bittorrent" />
-      <torznab:attr name="category" value="${TORZNAB_BOOK_CATEGORY}" />
-      <torznab:attr name="seeders" value="20" />
-      <torznab:attr name="peers" value="25" />
+      <enclosure url="${TEST_CONFIG.mocks.indexerUrl}/dl/${file}" length="${ADVERTISED_SIZE_BYTES}" type="${type}" />
+      ${attrs}
     </item>
   </channel>
 </rss>`;
@@ -179,7 +192,7 @@ function bookFeed(title: string, file: string): string {
  * LazyLibrarian tries several modes for one book, so this stub matches none.
  * The capabilities mapping keeps priority 1 and still answers `t=caps`.
  */
-function bookSearchStub(title: string, file: string): Mapping {
+function bookSearchStub(title: string, file: string, protocol: 'torrent' | 'usenet' = 'torrent'): Mapping {
   return {
     priority: 2,
     request: {
@@ -189,7 +202,7 @@ function bookSearchStub(title: string, file: string): Mapping {
     response: {
       status: 200,
       headers: { 'Content-Type': 'application/xml' },
-      body: bookFeed(title, file),
+      body: bookFeed(title, file, protocol),
     },
   };
 }
@@ -201,6 +214,18 @@ function torrentStub(file: string, metainfo: Buffer): Mapping {
       status: 200,
       headers: { 'Content-Type': 'application/x-bittorrent' },
       base64Body: metainfo.toString('base64'),
+    },
+  };
+}
+
+/** SABnzbd itself fetches the NZB (LazyLibrarian hands it the URL via `mode=addurl`), not LazyLibrarian. */
+function nzbStub(file: string): Mapping {
+  return {
+    request: { method: 'GET', urlPath: `/dl/${file}` },
+    response: {
+      status: 200,
+      headers: { 'Content-Type': 'application/x-nzb' },
+      body: buildMissingSegmentNzb(file),
     },
   };
 }
@@ -265,6 +290,34 @@ export async function prepareRelease(
   await indexerMock.stubMany([bookSearchStub(releaseTitle, file), torrentStub(file, torrent.metainfo)]);
 
   return { bookId: book.BookID, releaseTitle, torrent, library };
+}
+
+/**
+ * Registers the Newznab stubs for a book (search feed + NZB download) and snatches it.
+ *
+ * The NZB references a missing sabnews article, so SABnzbd fails the job fast once it
+ * tries to download it. Needs {@link pointLazyLibrarianAtSabnzbd} to have run first,
+ * since the seeded LazyLibrarian only has a Torznab provider and a qBittorrent client.
+ */
+export async function snatchBookViaSabnzbd(book: LazyLibrarianBook): Promise<SnatchedBook> {
+  const releaseTitle = `${book.AuthorName} - ${book.BookName}`.replace(/[^\w\s.-]/g, ' ').trim();
+  const file = `${book.BookID}.nzb`;
+
+  await indexerMock.stubMany([bookSearchStub(releaseTitle, file, 'usenet'), nzbStub(file)]);
+
+  await liveLazyLibrarian.markWanted(book.BookID);
+  await liveLazyLibrarian.searchBook(book.BookID);
+
+  const row = await waitForSnatchedRow(book.BookID);
+
+  return {
+    bookId: book.BookID,
+    releaseTitle,
+    // SABnzbd's nzo_id, not a hash: LazyLibrarian records whatever its downloader returns.
+    downloadId: row.DownloadID,
+    torrentName: releaseTitle,
+    origin: row.Origin,
+  };
 }
 
 /** Runs the search and grab for a release whose stubs are already registered. */
@@ -415,6 +468,22 @@ export async function createDownloadClient(api: CleanuparrApi): Promise<string> 
   return created.id;
 }
 
+/** The Cleanuparr-side SABnzbd client, for a spec that points LazyLibrarian at SABnzbd. */
+export async function createSabnzbdDownloadClient(api: CleanuparrApi, sab: SabnzbdDriver): Promise<string> {
+  const created = await (
+    await api.downloadClient.create(
+      buildDownloadClientPayload('sabnzbd', {
+        name: 'live-lazylibrarian sabnzbd',
+        host: sab.cleanuparrHost,
+        apiKey: sab.apiKey,
+      }),
+    )
+  ).json();
+
+  expect(created.id, 'createSabnzbdDownloadClient').toBeTruthy();
+  return created.id;
+}
+
 export interface LiveInstanceIds {
   instanceId: string;
   clientId: string;
@@ -544,6 +613,74 @@ export async function runUntilStrikes(api: CleanuparrApi, downloadId: string, st
       return;
     }
   }
+}
+
+const COMPOSE_FILE = resolve(__dirname, '..', '..', 'docker-compose.e2e.yml');
+const LAZYLIBRARIAN_CONFIG_PATH = resolve(__dirname, '..', '..', 'test-data', 'lazylibrarian-config', 'config.ini');
+
+let savedLazyLibrarianConfig: string | undefined;
+
+function composeCommand(cmd: string): void {
+  execSync(`docker compose -f ${COMPOSE_FILE} ${cmd}`, { stdio: 'inherit', env: process.env });
+}
+
+/**
+ * Points the seeded LazyLibrarian at SABnzbd, on top of its existing qBittorrent/Torznab setup.
+ *
+ * LazyLibrarian only writes config.ini on shutdown, and only reads it on startup, so this stops
+ * the container, edits the file on disk, and starts it again (same dance `seed-lazylibrarian.sh`
+ * uses to write the seed in the first place). Pair with {@link restoreLazyLibrarianConfig}.
+ */
+export async function pointLazyLibrarianAtSabnzbd(sab: SabnzbdDriver): Promise<void> {
+  composeCommand('stop lazylibrarian');
+
+  savedLazyLibrarianConfig = readFileSync(LAZYLIBRARIAN_CONFIG_PATH, 'utf8');
+
+  const sabUrl = new URL(sab.cleanuparrHost);
+  const indexerUrl = TEST_CONFIG.mocks.indexerUrl;
+  // Matches scripts/seed-lazylibrarian.sh's INDEXER_API_KEY: the stub never checks it.
+  const indexerApiKey = 'e2e-indexer-key';
+
+  // The seeded Torznab provider hits the same indexer mock on the same /api path, so it must
+  // be disabled: otherwise it also answers the Newznab search and tries to bencode-decode the NZB.
+  const withoutTorznab = savedLazyLibrarianConfig.replace(
+    /(\[Torznab_0\][^[]*?enabled = )True/,
+    '$1False',
+  );
+
+  writeFileSync(
+    LAZYLIBRARIAN_CONFIG_PATH,
+    `${withoutTorznab}\n` +
+      '[SABnzbd]\n' +
+      `sab_host = ${sabUrl.hostname}\n` +
+      `sab_port = ${sabUrl.port}\n` +
+      `sab_api = ${sab.apiKey}\n\n` +
+      '[USENET]\n' +
+      'nzb_downloader_sabnzbd = True\n\n' +
+      '[Newznab_0]\n' +
+      'dispname = E2E Newznab\n' +
+      'enabled = True\n' +
+      `host = ${indexerUrl}\n` +
+      `api = ${indexerApiKey}\n` +
+      'generalsearch = search\n' +
+      'manual = True\n',
+  );
+
+  composeCommand('up -d lazylibrarian');
+  await liveLazyLibrarian.waitReady();
+}
+
+/** Undoes {@link pointLazyLibrarianAtSabnzbd}, restoring the config every other live-lazylibrarian spec expects. */
+export async function restoreLazyLibrarianConfig(): Promise<void> {
+  if (!savedLazyLibrarianConfig) {
+    return;
+  }
+
+  composeCommand('stop lazylibrarian');
+  writeFileSync(LAZYLIBRARIAN_CONFIG_PATH, savedLazyLibrarianConfig);
+  savedLazyLibrarianConfig = undefined;
+  composeCommand('up -d lazylibrarian');
+  await liveLazyLibrarian.waitReady();
 }
 
 /** getAllBooks has no ORDER BY, so a spec must claim by work id. */

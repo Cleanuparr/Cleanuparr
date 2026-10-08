@@ -338,21 +338,21 @@ public abstract class GenericHandler : IHandler
             return false;
         }
 
-        // LazyLibrarian refuses to remove a task it adopted, and the files back another seed.
+        // LazyLibrarian refuses to remove a task it adopted.
         if (decision.Item.WasAdoptedByLazyLibrarian)
         {
             _logger.LogInformation(
-                "keeping torrent | LazyLibrarian adopted it | {Title} | {Hash}",
+                "keeping download | LazyLibrarian adopted it | {Title} | {Hash}",
                 decision.Item.Title, decision.Item.DownloadId
             );
 
             return false;
         }
 
-        if (decision.DownloadService is null || decision.Torrent is null)
+        if (decision.DownloadService is null || decision.Download is null)
         {
             _logger.LogWarning(
-                "skip lazylibrarian delete | torrent reference unavailable | {Title} | {Hash}",
+                "skip lazylibrarian delete | download reference unavailable | {Title} | {Hash}",
                 decision.Item.Title, decision.Item.DownloadId
             );
 
@@ -361,9 +361,9 @@ public abstract class GenericHandler : IHandler
 
         try
         {
-            await _dryRunInterceptor.InterceptAsync(() => decision.DownloadService.DeleteDownload(decision.Torrent, true));
+            await _dryRunInterceptor.InterceptAsync(() => decision.DownloadService.DeleteDownload(decision.Download, true));
             _logger.LogInformation(
-                "torrent removed from download client {Client} | {Title}",
+                "download removed from download client {Client} | {Title}",
                 decision.DownloadService.ClientConfig.Name, decision.Item.Title
             );
 
@@ -373,7 +373,7 @@ public abstract class GenericHandler : IHandler
         {
             _logger.LogError(
                 exception,
-                "failed to remove torrent from download client {Client} | {Hash} | {Title}",
+                "failed to remove download from download client {Client} | {Hash} | {Title}",
                 decision.DownloadService.ClientConfig.Name, decision.Item.DownloadId, decision.Item.Title
             );
 

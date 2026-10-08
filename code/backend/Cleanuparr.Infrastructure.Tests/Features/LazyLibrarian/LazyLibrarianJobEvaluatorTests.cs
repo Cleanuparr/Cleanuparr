@@ -4,6 +4,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
@@ -40,9 +41,9 @@ public class LazyLibrarianJobEvaluatorTests
         Origin = LazyLibrarianOrigin.New,
     };
 
-    private static IDownloadService CreateClient(DownloadClientType type = DownloadClientType.Torrent)
+    private static IMockDownloadService CreateClient(DownloadClientType type = DownloadClientType.Torrent)
     {
-        IDownloadService service = Substitute.For<IDownloadService>();
+        IMockDownloadService service = Substitute.For<IMockDownloadService>();
         service.ClientConfig.Returns(new DownloadClientConfig
         {
             Id = Guid.NewGuid(),
@@ -64,7 +65,7 @@ public class LazyLibrarianJobEvaluatorTests
     {
         // Arrange: an usenet client cannot hold a LazyLibrarian torrent snatch.
         StubQueue(CreateItem());
-        IDownloadService usenet = CreateClient(DownloadClientType.Usenet);
+        IMockDownloadService usenet = CreateClient(DownloadClientType.Usenet);
 
         // Act
         IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
@@ -76,11 +77,35 @@ public class LazyLibrarianJobEvaluatorTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_QueriesOnlyTheClientMatchingTheItemsProtocol()
+    {
+        // Arrange: a usenet snatch must never reach a torrent client's capability, and vice versa.
+        LazyLibrarianQueueItem usenetItem = CreateItem("HASH1") with { Source = LazyLibrarianSource.Sabnzbd };
+        LazyLibrarianQueueItem torrentItem = CreateItem("HASH2");
+        StubQueue(usenetItem, torrentItem);
+
+        IMockDownloadService torrentClient = CreateClient(DownloadClientType.Torrent);
+        IMockDownloadService usenetClient = CreateClient(DownloadClientType.Usenet);
+
+        torrentClient.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(new DownloadCheckResult { Found = false });
+        usenetClient.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns(new DownloadCheckResult { Found = false });
+
+        // Act
+        await CreateQueueCleanerEvaluator().EvaluateAsync(_instance, [torrentClient, usenetClient], []);
+
+        // Assert
+        await torrentClient.Received(1).ShouldRemoveFromArrQueueAsync("HASH2", Arg.Any<IReadOnlyList<string>>());
+        await usenetClient.Received(1).ShouldRemoveFromArrQueueAsync("HASH1", Arg.Any<IReadOnlyList<string>>());
+    }
+
+    [Fact]
     public async Task EvaluateAsync_SkipsAnIgnoredDownload()
     {
         // Arrange
         StubQueue(CreateItem());
-        IDownloadService client = CreateClient();
+        IMockDownloadService client = CreateClient();
 
         // Act
         IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
@@ -96,7 +121,7 @@ public class LazyLibrarianJobEvaluatorTests
     {
         // Arrange
         StubQueue(CreateItem());
-        IDownloadService client = CreateClient();
+        IMockDownloadService client = CreateClient();
         client.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Returns(new DownloadCheckResult { Found = false });
 
@@ -113,7 +138,7 @@ public class LazyLibrarianJobEvaluatorTests
     {
         // Arrange
         StubQueue(CreateItem());
-        IDownloadService client = CreateClient();
+        IMockDownloadService client = CreateClient();
         client.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
 
@@ -132,18 +157,18 @@ public class LazyLibrarianJobEvaluatorTests
         StubQueue(CreateItem());
         ITorrentItemWrapper torrent = Substitute.For<ITorrentItemWrapper>();
 
-        IDownloadService broken = CreateClient();
+        IMockDownloadService broken = CreateClient();
         broken.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Throws(new Exception("client is down"));
 
-        IDownloadService healthy = CreateClient();
+        IMockDownloadService healthy = CreateClient();
         healthy.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
                 DeleteReason = DeleteReason.Stalled,
-                Torrent = torrent,
+                Item = torrent,
             });
 
         // Act
@@ -154,7 +179,7 @@ public class LazyLibrarianJobEvaluatorTests
         LazyLibrarianRemovalDecision decision = decisions.ShouldHaveSingleItem();
         decision.DownloadService.ShouldBe(healthy);
         decision.DownloadClient.ShouldBe(healthy.ClientConfig);
-        decision.Torrent.ShouldBe(torrent);
+        decision.Download.ShouldBe(torrent);
         decision.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
@@ -170,7 +195,7 @@ public class LazyLibrarianJobEvaluatorTests
     {
         // Arrange
         StubQueue(CreateItem());
-        IDownloadService client = CreateClient();
+        IMockDownloadService client = CreateClient();
         client.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Returns(new DownloadCheckResult
             {
@@ -178,7 +203,7 @@ public class LazyLibrarianJobEvaluatorTests
                 ShouldRemove = true,
                 IsPrivate = isPrivate,
                 DeleteFromClient = deleteFromClient,
-                Torrent = Substitute.For<ITorrentItemWrapper>(),
+                Item = Substitute.For<ITorrentItemWrapper>(),
             });
 
         // Act
@@ -203,7 +228,7 @@ public class LazyLibrarianJobEvaluatorTests
         ContextProvider.Set(nameof(ContentBlockerConfig), new ContentBlockerConfig { DeletePrivate = deletePrivate });
         StubQueue(CreateItem());
 
-        IDownloadService client = CreateClient();
+        IMockDownloadService client = CreateClient();
         client.BlockUnwantedFilesAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Returns(new BlockFilesResult
             {
@@ -211,7 +236,7 @@ public class LazyLibrarianJobEvaluatorTests
                 ShouldRemove = true,
                 IsPrivate = isPrivate,
                 DeleteReason = DeleteReason.AllFilesBlocked,
-                Torrent = Substitute.For<ITorrentItemWrapper>(),
+                Item = Substitute.For<ITorrentItemWrapper>(),
             });
 
         // Act
@@ -229,13 +254,13 @@ public class LazyLibrarianJobEvaluatorTests
     {
         // Arrange
         StubQueue(CreateItem("HASH1"), CreateItem("HASH2"));
-        IDownloadService client = CreateClient();
+        IMockDownloadService client = CreateClient();
         client.ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
             .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
-                Torrent = Substitute.For<ITorrentItemWrapper>(),
+                Item = Substitute.For<ITorrentItemWrapper>(),
             });
 
         // Act

@@ -16,6 +16,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -690,6 +691,82 @@ public class QueueCleanerTests : IDisposable
         );
     }
 
+    [Theory]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    public async Task ProcessInstanceAsync_WhenUsenetDownloadNotFound_HonoursSkipIfNotFoundInClient(bool skipIfNotFound, int expectedChecks)
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext, "Test SABnzbd", DownloadClientTypeName.Sabnzbd);
+
+        QueueCleanerConfig queueCleanerConfig = _fixture.DataContext.QueueCleanerConfigs.First();
+        queueCleanerConfig.FailedImport = queueCleanerConfig.FailedImport with { SkipIfNotFoundInClient = skipIfNotFound };
+        _fixture.DataContext.SaveChanges();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        QueueRecord queueRecord = new()
+        {
+            Id = 1,
+            DownloadId = "SABnzbd_nzo_missing",
+            Title = "Missing Usenet Download",
+            Protocol = "usenet",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                Func<IReadOnlyList<QueueRecord>, Task> callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        IMockDownloadService mockDownloadService = _fixture.CreateMockDownloadService("Test SABnzbd", DownloadClientTypeName.Sabnzbd);
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult { Found = false });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        QueueCleanerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        _logger.HasLogContaining(LogLevel.Warning, "Download not found in any usenet client").ShouldBeTrue();
+        await mockArrClient.Received(expectedChecks).ShouldRemoveFromQueue(
+            InstanceType.Sonarr,
+            queueRecord,
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        );
+    }
+
     [Fact]
     public async Task ProcessInstanceAsync_WhenForceImportDefers_SkipsTheFailedImportCheck()
     {
@@ -731,7 +808,7 @@ public class QueueCleanerTests : IDisposable
                 await callback([queueRecord]);
             });
 
-        IDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
             .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
             .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
@@ -787,7 +864,7 @@ public class QueueCleanerTests : IDisposable
                 await callback([page[1]]);
             });
 
-        IDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
             .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
             .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
@@ -1788,9 +1865,9 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
         ITorrentItemWrapper torrent = Substitute.For<ITorrentItemWrapper>();
-        torrent.Hash.Returns("torrent-hash");
+        torrent.DownloadId.Returns("torrent-hash");
 
-        IDownloadService downloadService = _fixture.CreateMockDownloadService();
+        var downloadService = _fixture.CreateMockDownloadService();
         DownloadClientConfig clientConfig = downloadService.ClientConfig;
 
         LazyLibrarianRemovalDecision decision = new()
@@ -1800,7 +1877,7 @@ public class QueueCleanerTests : IDisposable
             RemoveFromClient = removeFromClient,
             DownloadClient = clientConfig,
             DownloadService = downloadService,
-            Torrent = torrent,
+            Download = torrent,
         };
 
         IReadOnlyList<LazyLibrarianRemovalDecision> decisions = [decision];
@@ -1892,7 +1969,7 @@ public class QueueCleanerTests : IDisposable
         LazyLibrarianQueueItem second = CreateBookItem() with { DownloadId = "torrent-hash-2" };
 
         ITorrentItemWrapper secondTorrent = Substitute.For<ITorrentItemWrapper>();
-        secondTorrent.Hash.Returns("torrent-hash-2");
+        secondTorrent.DownloadId.Returns("torrent-hash-2");
 
         DownloadClientConfig clientConfig = downloadService.ClientConfig;
         IReadOnlyList<LazyLibrarianRemovalDecision> decisions =
@@ -1904,7 +1981,7 @@ public class QueueCleanerTests : IDisposable
                 RemoveFromClient = true,
                 DownloadClient = clientConfig,
                 DownloadService = downloadService,
-                Torrent = torrent,
+                Download = torrent,
             },
             new LazyLibrarianRemovalDecision
             {
@@ -1913,7 +1990,7 @@ public class QueueCleanerTests : IDisposable
                 RemoveFromClient = true,
                 DownloadClient = clientConfig,
                 DownloadService = downloadService,
-                Torrent = secondTorrent,
+                Download = secondTorrent,
             },
         ];
 
@@ -1933,6 +2010,57 @@ public class QueueCleanerTests : IDisposable
         // Assert
         await _fixture.MessageBus.Received(1).Publish(
             Arg.Is<QueueItemRemoveRequest>(r => r.Target.DownloadId == "torrent-hash-2"),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DeletesAFailedSabnzbdDownloadFromTheClient()
+    {
+        // Arrange: a SABnzbd Failed job is a removal decision like any torrent one, but Download is a plain usenet item.
+        TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        IDownloadItem nzbItem = Substitute.For<IDownloadItem>();
+        nzbItem.DownloadId.Returns("nzo-hash");
+
+        var downloadService = _fixture.CreateMockDownloadService(typeName: DownloadClientTypeName.Sabnzbd);
+        DownloadClientConfig clientConfig = downloadService.ClientConfig;
+
+        LazyLibrarianRemovalDecision decision = new()
+        {
+            Item = CreateBookItem() with { DownloadId = "nzo-hash", Source = LazyLibrarianSource.Sabnzbd },
+            DeleteReason = DeleteReason.DownloadFailed,
+            RemoveFromClient = true,
+            DownloadClient = clientConfig,
+            DownloadService = downloadService,
+            Download = nzbItem,
+        };
+
+        _fixture.LazyLibrarianServiceQC
+            .EvaluateAsync(Arg.Any<ArrInstance>(), Arg.Any<IReadOnlyList<IDownloadService>>(), Arg.Any<IReadOnlyList<string>>())
+            .Returns([decision]);
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(downloadService);
+
+        _fixture.DryRunInterceptor
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .Returns(ci => ((Func<Task>)ci[0])());
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await downloadService.Received(1).DeleteDownload(nzbItem, true);
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r =>
+                r.LazyTarget().RemovedFromClient
+                && r.DeleteReason == DeleteReason.DownloadFailed
+            ),
             Arg.Any<CancellationToken>()
         );
     }

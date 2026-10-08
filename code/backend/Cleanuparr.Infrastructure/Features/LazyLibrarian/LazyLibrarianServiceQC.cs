@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Infrastructure.Features.DownloadClient;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.LazyLibrarian;
@@ -12,11 +13,16 @@ public sealed class LazyLibrarianServiceQC : LazyLibrarianJobEvaluator
 
     protected override async Task<ClientVerdict> CheckAsync(
         IDownloadService downloadService,
-        string hash,
+        string downloadId,
         IReadOnlyList<string> ignoredDownloads
     )
     {
-        DownloadCheckResult result = await downloadService.ShouldRemoveFromArrQueueAsync(hash, ignoredDownloads);
+        if (downloadService is not IQueueCheckCapable capable)
+        {
+            return default;
+        }
+
+        DownloadCheckResult result = await capable.ShouldRemoveFromArrQueueAsync(downloadId, ignoredDownloads);
 
         return new ClientVerdict(
             result.Found,
@@ -24,7 +30,7 @@ public sealed class LazyLibrarianServiceQC : LazyLibrarianJobEvaluator
             // LazyLibrarian has no post-import category, so a category change cannot apply.
             !result.IsPrivate || result.DeleteFromClient,
             result.DeleteReason,
-            result.Torrent
+            result.Item
         );
     }
 }
