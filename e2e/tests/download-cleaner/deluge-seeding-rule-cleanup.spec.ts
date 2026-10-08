@@ -65,10 +65,10 @@ async function stillPresent(infoHashes: string[]): Promise<string[]> {
  * `DownloadCleaned` event happens. Two torrents and one cleanup cycle show this
  * behavior.
  *
- * A DownloadCleaned removal also publishes a notification to the message bus
- * (NotificationPublisher -> MassTransit -> NotificationConsumer), so the same
- * cycle doubles as e2e coverage for that async dispatch: a provider subscribed
- * to OnDownloadCleaned must receive a real delivery when the rule fires.
+ * A DownloadCleaned removal also queues a notification on the in-process
+ * notification queue, so the same cycle doubles as e2e coverage for that
+ * async dispatch: a provider subscribed to OnDownloadCleaned must receive a
+ * real delivery when the rule fires.
  */
 test.describe.serial('Deluge seeding rule cleanup', () => {
   let token: string;

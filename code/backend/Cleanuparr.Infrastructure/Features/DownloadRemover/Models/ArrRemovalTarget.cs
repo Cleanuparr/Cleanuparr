@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 
@@ -21,9 +20,7 @@ public sealed record ArrRemovalTarget : RemovalTarget
     /// </summary>
     public bool ChangeCategory { get; init; }
 
-    [JsonIgnore]
     public override string DownloadId => Record.DownloadId;
 
-    [JsonIgnore]
     public override string Title => Record.Title;
 }

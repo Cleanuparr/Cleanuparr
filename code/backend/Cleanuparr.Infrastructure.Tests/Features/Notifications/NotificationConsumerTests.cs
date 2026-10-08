@@ -2,7 +2,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
-using MassTransit;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -53,15 +52,9 @@ public class NotificationConsumerTests
         };
     }
 
-    private static ConsumeContext<NotificationMessage> CreateConsumeContext(NotificationMessage message)
-    {
-        ConsumeContext<NotificationMessage> context = Substitute.For<ConsumeContext<NotificationMessage>>();
-        context.Message.Returns(message);
-        return context;
-    }
 
     [Fact]
-    public async Task Consume_WithConfiguredProviders_SendsToAll()
+    public async Task HandleAsync_WithConfiguredProviders_SendsToAll()
     {
         NotificationProviderDto providerDto1 = CreateProviderDto("Provider1");
         NotificationProviderDto providerDto2 = CreateProviderDto("Provider2");
@@ -75,14 +68,14 @@ public class NotificationConsumerTests
         _providerFactory.CreateProvider(providerDto1).Returns(provider1);
         _providerFactory.CreateProvider(providerDto2).Returns(provider2);
 
-        await _consumer.Consume(CreateConsumeContext(message));
+        await _consumer.HandleAsync(message);
 
         await provider1.Received(1).SendNotificationAsync(message.Context);
         await provider2.Received(1).SendNotificationAsync(message.Context);
     }
 
     [Fact]
-    public async Task Consume_WhenOneProviderThrows_OthersStillReceiveNotification()
+    public async Task HandleAsync_WhenOneProviderThrows_OthersStillReceiveNotification()
     {
         NotificationProviderDto providerDto1 = CreateProviderDto("Provider1");
         NotificationProviderDto providerDto2 = CreateProviderDto("Provider2");
@@ -99,35 +92,33 @@ public class NotificationConsumerTests
         _providerFactory.CreateProvider(providerDto1).Returns(provider1);
         _providerFactory.CreateProvider(providerDto2).Returns(provider2);
 
-        await _consumer.Consume(CreateConsumeContext(message));
+        await _consumer.HandleAsync(message);
 
         await provider2.Received(1).SendNotificationAsync(message.Context);
     }
 
     [Fact]
-    public async Task Consume_WhenNoProvidersConfigured_DoesNotCreateAnyProvider()
+    public async Task HandleAsync_WhenNoProvidersConfigured_DoesNotCreateAnyProvider()
     {
         NotificationMessage message = new(NotificationEventType.QueueItemDeleted, CreateContext(NotificationEventType.QueueItemDeleted));
 
         _configurationService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
             .Returns(new List<NotificationProviderDto>());
 
-        await _consumer.Consume(CreateConsumeContext(message));
+        await _consumer.HandleAsync(message);
 
         _providerFactory.DidNotReceive().CreateProvider(Arg.Any<NotificationProviderDto>());
     }
 
     [Fact]
-    public async Task Consume_WhenProviderLookupThrows_DoesNotThrow()
+    public async Task HandleAsync_WhenProviderLookupThrows_DoesNotThrow()
     {
         NotificationMessage message = new(NotificationEventType.QueueItemDeleted, CreateContext(NotificationEventType.QueueItemDeleted));
 
         _configurationService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
             .ThrowsAsync(new InvalidOperationException("db locked"));
 
-        ConsumeContext<NotificationMessage> ctx = CreateConsumeContext(message);
-
-        await Should.NotThrowAsync(() => _consumer.Consume(ctx));
+        await Should.NotThrowAsync(() => _consumer.HandleAsync(message));
 
         _providerFactory.DidNotReceive().CreateProvider(Arg.Any<NotificationProviderDto>());
     }

@@ -13,6 +13,24 @@ export class QueueCleanerApi {
     return this.client.put('/api/configuration/queue_cleaner', body);
   }
 
+  async getJsonConfig(): Promise<Record<string, unknown>> {
+    const res = await this.getConfig();
+    if (!res.ok) {
+      throw new Error(`GET queue cleaner config failed: ${res.status} ${await res.text()}`);
+    }
+    return res.json();
+  }
+
+  /** Merges overrides onto the current config. */
+  async patch(overrides: Record<string, unknown>): Promise<void> {
+    const current = await this.getJsonConfig();
+    const merged = { ...current, ...overrides };
+    const res = await this.updateConfig(merged);
+    if (!res.ok) {
+      throw new Error(`PUT queue cleaner config failed: ${res.status} ${await res.text()}`);
+    }
+  }
+
   listRules(kind: QueueRuleKind): Promise<Response> {
     return this.client.get(`/api/queue-rules/${kind}`);
   }
