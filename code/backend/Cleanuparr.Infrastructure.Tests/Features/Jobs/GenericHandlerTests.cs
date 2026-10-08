@@ -45,7 +45,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
@@ -321,6 +321,31 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         await _fixture.EventPublisher.Received(1).PublishAsync(
             EventType.DownloadMarkedForDeletion, Arg.Any<string>(), Arg.Any<EventSeverity>(),
             Arg.Any<Action<AppEvent>?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<bool?>());
+    }
+
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_DryRunEnabled_StampsTheMessageAsDryRun()
+    {
+        // Arrange
+        var arrConfig = new ArrConfig { Type = InstanceType.Sonarr, Instances = [] };
+        var instance = new ArrInstance
+        {
+            Name = "s",
+            Url = new Uri("http://s"),
+            ApiKey = "k",
+            ArrConfig = arrConfig,
+            Version = 4f,
+        };
+        var record = NewRecord(seriesId: 1, episodeId: 2);
+        _fixture.DryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act
+        await _handler.PublicPublishQueueItemRemoveRequest(
+            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
+
+        // Assert
+        await _fixture.MessageBus.Received(1)
+            .Publish(Arg.Is<QueueItemRemoveRequest>(r => r.IsDryRun), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -683,12 +708,12 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             IMemoryCache cache,
             IBus messageBus,
             IArrClientFactory arrClientFactory,
-            IArrQueueIterator arrQueueIterator,
+            IArrQueueReader arrQueueReader,
             IDownloadServiceFactory downloadServiceFactory,
             IEventPublisher eventPublisher,
             IDryRunInterceptor dryRunInterceptor,
             IForceImportService forceImportService)
-            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
+            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
         {
         }
 

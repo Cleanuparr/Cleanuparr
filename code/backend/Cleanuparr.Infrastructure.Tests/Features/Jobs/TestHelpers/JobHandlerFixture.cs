@@ -30,7 +30,7 @@ public class JobHandlerFixture : IDisposable
     public MemoryCache Cache { get; private set; }
     public IBus MessageBus { get; private set; }
     public IArrClientFactory ArrClientFactory { get; private set; }
-    public IArrQueueIterator ArrQueueIterator { get; private set; }
+    public IArrQueueReader ArrQueueReader { get; private set; }
     public IDownloadServiceFactory DownloadServiceFactory { get; private set; }
     public IEventPublisher EventPublisher { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
@@ -58,7 +58,7 @@ public class JobHandlerFixture : IDisposable
         Cache = new MemoryCache(new MemoryCacheOptions());
         MessageBus = Substitute.For<IBus>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
-        ArrQueueIterator = Substitute.For<IArrQueueIterator>();
+        ArrQueueReader = Substitute.For<IArrQueueReader>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
@@ -165,7 +165,7 @@ public class JobHandlerFixture : IDisposable
         // Recreate all substitutes to clear received call state
         MessageBus = Substitute.For<IBus>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
-        ArrQueueIterator = Substitute.For<IArrQueueIterator>();
+        ArrQueueReader = Substitute.For<IArrQueueReader>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();

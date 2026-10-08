@@ -57,7 +57,7 @@ public class QueueCleanerTests : IDisposable
             _fixture.Cache,
             _fixture.MessageBus,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.DryRunInterceptor,
@@ -84,9 +84,9 @@ public class QueueCleanerTests : IDisposable
 
         // Assert
         _logger.HasLogContaining(LogLevel.Warning, "no internet connectivity").ShouldBeTrue();
-        await _fixture.ArrQueueIterator
+        await _fixture.ArrQueueReader
             .DidNotReceive()
-            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>());
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>());
     }
 
     [Fact]
@@ -101,13 +101,9 @@ public class QueueCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -143,13 +139,9 @@ public class QueueCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -185,13 +177,9 @@ public class QueueCleanerTests : IDisposable
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
             .Returns(mockArrClient);
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -236,17 +224,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var sut = CreateSut();
 
@@ -287,17 +267,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var sut = CreateSut();
 
@@ -337,17 +309,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var sut = CreateSut();
 
@@ -389,17 +353,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -448,17 +404,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -516,17 +464,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -589,17 +529,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -653,17 +585,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -728,17 +652,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                Func<IReadOnlyList<QueueRecord>, Task> callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         IMockDownloadService mockDownloadService = _fixture.CreateMockDownloadService("Test SABnzbd", DownloadClientTypeName.Sabnzbd);
         mockDownloadService
@@ -796,17 +712,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                Func<IReadOnlyList<QueueRecord>, Task> callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -851,18 +759,9 @@ public class QueueCleanerTests : IDisposable
             new() { Id = 2, DownloadId = "second", Title = "Second", Protocol = "torrent", SeriesId = 1, EpisodeId = 2 },
         ];
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                Func<IReadOnlyList<QueueRecord>, Task> callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([page[0]]);
-                await callback([page[1]]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns(page.ToList());
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -886,6 +785,159 @@ public class QueueCleanerTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Is<IReadOnlySet<string>>(ids => ids.Contains("first") && ids.Contains("second"))
             );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenPackRecordsAreNotAdjacent_ChecksDownloadServiceOnlyOnce()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        QueueRecord packEp2 = new() { Id = 1, DownloadId = "pack-download-id", Title = "Pack S01E02", Protocol = "torrent", SeriesId = 1, EpisodeId = 2 };
+        QueueRecord otherDownload = new() { Id = 2, DownloadId = "other-download-id", Title = "Other Download", Protocol = "torrent", SeriesId = 1, EpisodeId = 20 };
+        QueueRecord packEp3 = new() { Id = 3, DownloadId = "pack-download-id", Title = "Pack S01E03", Protocol = "torrent", SeriesId = 1, EpisodeId = 3 };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([packEp2, otherDownload, packEp3]);
+
+        IMockDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        QueueCleanerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockDownloadService.Received(1)
+            .ShouldRemoveFromArrQueueAsync("pack-download-id", Arg.Any<List<string>>());
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenPackRecordsAreNotAdjacent_ChecksFailedImportOnlyOnce()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        QueueRecord packEp2 = new() { Id = 1, DownloadId = "pack-download-id", Title = "Pack S01E02", Protocol = "torrent", SeriesId = 1, EpisodeId = 2 };
+        QueueRecord otherDownload = new() { Id = 2, DownloadId = "other-download-id", Title = "Other Download", Protocol = "torrent", SeriesId = 1, EpisodeId = 20 };
+        QueueRecord packEp3 = new() { Id = 3, DownloadId = "pack-download-id", Title = "Pack S01E03", Protocol = "torrent", SeriesId = 1, EpisodeId = 3 };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([packEp2, otherDownload, packEp3]);
+
+        IMockDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
+
+        // The unrelated download is removed outright, so it never reaches the failed-import check.
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync("other-download-id", Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = true, DeleteReason = DeleteReason.Stalled });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        QueueCleanerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.Received(1).ShouldRemoveFromQueue(
+            InstanceType.Sonarr,
+            Arg.Any<QueueRecord>(),
+            false,
+            Arg.Any<short>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenPackRecordsAreNotAdjacentAndShouldRemove_PublishesOneRequestWithPackFlag()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        QueueRecord packEp2 = new() { Id = 1, DownloadId = "pack-download-id", Title = "Pack S01E02", Protocol = "torrent", SeriesId = 1, EpisodeId = 2, SeasonNumber = 1 };
+        QueueRecord otherDownload = new() { Id = 2, DownloadId = "other-download-id", Title = "Other Download", Protocol = "torrent", SeriesId = 1, EpisodeId = 20, SeasonNumber = 1 };
+        QueueRecord packEp3 = new() { Id = 3, DownloadId = "pack-download-id", Title = "Pack S01E03", Protocol = "torrent", SeriesId = 1, EpisodeId = 3, SeasonNumber = 1 };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([packEp2, otherDownload, packEp3]);
+
+        IMockDownloadService mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        QueueCleanerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert - the pack flag true branch builds a season SearchItem instead of an episode one
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest>(r =>
+                r.SeriesItem().SearchType == SeriesSearchType.Season &&
+                r.SeriesItem().Id == 1
+            ),
+            Arg.Any<CancellationToken>()
+        );
     }
 
     [Fact]
@@ -919,17 +971,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -980,17 +1024,9 @@ public class QueueCleanerTests : IDisposable
             Protocol = "torrent"
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var sut = CreateSut();
 
@@ -1039,17 +1075,9 @@ public class QueueCleanerTests : IDisposable
             Protocol = "torrent"
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1120,17 +1148,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1211,17 +1231,9 @@ public class QueueCleanerTests : IDisposable
             .GetDownloadService(Arg.Any<DownloadClientConfig>())
             .Returns(mockDownloadService);
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var sut = CreateSut();
 
@@ -1262,17 +1274,9 @@ public class QueueCleanerTests : IDisposable
             MovieId = 42
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1333,17 +1337,9 @@ public class QueueCleanerTests : IDisposable
             AlbumId = 123
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1404,17 +1400,9 @@ public class QueueCleanerTests : IDisposable
             BookId = 456
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1476,17 +1464,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 100
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1549,17 +1529,9 @@ public class QueueCleanerTests : IDisposable
             MovieId = 42
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1633,17 +1605,9 @@ public class QueueCleanerTests : IDisposable
             SeasonNumber = 3
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([record1, record2]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([record1, record2]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1726,17 +1690,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -1794,17 +1750,9 @@ public class QueueCleanerTests : IDisposable
             EpisodeId = 1
         };
 
-        _fixture.ArrQueueIterator
-            .Iterate(
-                Arg.Any<IArrClient>(),
-                Arg.Any<ArrInstance>(),
-                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-            )
-            .Returns(async ci =>
-            {
-                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
-                await callback([queueRecord]);
-            });
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -2066,7 +2014,7 @@ public class QueueCleanerTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueIterator()
+    public async Task ProcessInstanceAsync_LazyLibrarian_DoesNotUseTheArrQueueReader()
     {
         // Arrange
         StubLazyLibrarianDecision();
@@ -2076,11 +2024,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        await _fixture.ArrQueueIterator.DidNotReceive().Iterate(
-            Arg.Any<IArrClient>(),
-            Arg.Any<ArrInstance>(),
-            Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
-        );
+        await _fixture.ArrQueueReader.DidNotReceive().ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>());
     }
 
     #endregion

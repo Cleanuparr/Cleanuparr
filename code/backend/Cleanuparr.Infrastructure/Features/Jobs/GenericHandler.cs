@@ -32,7 +32,7 @@ public abstract class GenericHandler : IHandler
     protected readonly IMemoryCache _cache;
     protected readonly IBus _messageBus;
     protected readonly IArrClientFactory _arrClientFactory;
-    protected readonly IArrQueueIterator _arrArrQueueIterator;
+    protected readonly IArrQueueReader _arrQueueReader;
     protected readonly IDownloadServiceFactory _downloadServiceFactory;
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IEventPublisher _eventPublisher;
@@ -44,7 +44,7 @@ public abstract class GenericHandler : IHandler
         IMemoryCache cache,
         IBus messageBus,
         IArrClientFactory arrClientFactory,
-        IArrQueueIterator arrArrQueueIterator,
+        IArrQueueReader arrQueueReader,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
@@ -56,7 +56,7 @@ public abstract class GenericHandler : IHandler
         _cache = cache;
         _messageBus = messageBus;
         _arrClientFactory = arrClientFactory;
-        _arrArrQueueIterator = arrArrQueueIterator;
+        _arrQueueReader = arrQueueReader;
         _downloadServiceFactory = downloadServiceFactory;
         _eventPublisher = eventPublisher;
         _dataContext = dataContext;
@@ -189,6 +189,7 @@ public abstract class GenericHandler : IHandler
             JobRunId = ContextProvider.GetJobRunId(),
             SkipSearch = skipSearch,
             DownloadClient = downloadClient,
+            IsDryRun = await _dryRunInterceptor.IsDryRunEnabled(),
         };
 
         string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(target.DownloadId, instance.Url);

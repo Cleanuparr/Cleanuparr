@@ -49,7 +49,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         _fixture.Cache,
         _fixture.MessageBus,
         _fixture.ArrClientFactory,
-        _fixture.ArrQueueIterator,
+        _fixture.ArrQueueReader,
         _fixture.DownloadServiceFactory,
         _fixture.EventPublisher,
         _fixture.TimeProvider,

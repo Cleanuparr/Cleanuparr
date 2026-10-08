@@ -6,7 +6,7 @@ public sealed record ApprisePayload
 {
     [Required]
     public string Title { get; init; }
-    
+
     [Required]
     public string Body { get; init; }
 
@@ -17,19 +17,4 @@ public sealed record ApprisePayload
     public string? Tags { get; init; }
 
     public string? ImageUrl { get; init; }
-}
-
-public enum NotificationType
-{
-    Info,
-    Success,
-    Warning,
-    Failure
-}
-
-public enum FormatType
-{
-    Text,
-    Markdown,
-    Html
 }

@@ -34,7 +34,7 @@ public sealed class QueueCleaner : GenericHandler
         IMemoryCache cache,
         IBus messageBus,
         IArrClientFactory arrClientFactory,
-        IArrQueueIterator arrArrQueueIterator,
+        IArrQueueReader arrQueueReader,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
@@ -43,7 +43,7 @@ public sealed class QueueCleaner : GenericHandler
         [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
+        arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor,
         forceImportService
     )
     {
@@ -143,161 +143,160 @@ public sealed class QueueCleaner : GenericHandler
 
         HashSet<string> queuedDownloadIds = new(StringComparer.InvariantCultureIgnoreCase);
 
-        await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
+        List<QueueRecord> queueRecords = await _arrQueueReader.ReadAllAsync(arrClient, instance);
+
+        List<IGrouping<string, QueueRecord>> groups = queueRecords
+            .GroupBy(x => x.DownloadId)
+            .ToList();
+
+        foreach (IGrouping<string, QueueRecord> group in groups)
         {
-            var groups = items
-                .GroupBy(x => x.DownloadId)
-                .ToList();
+            QueueRecord record = group.First();
+            queuedDownloadIds.Add(record.DownloadId);
 
-            foreach (var group in groups)
+            if (!arrClient.IsRecordValid(record))
             {
-                QueueRecord record = group.First();
-                queuedDownloadIds.Add(record.DownloadId);
-
-                if (!arrClient.IsRecordValid(record))
-                {
-                    continue;
-                }
-                
-                if (record.IsIgnored(ignoredDownloads))
-                {
-                    _logger.LogInformation("skip | download is ignored | {name}", record.Title);
-                    continue;
-                }
-                
-                _logger.LogDebug("processing | {title} | {id}", record.Title, record.DownloadId);
-                
-                bool hasContentId = arrClient.HasContentId(record);
-
-                if (!hasContentId)
-                {
-                    if (!queueCleanerConfig.ProcessNoContentId)
-                    {
-                        _logger.LogInformation("skip | item is missing the content id | {title}", record.Title);
-                        continue;
-                    }
-                    
-                    _logger.LogDebug("item is missing the content id | {title}", record.Title);
-                }
-                
-                string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
-                
-                if (_cache.TryGetValue(downloadRemovalKey, out bool _))
-                {
-                    _logger.LogDebug("skip | already marked for removal | {title}", record.Title);
-                    continue;
-                }
-                
-                // push record to context
-                ContextProvider.Set(nameof(QueueRecord), record);
-
-                DownloadCheckResult downloadCheckResult = new();
-                bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
-                bool isUsenet = record.Protocol.Contains("usenet", StringComparison.InvariantCultureIgnoreCase);
-                DownloadClientConfig? foundInClient = null;
-
-                if (isTorrent || isUsenet)
-                {
-                    DownloadClientType clientType = isTorrent ? DownloadClientType.Torrent : DownloadClientType.Usenet;
-                    List<IQueueCheckCapable> matchingClients = downloadServices
-                        .OfType<IQueueCheckCapable>()
-                        .Where(x => x.ClientConfig.Type == clientType)
-                        .ToList();
-
-                    if (matchingClients.Count > 0)
-                    {
-                        // Check each download client for the download item
-                        foreach (IQueueCheckCapable downloadService in matchingClients)
-                        {
-                            try
-                            {
-                                // Get download info from download service for rule evaluation
-                                downloadCheckResult = await downloadService
-                                    .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
-
-                                if (downloadCheckResult.Found)
-                                {
-                                    foundInClient = downloadService.ClientConfig;
-                                    break;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Error checking download {dName} with download client {cName}",
-                                    record.Title, downloadService.ClientConfig.Name);
-                            }
-                        }
-
-                        if (!downloadCheckResult.Found)
-                        {
-                            _logger.LogWarning("Download not found in any {clientType} client | {title}", isTorrent ? "torrent" : "usenet", record.Title);
-                        }
-                    }
-                }
-
-                if (downloadCheckResult.ShouldRemove)
-                {
-                    bool changeCategory = downloadCheckResult.ChangeCategory;
-                    bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient);
-
-                    await PublishQueueItemRemoveRequest(
-                        instance,
-                        record,
-                        group.Count() > 1,
-                        removeFromClient,
-                        downloadCheckResult.DeleteReason,
-                        skipSearch: !hasContentId,
-                        downloadClient: foundInClient,
-                        changeCategory: changeCategory
-                    );
-
-                    continue;
-                }
-
-                // Runs before the client check below: a torrent missing from the client can still be imported.
-                ForceImportOutcome forceImport = await _forceImportService.TryImportAsync(arrClient, instance, record);
-
-                // A deferred import must not collect strikes while the arr works.
-                if (forceImport is not ForceImportOutcome.NotApplicable)
-                {
-                    continue;
-                }
-
-                // Skip failed import check if the download is not found in any client of its protocol and skipIfNotFoundInClient is enabled
-                bool skipIfNotFoundInClient = (isTorrent && hasEnabledTorrentClients) || (isUsenet && hasEnabledUsenetClients);
-
-                if (skipIfNotFoundInClient && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
-                {
-                    _logger.LogInformation("skip | download not found in any client | {title}", record.Title);
-                    continue;
-                }
-
-                // Failed import check
-                bool shouldRemoveFromArr = await arrClient
-                    .ShouldRemoveFromQueue(instance.ArrConfig.Type, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
-
-                if (shouldRemoveFromArr)
-                {
-                    bool changeCategory = queueCleanerConfig.FailedImport.ChangeCategory;
-                    bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate);
-
-                    await PublishQueueItemRemoveRequest(
-                        instance,
-                        record,
-                        group.Count() > 1,
-                        removeFromClient,
-                        DeleteReason.FailedImport,
-                        skipSearch: !hasContentId,
-                        downloadClient: foundInClient,
-                        changeCategory: changeCategory
-                    );
-
-                    continue;
-                }
-                
-                _logger.LogDebug("skip | {title}", record.Title);
+                continue;
             }
-        });
+
+            if (record.IsIgnored(ignoredDownloads))
+            {
+                _logger.LogInformation("skip | download is ignored | {name}", record.Title);
+                continue;
+            }
+
+            _logger.LogDebug("processing | {title} | {id}", record.Title, record.DownloadId);
+
+            bool hasContentId = arrClient.HasContentId(record);
+
+            if (!hasContentId)
+            {
+                if (!queueCleanerConfig.ProcessNoContentId)
+                {
+                    _logger.LogInformation("skip | item is missing the content id | {title}", record.Title);
+                    continue;
+                }
+
+                _logger.LogDebug("item is missing the content id | {title}", record.Title);
+            }
+
+            string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
+
+            if (_cache.TryGetValue(downloadRemovalKey, out bool _))
+            {
+                _logger.LogDebug("skip | already marked for removal | {title}", record.Title);
+                continue;
+            }
+
+            // push record to context
+            ContextProvider.Set(nameof(QueueRecord), record);
+
+            DownloadCheckResult downloadCheckResult = new();
+            bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
+            bool isUsenet = record.Protocol.Contains("usenet", StringComparison.InvariantCultureIgnoreCase);
+            DownloadClientConfig? foundInClient = null;
+
+            if (isTorrent || isUsenet)
+            {
+                DownloadClientType clientType = isTorrent ? DownloadClientType.Torrent : DownloadClientType.Usenet;
+                List<IQueueCheckCapable> matchingClients = downloadServices
+                    .OfType<IQueueCheckCapable>()
+                    .Where(x => x.ClientConfig.Type == clientType)
+                    .ToList();
+
+                if (matchingClients.Count > 0)
+                {
+                    // Check each download client for the download item
+                    foreach (IQueueCheckCapable downloadService in matchingClients)
+                    {
+                        try
+                        {
+                            // Get download info from download service for rule evaluation
+                            downloadCheckResult = await downloadService
+                                .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
+
+                            if (downloadCheckResult.Found)
+                            {
+                                foundInClient = downloadService.ClientConfig;
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error checking download {dName} with download client {cName}",
+                                record.Title, downloadService.ClientConfig.Name);
+                        }
+                    }
+
+                    if (!downloadCheckResult.Found)
+                    {
+                        _logger.LogWarning("Download not found in any {clientType} client | {title}", isTorrent ? "torrent" : "usenet", record.Title);
+                    }
+                }
+            }
+
+            if (downloadCheckResult.ShouldRemove)
+            {
+                bool changeCategory = downloadCheckResult.ChangeCategory;
+                bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient);
+
+                await PublishQueueItemRemoveRequest(
+                    instance,
+                    record,
+                    group.Count() > 1,
+                    removeFromClient,
+                    downloadCheckResult.DeleteReason,
+                    skipSearch: !hasContentId,
+                    downloadClient: foundInClient,
+                    changeCategory: changeCategory
+                );
+
+                continue;
+            }
+
+            // Runs before the client check below: a torrent missing from the client can still be imported.
+            ForceImportOutcome forceImport = await _forceImportService.TryImportAsync(arrClient, instance, record);
+
+            // A deferred import must not collect strikes while the arr works.
+            if (forceImport is not ForceImportOutcome.NotApplicable)
+            {
+                continue;
+            }
+
+            // Skip failed import check if the download is not found in any client of its protocol and skipIfNotFoundInClient is enabled
+            bool skipIfNotFoundInClient = (isTorrent && hasEnabledTorrentClients) || (isUsenet && hasEnabledUsenetClients);
+
+            if (skipIfNotFoundInClient && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
+            {
+                _logger.LogInformation("skip | download not found in any client | {title}", record.Title);
+                continue;
+            }
+
+            // Failed import check
+            bool shouldRemoveFromArr = await arrClient
+                .ShouldRemoveFromQueue(instance.ArrConfig.Type, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
+
+            if (shouldRemoveFromArr)
+            {
+                bool changeCategory = queueCleanerConfig.FailedImport.ChangeCategory;
+                bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate);
+
+                await PublishQueueItemRemoveRequest(
+                    instance,
+                    record,
+                    group.Count() > 1,
+                    removeFromClient,
+                    DeleteReason.FailedImport,
+                    skipSearch: !hasContentId,
+                    downloadClient: foundInClient,
+                    changeCategory: changeCategory
+                );
+
+                continue;
+            }
+
+            _logger.LogDebug("skip | {title}", record.Title);
+        }
 
         // A download the arr dropped from its queue has landed only if the arr's history says so.
         await _forceImportService.ReconcileAsync(arrClient, instance, queuedDownloadIds);

@@ -85,7 +85,7 @@ public class SeekerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _fixture.ArrClientFactory,
-            _fixture.ArrQueueIterator,
+            _fixture.ArrQueueReader,
             _fixture.EventPublisher,
             _dryRunInterceptor,
             _hostingEnvironment,
@@ -284,9 +284,9 @@ public class SeekerTests : IDisposable
             new() { Id = 1, Title = "Download 1", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, TrackedDownloadState = "downloading" },
             new() { Id = 2, Title = "Download 2", DownloadId = "hash2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(activeDownloads));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(activeDownloads.ToList());
 
         _fixture.ArrClientFactory
             .GetClient(InstanceType.Radarr, Arg.Any<float>())
@@ -340,9 +340,9 @@ public class SeekerTests : IDisposable
             new() { Id = 1, Title = "Episode 1", DownloadId = "same-hash", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, TrackedDownloadState = "downloading" },
             new() { Id = 2, Title = "Episode 2", DownloadId = "same-hash", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(activeDownloads));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(activeDownloads.ToList());
 
         _fixture.ArrClientFactory
             .GetClient(InstanceType.Radarr, Arg.Any<float>())
@@ -389,9 +389,9 @@ public class SeekerTests : IDisposable
             new() { Id = 1, Title = "Pending 1", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, Status = "delay" },
             new() { Id = 2, Title = "Pending 2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, Status = "delay" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(pendingReleases));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(pendingReleases.ToList());
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -449,9 +449,9 @@ public class SeekerTests : IDisposable
         [
             new() { Id = 1, Title = "Movie 2 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 2, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queuedRecords));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(queuedRecords.ToList());
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -510,9 +510,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -549,9 +549,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -600,9 +600,9 @@ public class SeekerTests : IDisposable
         [
             new() { Id = 1, Title = "Movie 1 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 0, MovieId = 1, TrackedDownloadState = "importFailed" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queuedRecords));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(queuedRecords.ToList());
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -657,9 +657,9 @@ public class SeekerTests : IDisposable
         [
             new() { Id = 1, Title = "Series Episode", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, SeriesId = 10, SeasonNumber = 1, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queuedRecords));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(queuedRecords.ToList());
 
         _sonarrClient
             .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
@@ -727,9 +727,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
@@ -788,9 +788,9 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_QueueFetchFails_ProceedsWithoutFiltering()
+    public async Task ExecuteAsync_QueueFetchFails_SkipsInstanceWithoutSearching()
     {
-        // Arrange — queue fetch throws, but search should still proceed
+        // Arrange — queue fetch throws, instance should be skipped for this run
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
@@ -811,8 +811,8 @@ public class SeekerTests : IDisposable
         var mockArrClient = Substitute.For<IArrClient>();
 
         // Queue fetch fails
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
             .ThrowsAsync(new HttpRequestException("Connection refused"));
 
         _radarrClient
@@ -835,9 +835,17 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — search still proceeded despite queue fetch failure
-        await mockArrClient.Received(1)
-            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+        // Assert — instance skipped entirely, no search sent or recorded
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+
+        await _fixture.EventPublisher.DidNotReceive()
+            .PublishSearchTriggered(
+                Arg.Any<string>(),
+                SeekerSearchType.Proactive,
+                Arg.Any<SeekerSearchReason>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
     }
 
     #endregion
@@ -868,9 +876,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -928,9 +936,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -998,9 +1006,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1078,9 +1086,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1143,9 +1151,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1204,9 +1212,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1288,9 +1296,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1321,6 +1329,75 @@ public class SeekerTests : IDisposable
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
         instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_LiveRun_IgnoresDryRunHistory_SearchesItemAgain()
+    {
+        // Arrange - a dry run searched this movie in the current cycle
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var currentCycleId = Guid.NewGuid();
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = now,
+            ItemTitle = "Movie 1",
+            IsDryRun = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        // Live run
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert - live run ignores the dry-run row and searches the item
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
     }
 
     #endregion
@@ -1363,9 +1440,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         // Return movies for both instances — only instance 2 should be called
         _radarrClient
@@ -1495,9 +1572,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1574,9 +1651,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1647,9 +1724,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -1717,9 +1794,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -1795,9 +1872,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -1896,9 +1973,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         // Instance A: return the movie that was already searched in its cycle
         _radarrClient
@@ -1991,9 +2068,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         // Library now has 3 items — the 3rd was newly added
         _radarrClient
@@ -2078,9 +2155,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         // Library: item 2 was removed, item 3 was added (same total count of 2)
         _radarrClient
@@ -2142,9 +2219,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _radarrClient
@@ -2207,9 +2284,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _radarrClient
@@ -2261,9 +2338,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -2314,9 +2391,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
@@ -2384,9 +2461,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _radarrClient
@@ -2477,9 +2554,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         // No missing movies — only movies with files, to isolate CF score filtering
         _radarrClient
@@ -2570,9 +2647,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -2632,9 +2709,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -2690,9 +2767,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -2756,9 +2833,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -2825,9 +2902,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -2927,9 +3004,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -2994,9 +3071,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -3059,9 +3136,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -3133,9 +3210,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _sonarrClient
             .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
@@ -3205,9 +3282,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -3241,6 +3318,136 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Radarr_LiveRunAfterDryRun_ClaimsDryRunHistoryRow()
+    {
+        // Arrange - a dry run searches the item first
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var cycleId = Guid.NewGuid();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = cycleId
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        // Act - dry run writes a dry history row for the item
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await CreateSut().ExecuteAsync();
+
+        // Act - a live run searches the same item
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await CreateSut().ExecuteAsync();
+
+        // Assert - live run owns the row, count restarts at 1
+        var history = await _fixture.EventsContext.SeekerHistory
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1);
+        history.ShouldNotBeNull();
+        history.IsDryRun.ShouldBeFalse();
+        history.SearchCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_DryRunAfterLiveRun_DoesNotTouchLiveHistoryRow()
+    {
+        // Arrange - a live run searches the item first
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var cycleId = Guid.NewGuid();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = cycleId
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        // Act - the live run writes a real history row
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        await CreateSut().ExecuteAsync();
+
+        // Act - advance past MinCycleTimeDays so the dry run re-selects the item
+        // Dry run rolls its own cycle and leaves the live row alone
+        _fixture.TimeProvider.Advance(TimeSpan.FromDays(8));
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        await CreateSut().ExecuteAsync();
+
+        // Assert - both runs search, the live row stays unchanged
+        await mockArrClient.Received(2)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+
+        var liveHistory = await _fixture.EventsContext.SeekerHistory
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1 && !h.IsDryRun);
+        liveHistory.ShouldNotBeNull();
+        liveHistory.CycleId.ShouldBe(cycleId);
+        liveHistory.SearchCount.ShouldBe(1);
+
+        // Assert - the dry cycle recorded the second search
+        var dryHistory = await _fixture.EventsContext.SeekerHistory
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1 && h.IsDryRun);
+        dryHistory.ShouldNotBeNull();
+        dryHistory.CycleId.ShouldNotBe(cycleId);
+        dryHistory.SearchCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_ProactiveSearch_SavesCommandTracker()
     {
         // Arrange
@@ -3264,9 +3471,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -3334,9 +3541,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         // Library only has movie 1, not movie 99
         _radarrClient
@@ -3404,9 +3611,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -3459,9 +3666,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -3521,9 +3728,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -3625,9 +3832,9 @@ public class SeekerTests : IDisposable
             new() { Id = 2, Title = "DL 2", DownloadId = "h2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" },
             new() { Id = 3, Title = "DL 3", DownloadId = "h3", Protocol = "torrent", SizeLeft = 3000, MovieId = 30, TrackedDownloadState = "downloading" }
         ];
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(activeDownloads));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(activeDownloads.ToList());
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -3904,9 +4111,9 @@ public class SeekerTests : IDisposable
             })
             .ToArray();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queueRecords));
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(queueRecords.ToList());
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -4017,9 +4224,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance1, Arg.Any<CancellationToken>())
@@ -4286,9 +4493,9 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = Substitute.For<IArrClient>();
 
-        _fixture.ArrQueueIterator
-            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
-            .Returns(Task.CompletedTask);
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
 
         _radarrClient
             .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
@@ -4311,6 +4518,393 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         await _statusNotifier.Received(1).NotifySearchStatsUpdatedAsync(Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
+    #region Dry Run Cycle Simulation
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_DryRun_CycleComplete_ProgressesAcrossRuns()
+    {
+        // Arrange - both movies searched live, min cycle time elapsed
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var currentCycleId = Guid.NewGuid();
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Movie 1"
+        });
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 2,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Movie 2"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        List<long> searchedMovieIds = [];
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                searchedMovieIds.Add(ci.ArgAt<SearchItem>(1).Id);
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act - two dry runs
+        await CreateSut().ExecuteAsync();
+        await CreateSut().ExecuteAsync();
+
+        // Assert - each run picked a different movie
+        searchedMovieIds.Count.ShouldBe(2);
+        searchedMovieIds[0].ShouldNotBe(searchedMovieIds[1]);
+        searchedMovieIds.OrderBy(id => id).ShouldBe(new List<long> { 1, 2 });
+
+        // Assert - dry rows share one new cycle
+        List<SeekerHistory> dryRows = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == radarrInstance.Id && h.IsDryRun)
+            .ToListAsync();
+        dryRows.Count.ShouldBe(2);
+        dryRows.Select(h => h.CycleId).Distinct().Count().ShouldBe(1);
+        dryRows[0].CycleId.ShouldNotBe(currentCycleId);
+
+        // Assert - live rows untouched
+        List<SeekerHistory> liveRows = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == radarrInstance.Id && !h.IsDryRun)
+            .ToListAsync();
+        liveRows.Count.ShouldBe(2);
+        liveRows.ShouldAllBe(h => h.CycleId == currentCycleId && h.SearchCount == 1);
+
+        // Assert - live cycle id unchanged
+        _fixture.DataContext.ChangeTracker.Clear();
+        var reloadedConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
+        reloadedConfig.CurrentCycleId.ShouldBe(currentCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_DryRun_CompletedSimulatedCycle_RollsToAnotherNewCycle()
+    {
+        // Arrange - one movie searched live, min cycle time elapsed
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var currentCycleId = Guid.NewGuid();
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Movie 1"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act - first dry run rolls a dry cycle
+        await CreateSut().ExecuteAsync();
+
+        SeekerHistory firstDryRow = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .FirstAsync(h => h.ArrInstanceId == radarrInstance.Id && h.IsDryRun);
+        Guid firstDryCycleId = firstDryRow.CycleId;
+
+        // Act - min cycle time passes, second dry run
+        _fixture.TimeProvider.Advance(TimeSpan.FromDays(8));
+        await CreateSut().ExecuteAsync();
+
+        // Assert - second dry cycle, live cycle id unchanged
+        SeekerHistory latestDryRow = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == radarrInstance.Id && h.IsDryRun)
+            .OrderByDescending(h => h.LastSearchedAt)
+            .FirstAsync();
+        latestDryRow.CycleId.ShouldNotBe(firstDryCycleId);
+        latestDryRow.CycleId.ShouldNotBe(currentCycleId);
+
+        _fixture.DataContext.ChangeTracker.Clear();
+        var reloadedConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
+        reloadedConfig.CurrentCycleId.ShouldBe(currentCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_LiveRun_IgnoresSimulatedDryCycle()
+    {
+        // Arrange - a dry cycle left by an earlier dry run
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var currentCycleId = Guid.NewGuid();
+        var dryCycleId = Guid.NewGuid();
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = dryCycleId,
+            LastSearchedAt = now,
+            ItemTitle = "Movie 1",
+            IsDryRun = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        // Live run
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert - live run searches under the live cycle
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+
+        SeekerHistory? liveRow = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && !h.IsDryRun);
+        liveRow.ShouldNotBeNull();
+        liveRow.CycleId.ShouldBe(currentCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_DryRun_CycleComplete_ProgressesAcrossRuns()
+    {
+        // Arrange - both seasons searched live, min cycle time elapsed
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        DateTime now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Test Series"
+        });
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 2,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Test Series"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 20, EpisodeFileCount = 10 } }
+            ]));
+
+        DateTime pastDate = now.AddDays(-30);
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10)
+            .Returns(
+            [
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, HasFile = false, AirDateUtc = pastDate },
+                new SearchableEpisode { Id = 101, SeasonNumber = 2, EpisodeNumber = 1, Monitored = true, HasFile = false, AirDateUtc = pastDate }
+            ]);
+
+        List<long> searchedSeasons = [];
+        mockArrClient
+            .SearchItemAsync(sonarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                SeriesSearchItem searchItem = ci.ArgAt<SearchItem>(1) as SeriesSearchItem;
+                searchedSeasons.Add(searchItem.Id);
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        // Act - two dry runs
+        await CreateSut().ExecuteAsync();
+        await CreateSut().ExecuteAsync();
+
+        // Assert - each run picked a different season
+        searchedSeasons.Count.ShouldBe(2);
+        searchedSeasons[0].ShouldNotBe(searchedSeasons[1]);
+        searchedSeasons.OrderBy(id => id).ShouldBe(new List<long> { 1L, 2L });
+
+        // Assert - dry rows share one new cycle
+        List<SeekerHistory> dryRows = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == sonarrInstance.Id && h.IsDryRun)
+            .ToListAsync();
+        dryRows.Count.ShouldBe(2);
+        dryRows.Select(h => h.CycleId).Distinct().Count().ShouldBe(1);
+        dryRows[0].CycleId.ShouldNotBe(currentCycleId);
+
+        // Assert - live rows untouched
+        List<SeekerHistory> liveRows = await _fixture.EventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == sonarrInstance.Id && !h.IsDryRun)
+            .ToListAsync();
+        liveRows.Count.ShouldBe(2);
+        liveRows.ShouldAllBe(h => h.CycleId == currentCycleId && h.SearchCount == 1);
+
+        // Assert - live cycle id unchanged
+        _fixture.DataContext.ChangeTracker.Clear();
+        SeekerInstanceConfig reloadedConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
+        reloadedConfig.CurrentCycleId.ShouldBe(currentCycleId);
     }
 
     #endregion

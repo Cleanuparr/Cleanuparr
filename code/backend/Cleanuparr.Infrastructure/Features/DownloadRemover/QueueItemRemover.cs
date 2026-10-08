@@ -89,9 +89,9 @@ public sealed class QueueItemRemover : IQueueItemRemover
     {
         InstanceType instanceType = request.Instance.ArrConfig.Type;
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
-        await arrClient.DeleteQueueItemAsync(request.Instance, target.Record, target.RemoveFromClient, target.ChangeCategory, request.DeleteReason);
+        bool sent = await arrClient.DeleteQueueItemAsync(request.Instance, target.Record, target.RemoveFromClient, target.ChangeCategory, request.DeleteReason);
 
-        await MarkDownloadRemovedAsync(target.DownloadId);
+        await MarkDownloadRemovedAsync(target.DownloadId, sent);
 
         SetRemovalContext(request, target, instanceType);
         ContextProvider.Set(nameof(QueueRecord), target.Record);
@@ -127,8 +127,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
         bool snatchCleared = await TryClearSnatchAsync(request, target);
 
-        await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
-        await MarkDownloadRemovedAsync(target.DownloadId);
+        bool sent = await _lazyLibrarianService.ResetItemAsync(request.Instance, item);
+        await MarkDownloadRemovedAsync(target.DownloadId, sent);
 
         _logger.LogInformation(
             "queue item reset in LazyLibrarian with reason {Reason} | {Url} | {Title}",
@@ -210,8 +210,17 @@ public sealed class QueueItemRemover : IQueueItemRemover
         }
     }
 
-    private async Task MarkDownloadRemovedAsync(string downloadId)
+    /// <remarks>
+    /// A skipped request leaves the download queued.
+    /// Marking it removed would turn its next strike into a false return.
+    /// </remarks>
+    private async Task MarkDownloadRemovedAsync(string downloadId, bool sent)
     {
+        if (!sent)
+        {
+            return;
+        }
+
         await _eventsContext.DownloadItems
             .Where(x => x.DownloadId == downloadId)
             .ExecuteUpdateAsync(setter =>

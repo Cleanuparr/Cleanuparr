@@ -51,6 +51,7 @@ public class RemovalRequestSerializationTests
             },
             DeleteReason = DeleteReason.Stalled,
             JobRunId = Guid.NewGuid(),
+            IsDryRun = false,
         };
     }
 

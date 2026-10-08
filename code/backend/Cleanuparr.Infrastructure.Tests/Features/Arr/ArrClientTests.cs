@@ -175,9 +175,10 @@ public class ArrClientTests
         _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
-        await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(42), removeFromClient: true, changeCategory: false, DeleteReason.FailedImport);
+        bool sent = await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(42), removeFromClient: true, changeCategory: false, DeleteReason.FailedImport);
 
         // Assert
+        sent.ShouldBeTrue();
         var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.Method.ShouldBe(HttpMethod.Delete);
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/queue/42");
@@ -227,7 +228,23 @@ public class ArrClientTests
     [Fact]
     public async Task DeleteQueueItemAsync_DryRunReturnsNull_DoesNotThrow()
     {
-        // Arrange — interceptor short-circuits and returns null; method should still log "removed"
+        // Arrange: interceptor skips the request and returns null
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .Returns((HttpResponseMessage?)null);
+
+        // Act
+        bool sent = await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(1), removeFromClient: false, changeCategory: false, DeleteReason.Stalled);
+
+        // Assert
+        sent.ShouldBeFalse();
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteQueueItemAsync_DryRun_SaysSoInTheLog()
+    {
+        // Arrange
         _dryRunInterceptor
             .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns((HttpResponseMessage?)null);
@@ -235,8 +252,13 @@ public class ArrClientTests
         // Act
         await _client.DeleteQueueItemAsync(_arrInstance, BuildRecord(1), removeFromClient: false, changeCategory: false, DeleteReason.Stalled);
 
-        // Assert — no HTTP call was actually made because the interceptor was substituted to return null
-        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+        // Assert: the log line marks this as a dry-run removal
+        _logger.Received(1).Log(
+            LogLevel.Information,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("[DRY RUN]")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     #endregion

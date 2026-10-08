@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.Core;
 using Shouldly;
 using Xunit;
 
@@ -16,6 +17,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.LazyLibrarian;
 public class LazyLibrarianServiceTests
 {
     private readonly FakeHttpMessageHandler _httpMessageHandler;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly LazyLibrarianService _service;
     private readonly ArrInstance _instance;
 
@@ -32,19 +34,19 @@ public class LazyLibrarianServiceTests
                 Arg.Any<Exception?>(),
                 Arg.Any<Func<object, Exception?, string>>()))
             .Do(ci => _loggedMessages.Add(ci.ArgAt<object>(2).ToString() ?? string.Empty));
-        IDryRunInterceptor dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         _httpMessageHandler = new FakeHttpMessageHandler();
 
         HttpClient httpClient = new(_httpMessageHandler);
         IHttpClientFactory httpClientFactory = Substitute.For<IHttpClientFactory>();
         httpClientFactory.CreateClient(Arg.Any<string>()).Returns(httpClient);
 
-        dryRunInterceptor.IsDryRunEnabled().Returns(false);
-        dryRunInterceptor
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        _dryRunInterceptor
             .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns(async ci => await ci.Arg<Func<Task<HttpResponseMessage>>>()());
 
-        _service = new LazyLibrarianService(logger, httpClientFactory, dryRunInterceptor);
+        _service = new LazyLibrarianService(logger, httpClientFactory, _dryRunInterceptor);
         _instance = new ArrInstance
         {
             Name = "lazylibrarian",
@@ -453,17 +455,88 @@ public class LazyLibrarianServiceTests
         });
 
         // Act
-        await _service.ResetItemAsync(_instance, CreateItem(
+        bool sent = await _service.ResetItemAsync(_instance, CreateItem(
         [
             new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
             new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
         ]));
 
         // Assert: the audio status is separate, so the audiobook carries the type parameter.
+        sent.ShouldBeTrue();
         requested.Select(uri => uri.Query).ShouldBe([
             $"?apikey={ApiKey}&cmd=queueBook&id=OL1W",
             $"?apikey={ApiKey}&cmd=queueBook&id=OL2W&type=AudioBook",
         ]);
+    }
+
+    [Fact]
+    public async Task ResetItemAsync_DryRunSkipsTheRequest_ReturnsFalse()
+    {
+        // Arrange: dry run skips every request
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .Returns((HttpResponseMessage?)null);
+
+        // Act
+        bool sent = await _service.ResetItemAsync(_instance, CreateItem());
+
+        // Assert
+        sent.ShouldBeFalse();
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ResetItemAsync_DryRunSkipsOneBook_ReturnsFalse()
+    {
+        // Arrange: dry run skips the second book
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("OK", Encoding.UTF8, "text/plain"),
+        }));
+
+        int callCount = 0;
+        _dryRunInterceptor
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
+            .ReturnsForAnyArgs(async ci =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    return await ci.Arg<Func<Task<HttpResponseMessage>>>()();
+                }
+                return null;
+            });
+
+        // Act
+        bool sent = await _service.ResetItemAsync(_instance, CreateItem(
+        [
+            new LazyLibrarianBookRef { BookId = "OL1W", Library = BookLibrary.EBook },
+            new LazyLibrarianBookRef { BookId = "OL2W", Library = BookLibrary.AudioBook },
+        ]));
+
+        // Assert: one request sent
+        sent.ShouldBeFalse();
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ResetItemAsync_NoBooks_ReturnsFalse()
+    {
+        // Arrange: item with no books
+        LazyLibrarianQueueItem item = new()
+        {
+            DownloadId = "HASH1",
+            Title = "A Book",
+            Books = [],
+            Source = LazyLibrarianSource.QBittorrent,
+            Origin = LazyLibrarianOrigin.New,
+        };
+
+        // Act
+        bool sent = await _service.ResetItemAsync(_instance, item);
+
+        // Assert
+        sent.ShouldBeFalse();
     }
 
     [Fact]

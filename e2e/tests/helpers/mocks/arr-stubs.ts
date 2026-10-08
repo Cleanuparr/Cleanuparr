@@ -76,6 +76,22 @@ export function arrRawQueueStub(body: string): Mapping {
   };
 }
 
+/** Same as {@link arrRawQueueStub}, but scoped to one `page` query value, for multi-page queue tests. */
+export function arrRawQueuePageStub(page: number, body: string): Mapping {
+  return {
+    request: {
+      method: 'GET',
+      urlPath: '/api/v3/queue',
+      queryParameters: { page: { equalTo: String(page) } },
+    },
+    response: {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    },
+  };
+}
+
 /** Accepts a queue item removal, so Cleanuparr records it as done and emits its event. */
 export function arrQueueDeleteStub(): Mapping {
   return {

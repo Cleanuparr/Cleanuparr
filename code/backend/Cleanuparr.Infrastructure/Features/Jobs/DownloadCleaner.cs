@@ -37,7 +37,7 @@ public sealed class DownloadCleaner : GenericHandler
         IMemoryCache cache,
         IBus messageBus,
         IArrClientFactory arrClientFactory,
-        IArrQueueIterator arrArrQueueIterator,
+        IArrQueueReader arrQueueReader,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
         TimeProvider timeProvider,
@@ -50,7 +50,7 @@ public sealed class DownloadCleaner : GenericHandler
         ILazyLibrarianService lazyLibrarianService
     ) : base(
         logger, dataContext, cache, messageBus,
-        arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher, dryRunInterceptor,
+        arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor,
         forceImportService
     )
     {
@@ -233,19 +233,11 @@ public sealed class DownloadCleaner : GenericHandler
 
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
 
-        await _arrArrQueueIterator.Iterate(arrClient, instance, items =>
+        List<QueueRecord> queueRecords = await _arrQueueReader.ReadAllAsync(arrClient, instance);
+
+        foreach (QueueRecord record in queueRecords.Where(x => !string.IsNullOrEmpty(x.DownloadId)))
         {
-            List<IGrouping<string, QueueRecord>> groups = items
-                .Where(x => !string.IsNullOrEmpty(x.DownloadId))
-                .GroupBy(x => x.DownloadId)
-                .ToList();
-
-            foreach (QueueRecord record in groups.Select(group => group.First()))
-            {
-                _downloadsProcessedByArrs.Add(record.DownloadId);
-            }
-
-            return Task.CompletedTask;
-        });
+            _downloadsProcessedByArrs.Add(record.DownloadId);
+        }
     }
 }

@@ -42,6 +42,7 @@ public class QueueItemRemoverTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
     private readonly ILazyLibrarianService _lazyLibrarianService = Substitute.For<ILazyLibrarianService>();
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly QueueItemRemover _queueItemRemover;
     private readonly Guid _jobRunId;
 
@@ -67,9 +68,9 @@ public class QueueItemRemoverTests : IDisposable
 
         IEventNotifier eventNotifier = Substitute.For<IEventNotifier>();
 
-        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        dryRunInterceptor.IsDryRunEnabled().Returns(false);
-        dryRunInterceptor
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
+        _dryRunInterceptor
             .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ReturnsForAnyArgs(Task.CompletedTask);
 
@@ -78,7 +79,7 @@ public class QueueItemRemoverTests : IDisposable
             eventNotifier,
             Substitute.For<ILogger<EventPublisher>>(),
             Substitute.For<INotificationPublisher>(),
-            dryRunInterceptor,
+            _dryRunInterceptor,
             new SqliteDatabaseProvider(),
             TimeProvider.System);
 
@@ -120,6 +121,7 @@ public class QueueItemRemoverTests : IDisposable
         },
         DeleteReason = DeleteReason.Stalled,
         JobRunId = _jobRunId,
+        IsDryRun = false,
     };
 
     private void StubProgress(int progress)
@@ -158,7 +160,7 @@ public class QueueItemRemoverTests : IDisposable
         StubProgress(-1);
         _lazyLibrarianService
             .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
-            .Returns(Task.FromException(new Exception("lazylibrarian is down")));
+            .Returns(Task.FromException<bool>(new Exception("lazylibrarian is down")));
         QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
 
         // Act
@@ -600,7 +602,7 @@ public class QueueItemRemoverTests : IDisposable
         StubProgress(-1);
         _lazyLibrarianService
             .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
-            .Returns(Task.FromException(new Exception("lazylibrarian is down")));
+            .Returns(Task.FromException<bool>(new Exception("lazylibrarian is down")));
 
         // Act
         await Should.ThrowAsync<Exception>(
@@ -704,6 +706,170 @@ public class QueueItemRemoverTests : IDisposable
 
     #endregion
 
+    #region Dry Run
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_DeleteSent_MarksDownloadRemoved()
+    {
+        // Arrange: the delete was sent
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(true);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "abc123def456",
+            Title = "Test Record",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "abc123def456");
+        item.IsRemoved.ShouldBeTrue();
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_DeleteSkipped_LeavesTheDownloadUnmarked()
+    {
+        // Arrange: dry run skipped the delete
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(false);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "abc123def456",
+            Title = "Test Record",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert: the removal flag stays set
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "abc123def456");
+        item.IsRemoved.ShouldBeFalse();
+        item.IsMarkedForRemoval.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_DeleteSentWhileDryRunFlagIsSet_StillMarksDownloadRemoved()
+    {
+        // Arrange: dry run turned on after the delete was sent
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(true);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "abc123def456",
+            Title = "Test Record",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "abc123def456");
+        item.IsRemoved.ShouldBeTrue();
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_ResetSent_MarksDownloadRemoved()
+    {
+        // Arrange
+        _lazyLibrarianService
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(true);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "hash1",
+            Title = "A Book",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "hash1");
+        item.IsRemoved.ShouldBeTrue();
+        item.IsMarkedForRemoval.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_LazyLibrarian_ResetSkipped_LeavesTheDownloadUnmarked()
+    {
+        // Arrange: dry run skipped every reset
+        _lazyLibrarianService
+            .ResetItemAsync(Arg.Any<ArrInstance>(), Arg.Any<LazyLibrarianQueueItem>())
+            .Returns(false);
+        _eventsContext.DownloadItems.Add(new DownloadItem
+        {
+            DownloadId = "hash1",
+            Title = "A Book",
+            IsMarkedForRemoval = true,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        StubProgress(-1);
+        QueueItemRemoveRequest request = CreateLazyLibrarianRequest(removedFromClient: true);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        DownloadItem item = await _eventsContext.DownloadItems.AsNoTracking()
+            .FirstAsync(x => x.DownloadId == "hash1");
+        item.IsRemoved.ShouldBeFalse();
+        item.IsMarkedForRemoval.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_DeleteSkipped_StillQueuesTheSearch()
+    {
+        // Arrange: dry run skipped the delete
+        _arrClient
+            .DeleteQueueItemAsync(Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            .Returns(false);
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _arrClient.Received(1).DeleteQueueItemAsync(
+            Arg.Any<ArrInstance>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<bool>(),
+            Arg.Any<DeleteReason>());
+        _eventsContext.SearchQueue.Count().ShouldBe(1);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private QueueItemRemoveRequest CreateRemoveRequest(
@@ -728,7 +894,8 @@ public class QueueItemRemoverTests : IDisposable
             },
             DeleteReason = deleteReason,
             SkipSearch = skipSearch,
-            JobRunId = _jobRunId
+            JobRunId = _jobRunId,
+            IsDryRun = false,
         };
     }
 

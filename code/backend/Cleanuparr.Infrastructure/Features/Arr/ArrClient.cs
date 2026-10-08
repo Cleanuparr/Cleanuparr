@@ -215,7 +215,7 @@ public abstract class ArrClient : IArrClient
     }
 
     /// <inheritdoc/>
-    public async Task ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files)
+    public async Task<bool> ForceImportAsync(ArrInstance arrInstance, List<ManualImportFile> files)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
@@ -234,6 +234,7 @@ public abstract class ArrClient : IArrClient
         {
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
             response?.Dispose();
+            return response is not null;
         }
         catch
         {
@@ -273,7 +274,7 @@ public abstract class ArrClient : IArrClient
     /// <inheritdoc/>
     public virtual ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) => null;
 
-    public virtual async Task DeleteQueueItemAsync(
+    public virtual async Task<bool> DeleteQueueItemAsync(
         ArrInstance arrInstance,
         QueueRecord record,
         bool removeFromClient,
@@ -293,18 +294,21 @@ public abstract class ArrClient : IArrClient
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
             response?.Dispose();
 
+            // A null response means the interceptor skipped the request.
+            string prefix = response is null ? "[DRY RUN] " : string.Empty;
+
             string logMessage;
             if (changeCategory)
             {
-                logMessage = "queue item category changed in arr with reason {reason} | {url} | {title}";
+                logMessage = prefix + "queue item category changed in arr with reason {reason} | {url} | {title}";
             }
             else if (removeFromClient)
             {
-                logMessage = "queue item deleted with reason {reason} | {url} | {title}";
+                logMessage = prefix + "queue item deleted with reason {reason} | {url} | {title}";
             }
             else
             {
-                logMessage = "queue item removed from arr with reason {reason} | {url} | {title}";
+                logMessage = prefix + "queue item removed from arr with reason {reason} | {url} | {title}";
             }
 
             _logger.LogInformation(
@@ -313,6 +317,8 @@ public abstract class ArrClient : IArrClient
                 arrInstance.Url,
                 record.Title
             );
+
+            return response is not null;
         }
         catch
         {
