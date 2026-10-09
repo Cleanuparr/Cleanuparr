@@ -180,21 +180,7 @@ public partial class SabnzbdService
 
         await _dryRunInterceptor.InterceptAsync(() =>
         {
-            // A single-file job reports `storage` as the file itself. SAB sorting can put several jobs'
-            // files in the same folder, so only the file is deleted; the folder follows if it is now empty.
-            if (File.Exists(storagePath))
-            {
-                string? parent = Path.GetDirectoryName(storagePath);
-                TryDeleteFiles(storagePath, failOnNotFound: false);
-
-                if (!string.IsNullOrEmpty(parent) && Directory.Exists(parent) && !Directory.EnumerateFileSystemEntries(parent).Any())
-                {
-                    Directory.Delete(parent);
-                }
-
-                return Task.CompletedTask;
-            }
-
+            // A single-file job's `storage` is the file. Its folder can be complete_dir or a category folder, so it stays.
             TryDeleteFiles(storagePath, failOnNotFound: false);
             return Task.CompletedTask;
         });

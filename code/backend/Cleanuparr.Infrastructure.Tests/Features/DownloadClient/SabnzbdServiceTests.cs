@@ -650,12 +650,12 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
-        public async Task CompletedSingleFileJob_WithDeleteFiles_DeletesJobFolder()
+        public async Task CompletedSingleFileJob_LastFileInFolder_KeepsTheFolder()
         {
-            // SAB reports `storage` as the file itself for a single-file job, one level under its job folder.
+            // With job folders off, the file sits straight in complete_dir; emptying it must not remove complete_dir.
             var sut = _fixture.CreateSut();
-            string jobFolder = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
-            string storagePath = Path.Combine(jobFolder, "file.mkv");
+            string completeDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+            string storagePath = Path.Combine(completeDir, "file.mkv");
             await File.WriteAllTextAsync(storagePath, "x");
 
             try
@@ -664,14 +664,12 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
 
                 await sut.DeleteDownload(torrent, true);
 
-                Directory.Exists(jobFolder).ShouldBeFalse();
+                File.Exists(storagePath).ShouldBeFalse();
+                Directory.Exists(completeDir).ShouldBeTrue();
             }
             finally
             {
-                if (Directory.Exists(jobFolder))
-                {
-                    Directory.Delete(jobFolder, true);
-                }
+                Directory.Delete(completeDir, true);
             }
         }
 
