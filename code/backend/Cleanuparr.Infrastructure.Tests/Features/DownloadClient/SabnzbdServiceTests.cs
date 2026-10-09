@@ -594,6 +594,22 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             items.Count.ShouldBe(2);
             items.Select(x => x.DownloadId).ShouldBe(["nzo1", "nzo2"], ignoreOrder: true);
         }
+
+        [Fact]
+        public async Task HealthyResponse_ReadsQueueBeforeHistory()
+        {
+            var sut = _fixture.CreateSut();
+            _fixture.ClientWrapper.GetQueueAsync().Returns(new SabnzbdQueueData { Slots = [] });
+            _fixture.ClientWrapper.GetHistoryAsync().Returns(new SabnzbdHistoryData { Slots = [] });
+
+            await sut.GetAllDownloadsLite();
+
+            Received.InOrder(() =>
+            {
+                _fixture.ClientWrapper.GetQueueAsync();
+                _fixture.ClientWrapper.GetHistoryAsync();
+            });
+        }
     }
 
     public class DeleteDownload_Scenarios : SabnzbdServiceTests

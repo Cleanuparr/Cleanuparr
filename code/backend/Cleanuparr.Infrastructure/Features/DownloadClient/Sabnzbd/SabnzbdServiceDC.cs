@@ -9,12 +9,8 @@ public partial class SabnzbdService
     /// <inheritdoc/>
     public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
-        Task<SabnzbdQueueData?> queueTask = _client.GetQueueAsync();
-        Task<SabnzbdHistoryData?> historyTask = _client.GetHistoryAsync();
-        await Task.WhenAll(queueTask, historyTask);
-
-        SabnzbdQueueData? queue = await queueTask;
-        SabnzbdHistoryData? history = await historyTask;
+        SabnzbdQueueData? queue = await _client.GetQueueAsync();
+        SabnzbdHistoryData? history = await _client.GetHistoryAsync();
 
         if (queue is null || history is null)
         {
