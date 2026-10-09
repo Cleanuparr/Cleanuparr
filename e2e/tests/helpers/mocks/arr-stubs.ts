@@ -92,6 +92,14 @@ export function arrRawQueuePageStub(page: number, body: string): Mapping {
   };
 }
 
+/** Accepts a queue item removal, so Cleanuparr records it as done and emits its event. */
+export function arrQueueDeleteStub(): Mapping {
+  return {
+    request: { method: 'DELETE', urlPathPattern: '/api/v3/queue/.*' },
+    response: { status: 200, jsonBody: {} },
+  };
+}
+
 export function arrQueueStub(records: QueueRecord[]): Mapping {
   return {
     request: { method: 'GET', urlPath: '/api/v3/queue' },

@@ -8,18 +8,18 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 public partial class RTorrentService
 {
     /// <inheritdoc/>
-    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
         // rTorrent uses uppercase hashes
-        hash = hash.ToUpperInvariant();
+        downloadId = downloadId.ToUpperInvariant();
 
         DownloadCheckResult result = new();
 
-        RTorrentTorrent? download = await _client.GetTorrentAsync(hash);
+        RTorrentTorrent? download = await _client.GetTorrentAsync(downloadId);
 
         if (string.IsNullOrEmpty(download?.Hash))
         {
-            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
@@ -28,9 +28,9 @@ public partial class RTorrentService
         SetDownloadClientContext();
 
         // Get trackers for ignore check
-        var trackers = await _client.GetTrackersAsync(hash);
+        var trackers = await _client.GetTrackersAsync(downloadId);
         RTorrentItemWrapper torrent = new(download, trackers, _timeProvider);
-        result.Torrent = torrent;
+        result.Item = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
@@ -41,7 +41,7 @@ public partial class RTorrentService
         List<RTorrentFile> files;
         try
         {
-            files = await _client.GetTorrentFilesAsync(hash);
+            files = await _client.GetTorrentFilesAsync(downloadId);
         }
         catch (Exception exception)
         {

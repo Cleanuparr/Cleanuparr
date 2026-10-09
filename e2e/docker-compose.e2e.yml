@@ -273,6 +273,41 @@ services:
       retries: 12
       start_period: 30s
 
+  # Fake NNTP news server (SABnzbd's own tests/sabnews.py). Serves articles from
+  # files under test-data/sabnews-articles and also generates NZBs for them.
+  sabnews:
+    build:
+      context: ./sabnews
+    network_mode: host
+    volumes:
+      - ./test-data/sabnews-articles:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import socket; socket.create_connection(('127.0.0.1', 8888), 2)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:5.1.3-ls275
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/sabnzbd-config:/config
+      - ./test-data/downloads/sabnzbd:/downloads
+    depends_on:
+      sabnews:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- 'http://127.0.0.1:8070/api?mode=version' > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
   rutorrent:
     image: lscr.io/linuxserver/rutorrent:latest
     ports:

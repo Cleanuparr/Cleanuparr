@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Infrastructure.Features.Context;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
@@ -14,11 +15,16 @@ public sealed class LazyLibrarianServiceCB : LazyLibrarianJobEvaluator
 
     protected override async Task<ClientVerdict> CheckAsync(
         IDownloadService downloadService,
-        string hash,
+        string downloadId,
         IReadOnlyList<string> ignoredDownloads
     )
     {
-        BlockFilesResult result = await downloadService.BlockUnwantedFilesAsync(hash, ignoredDownloads);
+        if (downloadService is not IFileBlockingCapable capable)
+        {
+            return default;
+        }
+
+        BlockFilesResult result = await capable.BlockUnwantedFilesAsync(downloadId, ignoredDownloads);
         ContentBlockerConfig config = ContextProvider.Get<ContentBlockerConfig>();
 
         return new ClientVerdict(
@@ -26,7 +32,7 @@ public sealed class LazyLibrarianServiceCB : LazyLibrarianJobEvaluator
             result.ShouldRemove,
             !result.IsPrivate || config.DeletePrivate,
             result.DeleteReason,
-            result.Torrent
+            result.Item
         );
     }
 }

@@ -31,13 +31,13 @@ public partial class UTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
         List<UTorrentItem> reported = await _client.GetTorrentsAsync();
 
-        List<ITorrentItemWrapper> torrents = reported
+        List<IDownloadItem> torrents = reported
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(ITorrentItemWrapper (x) => new UTorrentItemWrapper(x, new UTorrentProperties(), _timeProvider))
+            .Select(IDownloadItem (x) => new UTorrentItemWrapper(x, new UTorrentProperties(), _timeProvider))
             .ToList();
 
         ThrowIfTorrentListCollapsed(reported.Count, torrents.Count);
@@ -46,28 +46,28 @@ public partial class UTorrentService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
-        BuildClaimedPathsAsync(torrents, async torrent =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
+        BuildClaimedPathsAsync(downloads, async torrent =>
         {
-            if (string.IsNullOrEmpty(torrent.Hash))
+            if (string.IsNullOrEmpty(torrent.DownloadId))
             {
                 return [];
             }
 
-            List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(torrent.Hash);
+            List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(torrent.DownloadId);
             return files?.Select(f => f.Name).Where(name => !string.IsNullOrEmpty(name)).ToList() ?? [];
         });
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        string hash = torrent.Hash.ToLowerInvariant();
+        string hash = item.DownloadId.ToLowerInvariant();
         await _client.RemoveTorrentsAsync([hash], deleteSourceFiles);
     }
 
-    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        string hash = torrent.Hash.ToLowerInvariant();
+        string hash = item.DownloadId.ToLowerInvariant();
         await _client.StopTorrentsAsync([hash]);
     }
 
@@ -80,7 +80,7 @@ public partial class UTorrentService
     protected override async Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(ITorrentItemWrapper torrent)
     {
         UTorrentItemWrapper uTorrent = (UTorrentItemWrapper)torrent;
-        List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(uTorrent.Hash);
+        List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(uTorrent.DownloadId);
 
         List<(string FilePath, HardLinkScanAction Action)> scanItems = [];
 
@@ -101,7 +101,7 @@ public partial class UTorrentService
 
     /// <inheritdoc/>
     protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
-        ChangeLabel(torrent.Hash, targetCategory);
+        ChangeLabel(torrent.DownloadId, targetCategory);
 
     protected virtual async Task ChangeLabel(string hash, string newLabel)
     {

@@ -64,7 +64,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             // Assert
             result.Count.ShouldBe(2);
-            foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
+            foreach (var item in result) { item.DownloadId.ShouldNotBeNull(); }
         }
 
         [Fact]
@@ -193,7 +193,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -229,7 +229,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash2");
+            result[0].DownloadId.ShouldBe("hash2");
         }
 
         [Fact]
@@ -422,7 +422,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -481,7 +481,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         private static ITorrentItemWrapper CreateTorrentWithSeederCount(string hash, int? seederCount)
         {
             var torrent = Substitute.For<ITorrentItemWrapper>();
-            torrent.Hash.Returns(hash);
+            torrent.DownloadId.Returns(hash);
             torrent.Name.Returns($"Test {hash}");
             torrent.Category.Returns("movies");
             torrent.IsPrivate.Returns(false);
@@ -882,7 +882,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash2");
+            result[0].DownloadId.ShouldBe("hash2");
         }
 
         [Fact]
@@ -964,7 +964,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -1068,7 +1068,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains(hash)), true)
@@ -1089,7 +1089,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>())
@@ -1117,7 +1117,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             QBitService sut = _fixture.CreateSut();
             const string hash = "test-hash";
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .PauseAsync(Arg.Is<IEnumerable<string>>(h => h.Contains(hash)))
@@ -1137,7 +1137,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             QBitService sut = _fixture.CreateSut();
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("test-hash");
+            mockTorrent.DownloadId.Returns("test-hash");
 
             _fixture.ClientWrapper
                 .PauseAsync(Arg.Any<IEnumerable<string>>())
@@ -1197,7 +1197,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         {
             var sut = _fixture.CreateSut();
             var torrent = Substitute.For<ITorrentItemWrapper>();
-            torrent.Hash.Returns("hash1");
+            torrent.DownloadId.Returns("hash1");
             torrent.Name.Returns("Test");
             torrent.Category.Returns("movies");
 
@@ -1216,7 +1216,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         {
             var sut = _fixture.CreateSut();
             var torrent = Substitute.For<ITorrentItemWrapper>();
-            torrent.Hash.Returns("hash1");
+            torrent.DownloadId.Returns("hash1");
             torrent.Name.Returns("Test");
             torrent.Category.Returns("movies");
 
@@ -1235,7 +1235,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         {
             var sut = _fixture.CreateSut();
             var torrent = Substitute.For<ITorrentItemWrapper>();
-            torrent.Hash.Returns("hash1");
+            torrent.DownloadId.Returns("hash1");
             torrent.Name.Returns("Test");
             torrent.Category.Returns("movies");
 

@@ -165,7 +165,6 @@ public class SensitiveDataInputTests
         {
             Name = "Updated qBit",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Username = "admin",
             Password = Placeholder,
@@ -194,7 +193,6 @@ public class SensitiveDataInputTests
         {
             Name = "qBittorrent",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Username = "admin",
             Password = "new-password-123",
@@ -226,7 +224,6 @@ public class SensitiveDataInputTests
         {
             Name = "qBittorrent",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Password = Placeholder,
         };
@@ -241,7 +238,6 @@ public class SensitiveDataInputTests
         {
             Name = "qBittorrent",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Password = "real-password",
         };
@@ -256,7 +252,6 @@ public class SensitiveDataInputTests
         {
             Name = "qBittorrent",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Password = null,
         };
@@ -274,7 +269,6 @@ public class SensitiveDataInputTests
         var request = new TestDownloadClientRequest
         {
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Password = Placeholder,
         };
@@ -289,7 +283,6 @@ public class SensitiveDataInputTests
         var request = new TestDownloadClientRequest
         {
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Password = Placeholder,
             ClientId = Guid.NewGuid(),
@@ -306,7 +299,6 @@ public class SensitiveDataInputTests
         var request = new TestDownloadClientRequest
         {
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://qbit:8080",
             Password = "real-password",
         };

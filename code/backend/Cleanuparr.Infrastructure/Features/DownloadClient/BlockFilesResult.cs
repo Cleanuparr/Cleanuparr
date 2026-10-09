@@ -20,7 +20,7 @@ public sealed record BlockFilesResult
     public DeleteReason DeleteReason { get; set; } = DeleteReason.None;
 
     /// <summary>
-    /// The matched torrent, set when <see cref="Found"/> is true.
+    /// The matched download item, set when <see cref="Found"/> is true.
     /// </summary>
-    public ITorrentItemWrapper? Torrent { get; set; }
+    public IDownloadItem? Item { get; set; }
 }

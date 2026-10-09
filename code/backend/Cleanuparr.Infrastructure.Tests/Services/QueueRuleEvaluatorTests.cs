@@ -84,7 +84,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         long downloadedBytes = 0;
 
         var torrent = Substitute.For<ITorrentItemWrapper>();
-        torrent.Hash.Returns("hash");
+        torrent.DownloadId.Returns("hash");
         torrent.Name.Returns("Example Torrent");
         torrent.IsPrivate.Returns(false);
         torrent.Size.Returns(ByteSize.Parse("100 MB").Bytes);
@@ -963,7 +963,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         string size = "100 MB")
     {
         var torrent = Substitute.For<ITorrentItemWrapper>();
-        torrent.Hash.Returns(hash);
+        torrent.DownloadId.Returns(hash);
         torrent.Name.Returns(name);
         torrent.IsPrivate.Returns(isPrivate);
         torrent.CompletionPercentage.Returns(completionPercentage);

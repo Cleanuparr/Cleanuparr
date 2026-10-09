@@ -147,7 +147,6 @@ test.describe.serial('Deluge seeding rule cleanup', () => {
       enabled: true,
       name: 'Deluge seeding rule e2e',
       typeName: deluge.typeName,
-      type: 'Torrent',
       host: deluge.cleanuparrHost,
       username: deluge.username,
       password: deluge.password,

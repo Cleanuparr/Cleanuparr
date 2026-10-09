@@ -81,6 +81,7 @@
             @if (!isSelectedClientDisabled()) {
             <div class="form-divider"></div>
 
+            @if (isSeedingCleanupCapableClient()) {
             <app-accordion header="Seeding Rules" subtitle="Define cleanup rules per category" [(expanded)]="seedingRulesExpanded">
               @if (rulesReloading()) {
                 <div class="rules-loading">
@@ -166,7 +167,9 @@
                 </app-button>
               </div>
             </app-accordion>
+            }
 
+            @if (isUnlinkedCapableClient()) {
             <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
               <div class="form-stack">
                 <app-toggle label="Enabled" [formField]="unlinkedForm.enabled"
@@ -202,6 +205,7 @@
                 </div>
               </div>
             </app-accordion>
+            }
 
             @if (isDeadTorrentCapableClient()) {
             <app-accordion header="Dead Torrents" subtitle="Triage torrents with no seeders" featureId="dead-torrent" [(expanded)]="deadTorrentExpanded">

@@ -108,8 +108,49 @@ public class DownloadClientResponseContractTests : IDisposable
         ResponseContract.Body(result).GetProperty("password").GetString().ShouldBe(SensitiveDataHelper.Placeholder);
     }
 
+    [Fact]
+    public void GetDownloadClientTypes_ReturnsTheDocumentedWrapperKeys()
+    {
+        IActionResult result = _controller.GetDownloadClientTypes();
+
+        ResponseContract.Keys(result).ShouldBe(["types"]);
+    }
+
+    [Fact]
+    public void GetDownloadClientTypes_ReturnsTheDocumentedTypeKeys()
+    {
+        IActionResult result = _controller.GetDownloadClientTypes();
+
+        ResponseContract.Keys(FirstType(result)).ShouldBe(["authFields", "capabilities", "typeName"]);
+    }
+
+    [Fact]
+    public void GetDownloadClientTypes_ReturnsOneEntryPerSelectableType()
+    {
+        IActionResult result = _controller.GetDownloadClientTypes();
+
+        ResponseContract.Body(result).GetProperty("types").GetArrayLength()
+            .ShouldBe(EnumSentinel.SelectableValues<DownloadClientTypeName>().Count);
+    }
+
+    [Fact]
+    public void GetDownloadClientTypes_SabnzbdHasNoSeedingCleanupCapability()
+    {
+        IActionResult result = _controller.GetDownloadClientTypes();
+
+        JsonElement sabnzbd = ResponseContract.Body(result).GetProperty("types").EnumerateArray()
+            .First(t => t.GetProperty("typeName").GetString() == nameof(DownloadClientTypeName.Sabnzbd));
+
+        sabnzbd.GetProperty("capabilities").EnumerateArray().Select(c => c.GetString())
+            .ShouldNotContain(nameof(DownloadClientCapability.SeedingCleanup));
+    }
+
+    private static JsonElement FirstType(IActionResult result) =>
+        ResponseContract.Body(result).GetProperty("types").EnumerateArray().First();
+
     private static readonly string[] ClientKeys =
     [
+        "apiKey",
         "downloadDirectorySource",
         "downloadDirectoryTarget",
         "enabled",
@@ -150,7 +191,6 @@ public class DownloadClientResponseContractTests : IDisposable
         Enabled = true,
         Name = "created",
         TypeName = DownloadClientTypeName.qBittorrent,
-        Type = DownloadClientType.Torrent,
         Host = "http://localhost:8080",
         Username = "user",
         Password = "secret",
@@ -161,7 +201,6 @@ public class DownloadClientResponseContractTests : IDisposable
         Enabled = true,
         Name = "renamed",
         TypeName = DownloadClientTypeName.qBittorrent,
-        Type = DownloadClientType.Torrent,
         Host = "http://localhost:8080",
         Username = "user",
         Password = "secret",

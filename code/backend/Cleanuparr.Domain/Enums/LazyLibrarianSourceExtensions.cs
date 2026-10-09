@@ -2,21 +2,24 @@ namespace Cleanuparr.Domain.Enums;
 
 public static class LazyLibrarianSourceExtensions
 {
-    private static readonly HashSet<LazyLibrarianSource> TorrentClients =
-    [
-        LazyLibrarianSource.QBittorrent,
-        LazyLibrarianSource.Transmission,
-        LazyLibrarianSource.DelugeWebUi,
-        LazyLibrarianSource.DelugeRpc,
-        LazyLibrarianSource.UTorrent,
-        LazyLibrarianSource.RTorrent,
-    ];
+    private static readonly Dictionary<LazyLibrarianSource, DownloadClientType> QueryableClients = new()
+    {
+        [LazyLibrarianSource.QBittorrent] = DownloadClientType.Torrent,
+        [LazyLibrarianSource.Transmission] = DownloadClientType.Torrent,
+        [LazyLibrarianSource.DelugeWebUi] = DownloadClientType.Torrent,
+        [LazyLibrarianSource.DelugeRpc] = DownloadClientType.Torrent,
+        [LazyLibrarianSource.UTorrent] = DownloadClientType.Torrent,
+        [LazyLibrarianSource.RTorrent] = DownloadClientType.Torrent,
+        [LazyLibrarianSource.Sabnzbd] = DownloadClientType.Usenet,
+    };
 
     /// <summary>
-    /// A blackhole or Synology row keeps a torrent NZBmode but never reaches a client we can query.
-    /// Its DownloadID is a path or a task id, so it collides across unrelated rows.
+    /// The Cleanuparr client type that can query this source, or null when it never reaches a client we can query
+    /// (blackhole, Synology, direct, irc, or an unsupported usenet downloader like NZBGet).
+    /// Its DownloadID is then a path or a task id, so it collides across unrelated rows.
     /// </summary>
-    public static bool IsTorrentClient(this LazyLibrarianSource source) => TorrentClients.Contains(source);
+    public static DownloadClientType? ClientType(this LazyLibrarianSource source) =>
+        QueryableClients.TryGetValue(source, out DownloadClientType type) ? type : null;
 
     public static string ToWireValue(this LazyLibrarianSource source) =>
         LazyLibrarianSourceConverter.ToWireValue(source);

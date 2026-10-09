@@ -24,13 +24,13 @@ public partial class RTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
         List<RTorrentTorrent> downloads = await _client.GetAllTorrentsAsync();
 
-        List<ITorrentItemWrapper> torrents = downloads
+        List<IDownloadItem> torrents = downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x, null, _timeProvider))
+            .Select(IDownloadItem (x) => new RTorrentItemWrapper(x, null, _timeProvider))
             .ToList();
 
         ThrowIfTorrentListCollapsed(downloads.Count, torrents.Count);
@@ -39,11 +39,11 @@ public partial class RTorrentService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents)
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads)
     {
         HashSet<string> claimed = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ITorrentItemWrapper torrent in torrents)
+        foreach (IDownloadItem torrent in downloads)
         {
             if (torrent is not RTorrentItemWrapper wrapper)
             {
@@ -65,29 +65,36 @@ public partial class RTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        string hash = torrent.Hash.ToUpperInvariant();
-        await _client.DeleteTorrentAsync(hash);
+        string hash = item.DownloadId.ToUpperInvariant();
 
-        if (deleteSourceFiles)
+        if (!deleteSourceFiles)
         {
-            string savePath = PathHelper.NormalizeAndRemap(
-                torrent.SavePath,
-                _downloadClientConfig.DownloadDirectorySource,
-                _downloadClientConfig.DownloadDirectoryTarget);
-
-            if (!TryDeleteFiles(savePath, true))
-            {
-                _logger.LogWarning("Failed to delete files | {name}", torrent.Name);
-            }
+            await _client.DeleteTorrentAsync(hash);
+            return;
         }
+
+        // rTorrent keeps files open while a torrent is active, so stop it before deleting them.
+        await _client.StopTorrentAsync(hash);
+
+        string savePath = PathHelper.NormalizeAndRemap(
+            item.SavePath,
+            _downloadClientConfig.DownloadDirectorySource,
+            _downloadClientConfig.DownloadDirectoryTarget);
+
+        if (!TryDeleteFiles(savePath, failOnNotFound: false))
+        {
+            throw new IOException($"failed to delete rTorrent files | {item.Name}");
+        }
+
+        await _client.DeleteTorrentAsync(hash);
     }
 
     /// <inheritdoc/>
-    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        string hash = torrent.Hash.ToUpperInvariant();
+        string hash = item.DownloadId.ToUpperInvariant();
         await _client.StopTorrentAsync(hash);
     }
 
@@ -108,7 +115,7 @@ public partial class RTorrentService
 
         try
         {
-            files = await _client.GetTorrentFilesAsync(rTorrent.Hash);
+            files = await _client.GetTorrentFilesAsync(rTorrent.DownloadId);
         }
         catch (Exception exception)
         {
@@ -135,7 +142,7 @@ public partial class RTorrentService
 
     /// <inheritdoc/>
     protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
-        ChangeLabel(torrent.Hash, targetCategory);
+        ChangeLabel(torrent.DownloadId, targetCategory);
 
     protected virtual async Task ChangeLabel(string hash, string newLabel)
     {

@@ -12,9 +12,9 @@ WIREMOCKS = wiremock-arr wiremock-dlc wiremock-notify wiremock-blocklist
 APP_SERVICES = app nginx
 
 CORE_STACK = keycloak $(WIREMOCKS)
-CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent
+CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent sabnews sabnzbd
 ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr
-LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent lazylibrarian
+LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sabnews sabnzbd lazylibrarian
 
 setup:
 	bash ./scripts/setup-test-data.sh

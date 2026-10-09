@@ -98,7 +98,6 @@ test.describe.serial('Orphaned files cleanup — refuses to scan when client dat
       enabled: true,
       name: 'qBittorrent unreachable',
       typeName: 'qBittorrent',
-      type: 'Torrent',
       // Nothing listens on port 1, so the qBit client fails to connect.
       host: 'http://127.0.0.1:1',
       username: 'admin',

@@ -278,6 +278,7 @@ The raw event audit for the timeframe. The higher-level sections (`strikes`, `re
   - `DownloadMarkedForDeletion`: A download was flagged for removal, just before it is deleted.
   - `SearchTriggered`: The Seeker started a search for a missing or upgradeable item.
   - `StrikeReset`: A download recovered, so its accumulated strikes were cleared.
+  - `ForceImported`: A download the *arr had blocked from importing was force-imported instead of striked.
 - **bySeverity**: Events grouped by severity. Possible severities:
   - `Information`
   - `Warning`
@@ -321,6 +322,7 @@ Downloads removed from the queue in the timeframe, broken down by reason. This i
   - `AllFilesSkippedByQBit`: Removed because qBittorrent marked every file as `do not download`, so nothing was ever downloaded.
   - `AllFilesBlocked`: Removed because every file matched the malware blocklist.
   - `AtLeastOneFileBlocked`: Removed because at least one file matched the malware blocklist.
+  - `DownloadFailed`: Removed because SABnzbd moved the job to history as `Failed`.
 
 <Note>
 The number of **Malware blocked** can be derived from the sum of the `AllFilesBlocked` and `AtLeastOneFileBlocked`.

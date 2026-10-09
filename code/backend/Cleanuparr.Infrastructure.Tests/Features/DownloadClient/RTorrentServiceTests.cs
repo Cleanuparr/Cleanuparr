@@ -774,6 +774,91 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
         }
     }
 
+    public class DeleteDownload_Scenarios : RTorrentServiceTests
+    {
+        public DeleteDownload_Scenarios(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task DeleteFilesFalse_OnlyRemovesTorrent()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "TEST-HASH", Name = "Test" }, null, TimeProvider.System);
+
+            await sut.DeleteDownload(torrent, false);
+
+            await _fixture.ClientWrapper.Received(1).DeleteTorrentAsync("TEST-HASH");
+            await _fixture.ClientWrapper.DidNotReceive().StopTorrentAsync(Arg.Any<string>());
+        }
+
+        [Fact]
+        public async Task DeleteFiles_PathAlreadyGone_StillRemovesTorrent()
+        {
+            RTorrentService sut = _fixture.CreateSut();
+            string missingPath = Path.Combine(Path.GetTempPath(), $"rtorrent-missing-{Guid.NewGuid()}");
+            RTorrentItemWrapper torrent = new(new RTorrentTorrent { Hash = "TEST-HASH", Name = "Test", BasePath = missingPath }, null, TimeProvider.System);
+
+            await sut.DeleteDownload(torrent, true);
+
+            await _fixture.ClientWrapper.Received(1).DeleteTorrentAsync("TEST-HASH");
+        }
+
+        [Fact]
+        public async Task DeleteFiles_StopsThenDeletesFilesThenRemovesTorrent()
+        {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("rtorrent-delete-order-").FullName;
+
+            try
+            {
+                var torrent = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "TEST-HASH", Name = "Test", BasePath = tempDir }, null, TimeProvider.System);
+
+                await sut.DeleteDownload(torrent, true);
+
+                Directory.Exists(tempDir).ShouldBeFalse();
+                Received.InOrder(() =>
+                {
+                    _fixture.ClientWrapper.StopTorrentAsync("TEST-HASH");
+                    _fixture.ClientWrapper.DeleteTorrentAsync("TEST-HASH");
+                });
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task FileDeleteFails_ThrowsAndDoesNotRemoveTorrent()
+        {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("rtorrent-delete-fail-").FullName;
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "file.mkv"), "x");
+
+            // No write permission on the folder itself blocks deleting its entries.
+            File.SetUnixFileMode(tempDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+
+            try
+            {
+                var torrent = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "TEST-HASH", Name = "Test", BasePath = tempDir }, null, TimeProvider.System);
+
+                await Should.ThrowAsync<IOException>(() => sut.DeleteDownload(torrent, true));
+
+                await _fixture.ClientWrapper.Received(1).StopTorrentAsync("TEST-HASH");
+                await _fixture.ClientWrapper.DidNotReceive().DeleteTorrentAsync(Arg.Any<string>());
+            }
+            finally
+            {
+                File.SetUnixFileMode(tempDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
     public class BlockUnwantedFilesAsyncScenarios : RTorrentServiceTests
     {
         public BlockUnwantedFilesAsyncScenarios(RTorrentServiceFixture fixture) : base(fixture)

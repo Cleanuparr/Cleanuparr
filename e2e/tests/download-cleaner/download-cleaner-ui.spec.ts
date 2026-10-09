@@ -20,12 +20,12 @@ import {
 const CLIENT_A = 'E2E DC One';
 const CLIENT_B = 'E2E DC Two';
 const CLIENT_TRANSMISSION = 'E2E DC Transmission';
+const CLIENT_SABNZBD = 'E2E DC SABnzbd';
 
 function clientPayload(name: string) {
   return {
     enabled: true,
     name,
-    type: 'Torrent',
     typeName: 'qBittorrent',
     host: 'http://localhost:8090',
     username: 'admin',
@@ -46,6 +46,19 @@ function transmissionClientPayload(name: string) {
   };
 }
 
+function sabnzbdClientPayload(name: string) {
+  return {
+    enabled: true,
+    name,
+    typeName: 'Sabnzbd',
+    host: 'http://localhost:8070',
+    apiKey: 'e2e-ui-key',
+    urlBase: '',
+    downloadDirectorySource: null,
+    downloadDirectoryTarget: null,
+  };
+}
+
 // Behavior-parity spec for the Download Cleaner form: global config, seeding-rule modal,
 // and the per-client sub-configs (the linkedSignal-backed part with the highest migration risk).
 test.describe.serial('Download Cleaner UI', () => {
@@ -56,9 +69,10 @@ test.describe.serial('Download Cleaner UI', () => {
     await createDownloadClient(token, clientPayload(CLIENT_A));
     await createDownloadClient(token, clientPayload(CLIENT_B));
     await createDownloadClient(token, transmissionClientPayload(CLIENT_TRANSMISSION));
+    await createDownloadClient(token, sabnzbdClientPayload(CLIENT_SABNZBD));
     const clients = await listDownloadClients(token);
     for (const c of clients) {
-      if (c.name === CLIENT_A || c.name === CLIENT_B || c.name === CLIENT_TRANSMISSION) createdIds.push(c.id);
+      if ([CLIENT_A, CLIENT_B, CLIENT_TRANSMISSION, CLIENT_SABNZBD].includes(c.name)) createdIds.push(c.id);
     }
   });
 
@@ -203,5 +217,26 @@ test.describe.serial('Download Cleaner UI', () => {
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(dialog).toBeHidden();
+  });
+
+  test('SABnzbd hides seeding rules, unlinked downloads and dead torrents, but keeps orphaned files', async ({ page }) => {
+    await enableAndSelect(page, CLIENT_SABNZBD);
+
+    await expect(page.locator('app-accordion').filter({ hasText: 'Seeding Rules' })).toHaveCount(0);
+    await expect(page.locator('app-accordion').filter({ hasText: 'Unlinked Downloads' })).toHaveCount(0);
+    await expect(page.locator('app-accordion').filter({ hasText: 'Dead Torrents' })).toHaveCount(0);
+    await expect(page.locator('app-accordion').filter({ hasText: 'Orphaned Files' })).toBeVisible();
+  });
+
+  test('a failed types load shows the error state and recovers on retry', async ({ page }) => {
+    await page.route('**/download_client/types', (route) => route.abort());
+    await loginAndGotoSettings(page, 'download-cleaner');
+
+    await expect(page.getByRole('heading', { name: 'Could not connect to server' })).toBeVisible();
+
+    await page.unroute('**/download_client/types');
+    await page.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(toggle(page, 'Enabled')).toBeVisible();
   });
 });

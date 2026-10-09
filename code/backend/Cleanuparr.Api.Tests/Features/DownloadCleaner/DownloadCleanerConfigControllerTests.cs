@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -42,6 +44,39 @@ public class DownloadCleanerConfigControllerTests : IDisposable
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
         ok.Value.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task GetDownloadCleanerConfig_IncludesClientsWithoutSeedingCleanupCapability()
+    {
+        // Arrange: Sabnzbd has no seeding rules, unlinked handling or dead-torrent detection,
+        // but it still needs to show up here for its orphaned-files config.
+        _dataContext.DownloadClients.Add(new DownloadClientConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Sabnzbd",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Type = DownloadClientType.Usenet,
+            Enabled = true,
+        });
+        await _dataContext.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.GetDownloadCleanerConfig();
+
+        // Assert
+        JsonElement clients = ResponseContract.Body(result).GetProperty("clients");
+        JsonElement sab = clients.EnumerateArray()
+            .First(c => c.GetProperty("downloadClientName").GetString() == "Test Sabnzbd");
+        sab.GetProperty("seedingRules").GetArrayLength().ShouldBe(0);
+        sab.GetProperty("unlinkedConfig").ValueKind.ShouldBe(JsonValueKind.Null);
+        sab.GetProperty("deadTorrentConfig").ValueKind.ShouldBe(JsonValueKind.Null);
+        sab.GetProperty("orphanedFilesConfig").ValueKind.ShouldBe(JsonValueKind.Null);
+
+        // Reading the bundle must not create default config rows for a client that never had one.
+        (await _dataContext.UnlinkedConfigs.CountAsync()).ShouldBe(0);
+        (await _dataContext.DeadTorrentConfigs.CountAsync()).ShouldBe(0);
+        (await _dataContext.OrphanedFilesConfigs.CountAsync()).ShouldBe(0);
     }
 
     [Fact]

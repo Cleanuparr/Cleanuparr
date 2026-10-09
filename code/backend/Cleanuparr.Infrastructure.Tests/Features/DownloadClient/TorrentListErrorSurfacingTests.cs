@@ -282,7 +282,7 @@ public sealed class TorrentListErrorSurfacingTests
         QBitService sut = fixture.CreateSut();
         fixture.ClientWrapper.GetTorrentListAsync(Arg.Any<TorrentListQuery>()).Returns((IReadOnlyList<TorrentInfo>)null!);
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -293,7 +293,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetTorrentListAsync(Arg.Any<TorrentListQuery>())
             .Returns(new List<TorrentInfo> { new() });
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -304,7 +304,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetTorrentListAsync(Arg.Any<TorrentListQuery>())
             .Returns(new List<TorrentInfo> { new() { Hash = "hash1" }, new() });
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     #endregion
@@ -438,7 +438,7 @@ public sealed class TorrentListErrorSurfacingTests
             new Cleanuparr.Domain.Entities.RTorrent.Response.RTorrentTorrent { Hash = "", Name = "no-hash" },
         ]);
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -450,7 +450,7 @@ public sealed class TorrentListErrorSurfacingTests
             new Cleanuparr.Domain.Entities.Deluge.Response.DownloadStatus { Hash = "", Name = "no-hash" },
         ]);
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -461,7 +461,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetStatusForAllTorrents()
             .Returns((List<Cleanuparr.Domain.Entities.Deluge.Response.DownloadStatus>?)null);
 
-        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.DelugeClientException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.DelugeClientException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -472,7 +472,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
             .Returns((Transmission.API.RPC.Entity.TransmissionTorrents?)null);
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -486,7 +486,7 @@ public sealed class TorrentListErrorSurfacingTests
                 Torrents = [new Transmission.API.RPC.Entity.TorrentInfo { HashString = "" }],
             });
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     [Fact]
@@ -498,7 +498,7 @@ public sealed class TorrentListErrorSurfacingTests
             new Cleanuparr.Domain.Entities.UTorrent.Response.UTorrentItem { Hash = "", Name = "no-hash" },
         ]);
 
-        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllTorrentsLite());
+        await Should.ThrowAsync<InvalidOperationException>(() => sut.GetAllDownloadsLite());
     }
 
     #endregion
@@ -516,7 +516,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetAllTorrentsAsync()
             .Returns(new List<Cleanuparr.Domain.Entities.RTorrent.Response.RTorrentTorrent>());
 
-        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+        List<IDownloadItem> torrents = await sut.GetAllDownloadsLite();
 
         torrents.ShouldBeEmpty();
     }
@@ -529,7 +529,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetStatusForAllTorrents()
             .Returns(new List<Cleanuparr.Domain.Entities.Deluge.Response.DownloadStatus>());
 
-        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+        List<IDownloadItem> torrents = await sut.GetAllDownloadsLite();
 
         torrents.ShouldBeEmpty();
     }
@@ -542,7 +542,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetTorrentListAsync(Arg.Any<TorrentListQuery>())
             .Returns(new List<TorrentInfo>());
 
-        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+        List<IDownloadItem> torrents = await sut.GetAllDownloadsLite();
 
         torrents.ShouldBeEmpty();
     }
@@ -555,7 +555,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
             .Returns(new Transmission.API.RPC.Entity.TransmissionTorrents { Torrents = [] });
 
-        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+        List<IDownloadItem> torrents = await sut.GetAllDownloadsLite();
 
         torrents.ShouldBeEmpty();
     }
@@ -568,7 +568,7 @@ public sealed class TorrentListErrorSurfacingTests
         fixture.ClientWrapper.GetTorrentsAsync()
             .Returns(new List<Cleanuparr.Domain.Entities.UTorrent.Response.UTorrentItem>());
 
-        List<ITorrentItemWrapper> torrents = await sut.GetAllTorrentsLite();
+        List<IDownloadItem> torrents = await sut.GetAllDownloadsLite();
 
         torrents.ShouldBeEmpty();
     }

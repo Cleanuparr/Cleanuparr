@@ -21,7 +21,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
 
             // Assert
-            wrapper.Hash.ShouldBe("ABC123DEF456");
+            wrapper.DownloadId.ShouldBe("ABC123DEF456");
         }
 
         [Fact]

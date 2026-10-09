@@ -651,6 +651,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("ApiKey")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("api_key");
+
                     b.Property<string>("DownloadDirectorySource")
                         .HasColumnType("TEXT")
                         .HasColumnName("download_directory_source");

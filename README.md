@@ -67,6 +67,7 @@ https://cleanuparr.github.io/Cleanuparr/docs/screenshots
 - **Deluge**
 - **µTorrent**
 - **rTorrent**
+- **SABnzbd**
 
 ### Platforms
 - **Docker**

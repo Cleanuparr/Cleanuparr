@@ -145,6 +145,16 @@ public sealed class DownloadClientController : ControllerBase
         }
     }
 
+    [HttpGet("download_client/types")]
+    public IActionResult GetDownloadClientTypes()
+    {
+        List<DownloadClientTypeResponse> types = EnumSentinel.SelectableValues<DownloadClientTypeName>()
+            .Select(DownloadClientTypeResponse.From)
+            .ToList();
+
+        return Ok(new { types });
+    }
+
     [HttpPost("download_client/test")]
     public async Task<IActionResult> TestDownloadClient([FromBody] TestDownloadClientRequest request)
     {
@@ -153,8 +163,9 @@ public sealed class DownloadClientController : ControllerBase
             request.Validate();
 
             string? resolvedPassword = null;
+            string? resolvedApiKey = null;
 
-            if (request.Password.IsPlaceholder() && request.ClientId.HasValue)
+            if ((request.Password.IsPlaceholder() || request.ApiKey.IsPlaceholder()) && request.ClientId.HasValue)
             {
                 var existingClient = await _dataContext.DownloadClients
                     .AsNoTracking()
@@ -165,10 +176,11 @@ public sealed class DownloadClientController : ControllerBase
                     return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {request.ClientId.Value} not found");
                 }
 
-                resolvedPassword = existingClient.Password;
+                resolvedPassword = request.Password.IsPlaceholder() ? existingClient.Password : null;
+                resolvedApiKey = request.ApiKey.IsPlaceholder() ? existingClient.ApiKey : null;
             }
 
-            var testConfig = request.ToTestConfig(resolvedPassword);
+            var testConfig = request.ToTestConfig(resolvedPassword, resolvedApiKey);
             using var downloadService = _downloadServiceFactory.GetDownloadService(testConfig);
             var healthResult = await downloadService.HealthCheckAsync();
 

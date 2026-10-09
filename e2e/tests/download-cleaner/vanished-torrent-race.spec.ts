@@ -140,7 +140,6 @@ test.describe.serial('Download Cleaner with torrents deleted mid-pass', () => {
       enabled: true,
       name: 'qBittorrent vanish race e2e',
       typeName: qbit.typeName,
-      type: 'Torrent',
       host: qbit.cleanuparrHost,
       username: qbit.username ?? '',
       password: qbit.password ?? '',

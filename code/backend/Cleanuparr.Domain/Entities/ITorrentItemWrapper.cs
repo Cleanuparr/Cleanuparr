@@ -6,22 +6,19 @@ namespace Cleanuparr.Domain.Entities;
 /// Universal abstraction for a torrent item across all download clients.
 /// Provides a unified interface for accessing torrent properties and state.
 /// </summary>
-public interface ITorrentItemWrapper
+public interface ITorrentItemWrapper : IDownloadItem
 {
-    string Hash { get; }
-    
-    string Name { get; }
-
     bool IsPrivate { get; }
 
-    long Size { get; }
-    
-    double CompletionPercentage { get; }
-    
-    long DownloadedBytes { get; }
-
     long DownloadSpeed { get; }
-    
+
+    /// <summary>
+    /// Whether the download client has this item stopped or paused.
+    /// </summary>
+    bool IsStopped { get; }
+
+    bool IsDownloading();
+
     double Ratio { get; }
 
     /// <summary>
@@ -47,10 +44,6 @@ public interface ITorrentItemWrapper
 
     DateTime? LastActivityTime { get; }
 
-    string? Category { get; set; }
-
-    string SavePath { get; }
-
     /// <summary>
     /// Tracker domains extracted from all trackers associated with this torrent.
     /// Used for tracker-based seeding rule matching.
@@ -63,20 +56,5 @@ public interface ITorrentItemWrapper
     /// </summary>
     IReadOnlyList<string> Tags { get; }
 
-    /// <summary>
-    /// Whether the download client has this torrent stopped or paused.
-    /// </summary>
-    bool IsStopped { get; }
-
-    bool IsDownloading();
-
     bool IsStalled();
-
-    /// <summary>
-    /// Determines if this torrent should be ignored based on the provided patterns.
-    /// Checks if any pattern matches the torrent name, hash, or tracker.
-    /// </summary>
-    /// <param name="ignoredDownloads">List of patterns to check against</param>
-    /// <returns>True if the torrent matches any ignore pattern</returns>
-    bool IsIgnored(IReadOnlyList<string> ignoredDownloads);
 }

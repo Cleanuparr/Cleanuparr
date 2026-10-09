@@ -181,7 +181,6 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
         enabled: true,
         name: `${driver.typeName} e2e`,
         typeName: driver.typeName,
-        type: 'Torrent',
         host: driver.cleanuparrHost,
         username: driver.username ?? '',
         password: driver.password ?? '',

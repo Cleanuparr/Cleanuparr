@@ -48,45 +48,52 @@ test.describe.serial('QueueCleaner — fractional sizeleft from Sonarr v3', () =
     await mocks.arr.stub(ArrStubs.arrRawQueueStub(QUEUE_BODY));
 
     // The failed import check needs a pattern that matches the status message.
-    const current = await (await api.queueCleaner.getConfig()).json();
-    const qc = await api.queueCleaner.updateConfig({
-      ...current,
-      failedImport: {
-        ...current.failedImport,
-        maxStrikes: 3,
-        patternMode: 'Include',
-        patterns: ['Unable to import automatically'],
-      },
-    });
-    expect(qc.ok, `queue cleaner updateConfig: ${qc.status}`).toBe(true);
+    const currentQcConfig = await (await api.queueCleaner.getConfig()).json();
+    const currentArrConfig = await (await api.arr.getConfig('sonarr')).json();
 
-    // The arr value replaces the 3 strikes above, so one job run is enough.
-    const cfg = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: 1 });
-    expect(cfg.ok, `arr updateConfig: ${cfg.status}`).toBe(true);
-
-    const created = await api.arr.createInstance('sonarr', {
-      name: 'sonarr-fractional-sizeleft',
-      url: TEST_CONFIG.mocks.arrUrl,
-      apiKey: 'k',
-      version: 3,
-      enabled: true,
-    });
-    expect(created.ok, `createInstance: ${created.status}`).toBe(true);
-
-    const trigger = await api.jobs.trigger('QueueCleaner');
-    expect(trigger.status).toBeLessThan(300);
-
-    await expect
-      .poll(
-        async () => {
-          const requests = await mocks.arr.findRequests({
-            method: 'DELETE',
-            urlPattern: '/api/v3/queue/.*',
-          });
-          return requests.some((r) => r.url.includes(`/api/v3/queue/${RECORD_ID}`));
+    try {
+      const qc = await api.queueCleaner.updateConfig({
+        ...currentQcConfig,
+        failedImport: {
+          ...currentQcConfig.failedImport,
+          maxStrikes: 3,
+          patternMode: 'Include',
+          patterns: ['Unable to import automatically'],
         },
-        { timeout: 60_000, intervals: [1_000] },
-      )
-      .toBe(true);
+      });
+      expect(qc.ok, `queue cleaner updateConfig: ${qc.status}`).toBe(true);
+
+      // The arr value replaces the 3 strikes above, so one job run is enough.
+      const cfg = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: 1 });
+      expect(cfg.ok, `arr updateConfig: ${cfg.status}`).toBe(true);
+
+      const created = await api.arr.createInstance('sonarr', {
+        name: 'sonarr-fractional-sizeleft',
+        url: TEST_CONFIG.mocks.arrUrl,
+        apiKey: 'k',
+        version: 3,
+        enabled: true,
+      });
+      expect(created.ok, `createInstance: ${created.status}`).toBe(true);
+
+      const trigger = await api.jobs.trigger('QueueCleaner');
+      expect(trigger.status).toBeLessThan(300);
+
+      await expect
+        .poll(
+          async () => {
+            const requests = await mocks.arr.findRequests({
+              method: 'DELETE',
+              urlPattern: '/api/v3/queue/.*',
+            });
+            return requests.some((r) => r.url.includes(`/api/v3/queue/${RECORD_ID}`));
+          },
+          { timeout: 60_000, intervals: [1_000] },
+        )
+        .toBe(true);
+    } finally {
+      await api.queueCleaner.updateConfig(currentQcConfig);
+      await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: currentArrConfig.failedImportMaxStrikes });
+    }
   });
 });

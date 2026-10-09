@@ -9,7 +9,6 @@ function payload(): Record<string, unknown> {
     enabled: true,
     name: 'Deluge reconnect e2e',
     typeName: deluge.typeName,
-    type: 'Torrent',
     host: deluge.cleanuparrHost,
     username: deluge.username,
     password: deluge.password,

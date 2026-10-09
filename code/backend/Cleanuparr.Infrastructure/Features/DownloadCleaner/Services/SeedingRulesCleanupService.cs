@@ -21,7 +21,7 @@ public sealed class SeedingRulesCleanupService : ISeedingRulesCleanupService
         _dataContext = dataContext;
     }
 
-    public async Task CleanAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads)
+    public async Task CleanAsync(ISeedingCleanupCapable downloadService, List<ITorrentItemWrapper> clientDownloads)
     {
         try
         {

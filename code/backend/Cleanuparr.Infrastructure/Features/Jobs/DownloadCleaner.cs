@@ -100,7 +100,7 @@ public sealed class DownloadCleaner : GenericHandler
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
         ignoredDownloads.AddRange(config.IgnoredDownloads);
 
-        Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap = new();
+        Dictionary<ISeedingCleanupCapable, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap = new();
         List<IDownloadService> loggedInServices = new();
 
         foreach (IDownloadService downloadService in downloadServices)
@@ -112,11 +112,18 @@ public sealed class DownloadCleaner : GenericHandler
             {
                 await downloadService.LoginAsync();
                 loggedInServices.Add(downloadService);
-                List<ITorrentItemWrapper> clientDownloads = await downloadService.GetSeedingDownloads();
+
+                // Usenet downloads do not seed - there is nothing for the seeding/unlinked/dead-torrent steps to evaluate.
+                if (downloadService is not ISeedingCleanupCapable seedingCapableService)
+                {
+                    continue;
+                }
+
+                List<ITorrentItemWrapper> clientDownloads = await seedingCapableService.GetSeedingDownloads();
 
                 if (clientDownloads.Count > 0)
                 {
-                    downloadServiceToDownloadsMap[downloadService] = clientDownloads;
+                    downloadServiceToDownloadsMap[seedingCapableService] = clientDownloads;
                 }
             }
             catch (Exception ex)
@@ -141,7 +148,7 @@ public sealed class DownloadCleaner : GenericHandler
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sportarr)), true);
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian)), true);
 
-            foreach (KeyValuePair<IDownloadService, List<ITorrentItemWrapper>> pair in downloadServiceToDownloadsMap)
+            foreach (KeyValuePair<ISeedingCleanupCapable, List<ITorrentItemWrapper>> pair in downloadServiceToDownloadsMap)
             {
                 List<ITorrentItemWrapper> filteredDownloads = [];
 
@@ -153,7 +160,7 @@ public sealed class DownloadCleaner : GenericHandler
                         continue;
                     }
 
-                    if (_downloadsProcessedByArrs.Contains(download.Hash))
+                    if (_downloadsProcessedByArrs.Contains(download.DownloadId))
                     {
                         _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                         continue;
@@ -165,20 +172,28 @@ public sealed class DownloadCleaner : GenericHandler
                 downloadServiceToDownloadsMap[pair.Key] = filteredDownloads;
             }
 
-            foreach ((IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads) in downloadServiceToDownloadsMap)
+            foreach ((ISeedingCleanupCapable downloadService, List<ITorrentItemWrapper> clientDownloads) in downloadServiceToDownloadsMap)
             {
                 using IDisposable _ = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
                 using IDisposable _2 = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
-                await _unlinkedService.ProcessAsync(downloadService, clientDownloads);
-
-                try
+                // Every current implementor of ISeedingCleanupCapable (the torrent clients) is also IUnlinkedCapable.
+                if (downloadService is IUnlinkedCapable unlinkedCapableService)
                 {
-                    await _deadTorrentService.ProcessAsync(downloadService, clientDownloads);
+                    await _unlinkedService.ProcessAsync(unlinkedCapableService, clientDownloads);
                 }
-                catch (Exception ex)
+
+                // rTorrent is IUnlinkedCapable but never reports a seeder count, so it is excluded here.
+                if (downloadService is IDeadTorrentCapable deadTorrentCapable)
                 {
-                    _logger.LogError(ex, "Failed to process dead torrents for download client {clientName}", downloadService.ClientConfig.Name);
+                    try
+                    {
+                        await _deadTorrentService.ProcessAsync(deadTorrentCapable, clientDownloads);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to process dead torrents for download client {clientName}", downloadService.ClientConfig.Name);
+                    }
                 }
 
                 await _seedingRulesService.CleanAsync(downloadService, clientDownloads);

@@ -76,23 +76,23 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
     // contributes to "client has torrents" without claiming any test files.
     private ITorrentItemWrapper DecoyTorrent() => MakeTorrent("decoy", _tempRoot);
 
-    private IDownloadService SetupDownloadService(DownloadClientConfig clientConfig, List<ITorrentItemWrapper> torrents)
+    private IMockDownloadService SetupDownloadService(DownloadClientConfig clientConfig, List<IDownloadItem> torrents)
     {
-        var svc = Substitute.For<IDownloadService>();
+        var svc = Substitute.For<IMockDownloadService>();
         svc.ClientConfig.Returns(clientConfig);
         svc.LoginAsync().Returns(Task.CompletedTask);
         svc.GetSeedingDownloads().Returns([]);
-        svc.GetAllTorrentsLite().Returns(torrents);
-        svc.GetClaimedPathsAsync(Arg.Any<IReadOnlyList<ITorrentItemWrapper>>())
-            .Returns(ci => Task.FromResult(BuildDefaultClaimedPaths(ci.Arg<IReadOnlyList<ITorrentItemWrapper>>())));
+        svc.GetAllDownloadsLite().Returns(torrents);
+        svc.GetClaimedPathsAsync(Arg.Any<IReadOnlyList<IDownloadItem>>())
+            .Returns(ci => Task.FromResult(BuildDefaultClaimedPaths(ci.Arg<IReadOnlyList<IDownloadItem>>())));
         _fixture.DownloadServiceFactory.GetDownloadService(clientConfig).Returns(svc);
         return svc;
     }
 
-    private static IReadOnlyList<string> BuildDefaultClaimedPaths(IReadOnlyList<ITorrentItemWrapper> torrents)
+    private static IReadOnlyList<string> BuildDefaultClaimedPaths(IReadOnlyList<IDownloadItem> torrents)
     {
         HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
-        foreach (ITorrentItemWrapper torrent in torrents)
+        foreach (IDownloadItem torrent in torrents)
         {
             if (string.IsNullOrEmpty(torrent.SavePath))
             {
@@ -296,6 +296,58 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         File.Exists(strayInsideClaimed).ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task OrphanedFiles_EntryHoldsClaimedDescendant_StaysWhileUnclaimedSiblingMoves()
+    {
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string ancestorEntry = Path.Combine(scanDir, "tv");
+        string claimedDir = Path.Combine(ancestorEntry, "claimed-show");
+        Directory.CreateDirectory(claimedDir);
+        string unclaimedSibling = Path.Combine(scanDir, "unclaimed.mkv");
+        File.WriteAllText(unclaimedSibling, "x");
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        SetupDownloadService(dbClient, [MakeTorrent("", claimedDir)]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        Directory.Exists(ancestorEntry).ShouldBeTrue();
+        File.Exists(unclaimedSibling).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_PrefixTrap_SimilarlyNamedSiblingStillMoves()
+    {
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string tv = Path.Combine(scanDir, "tv");
+        string tv2 = Path.Combine(scanDir, "tv2");
+        string claimedDir = Path.Combine(tv2, "x");
+        Directory.CreateDirectory(tv);
+        Directory.CreateDirectory(claimedDir);
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        SetupDownloadService(dbClient, [MakeTorrent("", claimedDir)]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        Directory.Exists(tv).ShouldBeFalse();
+        Directory.Exists(tv2).ShouldBeTrue();
+    }
+
     [SkippableFact]
     public async Task OrphanedFiles_SymlinkEntry_IsSkipped()
     {
@@ -466,7 +518,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanedFiles_DownloadClientThrowsOnGetAllTorrentsLite_ScanIsSkipped()
+    public async Task OrphanedFiles_DownloadClientThrowsOnGetAllDownloadsLite_ScanIsSkipped()
     {
         string scanDir = Path.Combine(_tempRoot, "downloads");
         string orphanedDir = Path.Combine(_tempRoot, "orphaned");
@@ -481,11 +533,11 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
             scanDirectories: [scanDir],
             orphanedDirectory: orphanedDir);
 
-        IDownloadService svc = Substitute.For<IDownloadService>();
+        IMockDownloadService svc = Substitute.For<IMockDownloadService>();
         svc.ClientConfig.Returns(dbClient);
         svc.LoginAsync().Returns(Task.CompletedTask);
         svc.GetSeedingDownloads().Returns([]);
-        svc.GetAllTorrentsLite().ThrowsAsync(new HttpRequestException("connection refused"));
+        svc.GetAllDownloadsLite().ThrowsAsync(new HttpRequestException("connection refused"));
         _fixture.DownloadServiceFactory.GetDownloadService(dbClient).Returns(svc);
 
         DownloadCleaner sut = CreateSut();
@@ -651,11 +703,11 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
             scanDirectories: [scanDirB],
             orphanedDirectory: orphanedDirB);
 
-        IDownloadService svcA = Substitute.For<IDownloadService>();
+        IMockDownloadService svcA = Substitute.For<IMockDownloadService>();
         svcA.ClientConfig.Returns(clientA);
         svcA.LoginAsync().Returns(Task.CompletedTask);
         svcA.GetSeedingDownloads().Returns([]);
-        svcA.GetAllTorrentsLite().ThrowsAsync(new HttpRequestException("connection refused"));
+        svcA.GetAllDownloadsLite().ThrowsAsync(new HttpRequestException("connection refused"));
         _fixture.DownloadServiceFactory.GetDownloadService(clientA).Returns(svcA);
 
         SetupDownloadService(clientB, []);
@@ -693,11 +745,11 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
             scanDirectories: [scanDirB],
             orphanedDirectory: orphanedDirB);
 
-        IDownloadService svcA = Substitute.For<IDownloadService>();
+        IMockDownloadService svcA = Substitute.For<IMockDownloadService>();
         svcA.ClientConfig.Returns(clientA);
         svcA.LoginAsync().Returns(Task.CompletedTask);
         svcA.GetSeedingDownloads().Returns([]);
-        svcA.GetAllTorrentsLite().ThrowsAsync(new HttpRequestException("connection refused"));
+        svcA.GetAllDownloadsLite().ThrowsAsync(new HttpRequestException("connection refused"));
         _fixture.DownloadServiceFactory.GetDownloadService(clientA).Returns(svcA);
 
         SetupDownloadService(clientB, [DecoyTorrent()]);
@@ -711,6 +763,52 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
     }
 
     [Fact]
+    public async Task OrphanedFiles_ClaimedPathsCallThrows_OtherClientStillProcessed()
+    {
+        string scanDirA = Path.Combine(_tempRoot, "downloads-a");
+        string orphanedDirA = Path.Combine(_tempRoot, "orphaned-a");
+        string scanDirB = Path.Combine(_tempRoot, "downloads-b");
+        string orphanedDirB = Path.Combine(_tempRoot, "orphaned-b");
+        Directory.CreateDirectory(scanDirA);
+        Directory.CreateDirectory(scanDirB);
+        string fileInA = Path.Combine(scanDirA, "a-orphan.mkv");
+        string fileInB = Path.Combine(scanDirB, "b-orphan.mkv");
+        File.WriteAllText(fileInA, "x");
+        File.WriteAllText(fileInB, "x");
+
+        DownloadClientConfig clientA = TestDataContextFactory.AddDownloadClient(_fixture.DataContext, name: "Client A");
+        DownloadClientConfig clientB = TestDataContextFactory.AddDownloadClient(_fixture.DataContext, name: "Client B");
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, clientA,
+            scanDirectories: [scanDirA],
+            orphanedDirectory: orphanedDirA);
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, clientB,
+            scanDirectories: [scanDirB],
+            orphanedDirectory: orphanedDirB);
+
+        List<IDownloadItem> torrentsA = [DecoyTorrent()];
+        IMockDownloadService svcA = Substitute.For<IMockDownloadService>();
+        svcA.ClientConfig.Returns(clientA);
+        svcA.LoginAsync().Returns(Task.CompletedTask);
+        svcA.GetSeedingDownloads().Returns([]);
+        svcA.GetAllDownloadsLite().Returns(torrentsA);
+        svcA.GetClaimedPathsAsync(Arg.Any<IReadOnlyList<IDownloadItem>>())
+            .ThrowsAsync(new InvalidOperationException("get_config failed"));
+        _fixture.DownloadServiceFactory.GetDownloadService(clientA).Returns(svcA);
+
+        SetupDownloadService(clientB, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        File.Exists(fileInA).ShouldBeTrue();
+        File.Exists(fileInB).ShouldBeFalse();
+        Directory.GetFiles(orphanedDirB).ShouldContain(f => Path.GetFileName(f) == "b-orphan.mkv");
+        _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Error, "Failed to get torrents").ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task OrphanedFiles_ConfigWithEmptyScanDirectories_IsDroppedWithoutTouchingClient()
     {
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
@@ -720,12 +818,12 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
             scanDirectories: [],
             orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
 
-        IDownloadService svc = SetupDownloadService(dbClient, [DecoyTorrent()]);
+        IMockDownloadService svc = SetupDownloadService(dbClient, [DecoyTorrent()]);
 
         DownloadCleaner sut = CreateSut();
         await ExecuteWithTimeAdvance(sut);
 
-        await svc.DidNotReceive().GetAllTorrentsLite();
+        await svc.DidNotReceive().GetAllDownloadsLite();
         _fixture.OrphanedFilesLogger.HasLogContainingAtLeastOnce(LogLevel.Warning, "no scan directories configured").ShouldBeTrue();
     }
 
@@ -737,14 +835,14 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         TestDataContextFactory.AddOrphanedFilesConfig(_fixture.DataContext, clientA, scanDirectories: []);
         TestDataContextFactory.AddOrphanedFilesConfig(_fixture.DataContext, clientB, scanDirectories: []);
 
-        IDownloadService svcA = SetupDownloadService(clientA, [DecoyTorrent()]);
-        IDownloadService svcB = SetupDownloadService(clientB, [DecoyTorrent()]);
+        IMockDownloadService svcA = SetupDownloadService(clientA, [DecoyTorrent()]);
+        IMockDownloadService svcB = SetupDownloadService(clientB, [DecoyTorrent()]);
 
         DownloadCleaner sut = CreateSut();
         await ExecuteWithTimeAdvance(sut);
 
-        await svcA.DidNotReceive().GetAllTorrentsLite();
-        await svcB.DidNotReceive().GetAllTorrentsLite();
+        await svcA.DidNotReceive().GetAllDownloadsLite();
+        await svcB.DidNotReceive().GetAllDownloadsLite();
         _fixture.OrphanedFilesLogger.HasLogContaining(LogLevel.Warning, "no scan directories configured", count: 2).ShouldBeTrue();
         _fixture.OrphanedFilesLogger.HasNoLogContaining(LogLevel.Debug, "claimed paths across all clients").ShouldBeTrue();
     }
@@ -774,11 +872,11 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
             orphanedDirectory: orphanedDir,
             purgeAfterHours: 24);
 
-        IDownloadService svc = Substitute.For<IDownloadService>();
+        IMockDownloadService svc = Substitute.For<IMockDownloadService>();
         svc.ClientConfig.Returns(dbClient);
         svc.LoginAsync().Returns(Task.CompletedTask);
         svc.GetSeedingDownloads().Returns([]);
-        svc.GetAllTorrentsLite().ThrowsAsync(new HttpRequestException("connection refused"));
+        svc.GetAllDownloadsLite().ThrowsAsync(new HttpRequestException("connection refused"));
         _fixture.DownloadServiceFactory.GetDownloadService(dbClient).Returns(svc);
 
         DownloadCleaner sut = CreateSut();

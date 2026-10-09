@@ -162,7 +162,46 @@ public class LazyLibrarianServiceTests
         IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
 
         // Assert
-        items.ShouldHaveSingleItem().Source.IsTorrentClient().ShouldBeTrue();
+        items.ShouldHaveSingleItem().Source.ClientType().ShouldBe(DownloadClientType.Torrent);
+    }
+
+    [Fact]
+    public async Task GetQueueAsync_AcceptsAnNzbSnatchToSabnzbd()
+    {
+        // Arrange
+        RespondWith($"[{Row(mode: "nzb", source: "SABNZBD")}]");
+
+        // Act
+        IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
+
+        // Assert
+        items.ShouldHaveSingleItem().Source.ShouldBe(LazyLibrarianSource.Sabnzbd);
+    }
+
+    [Fact]
+    public async Task GetQueueAsync_NeverTreatsASabnzbdSnatchAsAdopted()
+    {
+        // Arrange: LazyLibrarian writes no origin for an NZB snatch.
+        RespondWith($"[{Row(mode: "nzb", source: "SABNZBD", origin: "")}]");
+
+        // Act
+        IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
+
+        // Assert
+        items.ShouldHaveSingleItem().WasAdoptedByLazyLibrarian.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task GetQueueAsync_RejectsAnNzbSnatchToNzbGet()
+    {
+        // Arrange: Cleanuparr has no NzbGet client, so the row can never be queried.
+        RespondWith($"[{Row(mode: "nzb", source: "NZBGET")}]");
+
+        // Act
+        IReadOnlyList<LazyLibrarianQueueItem> items = await _service.GetQueueAsync(_instance);
+
+        // Assert
+        items.ShouldBeEmpty();
     }
 
     [Theory]

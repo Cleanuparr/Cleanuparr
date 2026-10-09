@@ -25,7 +25,7 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
             .AsReadOnly());
     }
 
-    public string Hash => Info.Hash ?? string.Empty;
+    public string DownloadId => Info.Hash ?? string.Empty;
     
     public string Name => Info.Name ?? string.Empty;
 
@@ -98,7 +98,7 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         
         foreach (string pattern in ignoredDownloads)
         {
-            if (Hash?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            if (DownloadId?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
             {
                 return true;
             }

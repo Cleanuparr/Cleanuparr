@@ -31,7 +31,7 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
             .AsReadOnly());
     }
 
-    public string Hash => Info.Hash;
+    public string DownloadId => Info.Hash;
     
     public string Name => Info.Name;
 
@@ -100,7 +100,7 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
         
         foreach (string value in ignoredDownloads)
         {
-            if (Hash.Equals(value, StringComparison.InvariantCultureIgnoreCase))
+            if (DownloadId.Equals(value, StringComparison.InvariantCultureIgnoreCase))
             {
                 return true;
             }

@@ -11,12 +11,7 @@ import {
 
 # Download Client
 
-Configure download client connections for torrents. Cleanuparr supports the latest versions of the following download clients:
-- qBittorrent
-- Deluge
-- Transmission
-- µTorrent
-- rTorrent
+Configure download client connections for torrents and Usenet. See [Supported Apps](../../supported-apps#capabilities) for which Cleanuparr features each client supports.
 
 <ElementNavigator />
 
@@ -139,6 +134,14 @@ Username for download client authentication if required.
 >
 
 Password for download client authentication.
+
+</ConfigSection>
+
+<ConfigSection
+  title="API Key"
+>
+
+API key for download client authentication, for clients that use one instead of a username/password. Required for SABnzbd; found under SABnzbd's own Config &gt; General page.
 
 </ConfigSection>
 

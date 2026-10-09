@@ -161,11 +161,11 @@ public class DownloadCleanerTests : IDisposable
             orphanedDirectory: Path.Combine(Path.GetTempPath(), "cleanuparr-tests", Guid.NewGuid().ToString("N")));
 
         // Bound to the persisted client, because the orphaned scan matches configs by client id
-        IDownloadService mockDownloadService = Substitute.For<IDownloadService>();
+        IMockDownloadService mockDownloadService = Substitute.For<IMockDownloadService>();
         mockDownloadService.ClientConfig.Returns(client);
         mockDownloadService.LoginAsync().Returns(Task.CompletedTask);
         mockDownloadService.GetSeedingDownloads().Returns([]);
-        mockDownloadService.GetAllTorrentsLite().Returns([]);
+        mockDownloadService.GetAllDownloadsLite().Returns([]);
         mockDownloadService.GetClaimedPathsAsync(Arg.Any<IReadOnlyList<ITorrentItemWrapper>>())
             .Returns(Task.FromResult<IReadOnlyList<string>>([]));
 
@@ -196,7 +196,7 @@ public class DownloadCleanerTests : IDisposable
         _fixture.DataContext.SaveChanges();
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("ignored-hash");
+        mockTorrent.DownloadId.Returns("ignored-hash");
         mockTorrent.Name.Returns("Ignored Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(true);
 
@@ -227,7 +227,7 @@ public class DownloadCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("arr-download-hash");
+        mockTorrent.DownloadId.Returns("arr-download-hash");
         mockTorrent.Name.Returns("Arr Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
 
@@ -278,7 +278,7 @@ public class DownloadCleanerTests : IDisposable
 
         // Need at least one download for arr processing to occur
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -330,7 +330,7 @@ public class DownloadCleanerTests : IDisposable
             ignoredRootDirs: ["/media/library"]);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -377,7 +377,7 @@ public class DownloadCleanerTests : IDisposable
             ignoredRootDirs: []);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -439,13 +439,13 @@ public class DownloadCleanerTests : IDisposable
         _fixture.DataContext.SaveChanges();
 
         var mockTorrent1 = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent1.Hash.Returns("test-hash-1");
+        mockTorrent1.DownloadId.Returns("test-hash-1");
         mockTorrent1.Name.Returns("Test Download 1");
         mockTorrent1.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent1.Category.Returns("completed");
 
         var mockTorrent2 = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent2.Hash.Returns("test-hash-2");
+        mockTorrent2.DownloadId.Returns("test-hash-2");
         mockTorrent2.Name.Returns("Test Download 2");
         mockTorrent2.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent2.Category.Returns("completed");
@@ -519,7 +519,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -558,6 +558,53 @@ public class DownloadCleanerTests : IDisposable
 
     #endregion
 
+    #region DeadTorrentCapability Tests
+
+    [Fact]
+    public async Task ExecuteInternalAsync_WhenClientLacksDeadTorrentCapability_SkipsDeadTorrentButStillProcessesUnlinked()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext, typeName: DownloadClientTypeName.rTorrent);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
+
+        ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+        mockTorrent.DownloadId.Returns("test-hash");
+        mockTorrent.Name.Returns("Test Download");
+        mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
+        mockTorrent.Category.Returns("completed");
+
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+
+        // rTorrent shape: unlinked-capable, no seeder count.
+        ISeedingCleanupCapable mockDownloadService = Substitute.For<ISeedingCleanupCapable, IUnlinkedCapable>();
+        IUnlinkedCapable mockDownloadServiceAsUnlinked = (IUnlinkedCapable)mockDownloadService;
+        mockDownloadService.ClientConfig.Returns(dbClient);
+        mockDownloadService.LoginAsync().Returns(Task.CompletedTask);
+        mockDownloadService.GetSeedingDownloads().Returns([mockTorrent]);
+        mockDownloadServiceAsUnlinked
+            .FilterDownloadsToChangeCategoryAsync(Arg.Any<List<ITorrentItemWrapper>>(), Arg.Any<UnlinkedConfig>())
+            .Returns([mockTorrent]);
+        mockDownloadServiceAsUnlinked.CreateCategoryAsync(Arg.Any<string>()).Returns(Task.CompletedTask);
+        mockDownloadServiceAsUnlinked
+            .ChangeCategoryForNoHardLinksAsync(Arg.Any<List<ITorrentItemWrapper>>(), Arg.Any<UnlinkedConfig>())
+            .Returns(Task.CompletedTask);
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        DownloadCleaner sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - dead-torrent detection is skipped, unlinked processing still runs
+        await _fixture.DeadTorrentService.DidNotReceiveWithAnyArgs().ProcessAsync(default!, default!);
+        _fixture.UnlinkedLogger.HasLogContaining(LogLevel.Information, "Evaluating").ShouldBeTrue();
+    }
+
+    #endregion
+
     #region CleanDownloadsAsync Tests
 
     [Fact]
@@ -568,7 +615,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddSeedingRule(_fixture.DataContext, "completed", 1.0, 60);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -619,7 +666,7 @@ public class DownloadCleanerTests : IDisposable
 
         // Need at least one download for arr processing to occur
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -711,7 +758,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -750,7 +797,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -792,7 +839,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -837,7 +884,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -876,7 +923,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -922,7 +969,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -977,7 +1024,7 @@ public class DownloadCleanerTests : IDisposable
         // No seeding rules added — only unlinked config disabled
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -1012,7 +1059,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext, enabled: false);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");
@@ -1049,7 +1096,7 @@ public class DownloadCleanerTests : IDisposable
         TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext, enabled: true, categories: []);
 
         var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-        mockTorrent.Hash.Returns("test-hash");
+        mockTorrent.DownloadId.Returns("test-hash");
         mockTorrent.Name.Returns("Test Download");
         mockTorrent.IsIgnored(Arg.Any<List<string>>()).Returns(false);
         mockTorrent.Category.Returns("completed");

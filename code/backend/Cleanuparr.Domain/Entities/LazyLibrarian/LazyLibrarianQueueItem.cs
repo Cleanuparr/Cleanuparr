@@ -24,5 +24,9 @@ public sealed record LazyLibrarianQueueItem
     /// </summary>
     public required LazyLibrarianOrigin Origin { get; init; }
 
-    public bool WasAdoptedByLazyLibrarian => Origin is not LazyLibrarianOrigin.New;
+    /// <summary>
+    /// LazyLibrarian records an origin only for torrent snatches; its usenet path never sets one.
+    /// </summary>
+    public bool WasAdoptedByLazyLibrarian =>
+        Source.ClientType() is DownloadClientType.Torrent && Origin is not LazyLibrarianOrigin.New;
 }

@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Files;
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
@@ -16,7 +17,6 @@ using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
-using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -69,9 +69,9 @@ public class DownloadCleanerIntegrationTests : IDisposable
     /// <summary>
     /// Creates a mock download service that uses the actual DB config (so seeding rules match by ID).
     /// </summary>
-    private static IDownloadService CreateMockDownloadServiceWithDbConfig(DownloadClientConfig dbConfig)
+    private static IMockDownloadService CreateMockDownloadServiceWithDbConfig(DownloadClientConfig dbConfig)
     {
-        var mock = Substitute.For<IDownloadService>();
+        var mock = Substitute.For<IMockDownloadService>();
         mock.ClientConfig.Returns(dbConfig);
         mock.LoginAsync().Returns(Task.CompletedTask);
         return mock;
@@ -117,7 +117,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         // Assert: Only the orphaned download should be passed to filter/clean
         mockDownloadService.Received().FilterDownloadsToBeCleanedAsync(
             Arg.Is<List<ITorrentItemWrapper>>(list =>
-                list.Count == 1 && list[0].Hash == orphanedHash),
+                list.Count == 1 && list[0].DownloadId == orphanedHash),
             Arg.Any<List<ISeedingRule>>());
     }
 
@@ -157,7 +157,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         // Assert: Only the non-ignored download should be processed
         mockDownloadService.Received().FilterDownloadsToBeCleanedAsync(
             Arg.Is<List<ITorrentItemWrapper>>(list =>
-                list.Count == 1 && list[0].Hash == "normal_hash"),
+                list.Count == 1 && list[0].DownloadId == "normal_hash"),
             Arg.Any<List<ISeedingRule>>());
     }
 
@@ -445,7 +445,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         httpClientProvider.CreateClient(Arg.Any<DownloadClientConfig>()).Returns(new HttpClient());
 
         RecordingDownloadService downloadService = new(
-            Substitute.For<ILogger<DownloadService>>(),
+            Substitute.For<ILogger<TorrentDownloadService>>(),
             Substitute.For<IFilenameEvaluator>(),
             Substitute.For<IStriker>(),
             _fixture.DryRunInterceptor,
@@ -476,12 +476,12 @@ public class DownloadCleanerIntegrationTests : IDisposable
     /// A real DownloadService, so the cleanup loop runs.
     /// The client calls are recorded rather than sent.
     /// </summary>
-    private sealed class RecordingDownloadService : DownloadService
+    private sealed class RecordingDownloadService : TorrentDownloadService
     {
         private readonly List<ITorrentItemWrapper> _seedingDownloads;
 
         public RecordingDownloadService(
-            ILogger<DownloadService> logger,
+            ILogger<TorrentDownloadService> logger,
             IFilenameEvaluator filenameEvaluator,
             IStriker striker,
             IDryRunInterceptor dryRunInterceptor,
@@ -505,16 +505,16 @@ public class DownloadCleanerIntegrationTests : IDisposable
 
         public List<string> StoppedHashes { get; } = [];
 
-        public override Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+        public override Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
         {
-            DeletedHashes.Add(torrent.Hash);
+            DeletedHashes.Add(item.DownloadId);
 
             return Task.CompletedTask;
         }
 
-        public override Task StopDownload(ITorrentItemWrapper torrent)
+        public override Task StopDownload(IDownloadItem item)
         {
-            StoppedHashes.Add(torrent.Hash);
+            StoppedHashes.Add(item.DownloadId);
 
             return Task.CompletedTask;
         }
@@ -530,21 +530,18 @@ public class DownloadCleanerIntegrationTests : IDisposable
         protected override Task<IEnumerable<(string FilePath, HardLinkScanAction Action)>?> GetHardLinkScanItemsAsync(
             ITorrentItemWrapper torrent) => throw new NotSupportedException();
 
-        public override Task<List<ITorrentItemWrapper>> GetAllTorrentsLite() => Task.FromResult(_seedingDownloads);
+        public override Task<List<IDownloadItem>> GetAllDownloadsLite() =>
+            Task.FromResult(_seedingDownloads.Cast<IDownloadItem>().ToList());
 
-        public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
+        public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
             Task.FromResult<IReadOnlyList<string>>([]);
 
         public override Task LoginAsync() => Task.CompletedTask;
 
-        public override void Dispose()
-        {
-        }
-
         public override Task<HealthCheckResult> HealthCheckAsync() => throw new NotSupportedException();
 
         public override Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(
-            string hash, IReadOnlyList<string> ignoredDownloads) => throw new NotSupportedException();
+            string downloadId, IReadOnlyList<string> ignoredDownloads) => throw new NotSupportedException();
 
         protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
             throw new NotSupportedException();
@@ -552,7 +549,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         public override Task CreateCategoryAsync(string name) => throw new NotSupportedException();
 
         public override Task<BlockFilesResult> BlockUnwantedFilesAsync(
-            string hash, IReadOnlyList<string> ignoredDownloads) => throw new NotSupportedException();
+            string downloadId, IReadOnlyList<string> ignoredDownloads) => throw new NotSupportedException();
     }
 
     private static ITorrentItemWrapper CreateMockTorrentItem(
@@ -564,7 +561,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
         bool isStopped = false)
     {
         var mock = Substitute.For<ITorrentItemWrapper>();
-        mock.Hash.Returns(hash);
+        mock.DownloadId.Returns(hash);
         mock.Name.Returns(name);
         mock.Category.Returns(category);
         mock.Ratio.Returns(ratio);

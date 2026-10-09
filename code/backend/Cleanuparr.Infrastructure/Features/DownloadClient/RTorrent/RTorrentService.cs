@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 
-public partial class RTorrentService : DownloadService
+public partial class RTorrentService : TorrentDownloadService
 {
     private readonly IRTorrentClientWrapper _client;
 
@@ -101,9 +101,5 @@ public partial class RTorrentService : DownloadService
                 ResponseTime = stopwatch.Elapsed
             };
         }
-    }
-
-    public override void Dispose()
-    {
     }
 }

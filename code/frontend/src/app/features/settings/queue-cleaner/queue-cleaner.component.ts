@@ -191,6 +191,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
   readonly slowModalVisible = signal(false);
   readonly editingSlowRule = signal<SlowRule | null>(null);
 
+  readonly usenetExpanded = signal(false);
+
   private readonly dirtyTracker = createDirtyTracker(this.model);
   readonly dirty = this.dirtyTracker.dirty;
 

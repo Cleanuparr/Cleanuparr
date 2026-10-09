@@ -16,7 +16,7 @@ using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 
-public partial class TransmissionService : DownloadService
+public partial class TransmissionService : TorrentDownloadService, IDeadTorrentCapable
 {
     private readonly ITransmissionClientWrapper _client;
     private bool? _altSpeedLimitActive;
@@ -200,10 +200,6 @@ public partial class TransmissionService : DownloadService
         }
 
         return _altSpeedLimitActive.Value;
-    }
-
-    public override void Dispose()
-    {
     }
 
     private async Task<TorrentInfo?> GetTorrentAsync(string hash)

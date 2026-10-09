@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DownloadClientApi } from '@core/api/download-client.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
-import { ClientConfig, DownloadClientConfig } from '@shared/models/download-client-config.model';
-import { DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
+import { ClientConfig, DownloadClientConfig, DownloadClientTypesResponse } from '@shared/models/download-client-config.model';
+import { DownloadClientAuthField, DownloadClientCapability, DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
 import { DownloadClientsComponent } from './download-clients.component';
 
 const QBIT: ClientConfig = {
@@ -38,13 +38,49 @@ const DELUGE: ClientConfig = {
 
 const CONFIG: DownloadClientConfig = { clients: [QBIT, DELUGE] };
 
-function createApi(config: DownloadClientConfig = CONFIG) {
+const TYPES: DownloadClientTypesResponse = {
+  types: [
+    {
+      typeName: DownloadClientTypeName.qBittorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup, DownloadClientCapability.TagFiltering],
+    },
+    {
+      typeName: DownloadClientTypeName.Deluge,
+      authFields: [DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup],
+    },
+    {
+      typeName: DownloadClientTypeName.Transmission,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup, DownloadClientCapability.TagFiltering],
+    },
+    {
+      typeName: DownloadClientTypeName.uTorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [DownloadClientCapability.SeedingCleanup],
+    },
+    {
+      typeName: DownloadClientTypeName.rTorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [],
+    },
+    {
+      typeName: DownloadClientTypeName.Sabnzbd,
+      authFields: [DownloadClientAuthField.ApiKey],
+      capabilities: [DownloadClientCapability.OrphanClaims],
+    },
+  ],
+};
+
+function createApi(config: DownloadClientConfig = CONFIG, types: DownloadClientTypesResponse = TYPES) {
   return {
     getConfig: vi.fn(() => of(config)),
     create: vi.fn(() => of(QBIT)),
     update: vi.fn(() => of(QBIT)),
     delete: vi.fn(() => of(undefined)),
     test: vi.fn(() => of({ message: 'Connected to qBittorrent 4.6.0' })),
+    getTypes: vi.fn(() => of(types)),
   };
 }
 
@@ -158,6 +194,7 @@ describe('DownloadClientsComponent', () => {
       host: '',
       username: '',
       password: '',
+      apiKey: '',
       urlBase: '',
       externalUrl: '',
       downloadDirectorySource: '',
@@ -196,6 +233,111 @@ describe('DownloadClientsComponent', () => {
     expect(component.showUsernameField()).toBe(false);
     expect(fieldLabels(fixture)).not.toContain('Username');
     expect(fieldLabels(fixture)).toContain('Password');
+  });
+
+  it('hides username/password and shows a required API key field for SABnzbd', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'SABnzbd');
+
+    expect(component.clientModel().typeName).toBe(DownloadClientTypeName.Sabnzbd);
+    expect(component.showUsernameField()).toBe(false);
+    expect(component.showPasswordField()).toBe(false);
+    expect(component.showApiKeyField()).toBe(true);
+    expect(fieldLabels(fixture)).not.toContain('Username');
+    expect(fieldLabels(fixture)).not.toContain('Password');
+    expect(fieldLabels(fixture)).toContain('API Key');
+  });
+
+  it('blocks saving a SABnzbd client with an empty API key and shows the error', () => {
+    const { fixture, component, api } = setup();
+
+    component.openAddModal();
+    component.clientForm.name().value.set('SAB box');
+    component.clientForm.host().value.set('http://localhost:8080');
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'SABnzbd');
+
+    expect(component.hasModalErrors()).toBe(true);
+    expect(component.clientForm.apiKey().errors()[0].message).toBe('API key is required');
+
+    component.saveClient();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('does not require an API key for qBittorrent with an empty key', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    component.clientForm.name().value.set('New client');
+    component.clientForm.host().value.set('http://localhost:8080');
+    fixture.detectChanges();
+
+    expect(component.clientModel().typeName).toBe(DownloadClientTypeName.qBittorrent);
+    expect(component.clientForm.apiKey().value()).toBe('');
+    expect(component.hasModalErrors()).toBe(false);
+  });
+
+  it('shows no auth fields while the types endpoint is still loading', async () => {
+    const types$ = new Subject<DownloadClientTypesResponse>();
+    const api = createApi();
+    api.getTypes.mockReturnValue(types$);
+    const { fixture, component } = setup(api);
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    expect(component.showUsernameField()).toBe(false);
+    expect(component.showPasswordField()).toBe(false);
+    expect(component.showApiKeyField()).toBe(false);
+    expect(fieldLabels(fixture)).not.toContain('Username');
+    expect(fieldLabels(fixture)).not.toContain('Password');
+
+    types$.next(TYPES);
+    types$.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.showUsernameField()).toBe(true);
+    expect(component.showPasswordField()).toBe(true);
+  });
+
+  it('does not show the API key field for clients that do not use one', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    fixture.detectChanges();
+
+    expect(component.clientModel().typeName).toBe(DownloadClientTypeName.qBittorrent);
+    expect(component.showApiKeyField()).toBe(false);
+    expect(fieldLabels(fixture)).not.toContain('API Key');
+  });
+
+  it('saves a SABnzbd client with the Usenet client type', () => {
+    const { fixture, component, api } = setup();
+
+    component.openAddModal();
+    component.clientForm.name().value.set('SAB box');
+    component.clientForm.host().value.set('http://localhost:8080');
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'SABnzbd');
+    component.clientForm.apiKey().value.set('sab-key');
+    fixture.detectChanges();
+
+    component.saveClient();
+    fixture.detectChanges();
+
+    expect(api.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        typeName: DownloadClientTypeName.Sabnzbd,
+        apiKey: 'sab-key',
+      }),
+    );
   });
 
   it('autofills the url base and switches the hints to HTTP Basic Auth for rTorrent', () => {
@@ -265,6 +407,7 @@ describe('DownloadClientsComponent', () => {
       host: 'http://localhost:8112',
       username: 'legacy',
       password: '',
+      apiKey: '',
       urlBase: '',
       externalUrl: '',
       downloadDirectorySource: '',
@@ -290,11 +433,11 @@ describe('DownloadClientsComponent', () => {
     expect(api.create).toHaveBeenCalledWith({
       enabled: true,
       name: 'New client',
-      type: DownloadClientType.Torrent,
       typeName: DownloadClientTypeName.Transmission,
       host: 'http://localhost:9091',
       username: '',
       password: '',
+      apiKey: '',
       urlBase: 'transmission',
       externalUrl: undefined,
       downloadDirectorySource: null,
@@ -321,13 +464,12 @@ describe('DownloadClientsComponent', () => {
 
     expect(api.update).toHaveBeenCalledWith('client-qb', {
       enabled: true,
-      id: 'client-qb',
       name: 'Renamed',
-      type: DownloadClientType.Torrent,
       typeName: DownloadClientTypeName.qBittorrent,
       host: 'http://localhost:8080',
       username: 'admin',
       password: undefined,
+      apiKey: undefined,
       urlBase: '',
       externalUrl: undefined,
       downloadDirectorySource: null,
@@ -364,10 +506,10 @@ describe('DownloadClientsComponent', () => {
 
     expect(api.test).toHaveBeenCalledWith({
       typeName: DownloadClientTypeName.qBittorrent,
-      type: DownloadClientType.Torrent,
       host: 'http://localhost:8080',
       username: 'admin',
       password: 'secret',
+      apiKey: '',
       urlBase: '',
       clientId: 'client-qb',
     });
@@ -453,6 +595,24 @@ describe('DownloadClientsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
 
     api.getConfig.mockReturnValue(of(CONFIG));
+    component.retry();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(text(fixture, '.item-row__name')).toEqual(['qBit box', 'Deluge box']);
+  });
+
+  it('shows the connection error state when the types endpoint fails and recovers on retry', () => {
+    const api = createApi();
+    api.getTypes.mockReturnValue(throwError(() => new Error('offline')));
+    const { fixture, component, toast } = setup(api);
+
+    expect(component.loadError()).toBe(true);
+    expect(component.clients()).toEqual([]);
+    expect(toast.error).toHaveBeenCalledWith('Failed to load download clients: offline');
+    expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
+
+    api.getTypes.mockReturnValue(of(TYPES));
     component.retry();
     fixture.detectChanges();
 

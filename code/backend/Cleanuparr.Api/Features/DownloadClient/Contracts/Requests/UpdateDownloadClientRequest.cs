@@ -15,13 +15,13 @@ public sealed record UpdateDownloadClientRequest
 
     public DownloadClientTypeName TypeName { get; init; }
 
-    public DownloadClientType Type { get; init; }
-
     public string? Host { get; init; }
 
     public string? Username { get; init; }
 
     public string? Password { get; init; }
+
+    public string? ApiKey { get; init; }
 
     public string? UrlBase { get; init; }
 
@@ -33,6 +33,11 @@ public sealed record UpdateDownloadClientRequest
 
     public void Validate()
     {
+        if (TypeName is DownloadClientTypeName.Unknown || !Enum.IsDefined(TypeName))
+        {
+            throw new ValidationException("Unsupported download client type");
+        }
+
         if (string.IsNullOrWhiteSpace(Name))
         {
             throw new ValidationException("Client name cannot be empty");
@@ -52,6 +57,11 @@ public sealed record UpdateDownloadClientRequest
         {
             throw new ValidationException("External URL is not a valid URL");
         }
+
+        if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey) && !ApiKey.IsPlaceholder())
+        {
+            throw new ValidationException("API key cannot be empty");
+        }
     }
 
     public DownloadClientConfig ApplyTo(DownloadClientConfig existing) => existing with
@@ -59,10 +69,11 @@ public sealed record UpdateDownloadClientRequest
         Enabled = Enabled,
         Name = Name,
         TypeName = TypeName,
-        Type = Type,
+        Type = TypeName.ClientType(),
         Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
         Username = Username,
         Password = Password.IsPlaceholder() ? existing.Password : Password,
+        ApiKey = ApiKey.IsPlaceholder() ? existing.ApiKey : ApiKey,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
         DownloadDirectorySource = DownloadDirectorySource,

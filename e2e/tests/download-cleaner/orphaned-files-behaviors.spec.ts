@@ -146,7 +146,6 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
       enabled: true,
       name: 'qBittorrent behaviors',
       typeName: driver.typeName,
-      type: 'Torrent',
       host: driver.cleanuparrHost,
       username: driver.username ?? '',
       password: driver.password ?? '',

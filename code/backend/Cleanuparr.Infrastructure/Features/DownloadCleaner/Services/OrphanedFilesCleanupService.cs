@@ -86,7 +86,13 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
                 continue;
             }
 
-            bool success = await TryAddClaimedPathsAsync(downloadService, claimedPaths);
+            if (downloadService is not IOrphanClaimsCapable orphanClaimsCapableService)
+            {
+                skippedClientIds.Add(downloadService.ClientConfig.Id);
+                continue;
+            }
+
+            bool success = await TryAddClaimedPathsAsync(orphanClaimsCapableService, claimedPaths);
             if (!success)
             {
                 skippedClientIds.Add(downloadService.ClientConfig.Id);
@@ -134,13 +140,23 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         }
     }
 
-    private async Task<bool> TryAddClaimedPathsAsync(IDownloadService downloadService, HashSet<string> claimedPaths)
+    private async Task<bool> TryAddClaimedPathsAsync(IOrphanClaimsCapable downloadService, HashSet<string> claimedPaths)
     {
         DownloadClientConfig downloadClient = downloadService.ClientConfig;
-        List<ITorrentItemWrapper> torrents;
+        IReadOnlyList<string> clientClaimedPaths;
+        int torrentCount;
+
         try
         {
-            torrents = await downloadService.GetAllTorrentsLite();
+            List<IDownloadItem> torrents = await downloadService.GetAllDownloadsLite();
+            torrentCount = torrents.Count;
+
+            if (torrentCount is 0)
+            {
+                _logger.LogInformation("No torrents found in the download client | {Name}", downloadClient.Name);
+            }
+
+            clientClaimedPaths = await downloadService.GetClaimedPathsAsync(torrents);
         }
         catch (Exception ex)
         {
@@ -148,17 +164,12 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             return false;
         }
 
-        if (torrents.Count is 0)
-        {
-            _logger.LogInformation("No torrents found in the download client | {Name}", downloadClient.Name);
-        }
-
-        foreach (string claimedPath in await downloadService.GetClaimedPathsAsync(torrents))
+        foreach (string claimedPath in clientClaimedPaths)
         {
             claimedPaths.Add(claimedPath);
         }
 
-        _logger.LogDebug("Loaded {Count} torrents | {Name}", torrents.Count, downloadClient.Name);
+        _logger.LogDebug("Loaded {Count} torrents | {Name}", torrentCount, downloadClient.Name);
         return true;
     }
 
@@ -193,6 +204,12 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
                 if (claimedPaths.Contains(normalizedPath))
                 {
                     _logger.LogDebug("skip | claimed by torrent | {path}", normalizedPath);
+                    continue;
+                }
+
+                if (HoldsClaimedPath(normalizedPath, claimedPaths))
+                {
+                    _logger.LogDebug("skip | holds claimed path | {Path}", normalizedPath);
                     continue;
                 }
 
@@ -234,6 +251,15 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
                 _logger.LogError(ex, "Failed to handle orphaned entry: {path}", filePath);
             }
         }
+    }
+
+    /// <summary>
+    /// Whether any claimed path lives inside the entry, which makes the entry an ancestor to keep.
+    /// </summary>
+    private static bool HoldsClaimedPath(string entry, HashSet<string> claimedPaths)
+    {
+        string prefix = entry + Path.DirectorySeparatorChar;
+        return claimedPaths.Any(claimedPath => claimedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     private void MoveToOrphanedDirectory(string path, string orphanedDirectory)

@@ -80,7 +80,7 @@
             helpKey="queue-cleaner:failedImport.deletePrivate" />
         }
         <app-toggle label="Skip if Not Found in Client" [formField]="qcForm.failedSkipNotFound" [forceDisabled]="qcForm.failedSkipNotFound().disabled()"
-          hint="Skip failed import check for torrents not found in any enabled torrent client"
+          hint="Skip failed import check for downloads not found in any enabled client of their protocol (torrent or usenet)"
           helpKey="queue-cleaner:failedImport.skipIfNotFoundInClient" />
 
         <div class="form-divider"></div>
@@ -240,6 +240,16 @@
         <app-button variant="secondary" size="sm" (clicked)="openSlowModal()">
           <ng-icon name="tablerPlus" size="16" /> Add Slow Rule
         </app-button>
+      </div>
+    </app-accordion>
+
+    <!-- Usenet -->
+    <app-accordion header="Usenet" subtitle="Settings specific to Usenet download clients" [(expanded)]="usenetExpanded">
+      <div class="form-stack">
+        <app-toggle label="Remove failed SABnzbd downloads" [checked]="true" [forceDisabled]="true"
+          hint="Jobs SABnzbd marks as Failed are removed from the arr queue and SABnzbd, then searched again. Requires a SABnzbd download client."
+          helpKey="queue-cleaner:usenet.removeFailed"
+          featureId="usenet-queue-cleaner" />
       </div>
     </app-accordion>
 

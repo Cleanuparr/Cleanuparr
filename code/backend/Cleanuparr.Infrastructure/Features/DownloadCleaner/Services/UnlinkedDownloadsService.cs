@@ -25,7 +25,7 @@ public sealed class UnlinkedDownloadsService : IUnlinkedDownloadsService
         _hardLinkFileService = hardLinkFileService;
     }
 
-    public async Task ProcessAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads)
+    public async Task ProcessAsync(IUnlinkedCapable downloadService, List<ITorrentItemWrapper> clientDownloads)
     {
         UnlinkedConfig? unlinkedConfig = await _dataContext.UnlinkedConfigs
             .AsNoTracking()

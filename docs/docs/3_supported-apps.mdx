@@ -5,6 +5,7 @@ sidebar_position: 3
 import { Important } from '@site/src/components/documentation';
 import {
   AppCard,
+  CapabilityMatrix,
   styles
 } from '@site/src/components/documentation';
 import useBaseUrl from '@docusaurus/useBaseUrl';
@@ -12,6 +13,74 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 # Supported Apps
 
 Cleanuparr integrates with the servarr applications and download clients for media management automation.
+
+export const capabilityClients = [
+  { name: 'qBittorrent', icon: 'qbittorrent' },
+  { name: 'Deluge', icon: 'deluge' },
+  { name: 'Transmission', icon: 'transmission' },
+  { name: 'uTorrent', icon: 'utorrent' },
+  { name: 'rTorrent', icon: 'rtorrent' },
+  { name: 'SABnzbd', icon: 'sabnzbd' },
+];
+
+export const capabilityGroups = [
+  {
+    title: 'Queue Cleaner',
+    rows: [
+      { feature: 'Failed imports', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes'] },
+      { feature: 'Stalled downloads', cells: [{ status: 'yes' }, { status: 'yes', note: 1 }, { status: 'yes', note: 1 }, { status: 'yes', note: 1 }, { status: 'yes', note: 1 }, { status: 'na' }] },
+      { feature: 'Failed downloads', cells: ['na', 'na', 'na', 'na', 'na', { status: 'yes', note: 2 }] },
+      { feature: 'Slow downloads', cells: ['yes', 'yes', 'yes', 'yes', 'yes', { status: 'na', note: 3 }] },
+      { feature: 'Stuck downloading metadata', cells: ['yes', 'na', 'na', 'na', 'na', 'na'] },
+      { feature: 'Pause slow checks on alt-speed limit', cells: ['yes', 'na', 'yes', 'no', 'na', 'na'] },
+      { feature: 'Remove when all files skipped', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'na'] },
+      { feature: 'Ignore private torrents', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'na'] },
+      { feature: 'Ignored downloads', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes'], link: '#ignored-downloads-matching' },
+      { feature: 'Change category instead of removing', cells: ['yes', 'yes', 'yes', 'yes', 'yes', { status: 'yes', note: 4 }] },
+    ],
+  },
+  {
+    title: 'Malware Blocker',
+    rows: [
+      { feature: 'Block unwanted files', cells: ['yes', 'yes', 'yes', 'yes', 'yes', { status: 'partial', note: 5 }] },
+      { feature: 'Remove download when files are blocked', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes'] },
+      { feature: 'Ignore private torrents', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'na'] },
+    ],
+  },
+  {
+    title: 'Download Cleaner',
+    rows: [
+      { feature: 'Seeding rules', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'na'] },
+      { feature: 'Seeding rule: tag filter', cells: ['yes', 'na', 'yes', 'na', 'na', 'na'] },
+      { feature: 'Seeding rule: seeders filter', cells: ['yes', 'yes', 'yes', 'yes', { status: 'no', note: 6 }, 'na'] },
+      { feature: 'Dead torrents', cells: ['yes', { status: 'partial', note: 7 }, 'yes', { status: 'partial', note: 7 }, { status: 'no', note: 6 }, 'na'] },
+      { feature: 'Unlinked downloads', cells: [{ status: 'yes' }, { status: 'yes', note: 8 }, { status: 'yes' }, { status: 'yes', note: 8 }, { status: 'yes', note: 8 }, 'na'] },
+      { feature: 'Orphaned files', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes'] },
+    ],
+  },
+];
+
+export const ignoredDownloadsMatchingGroups = [
+  {
+    rows: [
+      { feature: 'Hash / job ID', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes'] },
+      { feature: 'Category', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes'] },
+      { feature: 'Tag', cells: ['yes', 'na', 'no', 'na', 'na', 'na'] },
+      { feature: 'Tracker', cells: ['yes', 'yes', 'yes', 'yes', 'yes', 'na'] },
+    ],
+  },
+];
+
+export const capabilityNotes = {
+  1: "The client has no native \"stalled\" state. It's inferred from the download speed being zero.",
+  2: "Removes jobs SABnzbd moves to history as Failed, while the *arr still lists them in its queue. This covers jobs that the *arr's Failed Download Handling doesn't catch, such as NZBs added manually, grabbed by another *arr, or with purged history.",
+  3: 'SABnzbd fails a job that stops progressing on its own while the *arr still lists it in its queue. The failure is then handled automatically.',
+  4: "The *arr removes the item with a category change. SABnzbd's settings determine what happens to the job.",
+  5: "SABnzbd can't skip files mid-download, so the Malware Blocker deletes matching files from completed jobs. The *arr can import a job before a Malware Blocker run reaches it.",
+  6: 'rTorrent reports no tracker state, so no seeder count is available.',
+  7: 'The client reports no tracker health, so only the seeder count matters. Unregistered torrents may remain uncaught while they have seeders.',
+  8: 'The client has no tags. "Use tag" falls back to a category change.',
+};
 
 <div className={styles.documentationPage}>
 
@@ -107,7 +176,7 @@ Only the latest versions of the following applications are supported, unless exp
       color: '#e90f0fff'
     },
     {
-      name: 'µTorrent',
+      name: 'uTorrent',
       iconLight: useBaseUrl('/img/icons/utorrent-light.svg'),
       iconDark: useBaseUrl('/img/icons/utorrent-dark.svg'),
       url: 'https://www.utorrent.com',
@@ -119,8 +188,37 @@ Only the latest versions of the following applications are supported, unless exp
       iconDark: useBaseUrl('/img/icons/rtorrent-dark.svg'),
       url: 'https://rakshasa.github.io/rtorrent/',
       color: '#888888'
+    },
+    {
+      name: 'SABnzbd',
+      iconLight: useBaseUrl('/img/icons/sabnzbd-light.svg'),
+      iconDark: useBaseUrl('/img/icons/sabnzbd-dark.svg'),
+      url: 'https://sabnzbd.org',
+      color: '#f5c400'
     }
   ]}
+/>
+
+## Capabilities
+
+Clients expose different amounts of detail through their APIs, so some features aren't available on every client.
+
+<CapabilityMatrix
+  id="capabilities-matrix"
+  clients={capabilityClients}
+  groups={capabilityGroups}
+  notes={capabilityNotes}
+/>
+
+### Ignored downloads matching
+
+What an ignore rule can match on, per client.
+
+<CapabilityMatrix
+  id="ignored-downloads-matching"
+  clients={capabilityClients}
+  groups={ignoredDownloadsMatchingGroups}
+  legend={false}
 />
 
 </div>

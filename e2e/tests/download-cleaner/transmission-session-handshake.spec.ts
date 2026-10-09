@@ -17,7 +17,6 @@ function payload(): Record<string, unknown> {
     enabled: true,
     name: 'Transmission handshake e2e',
     typeName: transmission.typeName,
-    type: 'Torrent',
     host: transmission.cleanuparrHost,
     username: transmission.username,
     password: transmission.password,

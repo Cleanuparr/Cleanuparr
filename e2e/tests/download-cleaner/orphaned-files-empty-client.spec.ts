@@ -125,7 +125,6 @@ test.describe.serial('Orphaned files cleanup — client with no torrents', () =>
       enabled: true,
       name: 'qBittorrent empty',
       typeName: driver.typeName,
-      type: 'Torrent',
       host: driver.cleanuparrHost,
       username: driver.username ?? '',
       password: driver.password ?? '',
@@ -225,7 +224,6 @@ test.describe.serial('Orphaned files cleanup — client with no torrents', () =>
       enabled: true,
       name: 'qBittorrent unreachable sibling',
       typeName: 'qBittorrent',
-      type: 'Torrent',
       // Nothing listens on port 1, so the qBit client fails to connect.
       host: 'http://127.0.0.1:1',
       username: 'admin',

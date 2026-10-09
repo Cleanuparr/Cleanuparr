@@ -30,7 +30,7 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
             .AsReadOnly());
     }
 
-    public string Hash => Info.Hash;
+    public string DownloadId => Info.Hash;
 
     public string Name => Info.Name;
 
@@ -105,7 +105,7 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
 
         foreach (string pattern in ignoredDownloads)
         {
-            if (Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase))
+            if (DownloadId.Equals(pattern, StringComparison.InvariantCultureIgnoreCase))
             {
                 return true;
             }

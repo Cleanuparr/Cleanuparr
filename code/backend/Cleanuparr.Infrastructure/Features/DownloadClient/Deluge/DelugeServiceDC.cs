@@ -26,7 +26,7 @@ public partial class DelugeService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    public override async Task<List<IDownloadItem>> GetAllDownloadsLite()
     {
         List<DownloadStatus>? downloads = await _client.GetStatusForAllTorrents();
         if (downloads is null)
@@ -34,9 +34,9 @@ public partial class DelugeService
             throw new DelugeClientException("Deluge returned no torrent status");
         }
 
-        List<ITorrentItemWrapper> torrents = downloads
+        List<IDownloadItem> torrents = downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(ITorrentItemWrapper (x) => new DelugeItemWrapper(x))
+            .Select(IDownloadItem (x) => new DelugeItemWrapper(x))
             .ToList();
 
         ThrowIfTorrentListCollapsed(downloads.Count, torrents.Count);
@@ -45,15 +45,15 @@ public partial class DelugeService
     }
 
     /// <inheritdoc/>
-    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
-        BuildClaimedPathsAsync(torrents, async torrent =>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads) =>
+        BuildClaimedPathsAsync(downloads, async torrent =>
         {
-            if (string.IsNullOrEmpty(torrent.Hash))
+            if (string.IsNullOrEmpty(torrent.DownloadId))
             {
                 return [];
             }
 
-            DelugeContents? contents = await _client.GetTorrentFiles(torrent.Hash);
+            DelugeContents? contents = await _client.GetTorrentFiles(torrent.DownloadId);
             List<string> relativePaths = [];
             ProcessFiles(contents?.Contents, (_, file) =>
             {
@@ -66,16 +66,16 @@ public partial class DelugeService
         });
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
-        string hash = torrent.Hash.ToLowerInvariant();
+        string hash = item.DownloadId.ToLowerInvariant();
 
         await _client.DeleteTorrents([hash], deleteSourceFiles);
     }
 
-    public override async Task StopDownload(ITorrentItemWrapper torrent)
+    public override async Task StopDownload(IDownloadItem item)
     {
-        string hash = torrent.Hash.ToLowerInvariant();
+        string hash = item.DownloadId.ToLowerInvariant();
 
         await _client.PauseTorrents([hash]);
     }
@@ -102,7 +102,7 @@ public partial class DelugeService
 
         try
         {
-            contents = await _client.GetTorrentFiles(delugeTorrent.Hash);
+            contents = await _client.GetTorrentFiles(delugeTorrent.DownloadId);
         }
         catch (Exception exception)
         {
@@ -131,7 +131,7 @@ public partial class DelugeService
 
     /// <inheritdoc/>
     protected override Task ChangeCategoryInClientAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag) =>
-        ChangeLabel(torrent.Hash, targetCategory);
+        ChangeLabel(torrent.DownloadId, targetCategory);
 
     protected async Task CreateLabel(string name)
     {

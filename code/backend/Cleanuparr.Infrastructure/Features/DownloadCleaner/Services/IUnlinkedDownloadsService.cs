@@ -13,5 +13,5 @@ public interface IUnlinkedDownloadsService
     /// Re-categorises downloads with no hard links according to the supplied
     /// configuration.
     /// </summary>
-    Task ProcessAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads);
+    Task ProcessAsync(IUnlinkedCapable downloadService, List<ITorrentItemWrapper> clientDownloads);
 }

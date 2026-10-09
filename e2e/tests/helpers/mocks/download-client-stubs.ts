@@ -76,6 +76,89 @@ export function utorrentStubs(token = 'utorrent-token', guid = 'test-guid'): Map
   ];
 }
 
+export interface SabQueueSlotStub {
+  nzo_id: string;
+  filename?: string;
+  status?: string;
+  cat?: string;
+}
+
+export function sabQueueStub(slots: SabQueueSlotStub[] = [], kbpersec = '0.00', paused = false): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api', queryParameters: { mode: { equalTo: 'queue' } } },
+    response: {
+      status: 200,
+      jsonBody: {
+        queue: {
+          paused,
+          kbpersec,
+          slots: slots.map((s) => ({ filename: s.nzo_id, status: 'Downloading', cat: '*', ...s })),
+        },
+      },
+    },
+  };
+}
+
+export interface SabHistorySlotStub {
+  nzo_id: string;
+  name?: string;
+  status?: string;
+  storage?: string;
+  fail_message?: string;
+}
+
+export function sabHistoryStub(slots: SabHistorySlotStub[] = []): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api', queryParameters: { mode: { equalTo: 'history' } } },
+    response: {
+      status: 200,
+      jsonBody: {
+        history: {
+          slots: slots.map((s) => ({ name: s.nzo_id, status: 'Completed', storage: '', fail_message: '', ...s })),
+        },
+      },
+    },
+  };
+}
+
+export function sabUnreachableStub(): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api' },
+    response: { status: 500 },
+  };
+}
+
+/** A 200 response with no `queue`/`history` key at all: version drift or a proxy rewrite. */
+export function sabEmptyBodyStub(mode: 'queue' | 'history'): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api', queryParameters: { mode: { equalTo: mode } } },
+    response: { status: 200, jsonBody: {} },
+  };
+}
+
+export function sabGetConfigStub(downloadDir: string): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api', queryParameters: { mode: { equalTo: 'get_config' } } },
+    response: { status: 200, jsonBody: { config: { misc: { download_dir: downloadDir } } } },
+  };
+}
+
+export function sabGetConfigErrorStub(): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api', queryParameters: { mode: { equalTo: 'get_config' } } },
+    response: { status: 500 },
+  };
+}
+
+/** Real SABnzbd rejects `mode=queue` (and any other authenticated mode) for a wrong apikey with HTTP 403 plain text. */
+export function sabRejectedApiKeyStub(apiKey: string): Mapping {
+  return {
+    request: { method: 'GET', urlPath: '/api', queryParameters: { mode: { equalTo: 'queue' }, apikey: { equalTo: apiKey } } },
+    response: { status: 403, body: 'API Key Incorrect' },
+    priority: 1,
+  };
+}
+
 export function rtorrentXmlRpcStub(): Mapping {
   return {
     request: { method: 'POST', urlPath: '/RPC2' },

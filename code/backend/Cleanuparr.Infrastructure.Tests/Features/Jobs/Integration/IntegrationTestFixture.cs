@@ -204,12 +204,12 @@ public class IntegrationTestFixture : IDisposable
     /// <summary>
     /// Creates a NSubstitute IDownloadService mock with default configuration.
     /// </summary>
-    public IDownloadService CreateMockDownloadService(
+    public IMockDownloadService CreateMockDownloadService(
         string clientName = "Test qBittorrent",
         DownloadClientTypeName typeName = DownloadClientTypeName.qBittorrent,
         DownloadClientType type = DownloadClientType.Torrent)
     {
-        var mock = Substitute.For<IDownloadService>();
+        var mock = Substitute.For<IMockDownloadService>();
         mock.ClientConfig.Returns(new DownloadClientConfig
         {
             Id = Guid.NewGuid(),

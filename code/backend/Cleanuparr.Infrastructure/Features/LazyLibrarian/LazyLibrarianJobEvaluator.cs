@@ -32,12 +32,12 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
         bool ShouldRemove,
         bool RemoveFromClient,
         DeleteReason DeleteReason,
-        ITorrentItemWrapper? Torrent
+        IDownloadItem? Download
     );
 
     protected abstract Task<ClientVerdict> CheckAsync(
         IDownloadService downloadService,
-        string hash,
+        string downloadId,
         IReadOnlyList<string> ignoredDownloads
     );
 
@@ -49,16 +49,6 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
     {
         IReadOnlyList<LazyLibrarianQueueItem> items = await _lazyLibrarianService.GetQueueAsync(instance);
 
-        List<IDownloadService> torrentClients = downloadServices
-            .Where(x => x.ClientConfig.Type is DownloadClientType.Torrent)
-            .ToList();
-
-        if (torrentClients.Count is 0)
-        {
-            _logger.LogDebug("No torrent clients enabled");
-            return [];
-        }
-
         List<LazyLibrarianRemovalDecision> decisions = new();
 
         foreach (LazyLibrarianQueueItem item in items)
@@ -69,13 +59,24 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
                 continue;
             }
 
+            DownloadClientType? protocol = item.Source.ClientType();
+            List<IDownloadService> matchingClients = downloadServices
+                .Where(x => x.ClientConfig.Type == protocol)
+                .ToList();
+
+            if (matchingClients.Count is 0)
+            {
+                _logger.LogDebug("skip | no {Protocol} clients enabled | {Title}", protocol, item.Title);
+                continue;
+            }
+
             _logger.LogDebug("processing | {Title} | {Id}", item.Title, item.DownloadId);
 
             // The striker fires inside the download service and notifies from context.
             ContextProvider.Set(ContextProvider.Keys.ItemName, item.Title);
             ContextProvider.Set(ContextProvider.Keys.Hash, item.DownloadId);
 
-            LazyLibrarianRemovalDecision? decision = await EvaluateItemAsync(item, torrentClients, ignoredDownloads);
+            LazyLibrarianRemovalDecision? decision = await EvaluateItemAsync(item, matchingClients, protocol, ignoredDownloads);
 
             if (decision is not null)
             {
@@ -88,7 +89,8 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
 
     private async Task<LazyLibrarianRemovalDecision?> EvaluateItemAsync(
         LazyLibrarianQueueItem item,
-        List<IDownloadService> torrentClients,
+        List<IDownloadService> clients,
+        DownloadClientType? protocol,
         IReadOnlyList<string> ignoredDownloads
     )
     {
@@ -96,7 +98,7 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
         DownloadClientConfig? foundInClient = null;
         IDownloadService? foundInService = null;
 
-        foreach (IDownloadService downloadService in torrentClients)
+        foreach (IDownloadService downloadService in clients)
         {
             try
             {
@@ -118,7 +120,8 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
 
         if (!check.Found)
         {
-            _logger.LogWarning("Download not found in any torrent client | {Title}", item.Title);
+            string protocolName = protocol is DownloadClientType.Usenet ? "usenet" : "torrent";
+            _logger.LogWarning("Download not found in any {Protocol} client | {Title}", protocolName, item.Title);
             return null;
         }
 
@@ -134,7 +137,7 @@ public abstract class LazyLibrarianJobEvaluator : ILazyLibrarianEvaluator
             RemoveFromClient = check.RemoveFromClient,
             DownloadClient = foundInClient,
             DownloadService = foundInService,
-            Torrent = check.Torrent,
+            Download = check.Download,
         };
     }
 }

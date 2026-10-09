@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -6,14 +7,14 @@ import {
   SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
-import { DownloadClientApi } from '@core/api/download-client.api';
+import { DownloadClientApi, indexClientTypes } from '@core/api/download-client.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
-  ClientConfig, CreateDownloadClientDto, TestDownloadClientRequest,
+  DownloadClientTypeInfo, ClientConfig, CreateDownloadClientDto, UpdateDownloadClientDto, TestDownloadClientRequest,
 } from '@shared/models/download-client-config.model';
-import { DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
+import { DownloadClientAuthField, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { createSettingsResource } from '@shared/utils/settings-resource.util';
 
@@ -23,11 +24,20 @@ const TYPE_OPTIONS: SelectOption[] = [
   { label: 'Transmission', value: DownloadClientTypeName.Transmission },
   { label: 'uTorrent', value: DownloadClientTypeName.uTorrent },
   { label: 'rTorrent', value: DownloadClientTypeName.rTorrent },
+  { label: 'SABnzbd', value: DownloadClientTypeName.Sabnzbd },
 ];
 
 const AUTOFILL_URL_BASES: Partial<Record<DownloadClientTypeName, string>> = {
   [DownloadClientTypeName.Transmission]: 'transmission',
   [DownloadClientTypeName.rTorrent]: 'plugins/httprpc/action.php',
+};
+
+type AuthField = 'username' | 'password' | 'apiKey';
+
+const AUTH_FIELD_BY_API_FIELD: Record<DownloadClientAuthField, AuthField> = {
+  [DownloadClientAuthField.Username]: 'username',
+  [DownloadClientAuthField.Password]: 'password',
+  [DownloadClientAuthField.ApiKey]: 'apiKey',
 };
 
 interface DownloadClientFormModel {
@@ -37,6 +47,7 @@ interface DownloadClientFormModel {
   host: string;
   username: string;
   password: string;
+  apiKey: string;
   urlBase: string;
   externalUrl: string;
   downloadDirectorySource: string;
@@ -61,17 +72,29 @@ export class DownloadClientsComponent implements HasPendingChanges {
   private readonly confirmService = inject(ConfirmService);
 
   private readonly settings = createSettingsResource({
-    load: () => this.api.getConfig(),
+    load: () => forkJoin({ config: this.api.getConfig(), types: this.api.getTypes() }),
     errorMessage: 'Failed to load download clients',
   });
-  private readonly clientsResource = this.settings.resource;
+  private readonly loadResource = this.settings.resource;
+
+  /** Type info indexed by type name, from the backend; empty while loading or on error. */
+  private readonly typesByName = computed<Partial<Record<DownloadClientTypeName, DownloadClientTypeInfo>>>(() =>
+    this.loadResource.hasValue() ? indexClientTypes(this.loadResource.value().types) : {});
+
+  private readonly authFieldsByType = computed<Partial<Record<DownloadClientTypeName, AuthField[]>>>(() => {
+    const result: Partial<Record<DownloadClientTypeName, AuthField[]>> = {};
+    for (const [typeName, info] of Object.entries(this.typesByName()) as [DownloadClientTypeName, DownloadClientTypeInfo][]) {
+      result[typeName] = info.authFields.map((f) => AUTH_FIELD_BY_API_FIELD[f]);
+    }
+    return result;
+  });
 
   readonly typeOptions = TYPE_OPTIONS;
   readonly loader = this.settings.loader;
   readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
   readonly clients = computed(() =>
-    this.clientsResource.hasValue() ? (this.clientsResource.value().clients ?? []) : [],
+    this.loadResource.hasValue() ? (this.loadResource.value().config.clients ?? []) : [],
   );
 
   // Modal
@@ -81,12 +104,16 @@ export class DownloadClientsComponent implements HasPendingChanges {
 
   readonly clientModel = signal<DownloadClientFormModel>({
     enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
-    host: '', username: '', password: '', urlBase: '', externalUrl: '',
+    host: '', username: '', password: '', apiKey: '', urlBase: '', externalUrl: '',
     downloadDirectorySource: '', downloadDirectoryTarget: '',
   });
   readonly clientForm = form(this.clientModel, (p) => {
     required(p.name, { message: 'Name is required' });
     required(p.host, { message: 'Host is required' });
+    required(p.apiKey, {
+      when: ({ valueOf }) => valueOf(p.typeName) === DownloadClientTypeName.Sabnzbd,
+      message: 'API key is required',
+    });
   });
 
   readonly hasModalErrors = computed(() => this.clientForm().invalid());
@@ -96,11 +123,16 @@ export class DownloadClientsComponent implements HasPendingChanges {
   private readonly modalDirty = computed(() =>
     this.modalVisible() && JSON.stringify(this.clientModel()) !== this.openSnapshot());
 
-  readonly showUsernameField = computed(() => {
-    return this.clientModel().typeName !== DownloadClientTypeName.Deluge;
-  });
+  readonly showUsernameField = computed(() =>
+    (this.authFieldsByType()[this.clientModel().typeName] ?? []).includes('username'));
 
-  readonly showPasswordField = computed(() => true);
+  readonly showPasswordField = computed(() =>
+    (this.authFieldsByType()[this.clientModel().typeName] ?? []).includes('password'));
+
+  readonly showApiKeyField = computed(() =>
+    (this.authFieldsByType()[this.clientModel().typeName] ?? []).includes('apiKey'));
+
+  readonly apiKeyHint = 'API key from SABnzbd > Config > General';
 
   readonly usernameHint = computed(() => {
     if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
@@ -129,8 +161,15 @@ export class DownloadClientsComponent implements HasPendingChanges {
     const newType = value as DownloadClientTypeName;
     const m = this.clientModel();
     const patch: Partial<DownloadClientFormModel> = {};
-    if (newType === DownloadClientTypeName.Deluge && m.username !== '') {
+    const fields = this.authFieldsByType()[newType] ?? [];
+    if (!fields.includes('username') && m.username !== '') {
       patch.username = '';
+    }
+    if (!fields.includes('password') && m.password !== '') {
+      patch.password = '';
+    }
+    if (!fields.includes('apiKey') && m.apiKey !== '') {
+      patch.apiKey = '';
     }
     const autofill = AUTOFILL_URL_BASES[newType];
     const replaceable = m.urlBase === '' || Object.values(AUTOFILL_URL_BASES).includes(m.urlBase);
@@ -150,7 +189,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
     this.editingClient.set(null);
     this.clientModel.set({
       enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
-      host: '', username: '', password: '', urlBase: '', externalUrl: '',
+      host: '', username: '', password: '', apiKey: '', urlBase: '', externalUrl: '',
       downloadDirectorySource: '', downloadDirectoryTarget: '',
     });
     this.openSnapshot.set(JSON.stringify(this.clientModel()));
@@ -166,6 +205,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
       host: client.host,
       username: client.username,
       password: client.password ?? '',
+      apiKey: client.apiKey ?? '',
       urlBase: client.urlBase,
       externalUrl: client.externalUrl ?? '',
       downloadDirectorySource: client.downloadDirectorySource ?? '',
@@ -179,10 +219,10 @@ export class DownloadClientsComponent implements HasPendingChanges {
     const m = this.clientModel();
     const request: TestDownloadClientRequest = {
       typeName: m.typeName,
-      type: DownloadClientType.Torrent,
       host: m.host,
       username: m.username,
       password: m.password,
+      apiKey: m.apiKey,
       urlBase: m.urlBase,
       clientId: this.editingClient()?.id,
     };
@@ -208,14 +248,14 @@ export class DownloadClientsComponent implements HasPendingChanges {
     this.saving.set(true);
 
     if (editing) {
-      const client: ClientConfig = {
-        ...editing,
+      const client: UpdateDownloadClientDto = {
         enabled: m.enabled,
         name: m.name,
         typeName: m.typeName,
         host: m.host,
         username: m.username,
         password: m.password || undefined,
+        apiKey: m.apiKey || undefined,
         urlBase: m.urlBase,
         externalUrl: m.externalUrl || undefined,
         downloadDirectorySource: m.downloadDirectorySource || null,
@@ -226,7 +266,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
           this.toast.success('Client updated');
           this.modalVisible.set(false);
           this.saving.set(false);
-          this.clientsResource.reload();
+          this.loadResource.reload();
         },
         error: (err: ApiError) => {
           this.toast.error(err.message);
@@ -237,11 +277,11 @@ export class DownloadClientsComponent implements HasPendingChanges {
       const dto: CreateDownloadClientDto = {
         enabled: m.enabled,
         name: m.name,
-        type: DownloadClientType.Torrent,
         typeName: m.typeName,
         host: m.host,
         username: m.username,
         password: m.password,
+        apiKey: m.apiKey,
         urlBase: m.urlBase,
         externalUrl: m.externalUrl || undefined,
         downloadDirectorySource: m.downloadDirectorySource || null,
@@ -252,7 +292,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
           this.toast.success('Client added');
           this.modalVisible.set(false);
           this.saving.set(false);
-          this.clientsResource.reload();
+          this.loadResource.reload();
         },
         error: (err: ApiError) => {
           this.toast.error(err.message);
@@ -276,7 +316,7 @@ export class DownloadClientsComponent implements HasPendingChanges {
     this.api.delete(client.id).subscribe({
       next: () => {
         this.toast.success('Client deleted');
-        this.clientsResource.reload();
+        this.loadResource.reload();
       },
       error: (err: ApiError) => this.toast.error(err.message),
     });

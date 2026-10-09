@@ -29,7 +29,7 @@ public class DelugeItemWrapperTests
         var wrapper = new DelugeItemWrapper(downloadStatus);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(expectedHash);
@@ -48,7 +48,7 @@ public class DelugeItemWrapperTests
         var wrapper = new DelugeItemWrapper(downloadStatus);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(string.Empty);

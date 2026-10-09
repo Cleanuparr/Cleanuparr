@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal, WritableSignal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { form, min, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -11,6 +12,7 @@ import {
   type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
+import { DownloadClientApi, indexClientTypes } from '@core/api/download-client.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
@@ -19,8 +21,9 @@ import {
   DeadTorrentConfigModel, OrphanedFilesConfig,
   createDefaultUnlinkedConfig, createDefaultDeadTorrentConfig, createDefaultOrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
+import { DownloadClientTypeInfo } from '@shared/models/download-client-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
-import { ScheduleUnit, DownloadClientTypeName, SeedingRuleAction } from '@shared/models/enums';
+import { ScheduleUnit, DownloadClientTypeName, DownloadClientCapability, SeedingRuleAction } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { createSettingsResource, saveSettings } from '@shared/utils/settings-resource.util';
 import { createDirtyTracker, DirtyTracker } from '@shared/utils/dirty-tracker.util';
@@ -84,10 +87,15 @@ interface OrphanedFilesFormModel {
 })
 export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly api = inject(DownloadCleanerApi);
+  private readonly downloadClientApi = inject(DownloadClientApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
   private readonly seedingRuleModal = viewChild(SeedingRuleModalComponent);
+
+  private hasCapability(typeName: DownloadClientTypeName | undefined, capability: DownloadClientCapability): boolean {
+    return !!typeName && (this.typesByName()[typeName]?.capabilities ?? []).includes(capability);
+  }
 
   private readonly orphanedFilesSnapshots = signal<Record<string, string>>({});
 
@@ -96,10 +104,14 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
 
   private readonly settings = createSettingsResource({
-    load: () => this.api.getConfig(),
+    load: () => forkJoin({ config: this.api.getConfig(), types: this.downloadClientApi.getTypes() }),
     errorMessage: 'Failed to load download cleaner settings',
   });
-  private readonly configResource = this.settings.resource;
+  private readonly loadResource = this.settings.resource;
+
+  /** Type info indexed by type name, from the backend; empty while loading or on error. */
+  private readonly typesByName = computed<Partial<Record<DownloadClientTypeName, DownloadClientTypeInfo>>>(() =>
+    this.loadResource.hasValue() ? indexClientTypes(this.loadResource.value().types) : {});
 
   readonly loader = this.settings.loader;
   readonly loadError = this.settings.loadError;
@@ -166,27 +178,22 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     this.selectedClient()?.downloadClientTypeName === DownloadClientTypeName.Transmission
   );
 
-  readonly isTagFilterableClient = computed(() => {
-    const typeName = this.selectedClient()?.downloadClientTypeName;
-    return typeName === DownloadClientTypeName.qBittorrent || typeName === DownloadClientTypeName.Transmission;
-  });
+  readonly isTagFilterableClient = computed(() =>
+    this.hasCapability(this.selectedClient()?.downloadClientTypeName as DownloadClientTypeName, DownloadClientCapability.TagFiltering));
 
-  readonly isSeedersFilterableClient = computed(() => {
-    const typeName = this.selectedClient()?.downloadClientTypeName;
-    return typeName === DownloadClientTypeName.qBittorrent
-      || typeName === DownloadClientTypeName.Deluge
-      || typeName === DownloadClientTypeName.Transmission
-      || typeName === DownloadClientTypeName.uTorrent;
-  });
+  readonly isSeedersFilterableClient = computed(() =>
+    this.hasCapability(this.selectedClient()?.downloadClientTypeName as DownloadClientTypeName, DownloadClientCapability.SeedersFiltering));
 
   // Dead torrent detection needs a seeder count; rTorrent does not report one.
-  readonly isDeadTorrentCapableClient = computed(() => {
-    const typeName = this.selectedClient()?.downloadClientTypeName;
-    return typeName === DownloadClientTypeName.qBittorrent
-      || typeName === DownloadClientTypeName.Deluge
-      || typeName === DownloadClientTypeName.Transmission
-      || typeName === DownloadClientTypeName.uTorrent;
-  });
+  readonly isDeadTorrentCapableClient = computed(() =>
+    this.hasCapability(this.selectedClient()?.downloadClientTypeName as DownloadClientTypeName, DownloadClientCapability.DeadTorrent));
+
+  /** Seeding rules need seeding support (SABnzbd has none). */
+  readonly isSeedingCleanupCapableClient = computed(() =>
+    this.hasCapability(this.selectedClient()?.downloadClientTypeName as DownloadClientTypeName, DownloadClientCapability.SeedingCleanup));
+
+  readonly isUnlinkedCapableClient = computed(() =>
+    this.hasCapability(this.selectedClient()?.downloadClientTypeName as DownloadClientTypeName, DownloadClientCapability.Unlinked));
 
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
@@ -321,7 +328,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     });
 
     effect(() => {
-      const dc = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      const dc = this.loadResource.hasValue() ? this.loadResource.value().config : undefined;
       if (!dc) {
         return;
       }

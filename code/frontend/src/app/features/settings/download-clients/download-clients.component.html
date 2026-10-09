@@ -81,6 +81,12 @@
         [hint]="passwordHint()"
         helpKey="download-client:password" />
     }
+    @if (showApiKeyField()) {
+      <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [formField]="clientForm.apiKey"
+        [hint]="apiKeyHint"
+        [error]="clientForm.apiKey().errors()[0]?.message"
+        helpKey="download-client:apiKey" />
+    }
     <app-input label="URL Base" placeholder="/api/v2" [formField]="clientForm.urlBase"
       [hint]="urlBaseHint()"
       helpKey="download-client:urlBase" />

@@ -103,7 +103,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -135,7 +135,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             // Assert
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash2");
+            result[0].DownloadId.ShouldBe("hash2");
         }
     }
 
@@ -247,7 +247,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -287,7 +287,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Assert
             result.ShouldNotBeNull();
             result.ShouldHaveSingleItem();
-            result[0].Hash.ShouldBe("hash1");
+            result[0].DownloadId.ShouldBe("hash1");
         }
 
         [Fact]
@@ -342,7 +342,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")), true)
@@ -363,7 +363,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .RemoveTorrentsAsync(Arg.Any<List<string>>(), true)
@@ -384,7 +384,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
             var mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")), false)
@@ -412,7 +412,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             UTorrentService sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .StopTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")))
@@ -433,7 +433,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             UTorrentService sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns(hash);
+            mockTorrent.DownloadId.Returns(hash);
 
             _fixture.ClientWrapper
                 .StopTorrentsAsync(Arg.Any<List<string>>())
@@ -453,7 +453,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Arrange
             UTorrentService sut = _fixture.CreateSut();
             ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
-            mockTorrent.Hash.Returns("TEST-HASH");
+            mockTorrent.DownloadId.Returns("TEST-HASH");
 
             _fixture.ClientWrapper
                 .StopTorrentsAsync(Arg.Any<List<string>>())

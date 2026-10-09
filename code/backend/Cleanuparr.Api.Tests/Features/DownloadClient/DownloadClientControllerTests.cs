@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -85,7 +86,6 @@ public class DownloadClientControllerTests : IDisposable
             Enabled = true,
             Name = "my-client",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://localhost:8080",
             Username = "user",
             Password = "pass",
@@ -102,6 +102,54 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDownloadClientConfig_SabnzbdWithNoType_StoresUsenet()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "sab-client",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Host = "http://localhost:8080",
+            ApiKey = "key",
+        };
+
+        // Act
+        await _controller.CreateDownloadClientConfig(request);
+
+        // Assert
+        var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Name == "sab-client");
+        saved.Type.ShouldBe(DownloadClientType.Usenet);
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_SabnzbdWithStaleTorrentTypeInBody_StoresUsenet()
+    {
+        // Arrange: CreateDownloadClientRequest no longer declares Type; STJ ignores
+        // the stale "type" field an older frontend build might still send
+        var json = """
+        {
+            "enabled": true,
+            "name": "sab-client-2",
+            "typeName": "Sabnzbd",
+            "type": "Torrent",
+            "host": "http://localhost:8080",
+            "apiKey": "key"
+        }
+        """;
+        var jsonOptions = new System.Text.Json.JsonSerializerOptions();
+        Cleanuparr.Api.Json.CleanuparrJsonConfiguration.ConfigureApiInbound(jsonOptions);
+        var request = System.Text.Json.JsonSerializer.Deserialize<CreateDownloadClientRequest>(json, jsonOptions)!;
+
+        // Act
+        await _controller.CreateDownloadClientConfig(request);
+
+        // Assert
+        var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Name == "sab-client-2");
+        saved.Type.ShouldBe(DownloadClientType.Usenet);
+    }
+
+    [Fact]
     public async Task CreateDownloadClientConfig_InvalidHost_PropagatesValidationException()
     {
         // Arrange
@@ -110,10 +158,41 @@ public class DownloadClientControllerTests : IDisposable
             Name = "x",
             Host = string.Empty,
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
         };
 
         // Act / Assert — Validate throws, controller's generic catch logs and re-throws
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_UnknownTypeName_PropagatesValidationException()
+    {
+        // Arrange
+        CreateDownloadClientRequest request = new()
+        {
+            Name = "x",
+            Host = "http://localhost:8080",
+            TypeName = DownloadClientTypeName.Unknown,
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_UndefinedTypeName_PropagatesValidationException()
+    {
+        // Arrange
+        CreateDownloadClientRequest request = new()
+        {
+            Name = "x",
+            Host = "http://localhost:8080",
+            TypeName = (DownloadClientTypeName)42,
+        };
+
+        // Act / Assert
         await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
     }
@@ -127,7 +206,6 @@ public class DownloadClientControllerTests : IDisposable
             Name = "x",
             Host = "http://localhost:8080",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
         };
 
         // Act
@@ -151,7 +229,6 @@ public class DownloadClientControllerTests : IDisposable
             Name = "renamed",
             Host = "http://newhost:9090",
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
         };
 
         // Act
@@ -162,6 +239,67 @@ public class DownloadClientControllerTests : IDisposable
         var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
         saved.Name.ShouldBe("renamed");
         saved.Host!.ToString().ShouldContain("newhost");
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_PlaceholderApiKeyOnClientWithNoStoredKey_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://newhost:9090",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            ApiKey = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_UnknownTypeName_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://newhost:9090",
+            TypeName = DownloadClientTypeName.Unknown,
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_UndefinedTypeName_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://newhost:9090",
+            TypeName = (DownloadClientTypeName)42,
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
     }
 
     [Fact]
@@ -207,7 +345,6 @@ public class DownloadClientControllerTests : IDisposable
         var request = new TestDownloadClientRequest
         {
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://localhost:8080",
             Password = "pass",
         };
@@ -234,7 +371,6 @@ public class DownloadClientControllerTests : IDisposable
         var request = new TestDownloadClientRequest
         {
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = "http://localhost:8080",
             Password = "pass",
         };
@@ -247,13 +383,90 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task TestDownloadClient_NewApiKeyWithPlaceholderPassword_UsesNewApiKeyAndStoredPassword()
+    {
+        // Arrange
+        var client = new DownloadClientConfig
+        {
+            Name = "sab",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Type = DownloadClientType.Usenet,
+            Host = new Uri("http://localhost:8080"),
+            Password = "stored-password",
+            ApiKey = "stored-api-key",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        DownloadClientConfig? capturedConfig = null;
+        var downloadService = Substitute.For<IDownloadService>();
+        downloadService.HealthCheckAsync().Returns(new HealthCheckResult { IsHealthy = true });
+        _downloadServiceFactory.GetDownloadService(Arg.Do<DownloadClientConfig>(c => capturedConfig = c)).Returns(downloadService);
+
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Host = "http://localhost:8080",
+            Password = SensitiveDataHelper.Placeholder,
+            ApiKey = "new-api-key",
+            ClientId = client.Id,
+        };
+
+        // Act
+        await _controller.TestDownloadClient(request);
+
+        // Assert
+        capturedConfig.ShouldNotBeNull();
+        capturedConfig.ApiKey.ShouldBe("new-api-key");
+        capturedConfig.Password.ShouldBe("stored-password");
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_NewPasswordWithPlaceholderApiKey_UsesNewPasswordAndStoredApiKey()
+    {
+        // Arrange
+        var client = new DownloadClientConfig
+        {
+            Name = "sab",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Type = DownloadClientType.Usenet,
+            Host = new Uri("http://localhost:8080"),
+            Password = "stored-password",
+            ApiKey = "stored-api-key",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        DownloadClientConfig? capturedConfig = null;
+        var downloadService = Substitute.For<IDownloadService>();
+        downloadService.HealthCheckAsync().Returns(new HealthCheckResult { IsHealthy = true });
+        _downloadServiceFactory.GetDownloadService(Arg.Do<DownloadClientConfig>(c => capturedConfig = c)).Returns(downloadService);
+
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Host = "http://localhost:8080",
+            Password = "new-password",
+            ApiKey = SensitiveDataHelper.Placeholder,
+            ClientId = client.Id,
+        };
+
+        // Act
+        await _controller.TestDownloadClient(request);
+
+        // Assert
+        capturedConfig.ShouldNotBeNull();
+        capturedConfig.Password.ShouldBe("new-password");
+        capturedConfig.ApiKey.ShouldBe("stored-api-key");
+    }
+
+    [Fact]
     public async Task TestDownloadClient_InvalidHost_ReturnsBadRequest()
     {
         // Arrange — empty host fails Validate; the controller wraps the exception in BadRequest
         var request = new TestDownloadClientRequest
         {
             TypeName = DownloadClientTypeName.qBittorrent,
-            Type = DownloadClientType.Torrent,
             Host = string.Empty,
             Password = "pass",
         };
@@ -265,12 +478,48 @@ public class DownloadClientControllerTests : IDisposable
         result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
+    [Fact]
+    public async Task TestDownloadClient_UnknownTypeName_ReturnsBadRequest()
+    {
+        // Arrange
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.Unknown,
+            Host = "http://localhost:8080",
+            Password = "pass",
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_UndefinedTypeName_ReturnsBadRequest()
+    {
+        // Arrange
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = (DownloadClientTypeName)42,
+            Host = "http://localhost:8080",
+            Password = "pass",
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+    }
+
     private static DownloadClientConfig NewClient(string name, DownloadClientTypeName typeName) => new()
     {
         Id = Guid.NewGuid(),
         Name = name,
         TypeName = typeName,
-        Type = DownloadClientType.Torrent,
+        Type = typeName.ClientType(),
         Host = new Uri("http://localhost:8080"),
     };
 }

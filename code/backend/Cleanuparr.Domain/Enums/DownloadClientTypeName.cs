@@ -7,6 +7,7 @@ public enum DownloadClientTypeName
     Transmission,
     uTorrent,
     rTorrent,
+    Sabnzbd,
 
     /// <summary>
     /// Text this build does not know.

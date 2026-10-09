@@ -19,7 +19,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
 {
     private readonly DataContext _dataContext;
     private readonly IStriker _striker;
-    private readonly IDownloadService _downloadService;
+    private readonly IDeadTorrentCapable _downloadService;
     private readonly DownloadClientConfig _clientConfig;
     private readonly FakeTimeProvider _timeProvider;
     private readonly DeadTorrentService _sut;
@@ -28,7 +28,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
     {
         _dataContext = TestDataContextFactory.Create(seedData: false);
         _striker = Substitute.For<IStriker>();
-        _downloadService = Substitute.For<IDownloadService>();
+        _downloadService = Substitute.For<IDeadTorrentCapable>();
         _timeProvider = new FakeTimeProvider();
 
         _clientConfig = new DownloadClientConfig
@@ -77,7 +77,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
         DateTimeOffset? addedOn = null)
     {
         var torrent = Substitute.For<ITorrentItemWrapper>();
-        torrent.Hash.Returns(hash);
+        torrent.DownloadId.Returns(hash);
         torrent.Name.Returns($"Test {hash}");
         torrent.Category.Returns(category);
         torrent.SeederCount.Returns(seederCount);

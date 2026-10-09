@@ -38,7 +38,7 @@ public class QBitItemWrapperTests
         var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(expectedHash);
@@ -53,7 +53,7 @@ public class QBitItemWrapperTests
         var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
-        var result = wrapper.Hash;
+        var result = wrapper.DownloadId;
 
         // Assert
         result.ShouldBe(string.Empty);

@@ -63,7 +63,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
         List<LazyLibrarianWantedRecord> rows = await GetHistoryAsync(instance);
 
         return rows
-            .Where(IsSnatchedTorrent)
+            .Where(IsQueryableSnatch)
             .Select(row => row.DownloadId!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -233,7 +233,10 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    private static bool IsSnatchedTorrent(LazyLibrarianWantedRecord row)
+    /// <summary>
+    /// The snatch went to a client Cleanuparr can query (a torrent client for torrents, SABnzbd for NZBs).
+    /// </summary>
+    private static bool IsQueryableSnatch(LazyLibrarianWantedRecord row)
     {
         if (row.Status is not LazyLibrarianStatus.Snatched)
         {
@@ -245,17 +248,19 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
             return false;
         }
 
-        if (row.Mode is not (LazyLibrarianDownloadMode.Torrent or LazyLibrarianDownloadMode.Torznab or LazyLibrarianDownloadMode.Magnet))
+        return row.Source.ClientType() switch
         {
-            return false;
-        }
-
-        return row.Source.IsTorrentClient();
+            DownloadClientType.Torrent => row.Mode is LazyLibrarianDownloadMode.Torrent
+                or LazyLibrarianDownloadMode.Torznab
+                or LazyLibrarianDownloadMode.Magnet,
+            DownloadClientType.Usenet => row.Mode is LazyLibrarianDownloadMode.Nzb,
+            _ => false,
+        };
     }
 
     private static bool IsActionableBook(LazyLibrarianWantedRecord row)
     {
-        if (!IsSnatchedTorrent(row))
+        if (!IsQueryableSnatch(row))
         {
             return false;
         }

@@ -209,7 +209,6 @@ test.describe.serial('Seeding rule stop action', () => {
         enabled: true,
         name: `${s.key} stop rule e2e`,
         typeName: s.driver.typeName,
-        type: 'Torrent',
         host: s.driver.cleanuparrHost,
         username: s.driver.username ?? '',
         password: s.driver.password ?? '',

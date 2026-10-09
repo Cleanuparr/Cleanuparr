@@ -32,7 +32,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
         _striker = striker;
     }
 
-    public async Task ProcessAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads)
+    public async Task ProcessAsync(IDeadTorrentCapable downloadService, List<ITorrentItemWrapper> clientDownloads)
     {
         DeadTorrentConfig? config = await _dataContext.DeadTorrentConfigs
             .AsNoTracking()
@@ -50,7 +50,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
         }
 
         List<ITorrentItemWrapper> candidates = clientDownloads
-            .Where(t => !string.IsNullOrEmpty(t.Hash))
+            .Where(t => !string.IsNullOrEmpty(t.DownloadId))
             .Where(t => config.Categories.Any(cat => cat.Equals(t.Category, StringComparison.OrdinalIgnoreCase)))
             .Where(t => config.UseTag
                 ? !t.Tags.Contains(config.TargetCategory, StringComparer.OrdinalIgnoreCase)
@@ -81,14 +81,14 @@ public sealed class DeadTorrentService : IDeadTorrentService
         {
             ContextProvider.SetDownloadClient(downloadService.ClientConfig);
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
-            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.DownloadId);
 
             bool unregistered = torrent.TrackerHealth is TrackerHealth.Unregistered
                                 && !WithinGracePeriod(torrent);
 
             if (torrent.SeederCount > 0 && !unregistered)
             {
-                await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, StrikeType.DeadTorrent);
+                await _striker.ResetStrikeAsync(torrent.DownloadId, torrent.Name, StrikeType.DeadTorrent);
                 continue;
             }
 
@@ -102,7 +102,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
                 torrent.Name);
 
             bool shouldMove = await _striker.StrikeAndCheckLimit(
-                torrent.Hash,
+                torrent.DownloadId,
                 torrent.Name,
                 config.MaxStrikes,
                 StrikeType.DeadTorrent);

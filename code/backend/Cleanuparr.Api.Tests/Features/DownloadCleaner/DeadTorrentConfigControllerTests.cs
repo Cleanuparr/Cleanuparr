@@ -97,6 +97,16 @@ public class DeadTorrentConfigControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_EnabledForSabnzbd_ReturnsBadRequest()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext, DownloadClientTypeName.Sabnzbd, "Test Sabnzbd");
+
+        var result = await _controller.UpdateDeadTorrentConfig(client.Id, ValidRequest());
+
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
     public async Task Update_NonExistentClient_ReturnsNotFound()
     {
         var result = await _controller.UpdateDeadTorrentConfig(Guid.NewGuid(), ValidRequest());

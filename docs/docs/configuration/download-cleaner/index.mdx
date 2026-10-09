@@ -322,6 +322,8 @@ Enable orphaned files scanning for this specific download client. The download c
 
 Absolute paths to scan for orphaned files for this download client. Each top-level entry inside these directories is checked against the save paths of all active torrents across all enabled clients. If no active torrent claims an entry, it is considered orphaned.
 
+Cleanuparr never moves an entry that holds an active download. A scan directory set above your download folders keeps those folders, and nothing inside them gets cleaned.
+
 **Examples:**
 ```
 /data/downloads/completed
@@ -334,6 +336,10 @@ Each path must be accessible by Cleanuparr. If running in Docker, make sure to m
 
 <Important>
 Scan directories must not overlap (be equal to, a parent of, or a subdirectory of) the scan directories or orphaned directory of any other download client. Cleanuparr enforces this at save time to prevent cross-client false positives.
+</Important>
+
+<Important>
+or SABnzbd, set the scan directory to the **Completed Download Folder** configured under SABnzbd's Folders settings. Cleanuparr skips SABnzbd's completed and temporary download folders, so setting the scan directory to a parent folder won't clean anything.
 </Important>
 
 </ConfigSection>

@@ -110,7 +110,6 @@ test.describe.serial('rTorrent seeding rule tracker pattern cleanup', () => {
       enabled: true,
       name: 'rTorrent seeding rule e2e',
       typeName: rtorrent.typeName,
-      type: 'Torrent',
       host: rtorrent.cleanuparrHost,
       username: rtorrent.username,
       password: rtorrent.password,

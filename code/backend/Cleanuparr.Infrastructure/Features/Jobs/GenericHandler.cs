@@ -331,21 +331,21 @@ public abstract class GenericHandler : IHandler
             return false;
         }
 
-        // LazyLibrarian refuses to remove a task it adopted, and the files back another seed.
+        // LazyLibrarian refuses to remove a task it adopted.
         if (decision.Item.WasAdoptedByLazyLibrarian)
         {
             _logger.LogInformation(
-                "keeping torrent | LazyLibrarian adopted it | {Title} | {Hash}",
+                "keeping download | LazyLibrarian adopted it | {Title} | {Hash}",
                 decision.Item.Title, decision.Item.DownloadId
             );
 
             return false;
         }
 
-        if (decision.DownloadService is null || decision.Torrent is null)
+        if (decision.DownloadService is null || decision.Download is null)
         {
             _logger.LogWarning(
-                "skip lazylibrarian delete | torrent reference unavailable | {Title} | {Hash}",
+                "skip lazylibrarian delete | download reference unavailable | {Title} | {Hash}",
                 decision.Item.Title, decision.Item.DownloadId
             );
 
@@ -354,9 +354,9 @@ public abstract class GenericHandler : IHandler
 
         try
         {
-            await _dryRunInterceptor.InterceptAsync(() => decision.DownloadService.DeleteDownload(decision.Torrent, true));
+            await _dryRunInterceptor.InterceptAsync(() => decision.DownloadService.DeleteDownload(decision.Download, true));
             _logger.LogInformation(
-                "torrent removed from download client {Client} | {Title}",
+                "download removed from download client {Client} | {Title}",
                 decision.DownloadService.ClientConfig.Name, decision.Item.Title
             );
 
@@ -366,7 +366,7 @@ public abstract class GenericHandler : IHandler
         {
             _logger.LogError(
                 exception,
-                "failed to remove torrent from download client {Client} | {Hash} | {Title}",
+                "failed to remove download from download client {Client} | {Hash} | {Title}",
                 decision.DownloadService.ClientConfig.Name, decision.Item.DownloadId, decision.Item.Title
             );
 
@@ -403,7 +403,79 @@ public abstract class GenericHandler : IHandler
         {
             _logger.LogDebug("Initialized {Count} download clients", downloadServices.Count);
         }
-        
+
         return downloadServices;
+    }
+
+    /// <summary>
+    /// Maps a queue record's protocol to the download client type that serves it, or null for an unknown protocol.
+    /// </summary>
+    protected static DownloadClientType? GetClientType(QueueRecord record)
+    {
+        if (record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return DownloadClientType.Torrent;
+        }
+
+        if (record.Protocol.Contains("usenet", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return DownloadClientType.Usenet;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="check"/> against each <typeparamref name="TCapable"/> client of the record's protocol until one finds the download.
+    /// </summary>
+    /// <returns>The finding client's result and config, or a default result and null when no client found it.</returns>
+    protected async Task<(TResult Result, DownloadClientConfig? FoundIn)> FindInClientsAsync<TCapable, TResult>(
+        QueueRecord record,
+        IReadOnlyList<IDownloadService> downloadServices,
+        Func<TCapable, Task<TResult>> check,
+        Func<TResult, bool> isFound
+    )
+        where TCapable : IDownloadService
+        where TResult : new()
+    {
+        DownloadClientType? clientType = GetClientType(record);
+
+        if (clientType is null)
+        {
+            return (new TResult(), null);
+        }
+
+        string clientTypeName = clientType.Value.ToString().ToLowerInvariant();
+        List<TCapable> matchingClients = downloadServices
+            .OfType<TCapable>()
+            .Where(x => x.ClientConfig.Type == clientType)
+            .ToList();
+
+        if (matchingClients.Count is 0)
+        {
+            _logger.LogDebug("No {ClientType} clients enabled", clientTypeName);
+            return (new TResult(), null);
+        }
+
+        foreach (TCapable downloadService in matchingClients)
+        {
+            try
+            {
+                TResult result = await check(downloadService);
+
+                if (isFound(result))
+                {
+                    return (result, downloadService.ClientConfig);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking download {DName} with download client {CName}",
+                    record.Title, downloadService.ClientConfig.Name);
+            }
+        }
+
+        _logger.LogWarning("Download not found in any {ClientType} client | {Title}", clientTypeName, record.Title);
+        return (new TResult(), null);
     }
 }

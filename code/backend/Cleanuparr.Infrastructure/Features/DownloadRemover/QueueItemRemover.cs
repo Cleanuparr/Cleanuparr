@@ -165,7 +165,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         if (!target.RemovedFromClient)
         {
             _logger.LogInformation(
-                "search not triggered | the torrent is still in the download client | {Title}",
+                "search not triggered | the download is still in the download client | {Title}",
                 target.Title
             );
 

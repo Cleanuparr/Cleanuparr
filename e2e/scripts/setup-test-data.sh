@@ -28,12 +28,16 @@ mkdir -p \
   "$TEST_DATA/downloads/deluge" \
   "$TEST_DATA/downloads/utorrent" \
   "$TEST_DATA/downloads/rtorrent" \
+  "$TEST_DATA/downloads/sabnzbd/incomplete" \
+  "$TEST_DATA/downloads/sabnzbd/complete" \
+  "$TEST_DATA/sabnews-articles" \
   "$TEST_DATA/orphaned-xdev" \
   "$TEST_DATA/qbittorrent-config/qBittorrent" \
   "$TEST_DATA/transmission-config" \
   "$TEST_DATA/deluge-config" \
   "$TEST_DATA/utorrent-config" \
-  "$TEST_DATA/rutorrent-config"
+  "$TEST_DATA/rutorrent-config" \
+  "$TEST_DATA/sabnzbd-config"
 
 chmod -R a+rwX "$TEST_DATA" 2>/dev/null || true
 
@@ -53,6 +57,46 @@ WebUI\AuthSubnetWhitelist=127.0.0.0/8, ::1/128
 WebUI\Username=admin
 WebUI\Password_PBKDF2="@ByteArray(ARQ77eY1NUZ366igo9pHIQ==:Bn3qWLqOY3qE6Z+sCx2NoO5q4nhgxhUL3eRD4Zw3+5p9C7+RmrI20bzAjcwHKqcWa+5z6QBQGckCB8sFCnVTGw==)"
 Downloads\SavePath=/downloads
+EOF
+
+# Headless SABnzbd config: a config file present (with a server already
+# defined) skips the first-run wizard. host/download_dir/complete_dir are
+# absolute so SabnzbdService.GetClaimedPathsAsync can resolve and claim them
+# (it skips a relative download_dir as unreachable from this host).
+cat > "$TEST_DATA/sabnzbd-config/sabnzbd.ini" <<'EOF'
+[misc]
+config_version = 25
+api_key = 0000000000000000000000000000e2e5
+nzb_key = 0000000000000000000000000000e2e5
+host = 0.0.0.0
+port = 8070
+download_dir = /downloads/incomplete
+complete_dir = /downloads/complete
+fail_hopeless_jobs = 1
+enable_https = 0
+check_new_rel = 0
+auto_browser = 0
+language = en
+host_whitelist = localhost,127.0.0.1
+inet_exposure = 0
+
+[servers]
+[[sabnews]]
+displayname = sabnews
+host = localhost
+port = 8888
+connections = 1
+ssl = 0
+enable = 1
+priority = 0
+# A connection to sabnews can stall for the full timeout; 20 is the lowest SABnzbd accepts.
+timeout = 20
+
+[categories]
+[[*]]
+pp = 3
+script = Default
+priority = 0
 EOF
 
 # Restore Sonarr and Radarr from the committed seed.

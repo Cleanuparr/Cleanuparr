@@ -10,23 +10,23 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 public partial class QBitService
 {
     /// <inheritdoc/>
-    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads)
+    public override async Task<BlockFilesResult> BlockUnwantedFilesAsync(string downloadId, IReadOnlyList<string> ignoredDownloads)
     {
-        TorrentInfo? download = (await _client.GetTorrentListAsync(new TorrentListQuery { Hashes = [hash] }))
+        TorrentInfo? download = (await _client.GetTorrentListAsync(new TorrentListQuery { Hashes = [downloadId] }))
             ?.FirstOrDefault();
         BlockFilesResult result = new();
 
         if (download is null)
         {
-            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
-        
-        IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(hash);
+
+        IReadOnlyList<TorrentTracker>? trackers = await GetTrackersAsync(downloadId);
 
         if (trackers is null)
         {
-            _logger.LogDebug("failed to find torrent {Hash} in the {Name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("failed to find torrent {DownloadId} in the {Name} download client", downloadId, _downloadClientConfig.Name);
             return result;
         }
 
@@ -36,8 +36,8 @@ public partial class QBitService
             _logger.LogInformation("skip | download is ignored | {Name}", download.Name);
             return result;
         }
-        
-        TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(hash);
+
+        TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(downloadId);
 
         if (torrentProperties is null)
         {
@@ -51,7 +51,7 @@ public partial class QBitService
 
         result.IsPrivate = isPrivate;
         result.Found = true;
-        result.Torrent = new QBitItemWrapper(download, trackers, isPrivate);
+        result.Item = new QBitItemWrapper(download, trackers, isPrivate);
         SetDownloadClientContext();
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
@@ -63,7 +63,7 @@ public partial class QBitService
             return result;
         }
         
-        IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(hash);
+        IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(downloadId);
 
         if (files?.Count is null or 0)
         {
@@ -91,7 +91,7 @@ public partial class QBitService
         {
             foreach (int fileIndex in unwantedIndices)
             {
-                await _client.SetFilePriorityAsync(hash, fileIndex, TorrentContentPriority.Skip);
+                await _client.SetFilePriorityAsync(downloadId, fileIndex, TorrentContentPriority.Skip);
             }
         });
 

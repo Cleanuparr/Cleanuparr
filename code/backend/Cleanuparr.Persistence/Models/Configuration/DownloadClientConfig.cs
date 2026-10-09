@@ -53,7 +53,13 @@ public sealed record DownloadClientConfig
     /// </summary>
     [SensitiveData]
     public string? Password { get; set; }
-    
+
+    /// <summary>
+    /// API key for authentication, for clients that use one instead of a username/password.
+    /// </summary>
+    [SensitiveData]
+    public string? ApiKey { get; set; }
+
     /// <summary>
     /// The base URL path component, used by clients like Transmission and Deluge
     /// </summary>
@@ -108,6 +114,11 @@ public sealed record DownloadClientConfig
         if (!string.IsNullOrWhiteSpace(DownloadDirectorySource) != !string.IsNullOrWhiteSpace(DownloadDirectoryTarget))
         {
             throw new ValidationException("Both download directory source and target must be set, or both must be empty");
+        }
+
+        if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey))
+        {
+            throw new ValidationException("API key cannot be empty");
         }
     }
 }

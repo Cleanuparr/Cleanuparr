@@ -1,6 +1,7 @@
 using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.AspNetCore.Authorization;
@@ -66,6 +67,11 @@ public class UnlinkedConfigController : ControllerBase
             if (client is null)
             {
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
+            }
+
+            if (dto.Enabled && !client.TypeName.SupportsCapability(DownloadClientCapability.Unlinked))
+            {
+                return this.ProblemResult(StatusCodes.Status400BadRequest, $"Unlinked download handling is not supported for {client.TypeName}");
             }
 
             var existing = await _dataContext.UnlinkedConfigs

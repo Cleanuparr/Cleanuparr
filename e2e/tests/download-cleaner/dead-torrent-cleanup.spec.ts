@@ -246,7 +246,6 @@ test.describe.serial('Dead torrent cleanup', () => {
         enabled: true,
         name: `${s.key} dead e2e`,
         typeName: s.driver.typeName,
-        type: 'Torrent',
         host: s.driver.cleanuparrHost,
         username: s.driver.username ?? '',
         password: s.driver.password ?? '',

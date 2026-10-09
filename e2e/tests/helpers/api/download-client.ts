@@ -5,23 +5,23 @@ export type DownloadClientType =
   | 'transmission'
   | 'deluge'
   | 'utorrent'
-  | 'rtorrent';
-
-export type DownloadClientCategory = 'Torrent' | 'Usenet';
+  | 'rtorrent'
+  | 'sabnzbd';
 
 export interface DownloadClientPayload {
   name: string;
-  /** Backend enum value (Torrent / Usenet). */
-  type?: DownloadClientCategory;
   /** Backend type-name enum value (qBittorrent / Deluge / Transmission / uTorrent / rTorrent). */
   typeName?: string;
   /** Full URL including scheme + port. */
   host: string;
   username?: string;
   password?: string;
+  apiKey?: string;
   urlBase?: string;
   externalUrl?: string;
   enabled?: boolean;
+  /** Existing client id, for test-connection requests that resolve a masked secret. */
+  clientId?: string;
 }
 
 const TYPE_NAME_MAP: Record<DownloadClientType, string> = {
@@ -30,6 +30,7 @@ const TYPE_NAME_MAP: Record<DownloadClientType, string> = {
   deluge: 'Deluge',
   utorrent: 'uTorrent',
   rtorrent: 'rTorrent',
+  sabnzbd: 'Sabnzbd',
 };
 
 export function buildDownloadClientPayload(
@@ -37,7 +38,6 @@ export function buildDownloadClientPayload(
   overrides: Partial<DownloadClientPayload> & { host: string; name: string },
 ): DownloadClientPayload {
   return {
-    type: 'Torrent',
     typeName: TYPE_NAME_MAP[type],
     enabled: true,
     ...overrides,

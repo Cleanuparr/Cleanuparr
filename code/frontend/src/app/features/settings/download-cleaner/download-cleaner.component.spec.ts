@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { of, Subject, throwError } from 'rxjs';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
+import { DownloadClientApi } from '@core/api/download-client.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
@@ -11,7 +12,11 @@ import {
   OrphanedFilesConfig,
   SeedingRule,
 } from '@shared/models/download-cleaner-config.model';
-import { DownloadClientTypeName, ScheduleUnit, SeedingRuleAction, TorrentPrivacyType } from '@shared/models/enums';
+import { DownloadClientTypesResponse } from '@shared/models/download-client-config.model';
+import {
+  DownloadClientAuthField, DownloadClientCapability, DownloadClientTypeName,
+  ScheduleUnit, SeedingRuleAction, TorrentPrivacyType,
+} from '@shared/models/enums';
 import { DownloadCleanerComponent } from './download-cleaner.component';
 
 const RULE_A: SeedingRule = {
@@ -87,6 +92,16 @@ const CONFIG: DownloadCleanerConfig = {
       deadTorrentConfig: null,
       orphanedFilesConfig: null,
     },
+    {
+      downloadClientId: 'client-sab',
+      downloadClientName: 'SAB box',
+      downloadClientEnabled: true,
+      downloadClientTypeName: DownloadClientTypeName.Sabnzbd,
+      seedingRules: [],
+      unlinkedConfig: null,
+      deadTorrentConfig: null,
+      orphanedFilesConfig: null,
+    },
   ],
 };
 
@@ -103,10 +118,43 @@ function createApi(config: DownloadCleanerConfig, reloadedRules: SeedingRule[]) 
   };
 }
 
+const TYPES: DownloadClientTypesResponse = {
+  types: [
+    {
+      typeName: DownloadClientTypeName.qBittorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [
+        DownloadClientCapability.SeedingCleanup, DownloadClientCapability.TagFiltering,
+        DownloadClientCapability.SeedersFiltering, DownloadClientCapability.DeadTorrent,
+        DownloadClientCapability.OrphanClaims, DownloadClientCapability.Unlinked,
+      ],
+    },
+    {
+      typeName: DownloadClientTypeName.rTorrent,
+      authFields: [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
+      capabilities: [
+        DownloadClientCapability.SeedingCleanup, DownloadClientCapability.OrphanClaims, DownloadClientCapability.Unlinked,
+      ],
+    },
+    {
+      typeName: DownloadClientTypeName.Sabnzbd,
+      authFields: [DownloadClientAuthField.ApiKey],
+      capabilities: [DownloadClientCapability.OrphanClaims],
+    },
+  ],
+};
+
+function createDownloadClientApi(types: DownloadClientTypesResponse = TYPES) {
+  return {
+    getTypes: vi.fn(() => of(types)),
+  };
+}
+
 interface Setup {
   fixture: ComponentFixture<DownloadCleanerComponent>;
   component: DownloadCleanerComponent;
   api: ReturnType<typeof createApi>;
+  downloadClientApi: ReturnType<typeof createDownloadClientApi>;
   toast: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
   confirm: ConfirmService;
 }
@@ -127,6 +175,7 @@ describe('DownloadCleanerComponent', () => {
   async function setup(
     config: DownloadCleanerConfig = CONFIG,
     reloadedRules: SeedingRule[] = [RULE_B],
+    downloadClientApi: ReturnType<typeof createDownloadClientApi> = createDownloadClientApi(),
   ): Promise<Setup> {
     const api = createApi(config, reloadedRules);
     const toast = createToast();
@@ -135,19 +184,21 @@ describe('DownloadCleanerComponent', () => {
       providers: [
         provideHttpClient(),
         { provide: DownloadCleanerApi, useValue: api },
+        { provide: DownloadClientApi, useValue: downloadClientApi },
         { provide: ToastService, useValue: toast },
       ],
     });
 
     const fixture = TestBed.createComponent(DownloadCleanerComponent);
     fixture.detectChanges();
-    await Promise.resolve();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     return {
       fixture,
       component: fixture.componentInstance,
       api,
+      downloadClientApi,
       toast,
       confirm: TestBed.inject(ConfirmService),
     };
@@ -173,6 +224,7 @@ describe('DownloadCleanerComponent', () => {
     expect(component.clientOptions()).toEqual([
       { label: 'qBit box', value: 'client-qb' },
       { label: 'rTorrent box', value: 'client-rt' },
+      { label: 'SAB box', value: 'client-sab' },
     ]);
     expect(component.hasPendingChanges()).toBe(false);
 
@@ -264,6 +316,100 @@ describe('DownloadCleanerComponent', () => {
     expect(component.isSeedersFilterableClient()).toBe(false);
     expect(component.isDeadTorrentCapableClient()).toBe(false);
     expect(fixture.nativeElement.textContent).not.toContain('Dead Torrents');
+  });
+
+  it('hides seeding rules and unlinked downloads for a seeding-incapable client but keeps orphaned files', async () => {
+    const { fixture, component } = await setup();
+
+    await component.onClientChange('client-sab');
+    fixture.detectChanges();
+
+    expect(component.selectedClient()?.downloadClientTypeName).toBe(DownloadClientTypeName.Sabnzbd);
+    expect(component.isSeedingCleanupCapableClient()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Seeding Rules');
+    expect(fixture.nativeElement.textContent).not.toContain('Unlinked Downloads');
+    expect(fixture.nativeElement.textContent).not.toContain('Dead Torrents');
+    expect(fixture.nativeElement.textContent).toContain('Orphaned Files');
+  });
+
+  it('gates seeding rules and unlinked downloads on separate capabilities', async () => {
+    const types: DownloadClientTypesResponse = {
+      types: TYPES.types.map((type) => type.typeName === DownloadClientTypeName.rTorrent
+        ? { ...type, capabilities: [DownloadClientCapability.Unlinked] }
+        : type),
+    };
+    const { fixture, component } = await setup(CONFIG, [RULE_B], createDownloadClientApi(types));
+
+    await component.onClientChange('client-rt');
+    fixture.detectChanges();
+
+    expect(component.isSeedingCleanupCapableClient()).toBe(false);
+    expect(component.isUnlinkedCapableClient()).toBe(true);
+    expect(fixture.nativeElement.textContent).not.toContain('Seeding Rules');
+    expect(fixture.nativeElement.textContent).toContain('Unlinked Downloads');
+  });
+
+  it('renders no form while the types endpoint is still loading, then renders once it resolves', async () => {
+    const types$ = new Subject<DownloadClientTypesResponse>();
+    const downloadClientApi = createDownloadClientApi();
+    downloadClientApi.getTypes.mockReturnValue(types$);
+    const api = createApi(CONFIG, [RULE_B]);
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        { provide: DownloadCleanerApi, useValue: api },
+        { provide: DownloadClientApi, useValue: downloadClientApi },
+      ],
+    });
+    const fixture = TestBed.createComponent(DownloadCleanerComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+
+    // forkJoin withholds the config too, so the whole form waits on types, not just capability gating.
+    expect(component.loadError()).toBe(false);
+    expect(fixture.nativeElement.textContent).not.toContain('Seeding Rules');
+    expect(fixture.nativeElement.textContent).not.toContain('General');
+
+    types$.next(TYPES);
+    types$.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.isSeedingCleanupCapableClient()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Seeding Rules');
+  });
+
+  it('shows the connection error state when the types endpoint fails and recovers on retry', async () => {
+    const downloadClientApi = createDownloadClientApi();
+    downloadClientApi.getTypes.mockReturnValue(throwError(() => new Error('offline')));
+    const api = createApi(CONFIG, []);
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        { provide: DownloadCleanerApi, useValue: api },
+        { provide: DownloadClientApi, useValue: downloadClientApi },
+      ],
+    });
+    const fixture = TestBed.createComponent(DownloadCleanerComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    expect(component.loadError()).toBe(true);
+    expect(fixture.nativeElement.textContent).not.toContain('Seeding Rules');
+    expect(fixture.nativeElement.textContent).toContain('Could not connect to server');
+
+    downloadClientApi.getTypes.mockReturnValue(of(TYPES));
+    component.retry();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.loadError()).toBe(false);
+    expect(component.selectedClientId()).toBe('client-qb');
   });
 
   it('keeps the selection when the discard prompt is cancelled and drops the edits once confirmed', async () => {
@@ -616,11 +762,15 @@ describe('DownloadCleanerComponent', () => {
     api.getConfig.mockReturnValue(throwError(() => new Error('offline')));
 
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), { provide: DownloadCleanerApi, useValue: api }],
+      providers: [
+        provideHttpClient(),
+        { provide: DownloadCleanerApi, useValue: api },
+        { provide: DownloadClientApi, useValue: createDownloadClientApi() },
+      ],
     });
     const fixture = TestBed.createComponent(DownloadCleanerComponent);
     fixture.detectChanges();
-    await Promise.resolve();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
