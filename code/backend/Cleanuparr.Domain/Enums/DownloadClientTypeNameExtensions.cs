@@ -12,6 +12,9 @@ public static class DownloadClientTypeNameExtensions
         [DownloadClientTypeName.Sabnzbd] = [DownloadClientAuthField.ApiKey],
     };
 
+    /// <summary>
+    /// Whether the client type accepts this credential field.
+    /// </summary>
     public static bool SupportsAuthField(this DownloadClientTypeName typeName, DownloadClientAuthField field) =>
         AuthFields.TryGetValue(typeName, out var fields) && fields.Contains(field);
 
