@@ -12,4 +12,10 @@ public sealed record SabnzbdMiscConfig
     /// </summary>
     [JsonPropertyName("download_dir")]
     public string? DownloadDir { get; init; }
+
+    /// <summary>
+    /// The folder SABnzbd moves a job into once it finishes downloading and post-processing.
+    /// </summary>
+    [JsonPropertyName("complete_dir")]
+    public string? CompleteDir { get; init; }
 }

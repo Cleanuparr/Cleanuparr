@@ -232,10 +232,11 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
-        public async Task BusyQueue_ClaimsEveryEntryInDownloadDir()
+        public async Task BusyQueue_ClaimsDownloadDirEntriesAndCompleteDir()
         {
             // SAB can rename a folder on a clash, so a busy queue claims every entry, not just name lookalikes.
             string downloadDir = Directory.CreateTempSubdirectory("sabnzbd-incomplete-").FullName;
+            string completeDir = Directory.CreateTempSubdirectory("sabnzbd-complete-").FullName;
 
             try
             {
@@ -244,16 +245,20 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
 
                 var sut = _fixture.CreateSut();
                 _fixture.ClientWrapper.GetDownloadDirAsync().Returns(downloadDir);
+                _fixture.ClientWrapper.GetCompleteDirAsync().Returns(completeDir);
                 var item = new SabnzbdItemWrapper(new SabnzbdQueueSlot { NzoId = "nzo2", Filename = "Downloading.Release", Status = "Downloading", Mb = 100, MbLeft = 50 });
 
                 IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
 
+                claimed.ShouldContain(downloadDir);
                 claimed.ShouldContain(jobFolder);
                 claimed.ShouldContain(renamedFolder);
+                claimed.ShouldContain(completeDir);
             }
             finally
             {
                 Directory.Delete(downloadDir, true);
+                Directory.Delete(completeDir, true);
             }
         }
 
@@ -359,17 +364,45 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
-        public async Task IdleClient_MissingDownloadDir_ReturnsNoClaimsWithoutThrowing()
+        public async Task IdleClient_UnresolvableDownloadDirAndCompleteDir_SkipsBothWithoutThrowing()
         {
-            // The client isn't busy (the only item is Completed), so BuildIncompleteClaimsAsync never runs.
+            // An idle client never needs BuildIncompleteClaimsAsync's throwing resolve, so a missing dir is skipped.
             var sut = _fixture.CreateSut();
             _fixture.ClientWrapper.GetDownloadDirAsync().Returns((string?)null);
+            _fixture.ClientWrapper.GetCompleteDirAsync().Returns("/does/not/exist/on/disk");
             var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
 
             IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
 
             claimed.ShouldContain("/downloads/complete/Test");
-            await _fixture.ClientWrapper.DidNotReceive().GetDownloadDirAsync();
+            claimed.ShouldNotContain("/does/not/exist/on/disk");
+        }
+
+        [Fact]
+        public async Task IdleClient_EmptyHistory_ClaimsDownloadDirAndCompleteDirOnly()
+        {
+            string downloadDir = Directory.CreateTempSubdirectory("sabnzbd-incomplete-").FullName;
+            string completeDir = Directory.CreateTempSubdirectory("sabnzbd-complete-").FullName;
+
+            try
+            {
+                string leftover = Directory.CreateDirectory(Path.Combine(downloadDir, "Leftover.Release")).FullName;
+
+                var sut = _fixture.CreateSut();
+                _fixture.ClientWrapper.GetDownloadDirAsync().Returns(downloadDir);
+                _fixture.ClientWrapper.GetCompleteDirAsync().Returns(completeDir);
+
+                IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([]);
+
+                claimed.ShouldContain(downloadDir);
+                claimed.ShouldContain(completeDir);
+                claimed.ShouldNotContain(leftover);
+            }
+            finally
+            {
+                Directory.Delete(downloadDir, true);
+                Directory.Delete(completeDir, true);
+            }
         }
 
         [Fact]
@@ -410,19 +443,10 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
-        public async Task HistoryOnly_NeverFetchesDownloadDir()
+        public async Task CategorySubfolderHistoryItem_ClaimsOnlyTheJobFolder()
         {
-            var sut = _fixture.CreateSut();
-            var item = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = "/downloads/complete/Test" });
-
-            await sut.GetClaimedPathsAsync([item]);
-
-            await _fixture.ClientWrapper.DidNotReceive().GetDownloadDirAsync();
-        }
-
-        [Fact]
-        public async Task CategorySubfolderHistoryItem_ClaimsTheJobFolderAndItsAncestors()
-        {
+            // The ancestors above the job folder (complete/tv, complete) are no longer claimed directly here;
+            // the orphan scanner's ancestor-of-a-claim rule keeps them instead.
             string targetRoot = Directory.CreateTempSubdirectory("sabnzbd-claim-test-").FullName;
 
             try
@@ -449,8 +473,8 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
                 IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
 
                 claimed.ShouldContain(Path.Combine(targetRoot, "complete", "tv", "Job"));
-                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "tv"));
-                claimed.ShouldContain(Path.Combine(targetRoot, "complete"));
+                claimed.ShouldNotContain(Path.Combine(targetRoot, "complete", "tv"));
+                claimed.ShouldNotContain(Path.Combine(targetRoot, "complete"));
             }
             finally
             {
@@ -459,9 +483,10 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
-        public async Task SingleFileHistoryItem_StorageIsTheFile_ClaimsItsJobFolder()
+        public async Task SingleFileHistoryItem_ClaimsOnlyTheStorageFile()
         {
-            // A single-file job reports `storage` as the file itself, one level under its job folder.
+            // A single-file job reports `storage` as the file itself; its job folder is left to the scanner's
+            // ancestor-of-a-claim rule rather than claimed here.
             string targetRoot = Directory.CreateTempSubdirectory("sabnzbd-claim-test-").FullName;
 
             try
@@ -487,7 +512,8 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
 
                 IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync([item]);
 
-                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "Job"));
+                claimed.ShouldContain(Path.Combine(targetRoot, "complete", "Job", "file.mkv"));
+                claimed.ShouldNotContain(Path.Combine(targetRoot, "complete", "Job"));
             }
             finally
             {
@@ -646,6 +672,33 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
                 {
                     Directory.Delete(jobFolder, true);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CompletedSingleFileJob_SharedParentWithSiblingFile_DeletesOnlyTheJobFile()
+        {
+            // SAB sorting can put another job's file in the same folder; the folder must survive.
+            var sut = _fixture.CreateSut();
+            string sharedParent = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+            string storagePath = Path.Combine(sharedParent, "file.mkv");
+            string siblingPath = Path.Combine(sharedParent, "other-job.mkv");
+            await File.WriteAllTextAsync(storagePath, "x");
+            await File.WriteAllTextAsync(siblingPath, "y");
+
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = storagePath });
+
+                await sut.DeleteDownload(torrent, true);
+
+                File.Exists(storagePath).ShouldBeFalse();
+                File.Exists(siblingPath).ShouldBeTrue();
+                Directory.Exists(sharedParent).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(sharedParent, true);
             }
         }
 

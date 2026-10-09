@@ -49,8 +49,8 @@ public partial class SabnzbdService
     }
 
     /// <summary>
-    /// Claims each history job's storage path and every ancestor folder above it, plus, while the client is busy
-    /// (queued or post-processing), every top-level entry under SABnzbd's incomplete <c>download_dir</c>.
+    /// Claims each history job's storage path, SABnzbd's own <c>download_dir</c> and <c>complete_dir</c>, plus,
+    /// while the client is busy (queued or post-processing), every top-level entry under <c>download_dir</c>.
     /// </summary>
     /// <inheritdoc/>
     public override async Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<IDownloadItem> downloads)
@@ -58,6 +58,11 @@ public partial class SabnzbdService
         HashSet<string> claimed = new(BuildHistoryClaims(downloads), StringComparer.OrdinalIgnoreCase);
 
         bool clientIsBusy = downloads.Any(t => t is SabnzbdItemWrapper { IsInHistory: false } or SabnzbdItemWrapper { Status: not ("Completed" or "Failed") });
+
+        foreach (string claim in await ClaimConfiguredDirectoriesAsync())
+        {
+            claimed.Add(claim);
+        }
 
         if (clientIsBusy)
         {
@@ -71,29 +76,51 @@ public partial class SabnzbdService
     }
 
     /// <summary>
-    /// Claims a history job's <c>storage</c> path plus every ancestor folder above it. A single-file job's
-    /// <c>storage</c> names the file itself, one level under its job folder; a category subfolder or an absolute
-    /// category path moves the job's top-level entry further up than one hop. Claiming the whole ancestor chain
-    /// covers all three without needing to know <c>complete_dir</c>.
+    /// Claims a history job's <c>storage</c> path. The scanner keeps every folder above a claim.
     /// </summary>
     private IEnumerable<string> BuildHistoryClaims(IReadOnlyList<IDownloadItem> downloads)
     {
         return downloads
             .Where(x => !string.IsNullOrEmpty(x.SavePath))
-            .SelectMany(x => PathAndAncestors(RemapAndTrim(x.SavePath)));
+            .Select(x => RemapAndTrim(x.SavePath));
     }
 
-    private static IEnumerable<string> PathAndAncestors(string path)
+    /// <summary>
+    /// Claims <c>download_dir</c> and <c>complete_dir</c> when each resolves to an existing folder, and skips one that doesn't.
+    /// For a busy client, <see cref="BuildIncompleteClaimsAsync"/> throws on an unresolvable <c>download_dir</c> instead.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> ClaimConfiguredDirectoriesAsync()
     {
-        for (string? current = path; !string.IsNullOrEmpty(current); current = Path.GetDirectoryName(current))
+        List<string> claims = [];
+
+        foreach (Func<Task<string?>> getDirAsync in new Func<Task<string?>>[] { _client.GetDownloadDirAsync, _client.GetCompleteDirAsync })
         {
-            yield return current;
+            string? dir = await TryResolveExistingDirAsync(getDirAsync);
+            if (dir is not null)
+            {
+                claims.Add(dir);
+            }
         }
+
+        return claims;
+    }
+
+    private async Task<string?> TryResolveExistingDirAsync(Func<Task<string?>> getDirAsync)
+    {
+        string? dir = await getDirAsync();
+
+        if (string.IsNullOrEmpty(dir))
+        {
+            return null;
+        }
+
+        string remapped = RemapAndTrim(dir);
+        return Path.IsPathRooted(remapped) && Directory.Exists(remapped) ? remapped : null;
     }
 
     /// <summary>
     /// SAB sanitizes job names for incomplete folders and appends ".1"/".2" on a clash, so download_dir plus the job name can miss the real folder.
-    /// Claiming every entry while the client is busy (queued or post-processing) protects active downloads instead; an idle client claims nothing, so leftovers stay cleanable.
+    /// Claiming every entry while the client is busy (queued or post-processing) protects active downloads instead; an idle client claims none of them, so leftovers stay cleanable.
     /// A busy client that can't resolve a usable download_dir throws instead, since silently claiming nothing would let the orphan scan move an in-progress job.
     /// </summary>
     private async Task<IReadOnlyList<string>> BuildIncompleteClaimsAsync()
@@ -151,14 +178,23 @@ public partial class SabnzbdService
 
         string storagePath = RemapAndTrim(sabnzbdItem.SavePath);
 
-        // A single-file job reports `storage` as the file itself, one level under its job folder.
-        if (File.Exists(storagePath))
-        {
-            storagePath = Path.GetDirectoryName(storagePath) ?? storagePath;
-        }
-
         await _dryRunInterceptor.InterceptAsync(() =>
         {
+            // A single-file job reports `storage` as the file itself. SAB sorting can put several jobs'
+            // files in the same folder, so only the file is deleted; the folder follows if it is now empty.
+            if (File.Exists(storagePath))
+            {
+                string? parent = Path.GetDirectoryName(storagePath);
+                TryDeleteFiles(storagePath, failOnNotFound: false);
+
+                if (!string.IsNullOrEmpty(parent) && Directory.Exists(parent) && !Directory.EnumerateFileSystemEntries(parent).Any())
+                {
+                    Directory.Delete(parent);
+                }
+
+                return Task.CompletedTask;
+            }
+
             TryDeleteFiles(storagePath, failOnNotFound: false);
             return Task.CompletedTask;
         });

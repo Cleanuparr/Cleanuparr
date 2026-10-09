@@ -271,4 +271,66 @@ test.describe.serial('SABnzbd live: orphaned files claims', () => {
       await driver.deleteCategory(category);
     }
   });
+
+  test('download_dir and complete_dir survive a scan rooted one level above them, an unrelated sibling moves', async () => {
+    test.setTimeout(90_000);
+    const completeDir = join(HOST_DOWNLOADS, 'complete');
+    const incompleteDir = join(HOST_DOWNLOADS, 'incomplete');
+    resetDir(completeDir);
+    resetDir(incompleteDir);
+    const orphanedDir = join(HOST_DOWNLOADS, 'root-orphaned');
+    resetDir(orphanedDir);
+
+    const ofc = await updateOrphanedFilesConfig(token, clientId, {
+      enabled: true,
+      scanDirectories: [APP_DOWNLOADS],
+      orphanedDirectory: `${APP_DOWNLOADS}/root-orphaned`,
+      minFileAgeHours: 0,
+    });
+    expect(ofc.status).toBe(200);
+
+    const dirName = `claim-root-${Date.now().toString(36)}`;
+    driver.writeArticleFile(dirName, 'data1.bin', 32_768);
+    driver.writeArticleFile(dirName, 'data2.bin', 32_768);
+    const nzoId = await driver.addWorkingNzbDir(dirName, 'e2e-ofc');
+    await driver.waitForHistoryStatus(nzoId, 'Completed', 60_000);
+
+    // An unrelated top-level entry with no SABnzbd job or config directory behind it.
+    mkdirSync(join(HOST_DOWNLOADS, 'leftover-root'), { recursive: true });
+
+    const trig = await triggerJob(token, 'DownloadCleaner');
+    expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
+
+    expect(await waitForMove(orphanedDir, 'leftover-root'), 'unrelated top-level folder should have been moved out').toBe(true);
+    expect(existsSync(incompleteDir), 'download_dir itself is claimed and must survive').toBe(true);
+    expect(existsSync(completeDir), 'complete_dir itself is claimed and must survive').toBe(true);
+    expect(existsSync(join(completeDir, dirName)), 'the completed job folder must survive').toBe(true);
+  });
+
+  test('download_dir and complete_dir survive a root-level scan with an idle queue and empty history', async () => {
+    test.setTimeout(60_000);
+    const completeDir = join(HOST_DOWNLOADS, 'complete');
+    const incompleteDir = join(HOST_DOWNLOADS, 'incomplete');
+    resetDir(completeDir);
+    resetDir(incompleteDir);
+    const orphanedDir = join(HOST_DOWNLOADS, 'root-orphaned');
+    resetDir(orphanedDir);
+
+    await driver.clearAll();
+
+    const ofc = await updateOrphanedFilesConfig(token, clientId, {
+      enabled: true,
+      scanDirectories: [APP_DOWNLOADS],
+      orphanedDirectory: `${APP_DOWNLOADS}/root-orphaned`,
+      minFileAgeHours: 0,
+    });
+    expect(ofc.status).toBe(200);
+
+    const trig = await triggerJob(token, 'DownloadCleaner');
+    expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
+    await new Promise((r) => setTimeout(r, 5_000));
+
+    expect(existsSync(incompleteDir), 'download_dir must survive even with an empty history').toBe(true);
+    expect(existsSync(completeDir), 'complete_dir must survive even with an empty history').toBe(true);
+  });
 });

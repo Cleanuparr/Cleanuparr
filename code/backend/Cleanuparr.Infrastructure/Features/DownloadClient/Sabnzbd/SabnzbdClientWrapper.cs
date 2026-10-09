@@ -28,6 +28,10 @@ public sealed class SabnzbdClientWrapper : ISabnzbdClientWrapper
         => _client.GetDownloadDirAsync();
 
     /// <inheritdoc/>
+    public Task<string?> GetCompleteDirAsync()
+        => _client.GetCompleteDirAsync();
+
+    /// <inheritdoc/>
     public Task DeleteFromQueueAsync(string nzoId, bool deleteFiles)
         => _client.DeleteFromQueueAsync(nzoId, deleteFiles);
 

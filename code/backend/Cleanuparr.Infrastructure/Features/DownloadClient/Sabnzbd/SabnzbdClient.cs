@@ -68,6 +68,11 @@ public sealed class SabnzbdClient
     /// </summary>
     public async Task<string?> GetDownloadDirAsync() => (await GetMiscConfigAsync())?.DownloadDir;
 
+    /// <summary>
+    /// The completed-downloads folder SABnzbd is configured with (<c>misc.complete_dir</c>).
+    /// </summary>
+    public async Task<string?> GetCompleteDirAsync() => (await GetMiscConfigAsync())?.CompleteDir;
+
     private async Task<SabnzbdMiscConfig?> GetMiscConfigAsync()
     {
         if (_miscConfigFetched)

@@ -25,6 +25,11 @@ public interface ISabnzbdClientWrapper
     Task<string?> GetDownloadDirAsync();
 
     /// <summary>
+    /// The completed-downloads folder SABnzbd is configured with.
+    /// </summary>
+    Task<string?> GetCompleteDirAsync();
+
+    /// <summary>
     /// Deletes a job from the queue, optionally deleting its on-disk files too.
     /// </summary>
     Task DeleteFromQueueAsync(string nzoId, bool deleteFiles);

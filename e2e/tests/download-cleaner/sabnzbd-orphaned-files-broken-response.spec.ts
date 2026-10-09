@@ -132,6 +132,7 @@ test.describe.serial('Orphaned files cleanup: SABnzbd broken responses', () => {
     await downloadClientMock.resetAll();
     await downloadClientMock.stub(DownloadClientStubs.sabQueueStub([]));
     await downloadClientMock.stub(DownloadClientStubs.sabHistoryStub([]));
+    await downloadClientMock.stub(DownloadClientStubs.sabGetConfigStub('/downloads/incomplete'));
 
     await triggerAndSettle(token);
 
