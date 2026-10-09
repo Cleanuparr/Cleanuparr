@@ -296,6 +296,58 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         File.Exists(strayInsideClaimed).ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task OrphanedFiles_EntryHoldsClaimedDescendant_StaysWhileUnclaimedSiblingMoves()
+    {
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string ancestorEntry = Path.Combine(scanDir, "tv");
+        string claimedDir = Path.Combine(ancestorEntry, "claimed-show");
+        Directory.CreateDirectory(claimedDir);
+        string unclaimedSibling = Path.Combine(scanDir, "unclaimed.mkv");
+        File.WriteAllText(unclaimedSibling, "x");
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        SetupDownloadService(dbClient, [MakeTorrent("", claimedDir)]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        Directory.Exists(ancestorEntry).ShouldBeTrue();
+        File.Exists(unclaimedSibling).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_PrefixTrap_SimilarlyNamedSiblingStillMoves()
+    {
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string tv = Path.Combine(scanDir, "tv");
+        string tv2 = Path.Combine(scanDir, "tv2");
+        string claimedDir = Path.Combine(tv2, "x");
+        Directory.CreateDirectory(tv);
+        Directory.CreateDirectory(claimedDir);
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        SetupDownloadService(dbClient, [MakeTorrent("", claimedDir)]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        Directory.Exists(tv).ShouldBeFalse();
+        Directory.Exists(tv2).ShouldBeTrue();
+    }
+
     [SkippableFact]
     public async Task OrphanedFiles_SymlinkEntry_IsSkipped()
     {

@@ -207,6 +207,12 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
                     continue;
                 }
 
+                if (HoldsClaimedPath(normalizedPath, claimedPaths))
+                {
+                    _logger.LogDebug("skip | holds claimed path | {Path}", normalizedPath);
+                    continue;
+                }
+
                 string entryName = Path.GetFileName(normalizedPath);
                 if (clientConfig.ExcludePatterns.Any(pattern => FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
                 {
@@ -245,6 +251,15 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
                 _logger.LogError(ex, "Failed to handle orphaned entry: {path}", filePath);
             }
         }
+    }
+
+    /// <summary>
+    /// Whether any claimed path lives inside the entry, which makes the entry an ancestor to keep.
+    /// </summary>
+    private static bool HoldsClaimedPath(string entry, HashSet<string> claimedPaths)
+    {
+        string prefix = entry + Path.DirectorySeparatorChar;
+        return claimedPaths.Any(claimedPath => claimedPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
     }
 
     private void MoveToOrphanedDirectory(string path, string orphanedDirectory)
