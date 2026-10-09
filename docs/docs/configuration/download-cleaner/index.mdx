@@ -322,6 +322,8 @@ Enable orphaned files scanning for this specific download client. The download c
 
 Absolute paths to scan for orphaned files for this download client. Each top-level entry inside these directories is checked against the save paths of all active torrents across all enabled clients. If no active torrent claims an entry, it is considered orphaned.
 
+Cleanuparr never moves an entry that holds an active download. A scan directory set above your download folders keeps those folders, and nothing inside them gets cleaned.
+
 **Examples:**
 ```
 /data/downloads/completed

@@ -73,10 +73,10 @@ export const ignoredDownloadsMatchingGroups = [
 
 export const capabilityNotes = {
   1: "The client has no native \"stalled\" state. It's inferred from the download speed being zero.",
-  2: "Removes jobs SABnzbd moves to history as Failed. This covers jobs that the *arr's Failed Download Handling doesn't catch, such as NZBs added manually, grabbed by another *arr, or with purged history.",
-  3: 'SABnzbd fails a job that stops progressing on its own. The failure is then handled automatically.',
+  2: "Removes jobs SABnzbd moves to history as Failed, while the *arr still lists them in its queue. This covers jobs that the *arr's Failed Download Handling doesn't catch, such as NZBs added manually, grabbed by another *arr, or with purged history.",
+  3: 'SABnzbd fails a job that stops progressing on its own while the *arr still lists it in its queue. The failure is then handled automatically.',
   4: "The *arr removes the item with a category change. SABnzbd's settings determine what happens to the job.",
-  5: "SABnzbd can't skip files mid-download, so completed jobs are scanned and matching files are deleted before the *arr imports them.",
+  5: "SABnzbd can't skip files mid-download, so the Malware Blocker deletes matching files from completed jobs. The *arr can import a job before a Malware Blocker run reaches it.",
   6: 'rTorrent reports no tracker state, so no seeder count is available.',
   7: 'The client reports no tracker health, so only the seeder count matters. Unregistered torrents may remain uncaught while they have seeders.',
   8: 'The client has no tags. "Use tag" falls back to a category change.',
