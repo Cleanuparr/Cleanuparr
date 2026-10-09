@@ -52,17 +52,23 @@ function writeOrphanFile(dir: string, name: string): string {
   return path;
 }
 
-async function triggerAndSettle(token: string): Promise<void> {
+async function triggerAndWaitForSentinel(token: string): Promise<void> {
   const sentinel = `sentinel-${Date.now().toString(36)}.mkv`;
   writeOrphanFile(HOST_SIBLING_SCAN_DIR, sentinel);
 
   const res = await triggerJob(token, 'DownloadCleaner');
   expect(res.ok, `triggerJob: ${res.status}`).toBe(true);
 
-  // Claims are gathered before any move, so the sibling move marks the SAB outcome final.
   await expect
     .poll(() => existsSync(join(HOST_SIBLING_ORPHANED_DIR, sentinel)), { timeout: 30_000 })
     .toBe(true);
+}
+
+async function triggerAndSettle(token: string): Promise<void> {
+  await triggerAndWaitForSentinel(token);
+  // Configs scan in no fixed order, so SAB may still be moving after the sibling sentinel.
+  // Jobs never overlap, so a second run's sentinel proves the first run finished.
+  await triggerAndWaitForSentinel(token);
 }
 
 test.describe.serial('Orphaned files cleanup: SABnzbd broken responses', () => {
