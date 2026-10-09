@@ -68,20 +68,27 @@ public partial class RTorrentService
     public override async Task DeleteDownload(IDownloadItem item, bool deleteSourceFiles)
     {
         string hash = item.DownloadId.ToUpperInvariant();
-        await _client.DeleteTorrentAsync(hash);
 
-        if (deleteSourceFiles)
+        if (!deleteSourceFiles)
         {
-            string savePath = PathHelper.NormalizeAndRemap(
-                item.SavePath,
-                _downloadClientConfig.DownloadDirectorySource,
-                _downloadClientConfig.DownloadDirectoryTarget);
-
-            if (!TryDeleteFiles(savePath, true))
-            {
-                _logger.LogWarning("Failed to delete files | {name}", item.Name);
-            }
+            await _client.DeleteTorrentAsync(hash);
+            return;
         }
+
+        // rTorrent keeps files open while a torrent is active, so stop it before deleting them.
+        await _client.StopTorrentAsync(hash);
+
+        string savePath = PathHelper.NormalizeAndRemap(
+            item.SavePath,
+            _downloadClientConfig.DownloadDirectorySource,
+            _downloadClientConfig.DownloadDirectoryTarget);
+
+        if (!TryDeleteFiles(savePath, true))
+        {
+            throw new IOException($"failed to delete rTorrent files | {item.Name}");
+        }
+
+        await _client.DeleteTorrentAsync(hash);
     }
 
     /// <inheritdoc/>
