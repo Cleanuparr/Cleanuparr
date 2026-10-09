@@ -700,6 +700,84 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
             }
         }
 
+        [Theory]
+        [InlineData("Test")]
+        [InlineData("Test.1")]
+        public async Task CompletedSingleFileJob_EmptiedJobFolder_RemovesTheFolder(string jobFolderName)
+        {
+            SabnzbdService sut = _fixture.CreateSut();
+            string completeDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+            string jobFolder = Path.Combine(completeDir, jobFolderName);
+            string storagePath = Path.Combine(jobFolder, "file.mkv");
+            Directory.CreateDirectory(jobFolder);
+            await File.WriteAllTextAsync(storagePath, "x");
+
+            try
+            {
+                SabnzbdItemWrapper torrent = new(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = storagePath });
+
+                await sut.DeleteDownload(torrent, true);
+
+                Directory.Exists(jobFolder).ShouldBeFalse();
+                Directory.Exists(completeDir).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(completeDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task CompletedSingleFileJob_JobFolderWithLeftoverFile_KeepsTheFolder()
+        {
+            SabnzbdService sut = _fixture.CreateSut();
+            string completeDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+            string jobFolder = Path.Combine(completeDir, "Test");
+            string storagePath = Path.Combine(jobFolder, "file.mkv");
+            string leftoverPath = Path.Combine(jobFolder, "file.nfo");
+            Directory.CreateDirectory(jobFolder);
+            await File.WriteAllTextAsync(storagePath, "x");
+            await File.WriteAllTextAsync(leftoverPath, "y");
+
+            try
+            {
+                SabnzbdItemWrapper torrent = new(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = storagePath });
+
+                await sut.DeleteDownload(torrent, true);
+
+                File.Exists(storagePath).ShouldBeFalse();
+                File.Exists(leftoverPath).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(completeDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task CompletedSingleFileJob_NoJobName_KeepsTheFolder()
+        {
+            // An empty name prefixes every folder, so it must not count as a match.
+            SabnzbdService sut = _fixture.CreateSut();
+            string completeDir = Directory.CreateTempSubdirectory("sabnzbd-delete-test-").FullName;
+            string storagePath = Path.Combine(completeDir, "file.mkv");
+            await File.WriteAllTextAsync(storagePath, "x");
+
+            try
+            {
+                SabnzbdItemWrapper torrent = new(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "", Status = "Completed", Storage = storagePath });
+
+                await sut.DeleteDownload(torrent, true);
+
+                File.Exists(storagePath).ShouldBeFalse();
+                Directory.Exists(completeDir).ShouldBeTrue();
+            }
+            finally
+            {
+                Directory.Delete(completeDir, true);
+            }
+        }
+
         [Fact]
         public async Task FailedStatus_DoesNotDeleteFromDisk()
         {

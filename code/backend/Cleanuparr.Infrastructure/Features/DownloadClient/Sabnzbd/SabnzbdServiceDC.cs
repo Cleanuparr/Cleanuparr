@@ -177,12 +177,50 @@ public partial class SabnzbdService
         }
 
         string storagePath = RemapAndTrim(sabnzbdItem.SavePath);
+        bool isSingleFileJob = File.Exists(storagePath);
 
         await _dryRunInterceptor.InterceptAsync(() =>
         {
-            // A single-file job's `storage` is the file. Its folder can be complete_dir or a category folder, so it stays.
             TryDeleteFiles(storagePath, failOnNotFound: false);
+
+            if (isSingleFileJob)
+            {
+                TryDeleteEmptyJobFolder(Path.GetDirectoryName(storagePath), sabnzbdItem.Name);
+            }
+
             return Task.CompletedTask;
         });
+    }
+
+    /// <summary>
+    /// Removes a single-file job's folder once it is empty.
+    /// Only a folder named after the job qualifies, so complete_dir and category folders stay.
+    /// The ".1"/".2" suffix SAB adds on a clash still matches.
+    /// </summary>
+    private void TryDeleteEmptyJobFolder(string? folder, string jobName)
+    {
+        if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(jobName))
+        {
+            return;
+        }
+
+        if (!Path.GetFileName(folder).StartsWith(jobName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!Directory.Exists(folder) || Directory.EnumerateFileSystemEntries(folder).Any())
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.Delete(folder);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete empty job folder | {Folder}", folder);
+        }
     }
 }
