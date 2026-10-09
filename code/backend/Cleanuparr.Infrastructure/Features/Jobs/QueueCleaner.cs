@@ -192,49 +192,12 @@ public sealed class QueueCleaner : GenericHandler
             // push record to context
             ContextProvider.Set(nameof(QueueRecord), record);
 
-            DownloadCheckResult downloadCheckResult = new();
-            bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
-            bool isUsenet = record.Protocol.Contains("usenet", StringComparison.InvariantCultureIgnoreCase);
-            DownloadClientConfig? foundInClient = null;
-
-            if (isTorrent || isUsenet)
-            {
-                DownloadClientType clientType = isTorrent ? DownloadClientType.Torrent : DownloadClientType.Usenet;
-                List<IQueueCheckCapable> matchingClients = downloadServices
-                    .OfType<IQueueCheckCapable>()
-                    .Where(x => x.ClientConfig.Type == clientType)
-                    .ToList();
-
-                if (matchingClients.Count > 0)
-                {
-                    // Check each download client for the download item
-                    foreach (IQueueCheckCapable downloadService in matchingClients)
-                    {
-                        try
-                        {
-                            // Get download info from download service for rule evaluation
-                            downloadCheckResult = await downloadService
-                                .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
-
-                            if (downloadCheckResult.Found)
-                            {
-                                foundInClient = downloadService.ClientConfig;
-                                break;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Error checking download {dName} with download client {cName}",
-                                record.Title, downloadService.ClientConfig.Name);
-                        }
-                    }
-
-                    if (!downloadCheckResult.Found)
-                    {
-                        _logger.LogWarning("Download not found in any {ClientType} client | {Title}", isTorrent ? "torrent" : "usenet", record.Title);
-                    }
-                }
-            }
+            (DownloadCheckResult downloadCheckResult, DownloadClientConfig? foundInClient) = await FindInClientsAsync<IQueueCheckCapable, DownloadCheckResult>(
+                record,
+                downloadServices,
+                downloadService => downloadService.ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads),
+                x => x.Found
+            );
 
             if (downloadCheckResult.ShouldRemove)
             {
@@ -265,7 +228,12 @@ public sealed class QueueCleaner : GenericHandler
             }
 
             // Skip failed import check if the download is not found in any client of its protocol and skipIfNotFoundInClient is enabled
-            bool skipIfNotFoundInClient = (isTorrent && hasEnabledTorrentClients) || (isUsenet && hasEnabledUsenetClients);
+            bool skipIfNotFoundInClient = GetClientType(record) switch
+            {
+                DownloadClientType.Torrent => hasEnabledTorrentClients,
+                DownloadClientType.Usenet => hasEnabledUsenetClients,
+                _ => false
+            };
 
             if (skipIfNotFoundInClient && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
             {
