@@ -221,37 +221,44 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
 
     await mocks.arr.stub(ArrStubs.arrQueueDeleteStub());
 
-    const current = await (await api.queueCleaner.getConfig()).json();
-    const qc = await api.queueCleaner.updateConfig({
-      ...current,
-      failedImport: {
-        ...current.failedImport,
-        maxStrikes: 3,
-        skipIfNotFoundInClient: false,
-        patternMode: 'Include',
-        patterns: ['Unable to import automatically'],
-      },
-    });
-    expect(qc.ok, `queue cleaner updateConfig: ${qc.status}`).toBe(true);
+    const currentQcConfig = await (await api.queueCleaner.getConfig()).json();
+    const currentArrConfig = await (await api.arr.getConfig('sonarr')).json();
 
-    const cfg = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: 1 });
-    expect(cfg.ok, `arr updateConfig: ${cfg.status}`).toBe(true);
+    try {
+      const qc = await api.queueCleaner.updateConfig({
+        ...currentQcConfig,
+        failedImport: {
+          ...currentQcConfig.failedImport,
+          maxStrikes: 3,
+          skipIfNotFoundInClient: false,
+          patternMode: 'Include',
+          patterns: ['Unable to import automatically'],
+        },
+      });
+      expect(qc.ok, `queue cleaner updateConfig: ${qc.status}`).toBe(true);
 
-    const clientId = await registerSabClient(api);
-    await api.arr.createInstance('sonarr', {
-      name: 'sonarr-sab-qc-missing', url: TEST_CONFIG.mocks.arrUrl, apiKey: 'k', version: 3, enabled: true,
-    });
+      const cfg = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: 1 });
+      expect(cfg.ok, `arr updateConfig: ${cfg.status}`).toBe(true);
 
-    const trigger = await api.jobs.trigger('QueueCleaner');
-    expect(trigger.status).toBeLessThan(300);
+      const clientId = await registerSabClient(api);
+      await api.arr.createInstance('sonarr', {
+        name: 'sonarr-sab-qc-missing', url: TEST_CONFIG.mocks.arrUrl, apiKey: 'k', version: 3, enabled: true,
+      });
 
-    await expect
-      .poll(
-        async () => (await mocks.arr.findRequests({ method: 'DELETE', urlPattern: `/api/v3/queue/${recordId}.*` })).length,
-        { timeout: 60_000, intervals: [1_000] },
-      )
-      .toBeGreaterThan(0);
+      const trigger = await api.jobs.trigger('QueueCleaner');
+      expect(trigger.status).toBeLessThan(300);
 
-    await api.downloadClient.delete(clientId);
+      await expect
+        .poll(
+          async () => (await mocks.arr.findRequests({ method: 'DELETE', urlPattern: `/api/v3/queue/${recordId}.*` })).length,
+          { timeout: 60_000, intervals: [1_000] },
+        )
+        .toBeGreaterThan(0);
+
+      await api.downloadClient.delete(clientId);
+    } finally {
+      await api.queueCleaner.updateConfig(currentQcConfig);
+      await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: currentArrConfig.failedImportMaxStrikes });
+    }
   });
 });
