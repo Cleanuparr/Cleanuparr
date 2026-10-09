@@ -159,13 +159,20 @@ public partial class SabnzbdService
             return;
         }
 
-        await _client.DeleteFromHistoryAsync(item.DownloadId, deleteSourceFiles);
-
-        if (!deleteSourceFiles || sabnzbdItem.Status != "Completed")
+        if (deleteSourceFiles && sabnzbdItem.Status == "Completed")
         {
-            return;
+            await DeleteCompletedJobFilesAsync(sabnzbdItem);
         }
 
+        await _client.DeleteFromHistoryAsync(item.DownloadId, deleteSourceFiles);
+    }
+
+    /// <summary>
+    /// Deletes a completed job's files before <see cref="DeleteDownload"/> clears it from history, so a failed
+    /// delete leaves the history entry in place for the next run to retry.
+    /// </summary>
+    private async Task DeleteCompletedJobFilesAsync(SabnzbdItemWrapper sabnzbdItem)
+    {
         if (string.IsNullOrEmpty(sabnzbdItem.SavePath))
         {
             _logger.LogDebug("skip disk delete | no storage path | {Name}", sabnzbdItem.Name);
@@ -177,7 +184,10 @@ public partial class SabnzbdService
 
         await _dryRunInterceptor.InterceptAsync(() =>
         {
-            TryDeleteFiles(storagePath, failOnNotFound: false);
+            if (!TryDeleteFiles(storagePath, failOnNotFound: false))
+            {
+                throw new IOException($"failed to delete SABnzbd job files | {sabnzbdItem.Name}");
+            }
 
             if (isSingleFileJob)
             {

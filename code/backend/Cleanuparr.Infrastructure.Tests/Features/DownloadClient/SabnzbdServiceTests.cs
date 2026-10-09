@@ -857,6 +857,63 @@ public class SabnzbdServiceTests : IClassFixture<SabnzbdServiceFixture>
         }
 
         [Fact]
+        public async Task CompletedWithDeleteFiles_DeletesFilesBeforeClearingHistory()
+        {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-delete-order-").FullName;
+            bool filesGoneBeforeHistoryDelete = false;
+
+            _fixture.ClientWrapper
+                .DeleteFromHistoryAsync("nzo1", true)
+                .Returns(_ =>
+                {
+                    filesGoneBeforeHistoryDelete = !Directory.Exists(tempDir);
+                    return Task.CompletedTask;
+                });
+
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = tempDir });
+
+                await sut.DeleteDownload(torrent, true);
+
+                filesGoneBeforeHistoryDelete.ShouldBeTrue();
+            }
+            finally
+            {
+                if (Directory.Exists(tempDir))
+                {
+                    Directory.Delete(tempDir, true);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task FileDeleteFails_ThrowsAndDoesNotClearHistory()
+        {
+            var sut = _fixture.CreateSut();
+            string tempDir = Directory.CreateTempSubdirectory("sabnzbd-delete-fail-").FullName;
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "file.mkv"), "x");
+
+            // No write permission on the folder itself blocks deleting its entries.
+            File.SetUnixFileMode(tempDir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+
+            try
+            {
+                var torrent = new SabnzbdItemWrapper(new SabnzbdHistorySlot { NzoId = "nzo1", Name = "Test", Status = "Completed", Storage = tempDir });
+
+                await Should.ThrowAsync<IOException>(() => sut.DeleteDownload(torrent, true));
+
+                await _fixture.ClientWrapper.DidNotReceive().DeleteFromHistoryAsync(Arg.Any<string>(), Arg.Any<bool>());
+            }
+            finally
+            {
+                File.SetUnixFileMode(tempDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
         public async Task DryRun_SkipsDiskDelete_ButStillDeletesFromHistory()
         {
             var sut = _fixture.CreateSut();
