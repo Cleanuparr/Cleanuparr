@@ -338,6 +338,10 @@ Each path must be accessible by Cleanuparr. If running in Docker, make sure to m
 Scan directories must not overlap (be equal to, a parent of, or a subdirectory of) the scan directories or orphaned directory of any other download client. Cleanuparr enforces this at save time to prevent cross-client false positives.
 </Important>
 
+<Important>
+or SABnzbd, set the scan directory to the **Completed Download Folder** configured under SABnzbd's Folders settings. Cleanuparr skips SABnzbd's completed and temporary download folders, so setting the scan directory to a parent folder won't clean anything.
+</Important>
+
 </ConfigSection>
 
 <ConfigSection
