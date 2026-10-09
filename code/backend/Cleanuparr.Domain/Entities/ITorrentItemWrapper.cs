@@ -10,6 +10,15 @@ public interface ITorrentItemWrapper : IDownloadItem
 {
     bool IsPrivate { get; }
 
+    long DownloadSpeed { get; }
+
+    /// <summary>
+    /// Whether the download client has this item stopped or paused.
+    /// </summary>
+    bool IsStopped { get; }
+
+    bool IsDownloading();
+
     double Ratio { get; }
 
     /// <summary>

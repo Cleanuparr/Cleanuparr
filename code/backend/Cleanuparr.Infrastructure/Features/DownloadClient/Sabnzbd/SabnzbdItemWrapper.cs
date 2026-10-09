@@ -56,8 +56,6 @@ public sealed class SabnzbdItemWrapper : IDownloadItem
         ? _historySlot.Bytes
         : (long)(((_queueSlot?.Mb ?? 0) - (_queueSlot?.MbLeft ?? 0)) * 1024 * 1024);
 
-    public long DownloadSpeed => 0;
-
     public string? Category { get; set; }
 
     public string SavePath => _historySlot?.Storage ?? string.Empty;
@@ -66,10 +64,6 @@ public sealed class SabnzbdItemWrapper : IDownloadItem
     /// The raw SABnzbd status string, e.g. "Downloading", "Paused", "Completed", "Failed".
     /// </summary>
     public string? Status => _queueSlot?.Status ?? _historySlot?.Status;
-
-    public bool IsStopped => false;
-
-    public bool IsDownloading() => _queueSlot?.Status is "Downloading" or "Extracting" or "Verifying" or "Repairing" or "Moving" or "QuickCheck" or "Checking" or "Fetching";
 
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {
