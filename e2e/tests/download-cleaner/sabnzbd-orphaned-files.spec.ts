@@ -143,10 +143,12 @@ test.describe.serial('SABnzbd live: orphaned files claims', () => {
     // not the folder itself: the bug GetClaimedPathsAsync must work around.
     expect(history.storage, 'the live quirk this test guards against').toMatch(/\.bin$/);
 
+    mkdirSync(join(completeDir, 'leftover-unrelated'), { recursive: true });
+
     const trig = await triggerJob(token, 'DownloadCleaner');
     expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-    await new Promise((r) => setTimeout(r, 5_000));
 
+    expect(await waitForMove(orphanedDir, 'leftover-unrelated'), 'unrelated folder should have been moved out').toBe(true);
     expect(existsSync(join(completeDir, history.name)), 'the completed job folder must survive: it is claimed').toBe(true);
   });
 
@@ -156,10 +158,12 @@ test.describe.serial('SABnzbd live: orphaned files claims', () => {
     resetDir(incompleteDir);
     const orphanedDir = join(HOST_DOWNLOADS, 'incomplete-orphaned');
     resetDir(orphanedDir);
+    const sentinelDir = join(HOST_DOWNLOADS, 'busy-sentinel');
+    resetDir(sentinelDir);
 
     const ofc = await updateOrphanedFilesConfig(token, clientId, {
       enabled: true,
-      scanDirectories: [`${APP_DOWNLOADS}/incomplete`],
+      scanDirectories: [`${APP_DOWNLOADS}/incomplete`, `${APP_DOWNLOADS}/busy-sentinel`],
       orphanedDirectory: `${APP_DOWNLOADS}/incomplete-orphaned`,
       minFileAgeHours: 0,
     });
@@ -167,6 +171,7 @@ test.describe.serial('SABnzbd live: orphaned files claims', () => {
 
     // A leftover with no live job, placed directly under the incomplete dir.
     mkdirSync(join(incompleteDir, 'leftover-incomplete'), { recursive: true });
+    mkdirSync(join(sentinelDir, 'leftover-unrelated'), { recursive: true });
 
     // Pausing the whole queue before adding keeps one job permanently non-history,
     // which is what makes GetClaimedPathsAsync treat the queue as "busy".
@@ -177,8 +182,8 @@ test.describe.serial('SABnzbd live: orphaned files claims', () => {
       nzoId = await driver.addWorkingNzb('busy-queue.bin', 300_000, 'e2e-ofc');
       const trig = await triggerJob(token, 'DownloadCleaner');
       expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-      await new Promise((r) => setTimeout(r, 5_000));
 
+      expect(await waitForMove(orphanedDir, 'leftover-unrelated'), 'a sentinel outside the incomplete dir proves the scan ran').toBe(true);
       expect(
         existsSync(join(incompleteDir, 'leftover-incomplete')),
         'a busy queue must claim every top-level entry defensively, including an unrelated one',
@@ -326,10 +331,12 @@ test.describe.serial('SABnzbd live: orphaned files claims', () => {
     });
     expect(ofc.status).toBe(200);
 
+    mkdirSync(join(HOST_DOWNLOADS, 'leftover-root'), { recursive: true });
+
     const trig = await triggerJob(token, 'DownloadCleaner');
     expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-    await new Promise((r) => setTimeout(r, 5_000));
 
+    expect(await waitForMove(orphanedDir, 'leftover-root'), 'unrelated top-level folder should have been moved out').toBe(true);
     expect(existsSync(incompleteDir), 'download_dir must survive even with an empty history').toBe(true);
     expect(existsSync(completeDir), 'complete_dir must survive even with an empty history').toBe(true);
   });
