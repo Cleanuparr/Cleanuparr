@@ -793,6 +793,18 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
         }
 
         [Fact]
+        public async Task DeleteFiles_PathAlreadyGone_StillRemovesTorrent()
+        {
+            RTorrentService sut = _fixture.CreateSut();
+            string missingPath = Path.Combine(Path.GetTempPath(), $"rtorrent-missing-{Guid.NewGuid()}");
+            RTorrentItemWrapper torrent = new(new RTorrentTorrent { Hash = "TEST-HASH", Name = "Test", BasePath = missingPath }, null, TimeProvider.System);
+
+            await sut.DeleteDownload(torrent, true);
+
+            await _fixture.ClientWrapper.Received(1).DeleteTorrentAsync("TEST-HASH");
+        }
+
+        [Fact]
         public async Task DeleteFiles_StopsThenDeletesFilesThenRemovesTorrent()
         {
             var sut = _fixture.CreateSut();

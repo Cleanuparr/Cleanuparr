@@ -83,7 +83,7 @@ public partial class RTorrentService
             _downloadClientConfig.DownloadDirectorySource,
             _downloadClientConfig.DownloadDirectoryTarget);
 
-        if (!TryDeleteFiles(savePath, true))
+        if (!TryDeleteFiles(savePath, failOnNotFound: false))
         {
             throw new IOException($"failed to delete rTorrent files | {item.Name}");
         }
