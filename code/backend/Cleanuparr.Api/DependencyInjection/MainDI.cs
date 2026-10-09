@@ -1,12 +1,14 @@
-﻿using Cleanuparr.Api.Json;
+﻿using System.Threading.Channels;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
+using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
+using Cleanuparr.Infrastructure.Features.Messaging;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Shared.Helpers;
-using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Cleanuparr.Api.DependencyInjection;
@@ -22,38 +24,25 @@ public static class MainDI
             .AddHealthServices()
             .AddQuartzServices(configuration)
             .AddNotifications()
-            .AddMassTransit(config =>
-            {
-                config.DisableUsageTelemetry();
-                
-                config.AddConsumer<DownloadRemoverConsumer>();
-                config.AddConsumer<NotificationConsumer>();
+            .AddMessageQueue<QueueItemRemoveRequest, DownloadRemoverConsumer>()
+            .AddMessageQueue<NotificationMessage, NotificationConsumer>();
 
-                config.UsingInMemory((context, cfg) =>
-                {
-                    cfg.ConfigureJsonSerializerOptions(options =>
-                    {
-                        CleanuparrJsonConfiguration.ConfigureCore(options);
+    /// <summary>
+    /// Registers an unbounded in-process queue for <typeparamref name="TMessage"/>,
+    /// drained one message at a time by a <see cref="QueueWorker{TMessage}"/>.
+    /// </summary>
+    private static IServiceCollection AddMessageQueue<TMessage, THandler>(this IServiceCollection services)
+        where THandler : class, IMessageHandler<TMessage>
+    {
+        Channel<TMessage> channel = Channel.CreateUnbounded<TMessage>(new UnboundedChannelOptions { SingleReader = true });
 
-                        return options;
-                    });
-                    
-                    cfg.ReceiveEndpoint("download-remover-queue", e =>
-                    {
-                        e.ConfigureConsumer<DownloadRemoverConsumer>(context);
-                        e.ConcurrentMessageLimit = 1;
-                        e.PrefetchCount = 1;
-                    });
-                    
-                    cfg.ReceiveEndpoint("notification-queue", e =>
-                    {
-                        e.ConfigureConsumer<NotificationConsumer>(context);
-                        e.ConcurrentMessageLimit = 1;
-                        e.PrefetchCount = 1;
-                    });
-                });
-            });
-    
+        return services
+            .AddSingleton(channel)
+            .AddSingleton(channel.Writer)
+            .AddScoped<IMessageHandler<TMessage>, THandler>()
+            .AddHostedService<QueueWorker<TMessage>>();
+    }
+
     private static IServiceCollection AddHttpClients(this IServiceCollection services, IConfiguration configuration)
     {
         // Add the dynamic HTTP client system - this replaces all the previous static configurations

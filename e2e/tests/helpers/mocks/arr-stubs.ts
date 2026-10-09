@@ -115,6 +115,34 @@ export function arrQueueStub(records: QueueRecord[]): Mapping {
   };
 }
 
+/** Answers every unstubbed arr request with an empty 200, lowest priority. */
+export function arrCatchAllMapping(): Mapping {
+  return {
+    request: { method: 'ANY', urlPathPattern: '/api/v[0-9]+/.*' },
+    response: { status: 200, jsonBody: {} },
+    priority: 100,
+  };
+}
+
+export interface DeleteCall {
+  id: number;
+  removeFromClient: boolean;
+  blocklist: boolean;
+}
+
+/** Reads the queue DELETE calls an arr stub recorded, decoded from the request's query string. */
+export async function readDeletes(arr: WireMockClient): Promise<DeleteCall[]> {
+  const reqs = await arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' });
+  return reqs.map((r) => {
+    const parsed = new URL(`http://stub${r.url}`);
+    return {
+      id: Number(parsed.pathname.split('/').pop()),
+      removeFromClient: parsed.searchParams.get('removeFromClient') === 'true',
+      blocklist: parsed.searchParams.get('blocklist') === 'true',
+    };
+  });
+}
+
 export function arrCommandTriggerStub(commandId = 1): Mapping {
   return {
     request: { method: 'POST', urlPath: '/api/v3/command' },

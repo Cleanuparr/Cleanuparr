@@ -18,7 +18,7 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using MassTransit;
+using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -30,7 +30,7 @@ public abstract class GenericHandler : IHandler
     protected readonly ILogger<GenericHandler> _logger;
     protected readonly DataContext _dataContext;
     protected readonly IMemoryCache _cache;
-    protected readonly IBus _messageBus;
+    protected readonly ChannelWriter<QueueItemRemoveRequest> _removalQueue;
     protected readonly IArrClientFactory _arrClientFactory;
     protected readonly IArrQueueReader _arrQueueReader;
     protected readonly IDownloadServiceFactory _downloadServiceFactory;
@@ -42,7 +42,7 @@ public abstract class GenericHandler : IHandler
         ILogger<GenericHandler> logger,
         DataContext dataContext,
         IMemoryCache cache,
-        IBus messageBus,
+        ChannelWriter<QueueItemRemoveRequest> removalQueue,
         IArrClientFactory arrClientFactory,
         IArrQueueReader arrQueueReader,
         IDownloadServiceFactory downloadServiceFactory,
@@ -54,7 +54,7 @@ public abstract class GenericHandler : IHandler
         _forceImportService = forceImportService;
         _logger = logger;
         _cache = cache;
-        _messageBus = messageBus;
+        _removalQueue = removalQueue;
         _arrClientFactory = arrClientFactory;
         _arrQueueReader = arrQueueReader;
         _downloadServiceFactory = downloadServiceFactory;
@@ -195,15 +195,7 @@ public abstract class GenericHandler : IHandler
         string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(target.DownloadId, instance.Url);
         _cache.Set(downloadRemovalKey, true);
 
-        try
-        {
-            await _messageBus.Publish(removeRequest);
-        }
-        catch
-        {
-            _cache.Remove(downloadRemovalKey);
-            throw;
-        }
+        await _removalQueue.WriteAsync(removeRequest);
 
         // The mark above lives only while the removal is in flight, and its absence must not read as an import.
         _forceImportService.Forget(instance, target.DownloadId);

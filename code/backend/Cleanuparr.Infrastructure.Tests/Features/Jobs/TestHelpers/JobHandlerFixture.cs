@@ -1,16 +1,17 @@
+﻿using System.Threading.Channels;
 using Cleanuparr.Domain.Enums;
-﻿using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
-using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
@@ -28,7 +29,7 @@ public class JobHandlerFixture : IDisposable
     public DataContext DataContext { get; private set; }
     public EventsContext EventsContext { get; private set; }
     public MemoryCache Cache { get; private set; }
-    public IBus MessageBus { get; private set; }
+    public Channel<QueueItemRemoveRequest> RemovalQueue { get; private set; }
     public IArrClientFactory ArrClientFactory { get; private set; }
     public IArrQueueReader ArrQueueReader { get; private set; }
     public IDownloadServiceFactory DownloadServiceFactory { get; private set; }
@@ -56,7 +57,7 @@ public class JobHandlerFixture : IDisposable
         DataContext = TestDataContextFactory.Create();
         EventsContext = TestDataContextFactory.CreateEvents();
         Cache = new MemoryCache(new MemoryCacheOptions());
-        MessageBus = Substitute.For<IBus>();
+        RemovalQueue = Channel.CreateUnbounded<QueueItemRemoveRequest>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
         ArrQueueReader = Substitute.For<IArrQueueReader>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
@@ -163,7 +164,7 @@ public class JobHandlerFixture : IDisposable
     {
         SubstituteHelper.ClearPendingArgSpecs();
         // Recreate all substitutes to clear received call state
-        MessageBus = Substitute.For<IBus>();
+        RemovalQueue = Channel.CreateUnbounded<QueueItemRemoveRequest>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
         ArrQueueReader = Substitute.For<IArrQueueReader>();
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();

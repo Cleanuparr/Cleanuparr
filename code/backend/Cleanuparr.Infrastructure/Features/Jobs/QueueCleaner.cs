@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Arr.ForceImport;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
@@ -14,7 +15,7 @@ using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using MassTransit;
+using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +33,7 @@ public sealed class QueueCleaner : GenericHandler
         ILogger<QueueCleaner> logger,
         DataContext dataContext,
         IMemoryCache cache,
-        IBus messageBus,
+        ChannelWriter<QueueItemRemoveRequest> removalQueue,
         IArrClientFactory arrClientFactory,
         IArrQueueReader arrQueueReader,
         IDownloadServiceFactory downloadServiceFactory,
@@ -42,7 +43,7 @@ public sealed class QueueCleaner : GenericHandler
         IForceImportService forceImportService,
         [FromKeyedServices(ILazyLibrarianEvaluator.QueueCleanerKey)] ILazyLibrarianEvaluator lazyLibrarianService
     ) : base(
-        logger, dataContext, cache, messageBus,
+        logger, dataContext, cache, removalQueue,
         arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor,
         forceImportService
     )

@@ -45,7 +45,7 @@ public class DownloadCleanerTests : IDisposable
             _logger,
             _fixture.DataContext,
             _fixture.Cache,
-            _fixture.MessageBus,
+            _fixture.RemovalQueue.Writer,
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,

@@ -38,7 +38,7 @@ Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in 
 - **Database**: SQLite with Entity Framework Core
   - Three separate contexts: `DataContext`, `EventsContext`, `UsersContext`
 - **Key Libraries**:
-  - MassTransit (messaging)
+  - System.Threading.Channels (in-process queues)
   - Quartz.NET (scheduling)
   - Serilog (logging)
   - SignalR (real-time communication)

@@ -2,12 +2,15 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.DryRun;
-using MassTransit;
+using Cleanuparr.Infrastructure.Features.Messaging;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 
-public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
+/// <summary>
+/// Removes one queued download removal request.
+/// </summary>
+public sealed class DownloadRemoverConsumer : IMessageHandler<QueueItemRemoveRequest>
 {
     private readonly ILogger<DownloadRemoverConsumer> _logger;
     private readonly IQueueItemRemover _queueItemRemover;
@@ -24,15 +27,16 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
         _dryRunActivity = dryRunActivity;
     }
 
-    public async Task Consume(ConsumeContext<QueueItemRemoveRequest> context)
+    /// <inheritdoc />
+    public async Task HandleAsync(QueueItemRemoveRequest message)
     {
         bool trackedDryRun = false;
 
         try
         {
-            ContextProvider.SetDryRun(context.Message.IsDryRun);
+            ContextProvider.SetDryRun(message.IsDryRun);
 
-            if (context.Message.IsDryRun)
+            if (message.IsDryRun)
             {
                 await _dryRunActivity.EnterAsync();
                 trackedDryRun = true;
@@ -40,7 +44,7 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
 
             try
             {
-                await _queueItemRemover.RemoveQueueItemAsync(context.Message);
+                await _queueItemRemover.RemoveQueueItemAsync(message);
             }
             finally
             {
@@ -53,9 +57,9 @@ public sealed class DownloadRemoverConsumer : IConsumer<QueueItemRemoveRequest>
         catch (Exception exception)
         {
             _logger.LogError(exception,
-                "failed to remove queue item | {title} | {url}",
-                context.Message.Target.Title,
-                context.Message.Instance.Url
+                "failed to remove queue item | {Title} | {Url}",
+                message.Target.Title,
+                message.Instance.Url
             );
         }
     }

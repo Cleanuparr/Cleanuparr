@@ -10,6 +10,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Events;
@@ -18,7 +19,7 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using MassTransit;
+using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Cleanuparr.Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
@@ -43,7 +44,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             Substitute.For<ILogger<GenericHandler>>(),
             _fixture.DataContext,
             _fixture.Cache,
-            _fixture.MessageBus,
+            _fixture.RemovalQueue.Writer,
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.DownloadServiceFactory,
@@ -293,7 +294,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             DeleteReason.FailedImport);
 
         // Assert
-        await _fixture.MessageBus.DidNotReceiveWithAnyArgs().Publish(default(object)!, default(CancellationToken));
+        _fixture.RemovalQueue.Reader.Count.ShouldBe(0);
     }
 
     [Fact]
@@ -316,8 +317,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
-        await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
+        _fixture.RemovalQueue.Reader.Count.ShouldBe(1);
         await _fixture.EventPublisher.Received(1).PublishAsync(
             EventType.DownloadMarkedForDeletion, Arg.Any<string>(), Arg.Any<EventSeverity>(),
             Arg.Any<Action<AppEvent>?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<bool?>());
@@ -344,8 +344,8 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
-        await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Is<QueueItemRemoveRequest>(r => r.IsDryRun), Arg.Any<CancellationToken>());
+        QueueItemRemoveRequest request = _fixture.RemovalQueue.ShouldHaveSingle();
+        request.IsDryRun.ShouldBeTrue();
     }
 
     [Fact]
@@ -368,8 +368,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             instance, record, isPack: false, removeFromClient: false, DeleteReason.Stalled);
 
         // Assert
-        await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
+        _fixture.RemovalQueue.Reader.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -392,8 +391,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
         // Assert
-        await _fixture.MessageBus.Received(1)
-            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>());
+        _fixture.RemovalQueue.Reader.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -411,45 +409,32 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
         };
         QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
         string key = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
-        bool markedWhenPublished = false;
 
-        _fixture.MessageBus
-            .When(bus => bus.Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>()))
-            .Do(_ => markedWhenPublished = _fixture.Cache.TryGetValue(key, out bool _));
+        MarkOrderSpyChannelWriter spyWriter = new(
+            _fixture.RemovalQueue.Writer,
+            () => _fixture.Cache.TryGetValue(key, out bool _));
+
+        TestHandler handler = new(
+            Substitute.For<ILogger<GenericHandler>>(),
+            _fixture.DataContext,
+            _fixture.Cache,
+            spyWriter,
+            _fixture.ArrClientFactory,
+            _fixture.ArrQueueReader,
+            _fixture.DownloadServiceFactory,
+            _fixture.EventPublisher,
+            _fixture.DryRunInterceptor,
+            _fixture.ForceImportService);
 
         // Act
-        await _handler.PublicPublishQueueItemRemoveRequest(
+        await handler.PublicPublishQueueItemRemoveRequest(
             instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport);
 
-        // Assert
-        markedWhenPublished.ShouldBeTrue();
-    }
+        // Assert: the mark was already set at the moment of the write
+        spyWriter.MarkWasSetAtWrite.ShouldBe(true);
 
-    [Fact]
-    public async Task PublishQueueItemRemoveRequest_PublishThrows_RemovesMark()
-    {
-        // Arrange
-        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
-        ArrInstance instance = new()
-        {
-            Name = "s",
-            Url = new Uri("http://s"),
-            ApiKey = "k",
-            ArrConfig = arrConfig,
-            Version = 4f,
-        };
-        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
-        string key = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
-
-        _fixture.MessageBus
-            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("bus is down")));
-
-        // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(() => _handler.PublicPublishQueueItemRemoveRequest(
-            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
-
-        _fixture.Cache.TryGetValue(key, out bool _).ShouldBeFalse();
+        // Assert: a successful write leaves the mark set afterwards too
+        _fixture.Cache.TryGetValue(key, out bool _).ShouldBeTrue();
     }
 
     [Fact]
@@ -473,32 +458,6 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
 
         // Assert: the download leaving the queue is a removal, not an import
         _fixture.ForceImportService.Received(1).Forget(instance, record.DownloadId);
-    }
-
-    [Fact]
-    public async Task PublishQueueItemRemoveRequest_PublishThrows_KeepsThePendingForceImport()
-    {
-        // Arrange
-        ArrConfig arrConfig = new() { Type = InstanceType.Sonarr, Instances = [] };
-        ArrInstance instance = new()
-        {
-            Name = "s",
-            Url = new Uri("http://s"),
-            ApiKey = "k",
-            ArrConfig = arrConfig,
-            Version = 4f,
-        };
-        QueueRecord record = NewRecord(seriesId: 1, episodeId: 2);
-
-        _fixture.MessageBus
-            .Publish(Arg.Any<QueueItemRemoveRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new InvalidOperationException("bus is down")));
-
-        // Act & Assert: nothing was removed, so a pending import still stands
-        await Should.ThrowAsync<InvalidOperationException>(() => _handler.PublicPublishQueueItemRemoveRequest(
-            instance, record, isPack: false, removeFromClient: true, DeleteReason.FailedImport));
-
-        _fixture.ForceImportService.DidNotReceive().Forget(Arg.Any<ArrInstance>(), Arg.Any<string>());
     }
 
     #endregion
@@ -680,6 +639,32 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     }
 
     /// <summary>
+    /// Wraps a real channel writer and records, at the moment of the write, whether the given probe is true.
+    /// </summary>
+    private sealed class MarkOrderSpyChannelWriter : ChannelWriter<QueueItemRemoveRequest>
+    {
+        private readonly ChannelWriter<QueueItemRemoveRequest> _inner;
+        private readonly Func<bool> _probe;
+
+        public bool? MarkWasSetAtWrite { get; private set; }
+
+        public MarkOrderSpyChannelWriter(ChannelWriter<QueueItemRemoveRequest> inner, Func<bool> probe)
+        {
+            _inner = inner;
+            _probe = probe;
+        }
+
+        public override bool TryWrite(QueueItemRemoveRequest item)
+        {
+            MarkWasSetAtWrite = _probe();
+            return _inner.TryWrite(item);
+        }
+
+        public override ValueTask<bool> WaitToWriteAsync(CancellationToken cancellationToken = default) =>
+            _inner.WaitToWriteAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Concrete GenericHandler subclass exposing protected members for testing.
     /// </summary>
     private sealed class TestHandler : GenericHandler
@@ -706,14 +691,14 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             ILogger<GenericHandler> logger,
             DataContext dataContext,
             IMemoryCache cache,
-            IBus messageBus,
+            ChannelWriter<QueueItemRemoveRequest> removalQueue,
             IArrClientFactory arrClientFactory,
             IArrQueueReader arrQueueReader,
             IDownloadServiceFactory downloadServiceFactory,
             IEventPublisher eventPublisher,
             IDryRunInterceptor dryRunInterceptor,
             IForceImportService forceImportService)
-            : base(logger, dataContext, cache, messageBus, arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
+            : base(logger, dataContext, cache, removalQueue, arrClientFactory, arrQueueReader, downloadServiceFactory, eventPublisher, dryRunInterceptor, forceImportService)
         {
         }
 

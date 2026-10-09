@@ -2,10 +2,10 @@
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
+using System.Threading.Channels;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
@@ -14,16 +14,16 @@ public class NotificationPublisher : INotificationPublisher
 {
     private readonly ILogger<NotificationPublisher> _logger;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly IBus _messageBus;
+    private readonly ChannelWriter<NotificationMessage> _notificationQueue;
 
     public NotificationPublisher(
         ILogger<NotificationPublisher> logger,
         IDryRunInterceptor dryRunInterceptor,
-        IBus messageBus)
+        ChannelWriter<NotificationMessage> notificationQueue)
     {
         _logger = logger;
         _dryRunInterceptor = dryRunInterceptor;
-        _messageBus = messageBus;
+        _notificationQueue = notificationQueue;
     }
 
     public virtual async Task NotifyStrike(StrikeType strikeType, int strikeCount)
@@ -147,7 +147,7 @@ public class NotificationPublisher : INotificationPublisher
     private async Task SendNotificationInternalAsync((NotificationEventType eventType, NotificationContext context) parameters)
     {
         var (eventType, context) = parameters;
-        await _messageBus.Publish(new NotificationMessage(eventType, context));
+        await _notificationQueue.WriteAsync(new NotificationMessage(eventType, context));
     }
 
     /// <summary>

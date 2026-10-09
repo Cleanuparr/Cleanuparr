@@ -7,7 +7,7 @@ namespace Cleanuparr.Api.Json;
 
 public static class CleanuparrJsonConfiguration
 {
-    public static void ConfigureCore(JsonSerializerOptions options)
+    private static void ConfigureCore(JsonSerializerOptions options)
     {
         options.PropertyNameCaseInsensitive = true;
         options.Converters.Add(new JsonStringEnumConverter());

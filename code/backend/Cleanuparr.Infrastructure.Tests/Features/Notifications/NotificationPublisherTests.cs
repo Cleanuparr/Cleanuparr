@@ -6,7 +6,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using MassTransit;
+using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -19,14 +19,14 @@ public class NotificationPublisherTests
 {
     private readonly ILogger<NotificationPublisher> _logger;
     private readonly IDryRunInterceptor _dryRunInterceptor;
-    private readonly IBus _messageBus;
+    private readonly Channel<NotificationMessage> _notificationQueue;
     private readonly NotificationPublisher _publisher;
 
     public NotificationPublisherTests()
     {
         _logger = Substitute.For<ILogger<NotificationPublisher>>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        _messageBus = Substitute.For<IBus>();
+        _notificationQueue = Channel.CreateUnbounded<NotificationMessage>();
 
         _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ReturnsForAnyArgs(ci => ci.ArgAt<Func<Task>>(0).Invoke());
@@ -34,7 +34,7 @@ public class NotificationPublisherTests
         _publisher = new NotificationPublisher(
             _logger,
             _dryRunInterceptor,
-            _messageBus);
+            _notificationQueue.Writer);
     }
 
     private void SetupContext(InstanceType instanceType = InstanceType.Sonarr)
@@ -86,10 +86,10 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.Stalled, 1);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.StalledStrike &&
-                 m.Context.Data.ContainsKey("Strike type") &&
-                 m.Context.Data["Strike type"] == "Stalled"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.StalledStrike);
+        m.Context.Data.ShouldContainKey("Strike type");
+        m.Context.Data["Strike type"].ShouldBe("Stalled");
     }
 
     [Fact]
@@ -102,9 +102,9 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.FailedImport, 2);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.FailedImportStrike &&
-                 m.Context.Data["Strike count"] == "2"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.FailedImportStrike);
+        m.Context.Data["Strike count"].ShouldBe("2");
     }
 
     [Theory]
@@ -127,8 +127,8 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(strikeType, 1);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == expectedEventType), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(expectedEventType);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class NotificationPublisherTests
         // Act & Assert
         await _publisher.NotifyStrike(StrikeType.DeadTorrent, 3);
 
-        await _messageBus.DidNotReceive().Publish(Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        _notificationQueue.Reader.Count.ShouldBe(0);
     }
 
     [Fact]
@@ -150,8 +150,8 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Data["Url"] == "http://sonarr.local/"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Data["Url"].ShouldBe("http://sonarr.local/");
     }
 
     #endregion
@@ -168,11 +168,11 @@ public class NotificationPublisherTests
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.QueueItemDeleted &&
-                 m.Context.Data["Reason"] == "Stalled" &&
-                 m.Context.Data["Removed from client?"] == "True" &&
-                 m.Context.Severity == EventSeverity.Important), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.QueueItemDeleted);
+        m.Context.Data["Reason"].ShouldBe("Stalled");
+        m.Context.Data["Removed from client?"].ShouldBe("True");
+        m.Context.Severity.ShouldBe(EventSeverity.Important);
     }
 
     [Fact]
@@ -185,9 +185,9 @@ public class NotificationPublisherTests
         await _publisher.NotifyQueueItemDeleted(false, DeleteReason.AllFilesBlocked);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Data["Removed from client?"] == "False" &&
-                 m.Context.Data["Reason"] == "AllFilesBlocked"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Data["Removed from client?"].ShouldBe("False");
+        m.Context.Data["Reason"].ShouldBe("AllFilesBlocked");
     }
 
     #endregion
@@ -204,12 +204,12 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.DownloadCleaned &&
-                 m.Context.Description == "Test Download" &&
-                 m.Context.Data["Category"] == "movies" &&
-                 m.Context.Data["Ratio"] == "2.5" &&
-                 m.Context.Data["Seeding hours"] == "48"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.DownloadCleaned);
+        m.Context.Description.ShouldBe("Test Download");
+        m.Context.Data["Category"].ShouldBe("movies");
+        m.Context.Data["Ratio"].ShouldBe("2.5");
+        m.Context.Data["Seeding hours"].ShouldBe("48");
     }
 
     [Fact]
@@ -217,15 +217,11 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupDownloadCleanerContext();
-        NotificationMessage? captured = null;
-        _messageBus.Publish(Arg.Do<NotificationMessage>(m => captured = m), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
-
         // Act
         await _publisher.NotifyDownloadCleaned(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
 
         // Assert
-        captured.ShouldNotBeNull();
+        NotificationMessage captured = _notificationQueue.ShouldHaveSingle();
         captured.Context.Data["Seeding hours"].ShouldBe("25");
     }
 
@@ -240,9 +236,9 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Data.ContainsKey("Url") &&
-                 m.Context.Data["Url"] == "https://qbit.external.com/"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Data.ShouldContainKey("Url");
+        m.Context.Data["Url"].ShouldBe("https://qbit.external.com/");
     }
 
     #endregion
@@ -259,12 +255,12 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadStopped(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.DownloadStopped &&
-                 m.Context.Description == "Test Download is no longer seeding. It stays in the download client and its files stay on disk." &&
-                 m.Context.Data["Category"] == "movies" &&
-                 m.Context.Data["Ratio"] == "2.5" &&
-                 m.Context.Data["Seeding hours"] == "48"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.DownloadStopped);
+        m.Context.Description.ShouldBe("Test Download is no longer seeding. It stays in the download client and its files stay on disk.");
+        m.Context.Data["Category"].ShouldBe("movies");
+        m.Context.Data["Ratio"].ShouldBe("2.5");
+        m.Context.Data["Seeding hours"].ShouldBe("48");
     }
 
     [Fact]
@@ -272,15 +268,11 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupDownloadCleanerContext();
-        NotificationMessage? captured = null;
-        _messageBus.Publish(Arg.Do<NotificationMessage>(m => captured = m), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
-
         // Act
         await _publisher.NotifyDownloadStopped(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
 
         // Assert
-        captured.ShouldNotBeNull();
+        NotificationMessage captured = _notificationQueue.ShouldHaveSingle();
         captured.Context.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
     }
 
@@ -295,9 +287,9 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadStopped(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Data.ContainsKey("Url") &&
-                 m.Context.Data["Url"] == "https://qbit.external.com/"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Data.ShouldContainKey("Url");
+        m.Context.Data["Url"].ShouldBe("https://qbit.external.com/");
     }
 
     #endregion
@@ -314,11 +306,11 @@ public class NotificationPublisherTests
         await _publisher.NotifyCategoryChanged("tv-sonarr", "seeding", false);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.CategoryChanged &&
-                 m.Context.Title == "Category changed" &&
-                 m.Context.Data["Old category"] == "tv-sonarr" &&
-                 m.Context.Data["New category"] == "seeding"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.CategoryChanged);
+        m.Context.Title.ShouldBe("Category changed");
+        m.Context.Data["Old category"].ShouldBe("tv-sonarr");
+        m.Context.Data["New category"].ShouldBe("seeding");
     }
 
     [Fact]
@@ -326,20 +318,16 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupDownloadCleanerContext();
-        NotificationMessage? captured = null;
-        _messageBus.Publish(Arg.Do<NotificationMessage>(m => captured = m), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask);
-
         // Act
         await _publisher.NotifyCategoryChanged("", "seeded", true);
 
         // Assert
-        captured.ShouldNotBeNull();
+        NotificationMessage captured = _notificationQueue.ShouldHaveSingle();
         captured.Context.Title.ShouldBe("Tag added");
-        captured.Context.Data.ContainsKey("Tag").ShouldBeTrue();
+        captured.Context.Data.ShouldContainKey("Tag");
         captured.Context.Data["Tag"].ShouldBe("seeded");
-        captured.Context.Data.ContainsKey("Old category").ShouldBeFalse();
-        captured.Context.Data.ContainsKey("New category").ShouldBeFalse();
+        captured.Context.Data.ShouldNotContainKey("Old category");
+        captured.Context.Data.ShouldNotContainKey("New category");
     }
 
     [Fact]
@@ -352,8 +340,8 @@ public class NotificationPublisherTests
         await _publisher.NotifyCategoryChanged("old", "new", false);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Severity == EventSeverity.Information), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Severity.ShouldBe(EventSeverity.Information);
     }
 
     #endregion
@@ -387,7 +375,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        await _messageBus.DidNotReceive().Publish(Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        _notificationQueue.Reader.Count.ShouldBe(0);
     }
 
     #endregion
@@ -489,15 +477,15 @@ public class NotificationPublisherTests
         await _publisher.NotifySearchItemGrabbed("Movie A", grabbedItems, InstanceType.Radarr, "http://radarr.local:7878");
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.SearchItemGrabbed &&
-                 m.Context.Title == "Download grabbed" &&
-                 m.Context.Description == "Movie A" &&
-                 m.Context.Severity == EventSeverity.Information &&
-                 m.Context.Data["Item"] == "Movie A" &&
-                 m.Context.Data["Grabbed"] == "Movie.A.2024.1080p, Movie.A.2024.720p" &&
-                 m.Context.Data["Instance type"] == "Radarr" &&
-                 m.Context.Data["Url"] == "http://radarr.local:7878"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.SearchItemGrabbed);
+        m.Context.Title.ShouldBe("Download grabbed");
+        m.Context.Description.ShouldBe("Movie A");
+        m.Context.Severity.ShouldBe(EventSeverity.Information);
+        m.Context.Data["Item"].ShouldBe("Movie A");
+        m.Context.Data["Grabbed"].ShouldBe("Movie.A.2024.1080p, Movie.A.2024.720p");
+        m.Context.Data["Instance type"].ShouldBe("Radarr");
+        m.Context.Data["Url"].ShouldBe("http://radarr.local:7878");
     }
 
     [Fact]
@@ -528,14 +516,14 @@ public class NotificationPublisherTests
         await _publisher.NotifyForceImported();
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.EventType == NotificationEventType.ForceImported &&
-                 m.Context.Title == "Imported a download the arr had blocked" &&
-                 m.Context.Description == "Test Show" &&
-                 m.Context.Severity == EventSeverity.Important &&
-                 m.Context.Data["Hash"] == "abcd1234" &&
-                 m.Context.Data["Instance type"] == "Sonarr" &&
-                 m.Context.Data["Url"] == "http://sonarr.local/"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.ForceImported);
+        m.Context.Title.ShouldBe("Imported a download the arr had blocked");
+        m.Context.Description.ShouldBe("Test Show");
+        m.Context.Severity.ShouldBe(EventSeverity.Important);
+        m.Context.Data["Hash"].ShouldBe("abcd1234");
+        m.Context.Data["Instance type"].ShouldBe("Sonarr");
+        m.Context.Data["Url"].ShouldBe("http://sonarr.local/");
     }
 
     [Fact]
@@ -577,8 +565,9 @@ public class NotificationPublisherTests
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Description == "Frankenstein" && m.Context.Data["Hash"] == "bookhash1"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Description.ShouldBe("Frankenstein");
+        m.Context.Data["Hash"].ShouldBe("bookhash1");
     }
 
     [Fact]
@@ -592,8 +581,9 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.Stalled, 1);
 
         // Assert
-        await _messageBus.Received(1).Publish(Arg.Is<NotificationMessage>(
-            m => m.Context.Description == "Frankenstein" && m.Context.Data["Hash"] == "bookhash1"), Arg.Any<CancellationToken>());
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Description.ShouldBe("Frankenstein");
+        m.Context.Data["Hash"].ShouldBe("bookhash1");
     }
 
     #endregion
