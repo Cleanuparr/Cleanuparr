@@ -94,18 +94,23 @@ test.describe('QueueCleaner — job execution end-to-end', () => {
 // client through wiremock-dlc. QueueCleaner never deletes from the client itself for a
 // usenet job: it asks the arr to do it via DELETE /api/v3/queue/{id}?removeFromClient=.
 test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
-  async function registerSabClient(api: import('../fixtures/base').CleanuparrApi): Promise<string> {
-    const created = await (
-      await api.downloadClient.create(
-        buildDownloadClientPayload('sabnzbd', {
-          name: `sab-qc-${Date.now()}`,
-          host: TEST_CONFIG.mocks.downloadClientUrl,
-          apiKey: 'e2e-key',
-        }),
-      )
-    ).json();
-    return created.id;
+  async function registerSabClient(api: import('../fixtures/base').CleanuparrApi): Promise<void> {
+    await api.downloadClient.create(
+      buildDownloadClientPayload('sabnzbd', {
+        name: `sab-qc-${Date.now()}`,
+        host: TEST_CONFIG.mocks.downloadClientUrl,
+        apiKey: 'e2e-key',
+      }),
+    );
   }
+
+  // Runs on failure too, so a failed poll can't leave a SABnzbd client behind for later specs.
+  test.afterEach(async ({ api }) => {
+    const list: { clients: Array<{ id: string; name: string }> } = await (await api.downloadClient.list()).json();
+    for (const client of list.clients.filter((c) => c.name.startsWith('sab-qc-'))) {
+      await api.downloadClient.delete(client.id);
+    }
+  });
 
   test('a failed history job is removed from the arr queue', async ({ api, mocks }) => {
     await ArrStubs.applyArrDefaults(mocks.arr);
@@ -120,7 +125,7 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
     );
     await mocks.arr.stub(ArrStubs.arrQueueDeleteStub());
 
-    const clientId = await registerSabClient(api);
+    await registerSabClient(api);
     await api.arr.createInstance('sonarr', {
       name: 'sonarr-sab-qc-failed', url: TEST_CONFIG.mocks.arrUrl, apiKey: 'k', version: 3, enabled: true,
     });
@@ -135,8 +140,6 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
 
     const event = await findEventWithDeleteReason(adminTokens().accessToken, 'SAB-FAILED-1', 'DownloadFailed', 15_000);
     expect(event, 'a DownloadFailed event should have been emitted for the failed SABnzbd job').toBeDefined();
-
-    await api.downloadClient.delete(clientId);
   });
 
   test('an in-progress queue job is left in the arr queue', async ({ api, mocks }) => {
@@ -149,7 +152,7 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
       ]),
     );
 
-    const clientId = await registerSabClient(api);
+    await registerSabClient(api);
     await api.arr.createInstance('sonarr', {
       name: 'sonarr-sab-qc-downloading', url: TEST_CONFIG.mocks.arrUrl, apiKey: 'k', version: 3, enabled: true,
     });
@@ -160,8 +163,6 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
 
     const deletes = await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/502.*' });
     expect(deletes).toEqual([]);
-
-    await api.downloadClient.delete(clientId);
   });
 
   test('an unreachable client surfaces as not-found rather than a silent removal', async ({ api, mocks }) => {
@@ -173,7 +174,7 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
       ]),
     );
 
-    const clientId = await registerSabClient(api);
+    await registerSabClient(api);
     await api.arr.createInstance('sonarr', {
       name: 'sonarr-sab-qc-unreachable', url: TEST_CONFIG.mocks.arrUrl, apiKey: 'k', version: 3, enabled: true,
     });
@@ -184,8 +185,6 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
 
     const deletes = await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/503.*' });
     expect(deletes, 'an unreachable client must not be mistaken for "safe to remove"').toEqual([]);
-
-    await api.downloadClient.delete(clientId);
   });
 
   test('a failed import missing from SABnzbd is removed when skip if not found is off', async ({ api, mocks }) => {
@@ -240,7 +239,7 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
       const cfg = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: 1 });
       expect(cfg.ok, `arr updateConfig: ${cfg.status}`).toBe(true);
 
-      const clientId = await registerSabClient(api);
+      await registerSabClient(api);
       await api.arr.createInstance('sonarr', {
         name: 'sonarr-sab-qc-missing', url: TEST_CONFIG.mocks.arrUrl, apiKey: 'k', version: 3, enabled: true,
       });
@@ -254,8 +253,6 @@ test.describe('QueueCleaner: SABnzbd job execution (mocked)', () => {
           { timeout: 60_000, intervals: [1_000] },
         )
         .toBeGreaterThan(0);
-
-      await api.downloadClient.delete(clientId);
     } finally {
       await api.queueCleaner.updateConfig(currentQcConfig);
       await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: currentArrConfig.failedImportMaxStrikes });
