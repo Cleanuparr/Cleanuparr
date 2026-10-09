@@ -252,6 +252,36 @@ describe('DownloadClientsComponent', () => {
     expect(fieldLabels(fixture)).toContain('API Key');
   });
 
+  it('blocks saving a SABnzbd client with an empty API key and shows the error', () => {
+    const { fixture, component, api } = setup();
+
+    component.openAddModal();
+    component.clientForm.name().value.set('SAB box');
+    component.clientForm.host().value.set('http://localhost:8080');
+    fixture.detectChanges();
+
+    chooseClientType(fixture, 'SABnzbd');
+
+    expect(component.hasModalErrors()).toBe(true);
+    expect(component.clientForm.apiKey().errors()[0].message).toBe('API key is required');
+
+    component.saveClient();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('does not require an API key for qBittorrent with an empty key', () => {
+    const { fixture, component } = setup();
+
+    component.openAddModal();
+    component.clientForm.name().value.set('New client');
+    component.clientForm.host().value.set('http://localhost:8080');
+    fixture.detectChanges();
+
+    expect(component.clientModel().typeName).toBe(DownloadClientTypeName.qBittorrent);
+    expect(component.clientForm.apiKey().value()).toBe('');
+    expect(component.hasModalErrors()).toBe(false);
+  });
+
   it('shows no auth fields while the types endpoint is still loading', async () => {
     const types$ = new Subject<DownloadClientTypesResponse>();
     const api = createApi();

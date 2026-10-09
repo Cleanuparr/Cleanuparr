@@ -115,5 +115,10 @@ public sealed record DownloadClientConfig
         {
             throw new ValidationException("Both download directory source and target must be set, or both must be empty");
         }
+
+        if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey))
+        {
+            throw new ValidationException("API key cannot be empty");
+        }
     }
 }

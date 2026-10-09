@@ -110,6 +110,10 @@ export class DownloadClientsComponent implements HasPendingChanges {
   readonly clientForm = form(this.clientModel, (p) => {
     required(p.name, { message: 'Name is required' });
     required(p.host, { message: 'Host is required' });
+    required(p.apiKey, {
+      when: ({ valueOf }) => valueOf(p.typeName) === DownloadClientTypeName.Sabnzbd,
+      message: 'API key is required',
+    });
   });
 
   readonly hasModalErrors = computed(() => this.clientForm().invalid());

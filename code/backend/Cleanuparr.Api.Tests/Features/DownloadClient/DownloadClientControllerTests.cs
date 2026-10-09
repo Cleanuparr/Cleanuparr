@@ -242,6 +242,27 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateDownloadClientConfig_PlaceholderApiKeyOnClientWithNoStoredKey_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://newhost:9090",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            ApiKey = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act / Assert
+        await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+    }
+
+    [Fact]
     public async Task UpdateDownloadClientConfig_UnknownTypeName_PropagatesValidationException()
     {
         // Arrange

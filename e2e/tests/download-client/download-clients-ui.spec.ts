@@ -40,6 +40,14 @@ test.describe('Download Clients UI', () => {
     await expect(modal.locator('app-input').filter({ hasText: 'Username' })).toHaveCount(0);
     await expect(modal.locator('app-input').filter({ hasText: 'Password' })).toHaveCount(0);
     await expect(modal.locator('app-input').filter({ hasText: 'API Key' })).toBeVisible();
+
+    const save = modal.getByRole('button', { name: 'Save' });
+    await modal.locator('app-input').first().locator('input').fill('E2E SAB Client'); // Name
+    await modal.locator('app-input').filter({ hasText: 'Host' }).locator('input').fill('http://localhost:8090');
+    await expect(save).toBeDisabled();
+
+    await modal.locator('app-input').filter({ hasText: 'API Key' }).locator('input').fill('sab-api-key');
+    await expect(save).toBeEnabled();
   });
 
   test('name and host required gate the modal Save button', async ({ page }) => {

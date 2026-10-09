@@ -138,3 +138,35 @@ test.describe('DownloadClient: invalid type validation', () => {
     await api.downloadClient.delete(created.id);
   });
 });
+
+test.describe('DownloadClient: API key validation', () => {
+  test('create SABnzbd with an empty API key returns 400', async ({ api }) => {
+    const payload = buildDownloadClientPayload('sabnzbd', {
+      name: 'invalid-sab-empty-key',
+      host: TEST_CONFIG.mocks.downloadClientUrl,
+      apiKey: '',
+    });
+    const res = await api.downloadClient.create(payload);
+    expect(res.status).toBe(400);
+  });
+
+  test('update a qBittorrent client to SABnzbd with the placeholder key returns 400', async ({ api }) => {
+    const payload = buildDownloadClientPayload('qbittorrent', {
+      name: 'base-for-key-update',
+      host: TEST_CONFIG.mocks.downloadClientUrl,
+      username: 'admin',
+      password: 'admin',
+    });
+    const created = await (await api.downloadClient.create(payload)).json();
+
+    const updatePayload = buildDownloadClientPayload('sabnzbd', {
+      name: 'invalid-key-update',
+      host: TEST_CONFIG.mocks.downloadClientUrl,
+      apiKey: '••••••••',
+    });
+    const res = await api.downloadClient.update(created.id, updatePayload);
+    expect(res.status).toBe(400);
+
+    await api.downloadClient.delete(created.id);
+  });
+});
