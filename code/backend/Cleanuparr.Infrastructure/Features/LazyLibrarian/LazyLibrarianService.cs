@@ -234,8 +234,7 @@ public sealed class LazyLibrarianService : ILazyLibrarianService
     }
 
     /// <summary>
-    /// A snatch sent to a client Cleanuparr can query: a torrent client for Torrent/Torznab/Magnet,
-    /// or SABnzbd for Nzb. Everything else (blackhole, Synology, NZBGet, direct, irc) stays out of reach.
+    /// The snatch went to a client Cleanuparr can query (a torrent client for torrents, SABnzbd for NZBs).
     /// </summary>
     private static bool IsQueryableSnatch(LazyLibrarianWantedRecord row)
     {
