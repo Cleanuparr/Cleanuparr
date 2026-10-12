@@ -12,7 +12,7 @@ WIREMOCKS = wiremock-arr wiremock-dlc wiremock-notify wiremock-blocklist
 APP_SERVICES = app nginx
 
 CORE_STACK = keycloak qbittorrent $(WIREMOCKS)
-CLIENTS_STACK = $(CORE_STACK) tracker transmission deluge utorrent rutorrent sabnews sabnzbd
+CLIENTS_STACK = $(CORE_STACK) tracker transmission deluge utorrent rutorrent sabnews sabnzbd download-client-auth-proxy
 ARR_STACK = $(CORE_STACK) wiremock-indexer tracker sonarr radarr whisparr whisparr2 lidarr chaptarr sportarr
 LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker sabnews sabnzbd lazylibrarian
 
