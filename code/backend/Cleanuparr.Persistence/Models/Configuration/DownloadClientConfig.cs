@@ -128,6 +128,12 @@ public sealed record DownloadClientConfig
             throw new CustomValidationException($"Host cannot be empty");
         }
 
+        if (Host.IsAbsoluteUri && Host.UserInfo.Length > 0)
+        {
+            throw new ValidationException(
+                "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
+        }
+
         if (!string.IsNullOrWhiteSpace(DownloadDirectorySource) != !string.IsNullOrWhiteSpace(DownloadDirectoryTarget))
         {
             throw new CustomValidationException("Both download directory source and target must be set, or both must be empty");

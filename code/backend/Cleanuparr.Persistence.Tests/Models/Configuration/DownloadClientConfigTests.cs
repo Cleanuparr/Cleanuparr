@@ -106,6 +106,35 @@ public sealed class DownloadClientConfigTests
         exception.Message.ShouldBe("Host cannot be empty");
     }
 
+    [Fact]
+    public void Validate_WithUserInfoInHost_ThrowsValidationException()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My Client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://user:pass@localhost:8080")
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
+    }
+
+    [Fact]
+    public void Validate_WithRelativeHost_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My Client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("192.168.1.5", UriKind.RelativeOrAbsolute)
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
     #endregion
 
     #region Validate - Directory Mapping

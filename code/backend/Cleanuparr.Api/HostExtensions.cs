@@ -2,7 +2,9 @@
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Providers;
+using Cleanuparr.Persistence.Startup;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Api;
 
@@ -77,6 +79,7 @@ public static class HostExtensions
             await configContext.Database.MigrateAsync();
         }
         await provider.OnPostMigrateAsync(configContext.Database, DbContextKind.Data, CancellationToken.None);
+        await MigrateDownloadClientUserInfoAsync(configContext);
 
         await using EventsContext eventsContext = EventsContext.CreateStaticInstance();
         if ((await eventsContext.Database.GetPendingMigrationsAsync()).Any())
@@ -93,5 +96,16 @@ public static class HostExtensions
         await provider.OnPostMigrateAsync(usersContext.Database, DbContextKind.Users, CancellationToken.None);
 
         return builder;
+    }
+
+    /// <summary>
+    /// Moves URL userinfo out of download client hosts.
+    /// DI does not exist yet, so the migrator gets its own console logger.
+    /// </summary>
+    private static async Task MigrateDownloadClientUserInfoAsync(DataContext context)
+    {
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        DownloadClientUserInfoMigrator migrator = new(loggerFactory.CreateLogger<DownloadClientUserInfoMigrator>());
+        await migrator.MigrateAsync(context, CancellationToken.None);
     }
 }

@@ -41,9 +41,15 @@ public sealed record TestDownloadClientRequest
             throw new CustomValidationException("Host cannot be empty");
         }
 
-        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
+        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out Uri? parsedHost))
         {
             throw new CustomValidationException("Host is not a valid URL");
+        }
+
+        if (parsedHost.IsAbsoluteUri && parsedHost.UserInfo.Length > 0)
+        {
+            throw new ValidationException(
+                "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 
         if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey) && !ApiKey.IsPlaceholder())

@@ -271,6 +271,41 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDownloadClientConfig_HostWithUserInfo_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Name = "x",
+            Host = "http://user:pass@localhost:8080",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_RelativeHost_ReturnsCreated()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Name = "x",
+            Host = "192.168.1.5",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act
+        IActionResult result = await _controller.CreateDownloadClientConfig(request);
+
+        // Assert
+        result.ShouldBeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
     public async Task CreateDownloadClientConfig_UnknownTypeName_PropagatesValidationException()
     {
         // Arrange
@@ -404,6 +439,27 @@ public class DownloadClientControllerTests : IDisposable
         // Act / Assert
         await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.UpdateDownloadClientConfig(client.Id, request));
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_HostWithUserInfo_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://user:pass@newhost:9090",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+        exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
     }
 
     [Fact]
@@ -704,6 +760,25 @@ public class DownloadClientControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_HostWithUserInfo_ReturnsBadRequest()
+    {
+        // Arrange
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://user:pass@localhost:8080",
+            Password = "pass",
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
     }
 
     [Fact]
