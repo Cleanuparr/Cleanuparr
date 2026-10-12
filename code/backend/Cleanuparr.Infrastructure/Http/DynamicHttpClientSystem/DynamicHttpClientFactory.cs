@@ -82,7 +82,16 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         RegisterConfiguration(clientName, config);
     }
 
-    public void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent)
+    public void RegisterDownloadClient(
+        string clientName,
+        int timeout,
+        HttpClientType clientType,
+        RetryConfig retryConfig,
+        CertificateValidationType certificateType,
+        bool sendUserAgent,
+        HttpAuthType httpAuthType = HttpAuthType.Basic,
+        NetworkCredential? httpAuthCredential = null,
+        Uri? baseUri = null)
     {
         HttpClientConfig config = new()
         {
@@ -91,7 +100,10 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
             Type = clientType,
             RetryConfig = retryConfig,
             CertificateValidationType = certificateType,
-            SendUserAgent = sendUserAgent
+            SendUserAgent = sendUserAgent,
+            HttpAuthType = httpAuthType,
+            HttpAuthCredential = httpAuthCredential,
+            BaseUri = baseUri,
         };
 
         // Configure Deluge-specific settings if needed

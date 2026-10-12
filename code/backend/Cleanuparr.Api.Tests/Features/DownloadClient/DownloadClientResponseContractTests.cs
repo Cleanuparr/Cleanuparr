@@ -109,6 +109,41 @@ public class DownloadClientResponseContractTests : IDisposable
     }
 
     [Fact]
+    public async Task GetDownloadClientConfig_MasksTheHttpAuthPassword()
+    {
+        DownloadClientConfig client = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "contract",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "proxysecret",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetDownloadClientConfig();
+
+        FirstClient(result).GetProperty("httpAuthPassword").GetString().ShouldBe(SensitiveDataHelper.Placeholder);
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_MasksTheHttpAuthPassword()
+    {
+        CreateDownloadClientRequest request = NewCreateRequest() with
+        {
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "proxysecret",
+        };
+
+        IActionResult result = await _controller.CreateDownloadClientConfig(request);
+
+        ResponseContract.Body(result).GetProperty("httpAuthPassword").GetString().ShouldBe(SensitiveDataHelper.Placeholder);
+    }
+
+    [Fact]
     public void GetDownloadClientTypes_ReturnsTheDocumentedWrapperKeys()
     {
         IActionResult result = _controller.GetDownloadClientTypes();
@@ -156,6 +191,9 @@ public class DownloadClientResponseContractTests : IDisposable
         "enabled",
         "externalUrl",
         "host",
+        "httpAuthPassword",
+        "httpAuthType",
+        "httpAuthUsername",
         "id",
         "name",
         "password",

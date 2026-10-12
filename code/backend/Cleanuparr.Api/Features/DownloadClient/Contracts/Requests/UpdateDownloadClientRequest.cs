@@ -23,6 +23,12 @@ public sealed record UpdateDownloadClientRequest
 
     public string? ApiKey { get; init; }
 
+    public HttpAuthType HttpAuthType { get; init; }
+
+    public string? HttpAuthUsername { get; init; }
+
+    public string? HttpAuthPassword { get; init; }
+
     public string? UrlBase { get; init; }
 
     public string? ExternalUrl { get; init; }
@@ -74,6 +80,9 @@ public sealed record UpdateDownloadClientRequest
         Username = Username,
         Password = Password.IsPlaceholder() ? existing.Password : Password,
         ApiKey = ApiKey.IsPlaceholder() ? existing.ApiKey : ApiKey,
+        HttpAuthType = HttpAuthType,
+        HttpAuthUsername = HttpAuthUsername,
+        HttpAuthPassword = HttpAuthPassword.IsPlaceholder() ? existing.HttpAuthPassword : HttpAuthPassword,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
         DownloadDirectorySource = DownloadDirectorySource,

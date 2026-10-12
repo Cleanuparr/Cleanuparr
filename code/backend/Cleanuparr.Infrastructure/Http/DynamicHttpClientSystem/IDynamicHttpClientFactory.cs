@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.General;
 
@@ -36,7 +37,16 @@ public interface IDynamicHttpClientFactory
     /// <summary>
     /// Registers a configuration for a download client
     /// </summary>
-    void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent);
+    void RegisterDownloadClient(
+        string clientName,
+        int timeout,
+        HttpClientType clientType,
+        RetryConfig retryConfig,
+        CertificateValidationType certificateType,
+        bool sendUserAgent,
+        HttpAuthType httpAuthType = HttpAuthType.Basic,
+        NetworkCredential? httpAuthCredential = null,
+        Uri? baseUri = null);
 
     /// <summary>
     /// Registers a client that opts out of every handler setting and only carries the User-Agent.

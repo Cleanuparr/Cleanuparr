@@ -61,6 +61,23 @@ public sealed record DownloadClientConfig
     public string? ApiKey { get; set; }
 
     /// <summary>
+    /// HTTP authentication scheme the client answers a reverse proxy's challenge with.
+    /// </summary>
+    public HttpAuthType HttpAuthType { get; set; } = HttpAuthType.Basic;
+
+    /// <summary>
+    /// Reverse proxy username for qBittorrent, Deluge and SABnzbd.
+    /// Other clients reuse Username.
+    /// </summary>
+    public string? HttpAuthUsername { get; set; }
+
+    /// <summary>
+    /// Reverse proxy password for qBittorrent, Deluge and SABnzbd.
+    /// </summary>
+    [SensitiveData]
+    public string? HttpAuthPassword { get; set; }
+
+    /// <summary>
     /// The base URL path component, used by clients like Transmission and Deluge
     /// </summary>
     public string? UrlBase { get; set; }
@@ -126,5 +143,22 @@ public sealed record DownloadClientConfig
         {
             throw new CustomValidationException("Use either an API key or a username and password, not both");
         }
+
+        if (TypeName.ApiKeyConflictsWithHttpAuth() && !string.IsNullOrWhiteSpace(ApiKey) &&
+            !string.IsNullOrWhiteSpace(HttpAuthUsername))
+        {
+            throw new ValidationException(
+                "API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
+        }
+
+        if (HttpAuthType == HttpAuthType.Digest && string.IsNullOrWhiteSpace(DigestUsername))
+        {
+            throw new ValidationException("HTTP Digest authentication requires a username");
+        }
     }
+
+    /// <summary>
+    /// Username sent for Digest auth.
+    /// </summary>
+    private string? DigestUsername => TypeName.UsesDedicatedHttpAuthFields() ? HttpAuthUsername : Username;
 }

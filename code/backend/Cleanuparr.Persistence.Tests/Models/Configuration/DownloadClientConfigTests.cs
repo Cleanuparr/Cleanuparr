@@ -293,6 +293,217 @@ public sealed class DownloadClientConfigTests
 
     #endregion
 
+    #region Validate - HTTP Auth
+
+    [Fact]
+    public void Validate_NewConfig_DefaultsHttpAuthTypeToBasic()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080")
+        };
+
+        config.HttpAuthType.ShouldBe(HttpAuthType.Basic);
+    }
+
+    [Fact]
+    public void Validate_QBittorrentWithApiKeyAndHttpAuthUsername_ThrowsValidationException()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
+            HttpAuthUsername = "proxyuser"
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
+    }
+
+    [Fact]
+    public void Validate_SabnzbdWithApiKeyAndHttpAuthUsername_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My SABnzbd",
+            TypeName = DownloadClientTypeName.Sabnzbd,
+            Type = DownloadClientType.Usenet,
+            Host = new Uri("http://localhost:8080"),
+            ApiKey = "0123456789abcdef0123456789abcdef",
+            HttpAuthUsername = "proxyuser"
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_QBittorrentWithApiKeyAndNoHttpAuthUsername_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_DigestWithoutUsername_ThrowsValidationException()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My rTorrent",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Digest,
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("HTTP Digest authentication requires a username");
+    }
+
+    [Fact]
+    public void Validate_DigestWithUsername_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My rTorrent",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Digest,
+            Username = "proxyuser",
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_DigestQBittorrentWithoutHttpAuthUsername_ThrowsValidationException()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Digest,
+            Username = "qbit-login-user",
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("HTTP Digest authentication requires a username");
+    }
+
+    [Fact]
+    public void Validate_DigestQBittorrentWithHttpAuthUsername_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Digest,
+            HttpAuthUsername = "proxyuser",
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    #endregion
+
+    #region GetHandlerHttpAuthCredential
+
+    [Fact]
+    public void GetHandlerHttpAuthCredential_BasicRTorrent_ReturnsNull()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My rTorrent",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Basic,
+            Username = "user",
+            Password = "pass",
+        };
+
+        config.GetHandlerHttpAuthCredential().ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetHandlerHttpAuthCredential_DigestRTorrent_UsesUsernamePassword()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My rTorrent",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Digest,
+            Username = "user",
+            Password = "pass",
+        };
+
+        var credential = config.GetHandlerHttpAuthCredential();
+        credential.ShouldNotBeNull();
+        credential!.UserName.ShouldBe("user");
+        credential.Password.ShouldBe("pass");
+    }
+
+    [Fact]
+    public void GetHandlerHttpAuthCredential_BasicQBittorrentWithHttpAuthUsername_UsesDedicatedFields()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Basic,
+            Username = "qbit-login",
+            Password = "qbit-pass",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "proxypass",
+        };
+
+        var credential = config.GetHandlerHttpAuthCredential();
+        credential.ShouldNotBeNull();
+        credential!.UserName.ShouldBe("proxyuser");
+        credential.Password.ShouldBe("proxypass");
+    }
+
+    [Fact]
+    public void GetHandlerHttpAuthCredential_BasicQBittorrentWithoutHttpAuthUsername_ReturnsNull()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My qBittorrent",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthType = HttpAuthType.Basic,
+            Username = "qbit-login",
+            Password = "qbit-pass",
+        };
+
+        config.GetHandlerHttpAuthCredential().ShouldBeNull();
+    }
+
+    #endregion
+
     #region Url Property Tests
 
     [Fact]

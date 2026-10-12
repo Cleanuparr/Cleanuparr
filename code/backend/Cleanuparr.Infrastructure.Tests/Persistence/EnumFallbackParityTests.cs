@@ -40,6 +40,7 @@ public class EnumFallbackParityTests
         ["PushoverConfig.Priority"] = PushoverPriority.Normal,
         ["AppriseConfig.Mode"] = AppriseMode.Api,
         ["SeekerHistory.ContentKind"] = SeekerContentKind.Standard,
+        ["DownloadClientConfig.HttpAuthType"] = HttpAuthType.Basic,
     };
 
     [Fact]

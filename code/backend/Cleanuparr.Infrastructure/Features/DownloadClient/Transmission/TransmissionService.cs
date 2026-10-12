@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.HealthCheck;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -67,11 +68,14 @@ public partial class TransmissionService : TorrentDownloadService, IDeadTorrentC
     {
         UriBuilder uriBuilder = new(_downloadClientConfig.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/rpc";
+
+        // In Digest mode the handler's CredentialCache answers instead.
+        bool useBasicAuth = _downloadClientConfig.HttpAuthType == HttpAuthType.Basic;
         var client = new Client(
             _httpClient,
             uriBuilder.Uri.ToString(),
-            login: _downloadClientConfig.Username,
-            password: _downloadClientConfig.Password
+            login: useBasicAuth ? _downloadClientConfig.Username : null,
+            password: useBasicAuth ? _downloadClientConfig.Password : null
         );
         _client = new TransmissionClientWrapper(client);
     }

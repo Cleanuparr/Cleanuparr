@@ -145,6 +145,68 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDownloadClientConfig_QBittorrentWithApiKeyAndHttpAuthUsername_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "qbit-httpauth-conflict-client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://localhost:8080",
+            ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
+            HttpAuthUsername = "proxyuser",
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_DigestWithoutUsername_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "rtorrent-digest-no-creds",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Host = "http://localhost:8080",
+            HttpAuthType = HttpAuthType.Digest,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("HTTP Digest authentication requires a username");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_DigestWithUsername_PersistsHttpAuthType()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "rtorrent-digest-with-creds",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Host = "http://localhost:8080",
+            HttpAuthType = HttpAuthType.Digest,
+            Username = "proxyuser",
+            Password = "proxypass",
+        };
+
+        // Act
+        await _controller.CreateDownloadClientConfig(request);
+
+        // Assert
+        var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Name == "rtorrent-digest-with-creds");
+        saved.HttpAuthType.ShouldBe(HttpAuthType.Digest);
+    }
+
+    [Fact]
     public async Task CreateDownloadClientConfig_SabnzbdWithNoType_StoresUsenet()
     {
         // Arrange
@@ -282,6 +344,7 @@ public class DownloadClientControllerTests : IDisposable
         var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
         saved.Name.ShouldBe("renamed");
         saved.Host!.ToString().ShouldContain("newhost");
+        _dynamicHttpClientFactory.Received(1).UnregisterConfiguration($"DownloadClient_{client.Id}");
     }
 
     [Fact]
@@ -405,6 +468,7 @@ public class DownloadClientControllerTests : IDisposable
 
         DownloadClientConfig saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
         saved.TypeName.ShouldBe(DownloadClientTypeName.qBittorrent);
+        _dynamicHttpClientFactory.DidNotReceive().UnregisterConfiguration(Arg.Any<string>());
     }
 
     [Fact]
@@ -497,6 +561,45 @@ public class DownloadClientControllerTests : IDisposable
             Host = "http://localhost:8080",
             ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
             Password = "pass",
+        };
+
+        // Act
+        var result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_QBittorrentWithApiKeyAndHttpAuthUsername_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://localhost:8080",
+            ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
+            HttpAuthUsername = "proxyuser",
+        };
+
+        // Act
+        var result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_DigestWithoutUsername_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.rTorrent,
+            Host = "http://localhost:8080",
+            HttpAuthType = HttpAuthType.Digest,
         };
 
         // Act

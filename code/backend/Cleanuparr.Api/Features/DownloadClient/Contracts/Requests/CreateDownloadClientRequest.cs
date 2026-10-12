@@ -23,6 +23,12 @@ public sealed record CreateDownloadClientRequest
 
     public string? ApiKey { get; init; }
 
+    public HttpAuthType HttpAuthType { get; init; }
+
+    public string? HttpAuthUsername { get; init; }
+
+    public string? HttpAuthPassword { get; init; }
+
     public string? UrlBase { get; init; }
 
     public string? ExternalUrl { get; init; }
@@ -68,6 +74,11 @@ public sealed record CreateDownloadClientRequest
             throw new CustomValidationException("API key cannot be a placeholder value");
         }
 
+        if (HttpAuthPassword.IsPlaceholder())
+        {
+            throw new ValidationException("HTTP auth password cannot be a placeholder value");
+        }
+
         if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey))
         {
             throw new CustomValidationException("API key cannot be empty");
@@ -84,6 +95,9 @@ public sealed record CreateDownloadClientRequest
         Username = Username,
         Password = Password,
         ApiKey = ApiKey,
+        HttpAuthType = HttpAuthType,
+        HttpAuthUsername = HttpAuthUsername,
+        HttpAuthPassword = HttpAuthPassword,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
         DownloadDirectorySource = DownloadDirectorySource,
