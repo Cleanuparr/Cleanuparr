@@ -75,4 +75,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-chaptarr' },
   { id: 'seeker-sportarr' },
   { id: 'queue-rule-content-type' },
+  { id: 'http-digest-auth' },
 ];

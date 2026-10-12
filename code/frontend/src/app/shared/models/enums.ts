@@ -16,6 +16,13 @@ export enum DownloadClientAuthField {
   Username = 'Username',
   Password = 'Password',
   ApiKey = 'ApiKey',
+  HttpAuthUsername = 'HttpAuthUsername',
+  HttpAuthPassword = 'HttpAuthPassword',
+}
+
+export enum HttpAuthType {
+  Basic = 'Basic',
+  Digest = 'Digest',
 }
 
 export enum DownloadClientCapability {
