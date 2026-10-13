@@ -207,6 +207,26 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDownloadClientConfig_PlaceholderHttpAuthPassword_PropagatesValidationException()
+    {
+        // Arrange
+        CreateDownloadClientRequest request = new()
+        {
+            Enabled = true,
+            Name = "qbit-httpauth-placeholder",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://localhost:8080",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("HTTP auth password cannot be a placeholder value");
+    }
+
+    [Fact]
     public async Task CreateDownloadClientConfig_SabnzbdWithNoType_StoresUsenet()
     {
         // Arrange
@@ -439,6 +459,41 @@ public class DownloadClientControllerTests : IDisposable
         // Act / Assert
         await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.UpdateDownloadClientConfig(client.Id, request));
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_PlaceholderHttpAuthPassword_KeepsExistingHttpAuthPassword()
+    {
+        // Arrange
+        DownloadClientConfig client = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "qbit-client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "stored-http-pass",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "qbit-client",
+            Host = "http://localhost:8080",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act
+        IActionResult result = await _controller.UpdateDownloadClientConfig(client.Id, request);
+
+        // Assert
+        result.ShouldBeOfType<OkObjectResult>();
+        DownloadClientConfig saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
+        saved.HttpAuthPassword.ShouldBe("stored-http-pass");
     }
 
     [Fact]
@@ -742,6 +797,47 @@ public class DownloadClientControllerTests : IDisposable
         capturedConfig.ShouldNotBeNull();
         capturedConfig.Password.ShouldBe("new-password");
         capturedConfig.ApiKey.ShouldBe("stored-api-key");
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_NewPasswordWithPlaceholderHttpAuthPassword_UsesStoredHttpAuthPassword()
+    {
+        // Arrange
+        DownloadClientConfig client = new()
+        {
+            Name = "deluge",
+            TypeName = DownloadClientTypeName.Deluge,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            Password = "stored-password",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "stored-http-pass",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        DownloadClientConfig? capturedConfig = null;
+        IDownloadService downloadService = Substitute.For<IDownloadService>();
+        downloadService.HealthCheckAsync().Returns(new HealthCheckResult { IsHealthy = true });
+        _downloadServiceFactory.GetDownloadService(Arg.Do<DownloadClientConfig>(c => capturedConfig = c)).Returns(downloadService);
+
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.Deluge,
+            Host = "http://localhost:8080",
+            Password = "new-password",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+            ClientId = client.Id,
+        };
+
+        // Act
+        await _controller.TestDownloadClient(request);
+
+        // Assert
+        capturedConfig.ShouldNotBeNull();
+        capturedConfig.Password.ShouldBe("new-password");
+        capturedConfig.HttpAuthPassword.ShouldBe("stored-http-pass");
     }
 
     [Fact]
