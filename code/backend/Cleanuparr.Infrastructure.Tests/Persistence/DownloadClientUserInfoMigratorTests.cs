@@ -21,7 +21,7 @@ public sealed class DownloadClientUserInfoMigratorTests
     {
         using SqliteTestDatabase sqlite = SqliteTestDatabase.Create("userinfo-migration");
 
-        await RunAsync(sqlite.CreateContext<DataContext>);
+        await Should.NotThrowAsync(() => RunAsync(sqlite.CreateContext<DataContext>));
     }
 
     [SkippableFact]
