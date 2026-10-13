@@ -55,7 +55,14 @@ public sealed class DownloadClientUserInfoMigrator
     {
         UserInfoCredential credential = UserInfoMigration.ParseCredential(client.Host!.UserInfo);
 
-        if (client.TypeName.UsesDedicatedHttpAuthFields())
+        if (client.TypeName.ApiKeyConflictsWithHttpAuth() && !string.IsNullOrEmpty(client.ApiKey))
+        {
+            _logger.LogWarning(
+                "Download client {Name} ({Id}) has an API key that conflicts with HTTP authentication; dropped the URL credentials and kept the API key",
+                client.Name,
+                client.Id);
+        }
+        else if (client.TypeName.UsesDedicatedHttpAuthFields())
         {
             client.HttpAuthUsername = credential.Username;
             client.HttpAuthPassword = credential.Password;

@@ -192,6 +192,7 @@ public sealed class DownloadClientUserInfoMigratorTests
         Guid usernameOnlyId = Guid.NewGuid();
         Guid passwordOnlyId = Guid.NewGuid();
         Guid emptyUserInfoId = Guid.NewGuid();
+        Guid apiKeyConflictId = Guid.NewGuid();
 
         await using (DataContext migrate = contextFactory())
         {
@@ -215,7 +216,8 @@ public sealed class DownloadClientUserInfoMigratorTests
                 NewClient(uppercaseSchemeId, "uppercase-scheme", DownloadClientTypeName.qBittorrent, "HTTP://user:pass@upper-host:80/"),
                 NewClient(usernameOnlyId, "username-only", DownloadClientTypeName.qBittorrent, "http://justuser@username-only-host/"),
                 NewClient(passwordOnlyId, "password-only", DownloadClientTypeName.qBittorrent, "http://:justpass@password-only-host/"),
-                NewClient(emptyUserInfoId, "empty-userinfo", DownloadClientTypeName.qBittorrent, "http://@empty-userinfo-host/"));
+                NewClient(emptyUserInfoId, "empty-userinfo", DownloadClientTypeName.qBittorrent, "http://@empty-userinfo-host/"),
+                NewClient(apiKeyConflictId, "api-key-conflict", DownloadClientTypeName.qBittorrent, "http://auser:apass@apikey-host/", apiKey: "secret-key"));
 
             await seed.SaveChangesAsync();
         }
@@ -311,9 +313,17 @@ public sealed class DownloadClientUserInfoMigratorTests
             emptyUserInfo.HttpAuthUsername.ShouldBeNull();
             emptyUserInfo.HttpAuthPassword.ShouldBeNull();
             emptyUserInfo.Host!.OriginalString.ShouldBe("http://@empty-userinfo-host/");
+
+            // An API key conflicts with HTTP auth for qBittorrent, so only the userinfo goes.
+            DownloadClientConfig apiKeyConflict = clients[apiKeyConflictId];
+            apiKeyConflict.ApiKey.ShouldBe("secret-key");
+            apiKeyConflict.HttpAuthUsername.ShouldBeNull();
+            apiKeyConflict.HttpAuthPassword.ShouldBeNull();
+            apiKeyConflict.Host!.OriginalString.ShouldBe("http://apikey-host/");
+            Should.NotThrow(() => apiKeyConflict.Validate());
         }
 
-        logger.Received(1).Log(
+        logger.Received(2).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -337,9 +347,15 @@ public sealed class DownloadClientUserInfoMigratorTests
                 .SingleAsync(c => c.Id == uTorrentExistingCredsId);
             uTorrentExistingCredsAgain.Username.ShouldBe("existing");
             uTorrentExistingCredsAgain.Password.ShouldBe("existingpass");
+
+            DownloadClientConfig apiKeyConflictAgain = await assertAgain.DownloadClients
+                .AsNoTracking()
+                .SingleAsync(c => c.Id == apiKeyConflictId);
+            apiKeyConflictAgain.ApiKey.ShouldBe("secret-key");
+            apiKeyConflictAgain.HttpAuthUsername.ShouldBeNull();
         }
 
-        logger.Received(1).Log(
+        logger.Received(2).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
             Arg.Any<object>(),
@@ -353,7 +369,8 @@ public sealed class DownloadClientUserInfoMigratorTests
         DownloadClientTypeName typeName,
         string host,
         string? username = null,
-        string? password = null) => new()
+        string? password = null,
+        string? apiKey = null) => new()
     {
         Id = id,
         Name = name,
@@ -362,5 +379,6 @@ public sealed class DownloadClientUserInfoMigratorTests
         Host = new Uri(host, UriKind.RelativeOrAbsolute),
         Username = username,
         Password = password,
+        ApiKey = apiKey,
     };
 }
