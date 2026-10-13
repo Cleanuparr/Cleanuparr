@@ -994,5 +994,161 @@ describe('DownloadClientsComponent', () => {
       expect(component.clientForm.apiKey().errors()).toEqual([]);
       expect(component.hasModalErrors()).toBe(false);
     });
+
+    it('clears HTTP auth credentials when switching from a client with them to one without', () => {
+      const { fixture, component } = setup();
+
+      component.openAddModal();
+      fixture.detectChanges();
+
+      chooseClientType(fixture, 'qBittorrent');
+      component.clientForm.httpAuthUsername().value.set('proxy-user');
+      component.clientForm.httpAuthPassword().value.set('proxy-pass');
+      fixture.detectChanges();
+
+      expect(component.clientModel().httpAuthUsername).toBe('proxy-user');
+      expect(component.clientModel().httpAuthPassword).toBe('proxy-pass');
+
+      chooseClientType(fixture, 'Transmission');
+
+      expect(component.clientModel().httpAuthUsername).toBe('');
+      expect(component.clientModel().httpAuthPassword).toBe('');
+    });
+
+    it('shows the HTTP auth type selector for types without dedicated fields and uses shared username/password', () => {
+      const { fixture, component } = setup();
+
+      component.openAddModal();
+      fixture.detectChanges();
+
+      chooseClientType(fixture, 'rTorrent');
+
+      expect(selectTriggerByLabel(fixture, 'HTTP Authentication')).toBeTruthy();
+      expect(component.showHttpAuthCredentialFields()).toBe(false);
+      expect(fieldLabels(fixture)).toContain('Username');
+      expect(fieldLabels(fixture)).toContain('Password');
+    });
+
+    it('shows different hints for clients with dedicated HTTP auth fields vs reused fields', () => {
+      const { fixture, component } = setup();
+
+      component.openAddModal();
+      fixture.detectChanges();
+
+      chooseClientType(fixture, 'qBittorrent');
+
+      expect(hintFor(fixture, 'Username')).toBe('Username for authentication');
+      expect(hintFor(fixture, 'Password')).toBe('Password for authentication');
+      expect(component.httpAuthHint()).toBe('For a reverse proxy that asks for HTTP auth. Pick Digest only if the proxy challenges with Digest.');
+
+      chooseClientType(fixture, 'rTorrent');
+
+      expect(hintFor(fixture, 'Username')).toBe('Username for the client and its reverse proxy');
+      expect(hintFor(fixture, 'Password')).toBe('Password for the client and its reverse proxy');
+      expect(component.httpAuthHint()).toBe('For a reverse proxy that asks for HTTP auth. Uses the username and password above. Pick Digest only if the proxy challenges with Digest.');
+    });
+
+    it('accepts Digest without error when a username is provided for a client with dedicated fields', () => {
+      const { fixture, component } = setup();
+
+      component.openAddModal();
+      component.clientForm.name().value.set('qbit box');
+      component.clientForm.host().value.set('http://localhost:8080');
+      component.clientForm.httpAuthType().value.set(HttpAuthType.Digest);
+      component.clientForm.httpAuthUsername().value.set('proxy-user');
+      fixture.detectChanges();
+
+      expect(component.clientForm.httpAuthUsername().errors()).toEqual([]);
+      expect(component.hasModalErrors()).toBe(false);
+    });
+
+    it('accepts Digest without error when a username is provided for a client reusing fields', () => {
+      const { fixture, component } = setup();
+
+      component.openAddModal();
+      component.clientForm.name().value.set('rt box');
+      component.clientForm.host().value.set('http://localhost:8080');
+      fixture.detectChanges();
+
+      chooseClientType(fixture, 'rTorrent');
+      component.clientForm.httpAuthType().value.set(HttpAuthType.Digest);
+      component.clientForm.username().value.set('rt-user');
+      fixture.detectChanges();
+
+      expect(component.clientForm.username().errors()).toEqual([]);
+      expect(component.hasModalErrors()).toBe(false);
+    });
+
+    it('loads HTTP auth fields when editing an existing client', () => {
+      const delugeWithBasic: ClientConfig = {
+        ...DELUGE,
+        httpAuthType: HttpAuthType.Basic,
+        httpAuthUsername: 'proxy-user',
+        httpAuthPassword: 'proxy-pass',
+      };
+      const { fixture, component } = setup(createApi({ clients: [delugeWithBasic] }));
+
+      component.openEditModal(delugeWithBasic);
+      fixture.detectChanges();
+
+      expect(component.clientModel().httpAuthType).toBe(HttpAuthType.Basic);
+      expect(component.clientModel().httpAuthUsername).toBe('proxy-user');
+      expect(component.clientModel().httpAuthPassword).toBe('proxy-pass');
+    });
+
+    it('sends updated HTTP auth fields when editing a client', () => {
+      const qbitWithHttpAuth: ClientConfig = {
+        ...QBIT,
+        httpAuthType: HttpAuthType.Basic,
+        httpAuthUsername: 'proxy-user',
+        httpAuthPassword: 'proxy-pass',
+      };
+      const { fixture, component, api } = setup(createApi({ clients: [qbitWithHttpAuth] }));
+
+      component.openEditModal(qbitWithHttpAuth);
+      component.clientForm.httpAuthType().value.set(HttpAuthType.Digest);
+      component.clientForm.httpAuthUsername().value.set('updated-user');
+      fixture.detectChanges();
+
+      component.saveClient();
+      fixture.detectChanges();
+
+      expect(api.update).toHaveBeenCalledWith(
+        'client-qb',
+        expect.objectContaining({
+          httpAuthType: HttpAuthType.Digest,
+          httpAuthUsername: 'updated-user',
+          httpAuthPassword: 'proxy-pass',
+        }),
+      );
+    });
+
+    it('drops empty HTTP auth fields when updating a client to Basic', () => {
+      const qbitWithHttpAuth: ClientConfig = {
+        ...QBIT,
+        httpAuthType: HttpAuthType.Digest,
+        httpAuthUsername: 'proxy-user',
+        httpAuthPassword: 'proxy-pass',
+      };
+      const { fixture, component, api } = setup(createApi({ clients: [qbitWithHttpAuth] }));
+
+      component.openEditModal(qbitWithHttpAuth);
+      component.clientForm.httpAuthType().value.set(HttpAuthType.Basic);
+      component.clientForm.httpAuthUsername().value.set('');
+      component.clientForm.httpAuthPassword().value.set('');
+      fixture.detectChanges();
+
+      component.saveClient();
+      fixture.detectChanges();
+
+      expect(api.update).toHaveBeenCalledWith(
+        'client-qb',
+        expect.objectContaining({
+          httpAuthType: HttpAuthType.Basic,
+          httpAuthUsername: undefined,
+          httpAuthPassword: undefined,
+        }),
+      );
+    });
   });
 });
