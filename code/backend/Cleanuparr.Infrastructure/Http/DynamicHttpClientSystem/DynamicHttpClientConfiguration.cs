@@ -29,7 +29,10 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
         using var scope = _scopeFactory.CreateScope();
         var configStore = scope.ServiceProvider.GetRequiredService<IHttpClientConfigStore>();
 
-        if (!configStore.TryGetConfiguration(name, out HttpClientConfig? config))
+        // The store keys on the bare name, IHttpClientFactory sees "name#generation".
+        string baseName = DynamicHttpClientFactory.StripVersion(name);
+
+        if (!configStore.TryGetConfiguration(baseName, out HttpClientConfig? config))
             return;
 
         if (config.SendUserAgent)

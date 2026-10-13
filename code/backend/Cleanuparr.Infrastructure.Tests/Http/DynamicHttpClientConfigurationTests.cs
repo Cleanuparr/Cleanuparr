@@ -2,6 +2,8 @@ using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Shared.Helpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 using Shouldly;
 using Xunit;
 
@@ -111,6 +113,41 @@ public sealed class DynamicHttpClientConfigurationTests
         using HttpResponseMessage response = new(HttpStatusCode.InternalServerError);
 
         DynamicHttpClientConfiguration.IsRetryable(response, excludeUnauthorized: true).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Configure_WithAVersionedName_ResolvesTheBaseConfiguration()
+    {
+        HttpClientConfigStore store = new();
+        store.AddConfiguration("client", new HttpClientConfig { Type = HttpClientType.Plain, SendUserAgent = true });
+
+        ServiceCollection services = new();
+        services.AddSingleton<IHttpClientConfigStore>(store);
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        DynamicHttpClientConfiguration configuration = new(provider.GetRequiredService<IServiceScopeFactory>());
+        HttpClientFactoryOptions options = new();
+
+        configuration.Configure("client#1", options);
+
+        options.HttpClientActions.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public void Configure_WithAnUnknownBaseName_DoesNothing()
+    {
+        HttpClientConfigStore store = new();
+
+        ServiceCollection services = new();
+        services.AddSingleton<IHttpClientConfigStore>(store);
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        DynamicHttpClientConfiguration configuration = new(provider.GetRequiredService<IServiceScopeFactory>());
+        HttpClientFactoryOptions options = new();
+
+        configuration.Configure("client#1", options);
+
+        options.HttpClientActions.ShouldBeEmpty();
     }
 
     [Fact]
