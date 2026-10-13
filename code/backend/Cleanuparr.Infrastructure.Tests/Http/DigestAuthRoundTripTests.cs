@@ -45,15 +45,22 @@ public sealed class DigestAuthRoundTripTests
         DynamicHttpClientConfiguration.ApplyHttpAuth(additionalHandlers, handler, config);
 
         using HttpClient client = new(handler);
-        HttpResponseMessage response = await client.GetAsync(prefix);
 
-        string? capturedAuthorizationHeader = await serverTask;
-        listener.Stop();
+        try
+        {
+            HttpResponseMessage response = await client.GetAsync(prefix);
 
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        capturedAuthorizationHeader.ShouldNotBeNull();
-        capturedAuthorizationHeader.ShouldStartWith("Digest ");
-        capturedAuthorizationHeader.ShouldContain("username=\"user\"");
+            string? capturedAuthorizationHeader = await serverTask.WaitAsync(TimeSpan.FromSeconds(5));
+
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+            capturedAuthorizationHeader.ShouldNotBeNull();
+            capturedAuthorizationHeader.ShouldStartWith("Digest ");
+            capturedAuthorizationHeader.ShouldContain("username=\"user\"");
+        }
+        finally
+        {
+            listener.Stop();
+        }
     }
 
     private static async Task<string?> AnswerDigestChallengeAsync(HttpListener listener)
