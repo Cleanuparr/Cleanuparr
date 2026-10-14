@@ -52,12 +52,6 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
 
     private void BumpGeneration(string clientName) => _generations.AddOrUpdate(clientName, 1, (_, generation) => generation + 1);
 
-    public HttpClient CreateClient(string clientName, HttpClientConfig config)
-    {
-        RegisterConfiguration(clientName, config);
-        return CreateClient(clientName);
-    }
-
     public HttpClient CreateClient(string clientName)
     {
         if (!_configStore.TryGetConfiguration(clientName, out _))

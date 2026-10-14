@@ -10,11 +10,6 @@ namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 public interface IDynamicHttpClientFactory
 {
     /// <summary>
-    /// Creates an HttpClient with the specified configuration and registers it for future use
-    /// </summary>
-    HttpClient CreateClient(string clientName, HttpClientConfig config);
-    
-    /// <summary>
     /// Creates an HttpClient using a previously registered configuration
     /// </summary>
     HttpClient CreateClient(string clientName);
