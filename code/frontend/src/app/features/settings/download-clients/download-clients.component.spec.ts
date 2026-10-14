@@ -899,6 +899,33 @@ describe('DownloadClientsComponent', () => {
       );
     });
 
+    it('defaults the HTTP auth type to Basic for a client with none stored', () => {
+      const clientWithoutAuthType: ClientConfig = { ...QBIT, httpAuthType: undefined as unknown as HttpAuthType };
+      const { fixture, component } = setup(createApi({ clients: [clientWithoutAuthType] }));
+
+      component.openEditModal(clientWithoutAuthType);
+      fixture.detectChanges();
+
+      expect(component.clientModel().httpAuthType).toBe(HttpAuthType.Basic);
+    });
+
+    it('does not require a Digest username while the types are still loading', () => {
+      const types$ = new Subject<DownloadClientTypesResponse>();
+      const api = createApi();
+      api.getTypes.mockReturnValue(types$);
+      const { fixture, component } = setup(api);
+
+      component.openAddModal();
+      component.clientForm.name().value.set('qbit box');
+      component.clientForm.host().value.set('http://localhost:8080');
+      component.clientForm.httpAuthType().value.set(HttpAuthType.Digest);
+      fixture.detectChanges();
+
+      expect(component.hasModalErrors()).toBe(false);
+      expect(component.clientForm.httpAuthUsername().errors()).toEqual([]);
+      expect(component.clientForm.username().errors()).toEqual([]);
+    });
+
     it('loads the saved HTTP auth type and credentials into the form', () => {
       const qbitWithHttpAuth: ClientConfig = {
         ...QBIT,
