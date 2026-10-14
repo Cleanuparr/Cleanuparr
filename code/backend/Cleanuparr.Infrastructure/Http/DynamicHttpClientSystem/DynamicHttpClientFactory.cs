@@ -199,6 +199,8 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         var clientNames = updatedConfigurations.Select(kvp => kvp.Key).ToList();
         foreach (string clientName in clientNames)
         {
+            // Direct IHttpClientFactory consumers (ArrClient, notification proxies) request the bare name.
+            _optionsCache.TryRemove(clientName);
             _optionsCache.TryRemove(ComposeVersionedName(clientName, GetGeneration(clientName)));
             BumpGeneration(clientName);
         }

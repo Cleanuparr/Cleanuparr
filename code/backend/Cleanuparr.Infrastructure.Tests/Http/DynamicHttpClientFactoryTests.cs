@@ -18,6 +18,7 @@ public sealed class DynamicHttpClientFactoryTests
 {
     private readonly IHttpClientConfigStore _store = new HttpClientConfigStore();
     private readonly IHttpClientFactory _httpClientFactory = Substitute.For<IHttpClientFactory>();
+    private readonly OptionsCache<HttpClientFactoryOptions> _optionsCache = new();
     private readonly DynamicHttpClientFactory _factory;
 
     public DynamicHttpClientFactoryTests()
@@ -27,7 +28,7 @@ public sealed class DynamicHttpClientFactoryTests
         _factory = new DynamicHttpClientFactory(
             _httpClientFactory,
             _store,
-            new OptionsCache<HttpClientFactoryOptions>(),
+            _optionsCache,
             NullLogger<DynamicHttpClientFactory>.Instance);
     }
 
@@ -160,6 +161,27 @@ public sealed class DynamicHttpClientFactoryTests
 
         requestedNames.Count.ShouldBe(2);
         requestedNames[0].ShouldNotBe(requestedNames[1]);
+    }
+
+    [Fact]
+    public void UpdateAllClientsFromGeneralConfig_ShouldEvictTheBareName_OnEveryUpdate()
+    {
+        _factory.RegisterPlainClient("client", sendUserAgent: false);
+        GeneralConfig generalConfig = new()
+        {
+            HttpTimeout = 55,
+            HttpMaxRetries = 9,
+            HttpCertificateValidation = CertificateValidationType.Disabled,
+            HttpSendUserAgent = true,
+        };
+
+        // First update bumps the generation past 0, so the bare name stops matching GetGeneration's output.
+        _factory.UpdateAllClientsFromGeneralConfig(generalConfig);
+
+        _optionsCache.TryAdd("client", new HttpClientFactoryOptions());
+        _factory.UpdateAllClientsFromGeneralConfig(generalConfig);
+
+        _optionsCache.TryRemove("client").ShouldBeFalse();
     }
 
     private HttpClientConfig Stored(string clientName)
