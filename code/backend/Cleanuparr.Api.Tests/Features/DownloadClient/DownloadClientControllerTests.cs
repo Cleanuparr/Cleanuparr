@@ -291,6 +291,23 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDownloadClientConfig_UnparseableHost_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Name = "x",
+            Host = "http://host:abc",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("Host is not a valid URL");
+    }
+
+    [Fact]
     public async Task CreateDownloadClientConfig_HostWithUserInfo_PropagatesValidationException()
     {
         // Arrange
@@ -494,6 +511,27 @@ public class DownloadClientControllerTests : IDisposable
         result.ShouldBeOfType<OkObjectResult>();
         DownloadClientConfig saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
         saved.HttpAuthPassword.ShouldBe("stored-http-pass");
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_UnparseableHost_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://host:abc",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+        exception.Message.ShouldBe("Host is not a valid URL");
     }
 
     [Fact]
@@ -876,6 +914,25 @@ public class DownloadClientControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_UnparseableHost_ReturnsBadRequest()
+    {
+        // Arrange
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://host:abc",
+            Password = "pass",
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
     }
 
     [Fact]
