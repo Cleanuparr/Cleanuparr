@@ -841,6 +841,26 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task TestDownloadClient_RawPlaceholderHttpAuthPasswordNoClientId_ReturnsBadRequest()
+    {
+        // Arrange: no ClientId, so there is no stored value to resolve the placeholder against
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.Deluge,
+            Host = "http://localhost:8080",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
     public async Task TestDownloadClient_InvalidHost_ReturnsBadRequest()
     {
         // Arrange — empty host fails Validate; the controller wraps the exception in BadRequest
