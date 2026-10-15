@@ -7,6 +7,7 @@
 # CI therefore needs no network and every run sees the same library.
 #
 # Needs internet: each arr reads its metadata provider.
+# Needs ffmpeg: builds the tiny media file the upgrade-detection spec imports.
 # Stops the sonarr, radarr, whisparr, whisparr2, lidarr, chaptarr and sportarr containers.
 #
 # Re-run it when the pinned image tags change, or when the library has to change.
@@ -63,6 +64,9 @@ CHAPTARR_WANTED_TITLE='Finding Fortune'
 # UFC and Bellator, each limited to the current season at the add and pruned to a fixed few events after.
 SPORTARR_UFC_ID='lg-000079'
 SPORTARR_BELLATOR_ID='lg-000103'
+# Weapons: a third movie seeded with a file, for #381's upgrade-detection specs.
+# F1 and Wild Robot stay fileless for the specs that depend on them.
+RADARR_UPGRADE_TMDB_ID=1078605
 
 log() {
   echo "[seed-arr] $*"
@@ -163,6 +167,35 @@ wait_for_arr() {
   done
 
   echo "[seed-arr] $name did not start" >&2
+  return 1
+}
+
+build_media_file() {
+  local path="$1"
+
+  ffmpeg -y -loglevel error -f lavfi -i color=c=black:s=320x240:d=1 -c:v libx264 -pix_fmt yuv420p "$path"
+}
+
+wait_for_command() {
+  local url="$1" api_key="$2" command_id="$3" name="$4"
+
+  log "waiting for $name"
+  for _ in $(seq 1 60); do
+    local status
+    status=$(arr_get "$url" "$api_key" "/api/v3/command/$command_id" \
+      | python3 -c 'import sys,json; print(json.load(sys.stdin)["status"])')
+
+    if [[ "$status" == "completed" ]]; then
+      return 0
+    fi
+    if [[ "$status" == "failed" ]]; then
+      echo "[seed-arr] $name failed" >&2
+      return 1
+    fi
+    sleep 1
+  done
+
+  echo "[seed-arr] $name timed out" >&2
   return 1
 }
 
@@ -301,7 +334,62 @@ seed_radarr() {
     | merge_add_options '/movies' '{"searchForMovie":false}' 'false')
   arr_post "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' "$second" > /dev/null
 
+  log "adding the upgrade movie"
+  local upgrade
+  upgrade=$(arr_get "$RADARR_URL" "$RADARR_API_KEY" "/api/v3/movie/lookup?term=tmdb%3A$RADARR_UPGRADE_TMDB_ID" \
+    | merge_add_options '/movies' '{"searchForMovie":false}')
+  arr_post "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' "$upgrade" > /dev/null
+
   wait_for_items "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' 'radarr movies'
+
+  seed_radarr_upgrade_file
+}
+
+# Gives the third movie a file, for #381's upgrade-detection specs.
+seed_radarr_upgrade_file() {
+  log "importing a movie file for the upgrade spec"
+
+  local movie
+  movie=$(arr_get "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' | python3 -c "
+import json, sys
+movie = next(m for m in json.load(sys.stdin) if m['tmdbId'] == $RADARR_UPGRADE_TMDB_ID)
+print(json.dumps({'id': movie['id'], 'path': movie['path']}))
+")
+  local movie_id movie_path
+  movie_id=$(echo "$movie" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+  movie_path=$(echo "$movie" | python3 -c 'import json,sys; print(json.load(sys.stdin)["path"])')
+
+  local filename="Weapons.2025.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
+  local host_dir="$TEST_DATA/radarr-movies/$(basename "$movie_path")"
+  mkdir -p "$host_dir"
+  build_media_file "$host_dir/$filename"
+
+  local command_id
+  command_id=$(arr_post "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/command' "$(cat <<EOF
+{
+  "name": "ManualImport",
+  "files": [{
+    "path": "$movie_path/$filename",
+    "movieId": $movie_id,
+    "quality": { "quality": { "id": 8 }, "revision": { "version": 1, "real": 0, "isRepack": false } },
+    "languages": [{ "id": 1, "name": "English" }],
+    "indexerFlags": 0
+  }],
+  "importMode": "move"
+}
+EOF
+)" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+
+  wait_for_command "$RADARR_URL" "$RADARR_API_KEY" "$command_id" 'radarr upgrade movie import'
+
+  local has_file
+  has_file=$(arr_get "$RADARR_URL" "$RADARR_API_KEY" "/api/v3/movie/$movie_id" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["hasFile"])')
+
+  if [[ "$has_file" != "True" ]]; then
+    echo "[seed-arr] radarr upgrade movie never got a file" >&2
+    return 1
+  fi
 }
 
 seed_whisparr() {
@@ -514,6 +602,12 @@ snapshot() {
 
   sqlite3 "$dest/$db.db" 'PRAGMA journal_mode=DELETE; VACUUM;' > /dev/null
   rm -f "$dest/$db.db-wal" "$dest/$db.db-shm"
+
+  # Carries the on-disk file the upgrade spec's moviefile row points at.
+  # setup-test-data.sh restores it before every run, or the arr unlinks the row on its next disk scan.
+  if [[ "$arr" == radarr ]]; then
+    cp -R "$TEST_DATA/radarr-movies" "$dest/movies"
+  fi
 }
 
 main() {

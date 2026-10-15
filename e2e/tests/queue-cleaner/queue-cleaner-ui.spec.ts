@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import {
   loginAndGotoSettings,
   toggle,
@@ -11,6 +11,18 @@ import {
 
 // Behavior-parity spec for the Queue Cleaner settings form + stall-rule modal.
 test.describe('Queue Cleaner UI', () => {
+  // Privacy Type's hint contains "applies to", so hasText alone matches both fields.
+  // Excluding the Privacy Type label picks the right one.
+  function appliesToSelect(modal: Locator): Locator {
+    return modal.locator('app-select').filter({ hasText: 'Applies to' }).filter({ hasNotText: 'Privacy Type' });
+  }
+
+  async function selectAppliesTo(modal: Locator, optionText: string): Promise<void> {
+    const el = appliesToSelect(modal);
+    await el.getByRole('combobox').click();
+    await el.getByRole('option', { name: optionText, exact: true }).click();
+  }
+
   async function openStallModal(page: Page) {
     await ensureToggle(toggle(page, 'Enabled'), true);
     await ensureAccordionExpanded(
@@ -220,6 +232,83 @@ test.describe('Queue Cleaner UI', () => {
 
     await card.getByRole('button', { name: 'Delete rule' }).click();
     await page.getByRole('alertdialog', { name: 'Delete Stall Rule' })
+      .getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('stall modal: Applies to persists after save and reload', async ({ page }) => {
+    const name = `ui-content-type-stall-${Date.now()}`;
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    const modal = await openStallModal(page);
+
+    await modal.locator('app-input').filter({ hasText: 'Name' }).locator('input').fill(name);
+    await selectAppliesTo(modal, 'New');
+
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/api/queue-rules/stall') && r.request().method() === 'POST',
+    );
+    await modal.getByRole('button', { name: 'Create' }).click();
+    expect((await created).status()).toBeLessThan(300);
+    await expect(modal).toBeHidden();
+
+    const card = page.locator('.rule-card').filter({ hasText: name });
+    await expect(card).toBeVisible();
+
+    await page.reload();
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    await ensureAccordionExpanded(
+      page,
+      'Stalled Download Rules',
+      page.getByRole('button', { name: 'Add Stall Rule' }),
+    );
+    await expect(card).toBeVisible();
+
+    await card.getByRole('button', { name: 'Edit rule' }).click();
+    const editModal = page.getByRole('dialog', { name: 'Edit Stall Rule' });
+    await expect(appliesToSelect(editModal).getByRole('combobox')).toHaveText('New');
+
+    await editModal.getByRole('button', { name: 'Cancel' }).click();
+    await card.getByRole('button', { name: 'Delete rule' }).click();
+    await page.getByRole('alertdialog', { name: 'Delete Stall Rule' })
+      .getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('slow modal: Applies to persists after save and reload', async ({ page }) => {
+    const name = `ui-content-type-slow-${Date.now()}`;
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    const modal = await openSlowModal(page);
+
+    await modal.locator('app-input').filter({ hasText: 'Name' }).locator('input').fill(name);
+    await modal.locator('app-size-input').filter({ hasText: 'Minimum Speed' }).locator('input').first().fill('50');
+    await selectAppliesTo(modal, 'Upgrade');
+
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/api/queue-rules/slow') && r.request().method() === 'POST',
+    );
+    await modal.getByRole('button', { name: 'Create' }).click();
+    expect((await created).status()).toBeLessThan(300);
+    await expect(modal).toBeHidden();
+
+    const card = page.locator('.rule-card').filter({ hasText: name });
+    await expect(card).toBeVisible();
+
+    await page.reload();
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    await ensureAccordionExpanded(
+      page,
+      'Slow Download Rules',
+      page.getByRole('button', { name: 'Add Slow Rule' }),
+    );
+    await expect(card).toBeVisible();
+
+    await card.getByRole('button', { name: 'Edit rule' }).click();
+    const editModal = page.getByRole('dialog', { name: 'Edit Slow Rule' });
+    await expect(appliesToSelect(editModal).getByRole('combobox')).toHaveText('Upgrade');
+
+    await editModal.getByRole('button', { name: 'Cancel' }).click();
+    await card.getByRole('button', { name: 'Delete rule' }).click();
+    await page.getByRole('alertdialog', { name: 'Delete Slow Rule' })
       .getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(card).toHaveCount(0);
   });
