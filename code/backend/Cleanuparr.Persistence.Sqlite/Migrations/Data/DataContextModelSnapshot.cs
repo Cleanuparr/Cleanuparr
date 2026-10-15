@@ -1541,6 +1541,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("change_category");
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_type");
+
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_private_torrents_from_client");
@@ -1615,6 +1620,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<bool>("ChangeCategory")
                         .HasColumnType("INTEGER")
                         .HasColumnName("change_category");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_type");
 
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
                         .HasColumnType("INTEGER")

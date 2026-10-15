@@ -1545,6 +1545,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("change_category");
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
                         .HasColumnType("boolean")
                         .HasColumnName("delete_private_torrents_from_client");
@@ -1619,6 +1624,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Property<bool>("ChangeCategory")
                         .HasColumnType("boolean")
                         .HasColumnName("change_category");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
 
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
                         .HasColumnType("boolean")
