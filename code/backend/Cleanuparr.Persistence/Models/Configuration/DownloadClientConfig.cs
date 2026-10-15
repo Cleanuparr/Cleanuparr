@@ -130,7 +130,7 @@ public sealed record DownloadClientConfig
 
         if (Host.IsAbsoluteUri && Host.UserInfo.Length > 0)
         {
-            throw new ValidationException(
+            throw new CustomValidationException(
                 "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 
@@ -153,13 +153,13 @@ public sealed record DownloadClientConfig
         if (TypeName.ApiKeyConflictsWithHttpAuth() && !string.IsNullOrWhiteSpace(ApiKey) &&
             !string.IsNullOrWhiteSpace(HttpAuthUsername))
         {
-            throw new ValidationException(
+            throw new CustomValidationException(
                 "API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
         }
 
         if (HttpAuthType == HttpAuthType.Digest && string.IsNullOrWhiteSpace(DigestUsername))
         {
-            throw new ValidationException("HTTP Digest authentication requires a username");
+            throw new CustomValidationException("HTTP Digest authentication requires a username");
         }
     }
 

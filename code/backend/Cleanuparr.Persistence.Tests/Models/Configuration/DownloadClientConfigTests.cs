@@ -117,7 +117,7 @@ public sealed class DownloadClientConfigTests
             Host = new Uri("http://user:pass@localhost:8080")
         };
 
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        var exception = Should.Throw<CustomValidationException>(() => config.Validate());
         exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
     }
 
@@ -351,7 +351,7 @@ public sealed class DownloadClientConfigTests
             HttpAuthUsername = "proxyuser"
         };
 
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        var exception = Should.Throw<CustomValidationException>(() => config.Validate());
         exception.Message.ShouldBe("API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
     }
 
@@ -398,7 +398,7 @@ public sealed class DownloadClientConfigTests
             HttpAuthType = HttpAuthType.Digest,
         };
 
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        var exception = Should.Throw<CustomValidationException>(() => config.Validate());
         exception.Message.ShouldBe("HTTP Digest authentication requires a username");
     }
 
@@ -431,7 +431,7 @@ public sealed class DownloadClientConfigTests
             Username = "qbit-login-user",
         };
 
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        var exception = Should.Throw<CustomValidationException>(() => config.Validate());
         exception.Message.ShouldBe("HTTP Digest authentication requires a username");
     }
 

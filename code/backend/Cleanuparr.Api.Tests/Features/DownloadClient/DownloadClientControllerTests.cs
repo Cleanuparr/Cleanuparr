@@ -159,7 +159,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
         exception.Message.ShouldBe("API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
     }
@@ -178,7 +178,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
         exception.Message.ShouldBe("HTTP Digest authentication requires a username");
     }
@@ -221,7 +221,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
         exception.Message.ShouldBe("HTTP auth password cannot be a placeholder value");
     }
@@ -302,7 +302,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
         exception.Message.ShouldBe("Host is not a valid URL");
     }
@@ -319,7 +319,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
         exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
     }
@@ -529,7 +529,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.UpdateDownloadClientConfig(client.Id, request));
         exception.Message.ShouldBe("Host is not a valid URL");
     }
@@ -550,7 +550,7 @@ public class DownloadClientControllerTests : IDisposable
         };
 
         // Act / Assert
-        Cleanuparr.Domain.Exceptions.ValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.ValidationException>(
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.UpdateDownloadClientConfig(client.Id, request));
         exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
     }

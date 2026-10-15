@@ -61,7 +61,7 @@ public sealed record UpdateDownloadClientRequest
 
         if (parsedHost.IsAbsoluteUri && parsedHost.UserInfo.Length > 0)
         {
-            throw new ValidationException(
+            throw new CustomValidationException(
                 "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 

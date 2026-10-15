@@ -61,7 +61,7 @@ public sealed record CreateDownloadClientRequest
 
         if (parsedHost.IsAbsoluteUri && parsedHost.UserInfo.Length > 0)
         {
-            throw new ValidationException(
+            throw new CustomValidationException(
                 "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 
@@ -82,7 +82,7 @@ public sealed record CreateDownloadClientRequest
 
         if (HttpAuthPassword.IsPlaceholder())
         {
-            throw new ValidationException("HTTP auth password cannot be a placeholder value");
+            throw new CustomValidationException("HTTP auth password cannot be a placeholder value");
         }
 
         if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey))
