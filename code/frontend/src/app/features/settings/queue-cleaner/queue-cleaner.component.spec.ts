@@ -7,7 +7,7 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { QueueCleanerConfig } from '@shared/models/queue-cleaner-config.model';
 import { SlowRule, StallRule } from '@shared/models/queue-rule.model';
-import { PatternMode, ScheduleUnit, TorrentPrivacyType } from '@shared/models/enums';
+import { PatternMode, QueueRuleContentType, ScheduleUnit, TorrentPrivacyType } from '@shared/models/enums';
 import { QueueCleanerComponent } from './queue-cleaner.component';
 
 const CONFIG: QueueCleanerConfig = {
@@ -37,6 +37,7 @@ const STALL_RULES: StallRule[] = [
     enabled: true,
     maxStrikes: 3,
     privacyType: TorrentPrivacyType.Both,
+    contentType: QueueRuleContentType.All,
     minCompletionPercentage: 0,
     maxCompletionPercentage: 100,
     deletePrivateTorrentsFromClient: false,
@@ -52,6 +53,7 @@ const SLOW_RULES: SlowRule[] = [
     enabled: true,
     maxStrikes: 5,
     privacyType: TorrentPrivacyType.Both,
+    contentType: QueueRuleContentType.All,
     minCompletionPercentage: 0,
     maxCompletionPercentage: 50,
     deletePrivateTorrentsFromClient: false,
@@ -231,8 +233,10 @@ describe('QueueCleanerComponent', () => {
 
     expect(component.stallCoverage().hasGaps).toBe(false);
     expect(component.slowCoverage().gaps).toEqual([
-      { privacyType: TorrentPrivacyType.Public, from: 50, to: 100 },
-      { privacyType: TorrentPrivacyType.Private, from: 50, to: 100 },
+      { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.New, from: 50, to: 100 },
+      { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.Upgrade, from: 50, to: 100 },
+      { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.New, from: 50, to: 100 },
+      { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.Upgrade, from: 50, to: 100 },
     ]);
 
     component.stallExpanded.set(true);
@@ -264,6 +268,27 @@ describe('QueueCleanerComponent', () => {
     fixture.detectChanges();
     expect(component.editingSlowRule()).toBeNull();
     expect(component.slowModalVisible()).toBe(true);
+  });
+
+  it('offers the applies-to select for both rule modals, defaulting new rules to All', () => {
+    const { fixture, component } = setup();
+
+    component.openStallModal();
+    fixture.detectChanges();
+    const stallSelect = fixture.nativeElement.querySelector(
+      'app-select[helpkey="queue-cleaner:stallRule.contentType"]',
+    );
+    expect(stallSelect).toBeTruthy();
+    expect(stallSelect.textContent).toContain('All');
+
+    component.stallModalVisible.set(false);
+    component.openSlowModal();
+    fixture.detectChanges();
+    const slowSelect = fixture.nativeElement.querySelector(
+      'app-select[helpkey="queue-cleaner:slowRule.contentType"]',
+    );
+    expect(slowSelect).toBeTruthy();
+    expect(slowSelect.textContent).toContain('All');
   });
 
   it('shows the empty state copy when a rule list is empty', () => {

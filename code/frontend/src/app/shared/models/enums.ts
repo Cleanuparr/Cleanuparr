@@ -81,6 +81,12 @@ export enum TorrentPrivacyType {
   Both = 'Both',
 }
 
+export enum QueueRuleContentType {
+  All = 'All',
+  New = 'New',
+  Upgrade = 'Upgrade',
+}
+
 export enum NtfyAuthenticationType {
   None = 'None',
   BasicAuth = 'BasicAuth',
