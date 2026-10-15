@@ -191,8 +191,12 @@ public sealed class QueueCleaner : GenericHandler
                 continue;
             }
 
-            // push record to context
             ContextProvider.Set(nameof(QueueRecord), record);
+
+            bool? isUpgrade = hasContentId && arrClient is IUpgradeDetectionCapable upgradeDetectionCapable
+                ? upgradeDetectionCapable.IsUpgrade(group.ToList())
+                : null;
+            ContextProvider.Set(ContextProvider.Keys.IsUpgrade, isUpgrade!);
 
             (DownloadCheckResult downloadCheckResult, DownloadClientConfig? foundInClient) = await FindInClientsAsync<IQueueCheckCapable, DownloadCheckResult>(
                 record,
