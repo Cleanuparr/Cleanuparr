@@ -2567,6 +2567,10 @@ public class SeekerTests : IDisposable
                 new SearchableMovie { Id = 3, Title = "Above Cutoff", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = false }, Tags = [] }
             ]));
 
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = true }]);
+
         SearchItem? capturedSearchItem = null;
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2660,6 +2664,10 @@ public class SeekerTests : IDisposable
                 new SearchableMovie { Id = 4, Title = "Both Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 400, QualityCutoffNotMet = false }, Tags = [] }
             ]));
 
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = true }]);
+
         List<SearchItem> capturedSearchItems = [];
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2683,6 +2691,265 @@ public class SeekerTests : IDisposable
         capturedSearchItems.ShouldContain(item => item.Id == 2);
         capturedSearchItems.ShouldContain(item => item.Id == 3);
         capturedSearchItems.ShouldNotContain(item => item.Id == 4);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_UseCustomFormatScore_UpgradesDisabledProfile_ExcludesBelowCutoffMovie()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 2,
+            ItemType = InstanceType.Radarr,
+            CurrentScore = 10,
+            CutoffScore = 50,
+            Title = "Below Cutoff"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 2, Title = "Below Cutoff", Status = "released", Monitored = true, HasFile = true, QualityProfileId = 0, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] }
+            ]));
+
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = false }]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_UseCustomFormatScore_UpgradesDisabledProfile_SearchesOnlyMissingMovie()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 2,
+            ItemType = InstanceType.Radarr,
+            CurrentScore = 10,
+            CutoffScore = 50,
+            Title = "Below Cutoff"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, QualityProfileId = 0, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Below Cutoff", Status = "released", Monitored = true, HasFile = true, QualityProfileId = 0, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] }
+            ]));
+
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = false }]);
+
+        SearchItem? capturedSearchItem = null;
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                capturedSearchItem = ci.ArgAt<SearchItem>(1);
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.Id.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_UseCutoffAndUseCustomFormatScore_UpgradesDisabledProfile_StillSearchesCutoffNotMet()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 3, Title = "Cutoff Not Met", Status = "released", Monitored = true, HasFile = true, QualityProfileId = 0, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = true }, Tags = [] }
+            ]));
+
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = false }]);
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.EventPublisher.Received(1)
+            .PublishSearchTriggered(
+                "Cutoff Not Met",
+                SeekerSearchType.Proactive,
+                SeekerSearchReason.QualityCutoffNotMet,
+                Arg.Any<Guid?>(),
+                Arg.Any<bool?>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_UseCustomFormatScoreDisabled_DoesNotFetchQualityProfiles()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = false
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _radarrClient.DidNotReceive()
+            .GetQualityProfilesAsync(Arg.Any<ArrInstance>());
     }
 
     [Fact]
@@ -3024,6 +3291,10 @@ public class SeekerTests : IDisposable
                 new SearchableEpisode { Id = 101, SeasonNumber = 2, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = true, EpisodeFileId = 600 }
             ]);
 
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = true }]);
+
         SeriesSearchItem? capturedSearchItem = null;
         mockArrClient
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
@@ -3045,6 +3316,138 @@ public class SeekerTests : IDisposable
         // Assert — only season 1 (below CF cutoff) should be searched
         capturedSearchItem.ShouldNotBeNull();
         capturedSearchItem.Id.ShouldBe(1); // Season 1
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_UseCustomFormatScore_UpgradesDisabledProfile_ExcludesBelowCutoffEpisode()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            CurrentScore = 10,
+            CutoffScore = 50,
+            Title = "Below CF Cutoff"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, QualityProfileId = 0, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 9 } }
+            ]));
+
+        DateTime pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10)
+            .Returns(
+            [
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = true, EpisodeFileId = 500 }
+            ]);
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = false }]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _sonarrClient.Received().GetEpisodesAsync(Arg.Any<ArrInstance>(), 10);
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_FullyDownloaded_UpgradesDisabledProfile_SkipsEpisodeFetch()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Fully Downloaded Series", Status = "continuing", Monitored = true, QualityProfileId = 0, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
+            ]));
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = false }]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _sonarrClient.DidNotReceive()
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10);
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
     }
 
     [Fact]
