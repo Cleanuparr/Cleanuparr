@@ -3451,6 +3451,57 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Sonarr_UseCustomFormatScoreDisabled_DoesNotFetchQualityProfiles()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = false
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Fully Downloaded Series", Status = "continuing", Monitored = true, QualityProfileId = 1, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
+            ]));
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _sonarrClient.DidNotReceive()
+            .GetQualityProfilesAsync(Arg.Any<ArrInstance>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Sonarr_MonitoredOnlyTrue_ExcludesUnmonitoredSeries()
     {
         // Arrange — MonitoredOnly true: unmonitored series should be excluded
