@@ -914,7 +914,7 @@ public sealed class Seeker : IHandler
         }
 
         bool BelowCustomFormatCutoff(SearchableEpisode e) =>
-            cfScores != null && cfScores.TryGetValue(e.Id, out var entry) && entry.CurrentScore < entry.CutoffScore;
+            cfScores != null && cfScores.TryGetValue(e.Id, out CustomFormatScoreEntry? entry) && entry.CurrentScore < entry.CutoffScore;
 
         // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed.
         // Cutoff status comes from the episodefile endpoint; items without a cached CF score are excluded.
