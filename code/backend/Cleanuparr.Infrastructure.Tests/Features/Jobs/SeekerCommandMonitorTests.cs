@@ -9,6 +9,7 @@ using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -931,6 +932,259 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         grabbedItems!.ShouldBe(["Example.Book.EPUB"]);
     }
 
+    #region RecordUnitOutcomeAsync
+
+    [Fact]
+    public async Task Grabbed_outcome_marks_the_unit_grabbed_and_increments_counters()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, cycleId, externalItemId: 500);
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 500);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse
+            {
+                TotalRecords = 1,
+                Records = [new QueueRecord { Id = 1, MovieId = 500, Title = "Grabbed.Movie", DownloadId = "HASH500", Protocol = "torrent", Status = "downloading" }]
+            });
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastOutcome.ShouldBe(SeekerSearchOutcome.Grabbed);
+        unit.Grabs.ShouldBe(1);
+
+        SeekerCycle cycle = await _eventsContext.SeekerCycles.AsNoTracking().SingleAsync(c => c.Id == cycleId);
+        cycle.GrabbedUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task NothingGrabbed_outcome_marks_the_unit_and_leaves_counters_untouched()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, cycleId, externalItemId: 501);
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 501);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastOutcome.ShouldBe(SeekerSearchOutcome.NothingGrabbed);
+        unit.Grabs.ShouldBe(0);
+
+        SeekerCycle cycle = await _eventsContext.SeekerCycles.AsNoTracking().SingleAsync(c => c.Id == cycleId);
+        cycle.GrabbedUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Failed_command_marks_the_unit_failed()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, cycleId, externalItemId: 502);
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 502);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Failed);
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastOutcome.ShouldBe(SeekerSearchOutcome.Failed);
+    }
+
+    [Fact]
+    public async Task Timed_out_command_marks_the_unit_failed()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, cycleId, externalItemId: 503);
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 503, age: TimeSpan.FromMinutes(31));
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Started);
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastOutcome.ShouldBe(SeekerSearchOutcome.Failed);
+    }
+
+    [Fact]
+    public async Task Replacement_search_without_a_cycle_leaves_units_and_cycles_untouched()
+    {
+        // Arrange: a replacement search's event carries no CycleId
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, cycleId: null, externalItemId: 504);
+
+        _eventsContext.SeekerCycles.Add(new SeekerCycle { Id = cycleId, ArrInstanceId = radarrInstance.Id, GrabbedUnits = 0 });
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 504);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse
+            {
+                TotalRecords = 1,
+                Records = [new QueueRecord { Id = 1, MovieId = 504, Title = "Grabbed.Movie", DownloadId = "HASH504", Protocol = "torrent", Status = "downloading" }]
+            });
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastOutcome.ShouldBeNull();
+        unit.Grabs.ShouldBe(0);
+
+        SeekerCycle cycle = await _eventsContext.SeekerCycles.AsNoTracking().SingleAsync(c => c.Id == cycleId);
+        cycle.GrabbedUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Dry_run_unit_rows_are_never_updated()
+    {
+        // Arrange: a dry-run unit with the same identifiers as the live search
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = Guid.NewGuid();
+
+        _eventsContext.Events.Add(new AppEvent
+        {
+            Id = eventId,
+            EventType = EventType.SearchTriggered,
+            Message = "Search triggered",
+            Severity = EventSeverity.Information,
+            CycleId = cycleId,
+        });
+        _eventsContext.SeekerCycles.Add(new SeekerCycle { Id = cycleId, ArrInstanceId = radarrInstance.Id, GrabbedUnits = 0 });
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 505,
+            ItemType = InstanceType.Radarr,
+            CycleId = cycleId,
+            ItemTitle = "Dry Run Movie",
+            IsDryRun = true,
+        });
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 505);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse
+            {
+                TotalRecords = 1,
+                Records = [new QueueRecord { Id = 1, MovieId = 505, Title = "Grabbed.Movie", DownloadId = "HASH505", Protocol = "torrent", Status = "downloading" }]
+            });
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastOutcome.ShouldBeNull();
+        unit.Grabs.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Adds the search-triggered event and matching unit history row RecordUnitOutcomeAsync reads to attribute an outcome.
+    /// </summary>
+    private Guid SetUpUnitOutcomeScenario(Guid arrInstanceId, Guid? cycleId, long externalItemId)
+    {
+        Guid eventId = Guid.NewGuid();
+
+        _eventsContext.Events.Add(new AppEvent
+        {
+            Id = eventId,
+            EventType = EventType.SearchTriggered,
+            Message = "Search triggered",
+            Severity = EventSeverity.Information,
+            CycleId = cycleId,
+        });
+
+        if (cycleId.HasValue)
+        {
+            _eventsContext.SeekerCycles.Add(new SeekerCycle { Id = cycleId.Value, ArrInstanceId = arrInstanceId, GrabbedUnits = 0 });
+        }
+
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = arrInstanceId,
+            ExternalItemId = externalItemId,
+            ItemType = InstanceType.Radarr,
+            CycleId = cycleId ?? Guid.NewGuid(),
+            ItemTitle = "Test Item",
+        });
+
+        return eventId;
+    }
+
+    #endregion
+
     private SeekerCommandTracker Tracker(
         Guid arrInstanceId,
         long externalItemId,
@@ -989,14 +1243,15 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         Guid eventId,
         long commandId = 1,
         TimeSpan? age = null,
-        SearchCommandStatus status = SearchCommandStatus.Pending)
+        SearchCommandStatus status = SearchCommandStatus.Pending,
+        long externalItemId = 300)
     {
         _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
             ArrInstanceId = arrInstanceId,
             CommandId = commandId,
             EventId = eventId,
-            ExternalItemId = 300,
+            ExternalItemId = externalItemId,
             ItemTitle = "Test Item",
             SeasonNumber = 0,
             Status = status,
