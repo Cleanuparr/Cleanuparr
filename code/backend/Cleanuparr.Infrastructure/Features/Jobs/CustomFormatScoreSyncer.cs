@@ -266,7 +266,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string profileName = profile?.Name ?? "Unknown";
 
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now, seasonNumber: null);
 
                 synced++;
             }
@@ -419,7 +419,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
 
                     existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now);
+                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now, episode.SeasonNumber);
 
                     synced++;
                 }
@@ -514,7 +514,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         int cutoffScore,
         string profileName,
         bool isMonitored,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        int? seasonNumber)
     {
         if (existing is not null)
         {
@@ -545,6 +546,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             existing.Title = title;
             existing.IsMonitored = isMonitored;
             existing.LastSyncedAt = now;
+            existing.SeasonNumber = seasonNumber;
         }
         else
         {
@@ -561,6 +563,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 QualityProfileName = profileName,
                 IsMonitored = isMonitored,
                 LastSyncedAt = now,
+                SeasonNumber = seasonNumber,
             });
 
             // Record initial score in history

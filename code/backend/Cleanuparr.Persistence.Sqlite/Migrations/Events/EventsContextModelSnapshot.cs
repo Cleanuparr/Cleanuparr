@@ -343,6 +343,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("quality_profile_name");
 
+                    b.Property<int?>("SeasonNumber")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("season_number");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT")

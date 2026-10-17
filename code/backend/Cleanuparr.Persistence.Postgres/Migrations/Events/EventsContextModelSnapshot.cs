@@ -347,6 +347,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("text")
                         .HasColumnName("quality_profile_name");
 
+                    b.Property<int?>("SeasonNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("season_number");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text")

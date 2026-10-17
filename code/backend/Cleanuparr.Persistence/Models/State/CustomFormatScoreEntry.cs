@@ -75,4 +75,9 @@ public sealed record CustomFormatScoreEntry
     /// Null when the item has no recorded upgrades.
     /// </summary>
     public DateTimeOffset? LastUpgradedAt { get; set; }
+
+    /// <summary>
+    /// Sonarr season of the episode; null for Radarr and for rows not yet re-synced.
+    /// </summary>
+    public int? SeasonNumber { get; set; }
 }
