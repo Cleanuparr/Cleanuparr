@@ -11,14 +11,17 @@ import {
   expectNoSearch,
   firstSearchEvent,
   listSearchEvents,
+  resetDownloads,
   resetLiveArrState,
   restoreLibrary,
   snapshotLibrary,
   teardownInstances,
   teardownQueueCleaner,
   triggerSeeker,
+  updateInstance,
   RUN_TAG,
   TRIGGERED_SEARCH_TIMEOUT,
+  type SeededArr,
 } from '../helpers/seeker-live';
 import { grabbableRelease, grabbableReleases } from '../helpers/mocks/torznab-stubs';
 
@@ -105,6 +108,27 @@ test.describe('Seeker candidate filters', () => {
     }
 
     throw new Error('the queue cleaner never struck the grabbed download');
+  }
+
+  /**
+   * Triggers one search and waits for the arr to record its grab.
+   *
+   * History, not the queue: the arr can refuse to track a release an earlier test grabbed.
+   */
+  async function grabOnce(api: CleanuparrApi, instanceId: string, target: SeededArr): Promise<void> {
+    const since = encodeURIComponent(new Date().toISOString());
+
+    await triggerSeeker(api);
+    await expect
+      .poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS })
+      .toBe(1);
+
+    await expect
+      .poll(
+        async () => (await target.arr.get<unknown[]>(`/api/v3/history/since?date=${since}&eventType=1`)).length,
+        { timeout: TRIGGERED_SEARCH_TIMEOUT },
+      )
+      .toBeGreaterThan(0);
   }
 
   /** Whether a strike landed within the window, without failing the test if none did. */
@@ -280,5 +304,50 @@ test.describe('Seeker candidate filters', () => {
         { timeout: SETTLE_MS },
       )
       .toBe(2);
+  });
+
+  test('skips a movie grabbed within the recent grab window', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { monitoredOnly: true } });
+    await grabOnce(api, instanceId, RADARR);
+    await resetDownloads();
+
+    await updateInstance(api, instanceId, { recentGrabWindowHours: 24 });
+    await triggerSeeker(api);
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+
+    // The grab stays in arr history after resetDownloads clears the queue, so it is still skipped.
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(1);
+  });
+
+  test('searches a grabbed movie again with the window off', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { monitoredOnly: true } });
+    await grabOnce(api, instanceId, RADARR);
+    await resetDownloads();
+
+    await triggerSeeker(api);
+
+    await expect
+      .poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS })
+      .toBe(2);
+  });
+
+  test('skips an episode grabbed within the recent grab window', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    await indexerMock.stubMany(grabbableRelease(SONARR.searchMode, SONARR.release, SONARR.category).mappings);
+
+    const instanceId = await arrangeInstance(api, SONARR, { instance: { monitoredOnly: true } });
+    await grabOnce(api, instanceId, SONARR);
+    await resetDownloads();
+
+    await updateInstance(api, instanceId, { recentGrabWindowHours: 24 });
+    await triggerSeeker(api);
+    await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(1);
   });
 });
