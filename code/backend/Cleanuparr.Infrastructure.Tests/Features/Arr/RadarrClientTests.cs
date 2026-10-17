@@ -599,6 +599,84 @@ public class RadarrClientTests
 
     #endregion
 
+    #region GetMissingMoviesAsync / GetCutoffUnmetMoviesAsync
+
+    [Fact]
+    public async Task GetMissingMoviesAsync_BuildsExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new ArrPagedResponse<SearchableMovie>())));
+
+        // Act
+        await _client.GetMissingMoviesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/wanted/missing");
+        request.RequestUri.Query.ShouldBe("?page=1&pageSize=1000&monitored=true");
+    }
+
+    [Fact]
+    public async Task GetCutoffUnmetMoviesAsync_MonitoredFalse_BuildsExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new ArrPagedResponse<SearchableMovie>())));
+
+        // Act
+        await _client.GetCutoffUnmetMoviesAsync(_arrInstance, monitored: false);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/wanted/cutoff");
+        request.RequestUri.Query.ShouldBe("?page=1&pageSize=1000&monitored=false");
+    }
+
+    [Fact]
+    public async Task GetMissingMoviesAsync_AccumulatesPagesUntilTotalRecordsReached()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) =>
+        {
+            int page = _httpMessageHandler.CapturedRequests.Count;
+            ArrPagedResponse<SearchableMovie> response = page == 1
+                ? new ArrPagedResponse<SearchableMovie>
+                {
+                    TotalRecords = 2,
+                    Records = [new SearchableMovie { Id = 1, Title = "Movie A" }],
+                }
+                : new ArrPagedResponse<SearchableMovie>
+                {
+                    TotalRecords = 2,
+                    Records = [new SearchableMovie { Id = 2, Title = "Movie B" }],
+                };
+            return Task.FromResult(JsonResponse(response));
+        });
+
+        // Act
+        List<SearchableMovie> movies = await _client.GetMissingMoviesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        movies.Count.ShouldBe(2);
+        movies[0].Title.ShouldBe("Movie A");
+        movies[1].Title.ShouldBe("Movie B");
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
+        _httpMessageHandler.CapturedRequests[1].RequestUri!.Query.ShouldBe("?page=2&pageSize=1000&monitored=true");
+    }
+
+    [Fact]
+    public async Task GetMissingMoviesAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.NotFound);
+
+        // Act, Assert
+        HttpRequestException exception = await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetMissingMoviesAsync(_arrInstance, monitored: true));
+        exception.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {
         Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),

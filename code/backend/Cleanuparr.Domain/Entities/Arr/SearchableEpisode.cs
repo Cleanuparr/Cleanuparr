@@ -4,6 +4,8 @@ public sealed record SearchableEpisode
 {
     public long Id { get; init; }
 
+    public long SeriesId { get; init; }
+
     public int SeasonNumber { get; init; }
 
     public int EpisodeNumber { get; init; }
