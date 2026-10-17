@@ -14,6 +14,8 @@ public sealed record SeekerInstanceConfigResponse
     
     public List<string> SkipTags { get; init; } = [];
     
+    public List<string> IncludeTags { get; init; } = [];
+
     public DateTimeOffset? LastProcessedAt { get; init; }
 
     public bool ArrInstanceEnabled { get; init; }

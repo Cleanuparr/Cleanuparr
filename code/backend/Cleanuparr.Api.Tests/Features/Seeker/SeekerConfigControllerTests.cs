@@ -6,6 +6,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,7 @@ public class SeekerConfigControllerTests : IDisposable
         instance.ArrInstanceId.ShouldBe(radarr.Id);
         instance.Enabled.ShouldBeFalse();
         instance.SkipTags.ShouldBeEmpty();
+        instance.IncludeTags.ShouldBeEmpty();
         instance.ActiveDownloadLimit.ShouldBe(3);
         instance.IgnoreStruckDownloads.ShouldBeFalse();
         instance.MinCycleTimeDays.ShouldBe(7);
@@ -73,6 +75,25 @@ public class SeekerConfigControllerTests : IDisposable
         var response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
 
         response.Instances.ShouldHaveSingleItem().IgnoreStruckDownloads.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task GetSeekerConfig_WithIncludeTags_ReturnsStoredTags()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            IncludeTags = ["wanted", "4k"]
+        });
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldHaveSingleItem().IncludeTags.ShouldBe(["wanted", "4k"]);
     }
 
     [Fact]
@@ -355,6 +376,7 @@ public class SeekerConfigControllerTests : IDisposable
             ArrInstanceId = radarr.Id,
             Enabled = false,
             SkipTags = ["old-tag"],
+            IncludeTags = ["old-include"],
             ActiveDownloadLimit = 2,
             MinCycleTimeDays = 5
         });
@@ -373,6 +395,7 @@ public class SeekerConfigControllerTests : IDisposable
                     ArrInstanceId = radarr.Id,
                     Enabled = true,
                     SkipTags = ["new-tag"],
+                    IncludeTags = ["new-include"],
                     ActiveDownloadLimit = 5,
                     IgnoreStruckDownloads = true,
                     MinCycleTimeDays = 14
@@ -383,6 +406,7 @@ public class SeekerConfigControllerTests : IDisposable
                     ArrInstanceId = sonarr.Id,
                     Enabled = true,
                     SkipTags = ["sonarr-tag"],
+                    IncludeTags = ["sonarr-include"],
                     ActiveDownloadLimit = 3,
                     MinCycleTimeDays = 7
                 }
@@ -397,6 +421,7 @@ public class SeekerConfigControllerTests : IDisposable
         var radarrConfig = configs.First(c => c.ArrInstanceId == radarr.Id);
         radarrConfig.Enabled.ShouldBeTrue();
         radarrConfig.SkipTags.ShouldContain("new-tag");
+        radarrConfig.IncludeTags.ShouldBe(["new-include"]);
         radarrConfig.ActiveDownloadLimit.ShouldBe(5);
         radarrConfig.IgnoreStruckDownloads.ShouldBeTrue();
         radarrConfig.MinCycleTimeDays.ShouldBe(14);
@@ -404,6 +429,7 @@ public class SeekerConfigControllerTests : IDisposable
         var sonarrConfig = configs.First(c => c.ArrInstanceId == sonarr.Id);
         sonarrConfig.Enabled.ShouldBeTrue();
         sonarrConfig.SkipTags.ShouldContain("sonarr-tag");
+        sonarrConfig.IncludeTags.ShouldBe(["sonarr-include"]);
         sonarrConfig.IgnoreStruckDownloads.ShouldBeFalse();
     }
 

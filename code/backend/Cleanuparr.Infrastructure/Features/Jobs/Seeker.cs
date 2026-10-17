@@ -531,6 +531,7 @@ public sealed class Seeker : IHandler
         List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
+        HashSet<string> includeTagSet = new(instanceConfig.IncludeTags, StringComparer.InvariantCultureIgnoreCase);
 
         // Load cached CF scores when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
@@ -569,10 +570,7 @@ public sealed class Seeker : IHandler
                 continue;
             }
 
-            if (instanceConfig.SkipTags.Count > 0
-                && movie.Tags
-                    .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
-                    .Any(label => label is not null && skipTagSet.Contains(label)))
+            if (!PassesTagFilter(movie.Tags, tagsById, skipTagSet, includeTagSet))
             {
                 continue;
             }
@@ -709,6 +707,7 @@ public sealed class Seeker : IHandler
         List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
+        HashSet<string> includeTagSet = new(instanceConfig.IncludeTags, StringComparer.InvariantCultureIgnoreCase);
 
         HashSet<int> upgradesDisabledProfileIds = [];
         if (instanceConfig.UseCustomFormatScore)
@@ -735,10 +734,7 @@ public sealed class Seeker : IHandler
                 continue;
             }
 
-            if (instanceConfig.SkipTags.Count > 0
-                && series.Tags
-                    .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
-                    .Any(label => label is not null && skipTagSet.Contains(label)))
+            if (!PassesTagFilter(series.Tags, tagsById, skipTagSet, includeTagSet))
             {
                 continue;
             }
@@ -1202,5 +1198,24 @@ public sealed class Seeker : IHandler
     {
         DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
         return releaseDate is null || releaseDate.Value <= graceCutoff;
+    }
+
+    private static bool PassesTagFilter(
+        List<long> itemTagIds,
+        Dictionary<long, string> tagsById,
+        HashSet<string> skipTags,
+        HashSet<string> includeTags)
+    {
+        List<string> labels = itemTagIds
+            .Select(id => tagsById.GetValueOrDefault(id))
+            .OfType<string>()
+            .ToList();
+
+        if (labels.Any(skipTags.Contains))
+        {
+            return false;
+        }
+
+        return includeTags.Count == 0 || labels.Any(includeTags.Contains);
     }
 }
