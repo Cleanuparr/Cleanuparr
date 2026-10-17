@@ -56,6 +56,7 @@ public class SeekerConfigControllerTests : IDisposable
         instance.ActiveDownloadLimit.ShouldBe(3);
         instance.IgnoreStruckDownloads.ShouldBeFalse();
         instance.MinCycleTimeDays.ShouldBe(7);
+        instance.RecentGrabWindowHours.ShouldBe(24);
     }
 
     [Fact]
@@ -94,6 +95,25 @@ public class SeekerConfigControllerTests : IDisposable
         SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
 
         response.Instances.ShouldHaveSingleItem().IncludeTags.ShouldBe(["wanted", "4k"]);
+    }
+
+    [Fact]
+    public async Task GetSeekerConfig_WithRecentGrabWindowHours_ReturnsStoredValue()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            RecentGrabWindowHours = 48
+        });
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldHaveSingleItem().RecentGrabWindowHours.ShouldBe(48);
     }
 
     [Fact]
@@ -378,7 +398,8 @@ public class SeekerConfigControllerTests : IDisposable
             SkipTags = ["old-tag"],
             IncludeTags = ["old-include"],
             ActiveDownloadLimit = 2,
-            MinCycleTimeDays = 5
+            MinCycleTimeDays = 5,
+            RecentGrabWindowHours = 12
         });
         await _dataContext.SaveChangesAsync();
 
@@ -398,7 +419,8 @@ public class SeekerConfigControllerTests : IDisposable
                     IncludeTags = ["new-include"],
                     ActiveDownloadLimit = 5,
                     IgnoreStruckDownloads = true,
-                    MinCycleTimeDays = 14
+                    MinCycleTimeDays = 14,
+                    RecentGrabWindowHours = 36
                 },
                 // Create new sonarr config
                 new UpdateSeekerInstanceConfigRequest
@@ -408,7 +430,8 @@ public class SeekerConfigControllerTests : IDisposable
                     SkipTags = ["sonarr-tag"],
                     IncludeTags = ["sonarr-include"],
                     ActiveDownloadLimit = 3,
-                    MinCycleTimeDays = 7
+                    MinCycleTimeDays = 7,
+                    RecentGrabWindowHours = 6
                 }
             ]
         };
@@ -425,12 +448,14 @@ public class SeekerConfigControllerTests : IDisposable
         radarrConfig.ActiveDownloadLimit.ShouldBe(5);
         radarrConfig.IgnoreStruckDownloads.ShouldBeTrue();
         radarrConfig.MinCycleTimeDays.ShouldBe(14);
+        radarrConfig.RecentGrabWindowHours.ShouldBe(36);
 
         var sonarrConfig = configs.First(c => c.ArrInstanceId == sonarr.Id);
         sonarrConfig.Enabled.ShouldBeTrue();
         sonarrConfig.SkipTags.ShouldContain("sonarr-tag");
         sonarrConfig.IncludeTags.ShouldBe(["sonarr-include"]);
         sonarrConfig.IgnoreStruckDownloads.ShouldBeFalse();
+        sonarrConfig.RecentGrabWindowHours.ShouldBe(6);
     }
 
     #endregion

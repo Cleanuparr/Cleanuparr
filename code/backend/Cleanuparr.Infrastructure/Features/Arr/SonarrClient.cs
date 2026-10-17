@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.History;
 using Cleanuparr.Domain.Entities.Arr.ManualImport;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Sonarr;
@@ -336,6 +337,17 @@ public class SonarrClient : ArrClient, ISonarrClient
         }
 
         return scores;
+    }
+
+    /// <inheritdoc/>
+    public async Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since)
+    {
+        List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, "&includeEpisode=true");
+
+        return records
+            .Where(record => record.SeriesId > 0 && record.Episode is not null)
+            .Select(record => (record.SeriesId, record.Episode!.SeasonNumber))
+            .ToHashSet();
     }
 
     private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)

@@ -538,6 +538,54 @@ public class RadarrClientTests
 
     #endregion
 
+    #region GetRecentlyGrabbedMovieIdsAsync
+
+    [Fact]
+    public async Task GetRecentlyGrabbedMovieIdsAsync_BuildsExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(Array.Empty<object>())));
+        DateTimeOffset since = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        // Act
+        await _client.GetRecentlyGrabbedMovieIdsAsync(_arrInstance, since);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/history/since");
+        request.RequestUri.Query.ShouldBe("?date=2026-01-01T00%3A00%3A00.0000000Z&eventType=1");
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedMovieIdsAsync_DropsZeroMovieIds()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new[]
+        {
+            new { movieId = 1 },
+            new { movieId = 0 },
+        })));
+
+        // Act
+        HashSet<long> ids = await _client.GetRecentlyGrabbedMovieIdsAsync(_arrInstance, DateTimeOffset.UtcNow);
+
+        // Assert
+        ids.ShouldBe([1L]);
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedMovieIdsAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetRecentlyGrabbedMovieIdsAsync(_arrInstance, DateTimeOffset.UtcNow));
+    }
+
+    #endregion
+
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {
         Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),

@@ -330,10 +330,41 @@ public sealed class Seeker : IHandler
             }
         }
 
+        HashSet<long> recentlyGrabbedMovieIds = [];
+        HashSet<(long SeriesId, long SeasonNumber)> recentlyGrabbedSeasons = [];
+
+        if (instanceConfig.RecentGrabWindowHours > 0)
+        {
+            DateTimeOffset since = _timeProvider.GetUtcNow().AddHours(-instanceConfig.RecentGrabWindowHours);
+
+            try
+            {
+                if (instanceType == InstanceType.Radarr)
+                {
+                    recentlyGrabbedMovieIds = await _radarrClient.GetRecentlyGrabbedMovieIdsAsync(arrInstance, since);
+                }
+                else
+                {
+                    recentlyGrabbedSeasons = await _sonarrClient.GetRecentlyGrabbedSeasonsAsync(arrInstance, since);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, failed to read grab history",
+                    arrInstance.Name);
+                return false;
+            }
+        }
+
         bool searched = false;
         try
         {
-            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords, cancellationToken);
+            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords,
+                recentlyGrabbedMovieIds, recentlyGrabbedSeasons, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -400,6 +431,8 @@ public sealed class Seeker : IHandler
         InstanceType instanceType,
         bool isDryRun,
         List<QueueRecord> queueRecords,
+        HashSet<long> recentlyGrabbedMovieIds,
+        HashSet<(long SeriesId, long SeasonNumber)> recentlyGrabbedSeasons,
         CancellationToken cancellationToken)
     {
         // Dry run tracks its own cycle through dry history rows.
@@ -455,6 +488,7 @@ public sealed class Seeker : IHandler
                 .Where(r => r.MovieId > 0)
                 .Select(r => r.MovieId)
                 .ToHashSet();
+            queuedMovieIds.UnionWith(recentlyGrabbedMovieIds);
 
             result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, effectiveCycleId, isDryRun, queuedMovieIds, cancellationToken);
         }
@@ -464,6 +498,7 @@ public sealed class Seeker : IHandler
                 .Where(r => r.SeriesId > 0)
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
+            queuedSeasons.UnionWith(recentlyGrabbedSeasons);
 
             result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, effectiveCycleId, isDryRun, cancellationToken, queuedSeasons: queuedSeasons);
         }

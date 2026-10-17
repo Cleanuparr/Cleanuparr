@@ -90,4 +90,9 @@ public sealed record SeekerInstanceConfig
     /// Search items whose custom format score is below the quality profile's cutoff format score
     /// </summary>
     public bool UseCustomFormatScore { get; set; }
+
+    /// <summary>
+    /// Skips items the arr grabbed within this many hours, even after the download left the queue. 0 = disabled.
+    /// </summary>
+    public int RecentGrabWindowHours { get; set; } = 24;
 }

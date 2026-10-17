@@ -1727,6 +1727,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("monitored_only");
 
+                    b.Property<int>("RecentGrabWindowHours")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("recent_grab_window_hours");
+
                     b.PrimitiveCollection<string>("SkipTags")
                         .IsRequired()
                         .HasColumnType("TEXT")
