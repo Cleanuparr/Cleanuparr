@@ -1,10 +1,12 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.DryRun;
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -187,6 +189,64 @@ public class EventCleanupServiceTests : IDisposable
 
         // Assert
         delay.ShouldBe(TimeSpan.FromSeconds(expectedSeconds));
+    }
+
+    [Fact]
+    public async Task PruneSeekerCyclesAsync_DeletesCompletedCyclesOlderThanRetention()
+    {
+        // Arrange
+        using EventsContext eventsContext = TestDataContextFactory.CreateEvents();
+        FakeTimeProvider timeProvider = new();
+        EventCleanupService service = new EventCleanupService(_logger, _serviceProvider.GetRequiredService<IServiceScopeFactory>(), timeProvider, new DryRunActivity());
+
+        Guid oldCompletedId = Guid.NewGuid();
+        eventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = oldCompletedId,
+            StartedAt = timeProvider.GetUtcNow().AddDays(-40),
+            CompletedAt = timeProvider.GetUtcNow().AddDays(-31),
+            CompletionReason = SeekerCycleCompletionReason.Completed,
+        });
+        await eventsContext.SaveChangesAsync();
+
+        // Act
+        await service.PruneSeekerCyclesAsync(eventsContext, retentionDays: 30);
+
+        // Assert
+        (await eventsContext.SeekerCycles.CountAsync(c => c.Id == oldCompletedId)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task PruneSeekerCyclesAsync_KeepsOpenAndRecentCycles()
+    {
+        // Arrange
+        using EventsContext eventsContext = TestDataContextFactory.CreateEvents();
+        FakeTimeProvider timeProvider = new();
+        EventCleanupService service = new EventCleanupService(_logger, _serviceProvider.GetRequiredService<IServiceScopeFactory>(), timeProvider, new DryRunActivity());
+
+        Guid openCycleId = Guid.NewGuid();
+        Guid recentCompletedId = Guid.NewGuid();
+        eventsContext.SeekerCycles.AddRange(
+            new SeekerCycle
+            {
+                Id = openCycleId,
+                StartedAt = timeProvider.GetUtcNow().AddDays(-60),
+                CompletedAt = null,
+            },
+            new SeekerCycle
+            {
+                Id = recentCompletedId,
+                StartedAt = timeProvider.GetUtcNow().AddDays(-5),
+                CompletedAt = timeProvider.GetUtcNow().AddDays(-1),
+                CompletionReason = SeekerCycleCompletionReason.Completed,
+            });
+        await eventsContext.SaveChangesAsync();
+
+        // Act
+        await service.PruneSeekerCyclesAsync(eventsContext, retentionDays: 30);
+
+        // Assert
+        (await eventsContext.SeekerCycles.CountAsync()).ShouldBe(2);
     }
 
     [Fact]
