@@ -16,6 +16,7 @@ export interface SeekerInstanceConfig {
   instanceType: string;
   enabled: boolean;
   skipTags: string[];
+  includeTags: string[];
   lastProcessedAt?: string;
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
@@ -40,6 +41,7 @@ export interface UpdateSeekerInstanceConfig {
   arrInstanceId: string;
   enabled: boolean;
   skipTags: string[];
+  includeTags: string[];
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
   minCycleTimeDays: number;

@@ -70,6 +70,7 @@ interface InstanceState {
   instanceType: string;
   enabled: boolean;
   skipTags: string[];
+  includeTags: string[];
   lastProcessedAt?: string;
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
@@ -167,6 +168,7 @@ export class SeekerComponent implements HasPendingChanges {
           instanceType: i.instanceType,
           enabled: i.enabled,
           skipTags: [...i.skipTags],
+          includeTags: [...i.includeTags],
           lastProcessedAt: i.lastProcessedAt,
           arrInstanceEnabled: i.arrInstanceEnabled,
           activeDownloadLimit: i.activeDownloadLimit,
@@ -236,6 +238,7 @@ export class SeekerComponent implements HasPendingChanges {
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,
         skipTags: i.skipTags,
+        includeTags: i.includeTags,
         activeDownloadLimit: i.activeDownloadLimit,
         ignoreStruckDownloads: i.ignoreStruckDownloads,
         minCycleTimeDays: i.minCycleTimeDays,

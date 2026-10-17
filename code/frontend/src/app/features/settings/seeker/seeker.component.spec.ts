@@ -14,6 +14,7 @@ const SONARR: SeekerInstanceConfig = {
   instanceType: 'Sonarr',
   enabled: true,
   skipTags: ['alpha', 'beta'],
+  includeTags: ['wanted'],
   arrInstanceEnabled: true,
   activeDownloadLimit: 3,
   ignoreStruckDownloads: false,
@@ -29,6 +30,7 @@ const RADARR: SeekerInstanceConfig = {
   instanceType: 'Radarr',
   enabled: false,
   skipTags: [],
+  includeTags: [],
   lastProcessedAt: '2026-08-01T10:00:00Z',
   arrInstanceEnabled: true,
   activeDownloadLimit: 5,
@@ -133,6 +135,18 @@ describe('SeekerComponent', () => {
     return host.querySelector('.number-field') as HTMLInputElement;
   }
 
+  function chipField(fixture: ComponentFixture<SeekerComponent>, label: string): HTMLElement {
+    return Array.from(fixture.nativeElement.querySelectorAll('app-chip-input')).find((input) =>
+      (input as HTMLElement).querySelector('.chip-label')?.textContent?.includes(label),
+    ) as HTMLElement;
+  }
+
+  function chipTexts(field: HTMLElement): string[] {
+    return Array.from(field.querySelectorAll('.chip')).map((chip) =>
+      (chip as HTMLElement).textContent!.replace('×', '').trim(),
+    );
+  }
+
   function setNumberField(fixture: ComponentFixture<SeekerComponent>, label: string, value: string): void {
     const field = numberField(fixture, label);
     field.value = value;
@@ -151,8 +165,8 @@ describe('SeekerComponent', () => {
     expect(component.seekerForm.postReleaseGraceHours().value()).toBe(6);
 
     expect(component.instances()).toEqual([
-      { ...SONARR, skipTags: ['alpha', 'beta'] },
-      { ...RADARR, skipTags: [] },
+      { ...SONARR, skipTags: ['alpha', 'beta'], includeTags: ['wanted'] },
+      { ...RADARR, skipTags: [], includeTags: [] },
     ]);
     expect(component.dirty()).toBe(false);
     expect(component.hasPendingChanges()).toBe(false);
@@ -160,23 +174,22 @@ describe('SeekerComponent', () => {
     expect(text(fixture)).toContain('Search for missing items and quality upgrades');
   });
 
-  it('copies the loaded skip tags instead of sharing the response array', () => {
+  it('copies the loaded tags instead of sharing the response arrays', () => {
     const { component } = setup();
 
-    component.patchInstance(0, { skipTags: ['gamma'] });
+    component.patchInstance(0, { skipTags: ['gamma'], includeTags: ['delta'] });
 
     expect(SONARR.skipTags).toEqual(['alpha', 'beta']);
+    expect(SONARR.includeTags).toEqual(['wanted']);
     expect(component.instances()[0].skipTags).toEqual(['gamma']);
+    expect(component.instances()[0].includeTags).toEqual(['delta']);
   });
 
-  it('renders the skip tag chips and the per-instance detail controls', () => {
+  it('renders the include and skip tag chips and the per-instance detail controls', () => {
     const { fixture } = setup();
 
-    const chips = Array.from(fixture.nativeElement.querySelectorAll('.chip')).map((chip) =>
-      (chip as HTMLElement).textContent!.replace('×', '').trim(),
-    );
-
-    expect(chips).toEqual(['alpha', 'beta']);
+    expect(chipTexts(chipField(fixture, 'Include Tags'))).toEqual(['wanted']);
+    expect(chipTexts(chipField(fixture, 'Skip Tags'))).toEqual(['alpha', 'beta']);
     expect(toggleByLabel(fixture, 'Monitored Only')).not.toBeNull();
     expect(toggleByLabel(fixture, 'Use Cutoff')).not.toBeNull();
     expect(toggleByLabel(fixture, 'Use Custom Format Score')).not.toBeNull();
@@ -382,7 +395,8 @@ describe('SeekerComponent', () => {
 
   it('patches the skip tags edited in the chip input', () => {
     const { fixture, component } = setup();
-    const input = fixture.nativeElement.querySelector('.chip-input') as HTMLInputElement;
+    const field = chipField(fixture, 'Skip Tags');
+    const input = field.querySelector('.chip-input') as HTMLInputElement;
 
     input.value = 'gamma';
     input.dispatchEvent(new Event('input'));
@@ -392,10 +406,26 @@ describe('SeekerComponent', () => {
 
     expect(component.instances()[0].skipTags).toEqual(['alpha', 'beta', 'gamma']);
 
-    (fixture.nativeElement.querySelector('.chip__remove') as HTMLButtonElement).click();
+    (field.querySelector('.chip__remove') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     expect(component.instances()[0].skipTags).toEqual(['beta', 'gamma']);
+  });
+
+  it('patches the include tags edited in the chip input', () => {
+    const { fixture, component } = setup();
+    const field = chipField(fixture, 'Include Tags');
+    const input = field.querySelector('.chip-input') as HTMLInputElement;
+
+    input.value = 'anime';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    fixture.detectChanges();
+
+    expect(component.instances()[0].includeTags).toEqual(['wanted', 'anime']);
+    expect(component.instances()[0].skipTags).toEqual(['alpha', 'beta']);
+    expect(component.dirty()).toBe(true);
   });
 
   it('blocks saving while proactive search has no enabled instance', () => {
@@ -457,7 +487,7 @@ describe('SeekerComponent', () => {
     component.seekerForm.searchInterval().value.set(10);
     component.seekerForm.selectionStrategy().value.set(SelectionStrategy.NewestFirst);
     component.seekerForm.postReleaseGraceHours().value.set(24);
-    component.patchInstance(0, { skipTags: ['gamma'], ignoreStruckDownloads: true });
+    component.patchInstance(0, { skipTags: ['gamma'], includeTags: ['anime'], ignoreStruckDownloads: true });
     fixture.detectChanges();
 
     expect(component.dirty()).toBe(true);
@@ -477,6 +507,7 @@ describe('SeekerComponent', () => {
           arrInstanceId: SONARR.arrInstanceId,
           enabled: true,
           skipTags: ['gamma'],
+          includeTags: ['anime'],
           activeDownloadLimit: 3,
           ignoreStruckDownloads: true,
           minCycleTimeDays: 7,
@@ -488,6 +519,7 @@ describe('SeekerComponent', () => {
           arrInstanceId: RADARR.arrInstanceId,
           enabled: false,
           skipTags: [],
+          includeTags: [],
           activeDownloadLimit: 5,
           ignoreStruckDownloads: true,
           minCycleTimeDays: 14,
