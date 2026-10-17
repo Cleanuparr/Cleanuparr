@@ -23,6 +23,44 @@ export const capabilityClients = [
   { name: 'SABnzbd', icon: 'sabnzbd' },
 ];
 
+export const arrCapabilityClients = [
+  { name: 'Sonarr', icon: 'sonarr' },
+  { name: 'Radarr', icon: 'radarr' },
+  { name: 'Lidarr', icon: 'lidarr' },
+  { name: 'Readarr', icon: 'readarr' },
+  { name: 'Whisparr v2', icon: 'whisparr' },
+  { name: 'Whisparr v3', icon: 'whisparr' },
+  { name: 'Sportarr', icon: 'sportarr' },
+  { name: 'LazyLibrarian', icon: 'lazylibrarian' },
+];
+
+export const arrCapabilityGroups = [
+  {
+    rows: [
+      {
+        feature: 'Upgrade detection (stall/slow rules)',
+        cells: [
+          'yes', 'yes',
+          { status: 'no', note: 1 }, { status: 'no', note: 1 },
+          'yes', 'yes',
+          { status: 'no', note: 1 },
+          { status: 'na', note: 2 },
+        ],
+        link: '/configuration/queue-cleaner#stalled-applies-to',
+      },
+      {
+        feature: 'Force import (failed imports)',
+        cells: ['yes', 'yes', 'no', 'no', 'yes', 'yes', 'yes', { status: 'na', note: 2 }],
+      },
+    ],
+  },
+];
+
+export const arrCapabilityNotes = {
+  1: 'Lidarr, Readarr and Sportarr queue items never report whether they have a file, so these apps only match a stall/slow rule set to "All".',
+  2: 'LazyLibrarian runs its own queue evaluator outside the *arr queue cleaner, so this concept does not apply to it.',
+};
+
 export const capabilityGroups = [
   {
     title: 'Queue Cleaner',
@@ -209,6 +247,17 @@ Clients expose different amounts of detail through their APIs, so some features 
   clients={capabilityClients}
   groups={capabilityGroups}
   notes={capabilityNotes}
+/>
+
+### Arr app capabilities
+
+Some features depend on data that not every *arr exposes.
+
+<CapabilityMatrix
+  id="arr-capabilities-matrix"
+  clients={arrCapabilityClients}
+  groups={arrCapabilityGroups}
+  notes={arrCapabilityNotes}
 />
 
 ### Ignored downloads matching

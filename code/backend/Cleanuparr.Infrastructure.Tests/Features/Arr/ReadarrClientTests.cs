@@ -4,6 +4,7 @@ using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
@@ -159,6 +160,12 @@ public class ReadarrClientTests
     }
 
     #endregion
+
+    [Fact]
+    public void IsNotUpgradeDetectionCapable()
+    {
+        _client.ShouldNotBeAssignableTo<IUpgradeDetectionCapable>();
+    }
 
     #region SearchItemsAsync
 

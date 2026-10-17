@@ -49,51 +49,35 @@ public class RuleIntervalValidator : IRuleIntervalValidator
             .Select(g => g.Last())
             .ToList();
 
-        // Only consider enabled rules for validation
         List<QueueRule> enabledRules = deduplicatedRules
             .Where(r => r.Enabled)
             .ToList();
         
-        // Expand privacy types (Both -> Public + Private)
-        List<RuleInterval> intervals = ExpandPrivacyTypes(enabledRules);
-        
-        // Group by privacy type and check for overlaps
-        List<RuleInterval> publicIntervals = intervals
-            .Where(i => i.PrivacyType == TorrentPrivacyType.Public)
-            .ToList();
-        List<RuleInterval> privateIntervals = intervals
-            .Where(i => i.PrivacyType == TorrentPrivacyType.Private)
-            .ToList();
-        
-        List<OverlapResult> publicOverlaps = FindAllOverlappingIntervals(publicIntervals, newRuleName);
-        List<OverlapResult> privateOverlaps = FindAllOverlappingIntervals(privateIntervals, newRuleName);
+        // Expand privacy types (Both -> Public + Private) and content types (All -> New + Upgrade)
+        List<RuleInterval> intervals = ExpandRuleAxes(enabledRules);
 
+        // Group by privacy type and content type, then check for overlaps within each group
         HashSet<string> overlappingRules = [];
 
-        foreach (var overlap in publicOverlaps)
+        foreach (var group in intervals.GroupBy(i => (i.PrivacyType, i.ContentType)))
         {
-            overlappingRules.Add(overlap.ConflictingRuleName);
+            List<OverlapResult> overlaps = FindAllOverlappingIntervals(group.ToList(), newRuleName);
 
-            _logger.LogWarning("Rule {newRuleName} overlaps for Public torrents with rule {ruleName} (both cover {start}%-{end}%)",
-                newRuleName,
-                overlap.ConflictingRuleName,
-                overlap.OverlapStart,
-                overlap.OverlapEnd
-            );
+            foreach (var overlap in overlaps)
+            {
+                overlappingRules.Add(overlap.ConflictingRuleName);
+
+                _logger.LogWarning("Rule {newRuleName} overlaps for {privacyType} {contentType} torrents with rule {ruleName} (both cover {start}%-{end}%)",
+                    newRuleName,
+                    group.Key.PrivacyType,
+                    group.Key.ContentType,
+                    overlap.ConflictingRuleName,
+                    overlap.OverlapStart,
+                    overlap.OverlapEnd
+                );
+            }
         }
 
-        foreach (var overlap in privateOverlaps)
-        {
-            overlappingRules.Add(overlap.ConflictingRuleName);
-
-            _logger.LogWarning("Rule {newRuleName} overlaps for Private torrents with rule {ruleName} (both cover {start}%-{end}%)",
-                newRuleName,
-                overlap.ConflictingRuleName,
-                overlap.OverlapStart,
-                overlap.OverlapEnd
-            );
-        }
-        
         if (overlappingRules.Count > 0)
         {
             var details = overlappingRules.ToList();
@@ -103,18 +87,20 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return ValidationResult.Success();
     }
 
-    private static List<RuleInterval> ExpandPrivacyTypes(List<QueueRule> rules)
+    private static List<RuleInterval> ExpandRuleAxes(List<QueueRule> rules)
     {
         return rules
             .SelectMany(rule => GetPrivacyTypes(rule.PrivacyType)
-                .Select(privacyType => new RuleInterval
-                {
-                    PrivacyType = privacyType,
-                    Start = rule.MinCompletionPercentage,
-                    End = rule.MaxCompletionPercentage,
-                    RuleName = rule.Name,
-                    RuleId = rule.Id
-                }))
+                .SelectMany(privacyType => GetContentTypes(rule.ContentType)
+                    .Select(contentType => new RuleInterval
+                    {
+                        PrivacyType = privacyType,
+                        ContentType = contentType,
+                        Start = rule.MinCompletionPercentage,
+                        End = rule.MaxCompletionPercentage,
+                        RuleName = rule.Name,
+                        RuleId = rule.Id
+                    })))
             .ToList();
     }
 
@@ -131,12 +117,19 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         }
     }
 
-    /// <summary>
-    /// Finds all overlapping intervals for the new rule being validated.
-    /// </summary>
-    /// <param name="intervals">List of intervals to check for overlaps</param>
-    /// <param name="newRuleName">Name of the rule being validated</param>
-    /// <returns>List of all overlaps found</returns>
+    private static IEnumerable<QueueRuleContentType> GetContentTypes(QueueRuleContentType type)
+    {
+        if (type == QueueRuleContentType.All)
+        {
+            yield return QueueRuleContentType.New;
+            yield return QueueRuleContentType.Upgrade;
+        }
+        else
+        {
+            yield return type;
+        }
+    }
+
     private static List<OverlapResult> FindAllOverlappingIntervals(List<RuleInterval> intervals, string newRuleName)
     {
         var overlaps = new List<OverlapResult>();

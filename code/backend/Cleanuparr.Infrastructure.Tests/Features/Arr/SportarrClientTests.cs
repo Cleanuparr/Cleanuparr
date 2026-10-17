@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Sonarr;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
@@ -51,6 +52,14 @@ public class SportarrClientTests
                 Func<Task<HttpResponseMessage>> action = ci.Arg<Func<Task<HttpResponseMessage>>>();
                 return await action();
             });
+    }
+
+    [Fact]
+    public void IsNotUpgradeDetectionCapable()
+    {
+        // Sportarr's queue has no episode object, so it must not get the capability.
+        // SonarrClient and WhisparrV2Client inherit it from SonarrClientBase instead.
+        _client.ShouldNotBeAssignableTo<IUpgradeDetectionCapable>();
     }
 
     [Fact]

@@ -21,6 +21,7 @@ public sealed record SlowRuleResponse : QueueRuleResponse
         Enabled = rule.Enabled,
         MaxStrikes = rule.MaxStrikes,
         PrivacyType = rule.PrivacyType,
+        ContentType = rule.ContentType,
         MinCompletionPercentage = rule.MinCompletionPercentage,
         MaxCompletionPercentage = rule.MaxCompletionPercentage,
         DeletePrivateTorrentsFromClient = rule.DeletePrivateTorrentsFromClient,

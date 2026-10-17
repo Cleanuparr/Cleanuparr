@@ -16,12 +16,11 @@ ARR_SEED="$HERE/arr-seed"
 rm -rf "$TEST_DATA/torznab-src"
 
 # Media an arr imports during a run, wiped so its library always starts empty.
-rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies" "$TEST_DATA/lazylibrarian-books"
+# sonarr-tv and radarr-movies are handled below, alongside the arr config restore.
+rm -rf "$TEST_DATA/lazylibrarian-books"
 
 mkdir -p \
   "$TEST_DATA/torznab-src" \
-  "$TEST_DATA/sonarr-tv" \
-  "$TEST_DATA/radarr-movies" \
   "$TEST_DATA/lazylibrarian-books" \
   "$TEST_DATA/downloads/qbittorrent" \
   "$TEST_DATA/downloads/transmission" \
@@ -111,6 +110,22 @@ for arr in sonarr radarr; do
     mkdir -p "$TEST_DATA/$arr-config"
   fi
 done
+
+# Restore the seeded media files.
+# Without them, the arr unlinks the seeded moviefile/episodefile rows on its next disk scan.
+# Anything a run imports gets wiped.
+rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies"
+if [[ -d "$ARR_SEED/radarr/movies" ]]; then
+  cp -R "$ARR_SEED/radarr/movies" "$TEST_DATA/radarr-movies"
+else
+  mkdir -p "$TEST_DATA/radarr-movies"
+fi
+if [[ -d "$ARR_SEED/sonarr/tv" ]]; then
+  cp -R "$ARR_SEED/sonarr/tv" "$TEST_DATA/sonarr-tv"
+else
+  mkdir -p "$TEST_DATA/sonarr-tv"
+fi
+chmod -R a+rwX "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies"
 
 # Restore LazyLibrarian from its committed seed.
 # LazyLibrarian rewrites config.ini when it shuts down, so the run gets a copy.

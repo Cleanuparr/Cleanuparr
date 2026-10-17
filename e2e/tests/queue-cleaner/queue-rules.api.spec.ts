@@ -30,22 +30,22 @@ function buildPayload(kind: QueueRuleKind, name: string, overrides: Record<strin
 
 const RULE_KEYS: Record<QueueRuleKind, string[]> = {
   stall: [
-    'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
+    'changeCategory', 'contentType', 'deletePrivateTorrentsFromClient', 'enabled', 'id',
     'maxCompletionPercentage', 'maxStrikes', 'minCompletionPercentage', 'minimumProgress',
     'name', 'privacyType', 'resetStrikesOnProgress',
   ],
   slow: [
-    'changeCategory', 'deletePrivateTorrentsFromClient', 'enabled', 'id', 'ignoreAboveSize',
+    'changeCategory', 'contentType', 'deletePrivateTorrentsFromClient', 'enabled', 'id', 'ignoreAboveSize',
     'ignoreWhileAltSpeedActive', 'maxCompletionPercentage', 'maxStrikes', 'maxTimeHours',
     'minCompletionPercentage', 'minSpeed', 'name', 'privacyType', 'resetStrikesOnProgress',
   ],
 };
 
-test.describe('QueueCleaner — rules CRUD', () => {
+test.describe('QueueCleaner: rules CRUD', () => {
   // Belt-and-braces: SQLite-direct autoReset clears the rule tables, but EF
-  // Core's pooled connection can occasionally hold a pre-DELETE snapshot.
-  // Explicitly delete any lingering rules through the API as well so the
-  // backend's own view matches our reset.
+  // Core's pooled connection can hold a pre-DELETE snapshot.
+  // Delete any lingering rules through the API too, so the
+  // backend's own view matches the reset.
   test.beforeEach(async ({ api }) => {
     for (const kind of KINDS) {
       const list = await (await api.queueCleaner.listRules(kind)).json();
@@ -106,6 +106,27 @@ test.describe('QueueCleaner — rules CRUD', () => {
       );
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.status).toBeLessThan(500);
+    });
+
+    test(`${kind}: New and Upgrade rules coexist, but All overlapping either is rejected`, async ({ api }) => {
+      const newRule = await api.queueCleaner.createRule(
+        kind,
+        buildPayload(kind, `${kind}-content-new`, { contentType: 'New' }),
+      );
+      expect(newRule.status).toBeLessThan(300);
+
+      const upgradeRule = await api.queueCleaner.createRule(
+        kind,
+        buildPayload(kind, `${kind}-content-upgrade`, { contentType: 'Upgrade' }),
+      );
+      expect(upgradeRule.status).toBeLessThan(300);
+
+      const allRule = await api.queueCleaner.createRule(
+        kind,
+        buildPayload(kind, `${kind}-content-all`, { contentType: 'All' }),
+      );
+      expect(allRule.status).toBeGreaterThanOrEqual(400);
+      expect(allRule.status).toBeLessThan(500);
     });
   }
 });

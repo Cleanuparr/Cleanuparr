@@ -16,7 +16,9 @@ public abstract record QueueRuleDto
     public int MaxStrikes { get; set; } = 3;
     
     public TorrentPrivacyType PrivacyType { get; set; } = TorrentPrivacyType.Public;
-    
+
+    public QueueRuleContentType ContentType { get; set; } = QueueRuleContentType.All;
+
     [Range(0, 100, ErrorMessage = "Minimum completion percentage must be between 0 and 100")]
     public ushort MinCompletionPercentage { get; set; }
     

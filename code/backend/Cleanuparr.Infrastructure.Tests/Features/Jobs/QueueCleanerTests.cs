@@ -8,6 +8,7 @@ using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Helpers;
@@ -612,6 +613,227 @@ public class QueueCleanerTests : IDisposable
             Arg.Any<short>()
         );
     }
+
+    #region Upgrade status pushed to context
+
+    // ContextProvider is AsyncLocal: a value set in ProcessInstanceAsync is gone once ExecuteAsync returns.
+    // Capture IsUpgrade inside the download service callback, where the context still holds it.
+    [Fact]
+    public async Task ProcessInstanceAsync_CapableClientUpgrade_PushesTrueToContext()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient, IUpgradeDetectionCapable>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        ((IUpgradeDetectionCapable)mockArrClient).IsUpgrade(Arg.Any<IReadOnlyList<QueueRecord>>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "upgrade-download-id",
+            Title = "Upgrade Download",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1,
+            Episode = new QueueEpisode { HasFile = true },
+        };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
+
+        object? capturedIsUpgrade = "not captured";
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(_ =>
+            {
+                capturedIsUpgrade = ContextProvider.Get(ContextProvider.Keys.IsUpgrade);
+                return Task.FromResult(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedIsUpgrade.ShouldBe(true);
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_CapableClientNew_PushesFalseToContext()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient, IUpgradeDetectionCapable>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        ((IUpgradeDetectionCapable)mockArrClient).IsUpgrade(Arg.Any<IReadOnlyList<QueueRecord>>()).Returns(false);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "new-download-id",
+            Title = "New Download",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1,
+            Episode = new QueueEpisode { HasFile = false },
+        };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
+
+        object? capturedIsUpgrade = "not captured";
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(_ =>
+            {
+                capturedIsUpgrade = ContextProvider.Get(ContextProvider.Keys.IsUpgrade);
+                return Task.FromResult(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedIsUpgrade.ShouldBe(false);
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_NonCapableClient_PushesNullToContext()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "non-capable-download-id",
+            Title = "Non Capable Download",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1,
+        };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
+
+        object? capturedIsUpgrade = "not captured";
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(_ =>
+            {
+                capturedIsUpgrade = ContextProvider.Get(ContextProvider.Keys.IsUpgrade);
+                return Task.FromResult(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedIsUpgrade.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_CapableClientMissingContentId_PushesNullToContext()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var queueCleanerConfig = _fixture.DataContext.QueueCleanerConfigs.First();
+        queueCleanerConfig.ProcessNoContentId = true;
+        _fixture.DataContext.SaveChanges();
+
+        var mockArrClient = Substitute.For<IArrClient, IUpgradeDetectionCapable>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(false);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "missing-content-id-download",
+            Title = "Missing Content Id",
+            Protocol = "torrent",
+        };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
+
+        object? capturedIsUpgrade = "not captured";
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(_ =>
+            {
+                capturedIsUpgrade = ContextProvider.Get(ContextProvider.Keys.IsUpgrade);
+                return Task.FromResult(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedIsUpgrade.ShouldBeNull();
+        ((IUpgradeDetectionCapable)mockArrClient).DidNotReceive().IsUpgrade(Arg.Any<IReadOnlyList<QueueRecord>>());
+    }
+
+    #endregion
 
     [Theory]
     [InlineData(true, 0)]

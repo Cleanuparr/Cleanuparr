@@ -367,6 +367,87 @@ public class QueueRuleManagerTests
         result.Id.ShouldBe(slowRule.Id);
     }
 
+    #region Content type scoping
+
+    [Fact]
+    public void GetMatchingStallRule_UpgradeContentType_MatchesWhenIsUpgradeTrue()
+    {
+        var logger = Substitute.For<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(logger);
+
+        var stallRule = CreateStallRule("Upgrade Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, contentType: QueueRuleContentType.Upgrade);
+        ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
+        ContextProvider.Set(ContextProvider.Keys.IsUpgrade, true);
+
+        var result = ruleManager.GetMatchingStallRule(CreateTorrentMock());
+
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
+    }
+
+    [Fact]
+    public void GetMatchingStallRule_UpgradeContentType_DoesNotMatchWhenIsUpgradeFalse()
+    {
+        var logger = Substitute.For<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(logger);
+
+        var stallRule = CreateStallRule("Upgrade Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, contentType: QueueRuleContentType.Upgrade);
+        ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
+        ContextProvider.Set(ContextProvider.Keys.IsUpgrade, false);
+
+        var result = ruleManager.GetMatchingStallRule(CreateTorrentMock());
+
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetMatchingStallRule_NewContentType_MatchesWhenIsUpgradeFalse()
+    {
+        var logger = Substitute.For<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(logger);
+
+        var stallRule = CreateStallRule("New Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, contentType: QueueRuleContentType.New);
+        ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
+        ContextProvider.Set(ContextProvider.Keys.IsUpgrade, false);
+
+        var result = ruleManager.GetMatchingStallRule(CreateTorrentMock());
+
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
+    }
+
+    [Fact]
+    public void GetMatchingStallRule_NewContentType_DoesNotMatchWhenIsUpgradeIsNull()
+    {
+        var logger = Substitute.For<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(logger);
+
+        var stallRule = CreateStallRule("New Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, contentType: QueueRuleContentType.New);
+        ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
+        // No IsUpgrade pushed to context (non-capable client, or missing content id)
+
+        var result = ruleManager.GetMatchingStallRule(CreateTorrentMock());
+
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetMatchingStallRule_AllContentType_MatchesWhenIsUpgradeIsNull()
+    {
+        var logger = Substitute.For<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(logger);
+
+        var stallRule = CreateStallRule("All Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, contentType: QueueRuleContentType.All);
+        ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
+
+        var result = ruleManager.GetMatchingStallRule(CreateTorrentMock());
+
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
+    }
+
+    #endregion
+
     private static ITorrentItemWrapper CreateTorrentMock(
         bool isPrivate = false,
         double completionPercentage = 50,
@@ -389,7 +470,8 @@ public class QueueRuleManagerTests
         bool enabled,
         TorrentPrivacyType privacyType,
         ushort minCompletion,
-        ushort maxCompletion)
+        ushort maxCompletion,
+        QueueRuleContentType contentType = QueueRuleContentType.All)
     {
         return new StallRule
         {
@@ -399,6 +481,7 @@ public class QueueRuleManagerTests
             Enabled = enabled,
             MaxStrikes = 3,
             PrivacyType = privacyType,
+            ContentType = contentType,
             MinCompletionPercentage = minCompletion,
             MaxCompletionPercentage = maxCompletion,
             ResetStrikesOnProgress = false,

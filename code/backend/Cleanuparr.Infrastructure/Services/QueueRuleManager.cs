@@ -34,8 +34,10 @@ public class QueueRuleManager : IQueueRuleManager
             return null;
         }
 
+        bool? isUpgrade = ContextProvider.Get(ContextProvider.Keys.IsUpgrade) as bool?;
+
         List<TRule> matchedRules = rules
-            .Where(x => x.Enabled && x.MatchesTorrent(torrent))
+            .Where(x => x.Enabled && x.MatchesContentType(isUpgrade) && x.MatchesTorrent(torrent))
             .ToList();
 
         if (matchedRules.Count > 1)
