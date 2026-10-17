@@ -23,5 +23,5 @@ public interface IRadarrClient : IArrClient
     /// <summary>
     /// Fetches the ids of movies Radarr grabbed since the given time.
     /// </summary>
-    Task<HashSet<long>> GetRecentlyGrabbedMovieIdsAsync(ArrInstance arrInstance, DateTimeOffset since);
+    Task<HashSet<long>> GetRecentlyGrabbedMovieIdsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
 }

@@ -340,9 +340,9 @@ public class SonarrClient : ArrClient, ISonarrClient
     }
 
     /// <inheritdoc/>
-    public async Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since)
+    public async Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default)
     {
-        List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, "&includeEpisode=true");
+        List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, "&includeEpisode=true", cancellationToken);
 
         return records
             .Where(record => record.SeriesId > 0 && record.Episode is not null)

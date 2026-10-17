@@ -282,7 +282,8 @@ public abstract class ArrClient : IArrClient
     /// <param name="arrInstance">The arr instance to query.</param>
     /// <param name="since">Only rows at or after this time are returned.</param>
     /// <param name="extraQuery">Additional query parameters, appended as-is (e.g. "&amp;includeEpisode=true").</param>
-    protected async Task<List<ArrHistoryRecord>> GetGrabHistorySinceAsync(ArrInstance arrInstance, DateTimeOffset since, string extraQuery)
+    /// <param name="cancellationToken">Token used to cancel the request.</param>
+    protected async Task<List<ArrHistoryRecord>> GetGrabHistorySinceAsync(ArrInstance arrInstance, DateTimeOffset since, string extraQuery, CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/history/since";
@@ -292,7 +293,7 @@ public abstract class ArrClient : IArrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         try
         {
@@ -304,7 +305,7 @@ public abstract class ArrClient : IArrClient
             throw;
         }
 
-        return await DeserializeStreamAsync<List<ArrHistoryRecord>>(response) ?? [];
+        return await DeserializeStreamAsync<List<ArrHistoryRecord>>(response, cancellationToken) ?? [];
     }
 
     /// <inheritdoc/>

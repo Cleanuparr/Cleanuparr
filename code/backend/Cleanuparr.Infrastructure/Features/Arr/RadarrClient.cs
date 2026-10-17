@@ -224,9 +224,9 @@ public class RadarrClient : ArrClient, IRadarrClient
     }
 
     /// <inheritdoc/>
-    public async Task<HashSet<long>> GetRecentlyGrabbedMovieIdsAsync(ArrInstance arrInstance, DateTimeOffset since)
+    public async Task<HashSet<long>> GetRecentlyGrabbedMovieIdsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default)
     {
-        List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, string.Empty);
+        List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, string.Empty, cancellationToken);
 
         return records
             .Where(record => record.MovieId > 0)

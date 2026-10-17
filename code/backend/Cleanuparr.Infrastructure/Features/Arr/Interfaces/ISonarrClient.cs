@@ -33,5 +33,5 @@ public interface ISonarrClient : IArrClient
     /// <summary>
     /// Fetches the series/season pairs Sonarr grabbed an episode for since the given time.
     /// </summary>
-    Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since);
+    Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
 }

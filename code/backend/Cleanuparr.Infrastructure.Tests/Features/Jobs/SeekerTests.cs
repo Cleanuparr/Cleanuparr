@@ -62,10 +62,10 @@ public class SeekerTests : IDisposable
 
         // Default: no recently grabbed movies/seasons
         _radarrClient
-            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>())
+            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns([]);
         _sonarrClient
-            .GetRecentlyGrabbedSeasonsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>())
+            .GetRecentlyGrabbedSeasonsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns([]);
 
         // Default: PublishSearchTriggered returns a Guid
@@ -5581,7 +5581,7 @@ public class SeekerTests : IDisposable
             .Returns([]);
 
         _radarrClient
-            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Any<DateTimeOffset>())
+            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns([2L]);
 
         _radarrClient
@@ -5647,7 +5647,7 @@ public class SeekerTests : IDisposable
             .Returns([]);
 
         _sonarrClient
-            .GetRecentlyGrabbedSeasonsAsync(sonarrInstance, Arg.Any<DateTimeOffset>())
+            .GetRecentlyGrabbedSeasonsAsync(sonarrInstance, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .Returns([(10L, 1L)]);
 
         _sonarrClient
@@ -5735,7 +5735,7 @@ public class SeekerTests : IDisposable
 
         // Assert: history endpoint was never queried
         await _radarrClient.DidNotReceive()
-            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>());
+            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -5767,7 +5767,7 @@ public class SeekerTests : IDisposable
             .Returns([]);
 
         _radarrClient
-            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Any<DateTimeOffset>())
+            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new HttpRequestException("boom"));
 
         _fixture.ArrClientFactory
@@ -5782,6 +5782,98 @@ public class SeekerTests : IDisposable
         // Assert: no search was attempted for the instance
         await mockArrClient.DidNotReceive()
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_GrabHistoryReadCanceled_PropagatesCancellation()
+    {
+        // Arrange: the history read is canceled, the exception must propagate instead of being swallowed
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            RecentGrabWindowHours = 24
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act & assert
+        await Should.ThrowAsync<OperationCanceledException>(() => sut.ExecuteAsync());
+
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RecentGrabWindow_PassesCancellationTokenToGrabHistoryRead()
+    {
+        // Arrange: the token passed to ExecuteAsync must reach the grab history read
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            RecentGrabWindowHours = 24
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([]));
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+        using CancellationTokenSource cts = new();
+
+        // Act
+        await sut.ExecuteAsync(cts.Token);
+
+        // Assert
+        await _radarrClient.Received(1)
+            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Any<DateTimeOffset>(), cts.Token);
     }
 
     [Fact]
@@ -5829,7 +5921,7 @@ public class SeekerTests : IDisposable
 
         // Assert
         await _radarrClient.Received(1)
-            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Is<DateTimeOffset>(d => d == expectedSince));
+            .GetRecentlyGrabbedMovieIdsAsync(radarrInstance, Arg.Is<DateTimeOffset>(d => d == expectedSince), Arg.Any<CancellationToken>());
     }
 
     #endregion

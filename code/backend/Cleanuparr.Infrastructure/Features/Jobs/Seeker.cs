@@ -341,11 +341,11 @@ public sealed class Seeker : IHandler
             {
                 if (instanceType == InstanceType.Radarr)
                 {
-                    recentlyGrabbedMovieIds = await _radarrClient.GetRecentlyGrabbedMovieIdsAsync(arrInstance, since);
+                    recentlyGrabbedMovieIds = await _radarrClient.GetRecentlyGrabbedMovieIdsAsync(arrInstance, since, cancellationToken);
                 }
                 else
                 {
-                    recentlyGrabbedSeasons = await _sonarrClient.GetRecentlyGrabbedSeasonsAsync(arrInstance, since);
+                    recentlyGrabbedSeasons = await _sonarrClient.GetRecentlyGrabbedSeasonsAsync(arrInstance, since, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
