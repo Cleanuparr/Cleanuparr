@@ -68,6 +68,10 @@ For Sonarr, the cycle is tracked at the season level; each season of each series
 </Note>
 
 <Note>
+Seeker reads the Missing and Cutoff Unmet lists of each *arr instance. Proactive search on Radarr needs Radarr v5.6 or newer, the first version with those lists.
+</Note>
+
+<Note>
 For an item to be eligible, it has to be released digitally. For example, if the item is currently in cinemas, it will be skipped until it has a proper digital release.
 </Note>
 
@@ -129,7 +133,7 @@ When enabled, items that already have a file but have not yet met the quality pr
 When enabled, items whose current custom format score is below the quality profile's cutoff format score will be included as upgrade candidates. Seeker uses cached score data that is kept up to date by the Custom Format Score Syncer, which runs automatically when this setting is enabled.
 
 <Note>
-Custom format scores are tracked at the episode level for Sonarr. If a series has episodes with scores below the cutoff, the corresponding season will be searched.
+Custom format scores are tracked at the episode level for Sonarr. If a series has episodes with scores below the cutoff, the corresponding season will be searched. After an update to Cleanuparr, these episodes count again once the syncer has run.
 </Note>
 
 </ConfigSection>
