@@ -75,24 +75,25 @@ public sealed class SearchStatsController : ControllerBase
             })
             .ToListAsync();
 
-        // Count items searched in current cycle per instance
-        List<Guid> currentCycleIds = instanceConfigs.Select(ic => ic.CurrentCycleId).ToList();
-        var cycleItemsByInstance = await _eventsContext.SeekerHistory
+        // Dry run searches in its own cycles, so show those while it is on.
+        bool isDryRun = (await _dataContext.GeneralConfigs.AsNoTracking().FirstAsync()).DryRun;
+        List<Guid> instanceIds = instanceConfigs.Select(ic => ic.ArrInstanceId).ToList();
+        List<SeekerCycle> cycles = await _eventsContext.SeekerCycles
             .AsNoTracking()
-            .Where(h => currentCycleIds.Contains(h.CycleId))
-            .GroupBy(h => h.ArrInstanceId)
-            .Select(g => new
-            {
-                InstanceId = g.Key,
-                CycleItemsSearched = g.Select(h => h.ExternalItemId).Distinct().Count(),
-                CycleStartedAt = (DateTimeOffset?)g.Min(h => h.LastSearchedAt),
-            })
+            .Where(c => instanceIds.Contains(c.ArrInstanceId) && c.IsDryRun == isDryRun)
             .ToListAsync();
 
         var perInstanceStats = instanceConfigs.Select(ic =>
         {
             var history = historyByInstance.FirstOrDefault(h => h.InstanceId == ic.ArrInstanceId);
-            var cycleProgress = cycleItemsByInstance.FirstOrDefault(c => c.InstanceId == ic.ArrInstanceId);
+            List<SeekerCycle> instanceCycles = cycles
+                .Where(c => c.ArrInstanceId == ic.ArrInstanceId)
+                .OrderByDescending(c => c.StartedAt)
+                .ToList();
+            SeekerCycle? current = isDryRun
+                ? instanceCycles.FirstOrDefault()
+                : instanceCycles.FirstOrDefault(c => c.Id == ic.CurrentCycleId);
+            SeekerCycle? last = instanceCycles.FirstOrDefault(c => c.CompletedAt != null && c.Id != current?.Id);
             return new InstanceSearchStat
             {
                 InstanceId = ic.ArrInstanceId,
@@ -102,10 +103,14 @@ public sealed class SearchStatsController : ControllerBase
                 TotalSearchCount = history?.TotalSearchCount ?? 0,
                 LastSearchedAt = history?.LastSearchedAt,
                 LastProcessedAt = ic.LastProcessedAt,
-                CurrentCycleId = ic.CurrentCycleId,
-                CycleItemsSearched = cycleProgress?.CycleItemsSearched ?? 0,
-                CycleItemsTotal = ic.TotalEligibleItems,
-                CycleStartedAt = cycleProgress?.CycleStartedAt,
+                CurrentCycleId = current?.Id ?? ic.CurrentCycleId,
+                CycleItemsSearched = current is null ? 0 : Math.Max(0, current.EligibleNow - current.RemainingUnits),
+                CycleItemsTotal = current?.EligibleNow ?? 0,
+                CycleItemsRemaining = current?.RemainingUnits ?? 0,
+                CycleStartedAt = current?.StartedAt,
+                CycleCompletedAt = current?.CompletedAt,
+                LastCycleStartedAt = last?.StartedAt,
+                LastCycleCompletedAt = last?.CompletedAt,
             };
         }).ToList();
 

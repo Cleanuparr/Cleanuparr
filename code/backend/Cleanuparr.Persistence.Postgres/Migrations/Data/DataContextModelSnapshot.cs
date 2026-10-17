@@ -1740,10 +1740,6 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("text[]")
                         .HasColumnName("skip_tags");
 
-                    b.Property<int>("TotalEligibleItems")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_eligible_items");
-
                     b.Property<bool>("UseCustomFormatScore")
                         .HasColumnType("boolean")
                         .HasColumnName("use_custom_format_score");

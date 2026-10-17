@@ -1772,8 +1772,7 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
-            MinCycleTimeDays = 7,
-            TotalEligibleItems = 2
+            MinCycleTimeDays = 7
         });
 
         // Cycle started 2 days ago — within the 7-day minimum
@@ -1855,8 +1854,7 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
-            MinCycleTimeDays = 7,
-            TotalEligibleItems = 2
+            MinCycleTimeDays = 7
         });
 
         // Cycle started 10 days ago — beyond the 7-day minimum
@@ -2013,8 +2011,7 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
-            MinCycleTimeDays = 7,
-            TotalEligibleItems = 1
+            MinCycleTimeDays = 7
         });
 
         // Series history — season already searched in current cycle (started 2 days ago)
@@ -2089,8 +2086,7 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
-            MinCycleTimeDays = 7,
-            TotalEligibleItems = 1
+            MinCycleTimeDays = 7
         });
 
         // Series history — season already searched in current cycle (started 10 days ago)
@@ -2174,7 +2170,6 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false,
             CurrentCycleId = cycleIdA,
             MinCycleTimeDays = 30,
-            TotalEligibleItems = 1,
             LastProcessedAt = now.AddDays(-5) // Oldest — round-robin tries this first
         });
         _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
@@ -2198,7 +2193,6 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false,
             CurrentCycleId = cycleIdB,
             MinCycleTimeDays = 5,
-            TotalEligibleItems = 1,
             LastProcessedAt = now.AddDays(-1)
         });
         // No history for instance B — it hasn't searched anything yet
@@ -2281,8 +2275,7 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
-            MinCycleTimeDays = 30,
-            TotalEligibleItems = 2 // Stale value from previous run
+            MinCycleTimeDays = 30
         });
 
         // History: 2 items searched in current cycle
@@ -2373,8 +2366,7 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
-            MinCycleTimeDays = 30,
-            TotalEligibleItems = 2 // Stale value from previous run
+            MinCycleTimeDays = 30
         });
 
         // History: items 1 and 2 were searched
@@ -4618,9 +4610,9 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_Sonarr_TotalEligibleItems_CountsSeriesWithAnEligibleSeason()
+    public async Task ExecuteAsync_Sonarr_Cycle_EligibleNow_CountsEligibleSeasonsAcrossSeries()
     {
-        // Arrange: series 10 has two eligible seasons, series 20 has one; TotalEligibleItems counts series, not seasons
+        // Arrange: series 10 has two eligible seasons, series 20 has one; the cycle counts seasons, not series
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
@@ -4673,10 +4665,10 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: two series had an eligible season, even though series 10 contributed two seasons
-        var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
-            .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
-        instanceConfig.TotalEligibleItems.ShouldBe(2);
+        // Assert
+        var cycle = await _fixture.EventsContext.SeekerCycles
+            .FirstAsync(c => c.ArrInstanceId == sonarrInstance.Id && !c.IsDryRun);
+        cycle.EligibleNow.ShouldBe(3);
     }
 
     [Fact]
@@ -5236,7 +5228,7 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_Radarr_UpdatesTotalEligibleItems()
+    public async Task ExecuteAsync_Radarr_Cycle_EligibleNow_UpdatesToMatchEligibleMovies()
     {
         // Arrange
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
@@ -5252,8 +5244,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
-            MonitoredOnly = false,
-            TotalEligibleItems = 0 // Start at 0
+            MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -5291,10 +5282,10 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — TotalEligibleItems updated to 3
-        var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
-            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        instanceConfig.TotalEligibleItems.ShouldBe(3);
+        // Assert
+        var cycle = await _fixture.EventsContext.SeekerCycles
+            .FirstAsync(c => c.ArrInstanceId == radarrInstance.Id && !c.IsDryRun);
+        cycle.EligibleNow.ShouldBe(3);
     }
 
     #endregion
@@ -7338,10 +7329,6 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
-            .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
-        instanceConfig.TotalEligibleItems.ShouldBe(1);
-
         var cycle = await _fixture.EventsContext.SeekerCycles
             .FirstAsync(c => c.ArrInstanceId == sonarrInstance.Id && !c.IsDryRun);
         cycle.EligibleNow.ShouldBe(2);

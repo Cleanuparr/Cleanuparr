@@ -4,8 +4,12 @@ using Cleanuparr.Api.Features.Seeker.Controllers;
 using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using Shouldly;
 
@@ -70,6 +74,123 @@ public class SearchStatsControllerTests : IDisposable
         summary.TotalSearchesAllTime.ShouldBe(2);
         summary.SearchesLast7Days.ShouldBe(0);
         summary.SearchesLast30Days.ShouldBe(1);
+    }
+
+    #endregion
+
+    #region GetSummary PerInstanceStats
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_UsesTheCurrentCycleRow()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        AddInstanceConfig(radarr.Id, currentCycleId);
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 10, remainingUnits: 4, startedAt: Now.AddDays(-2));
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.CycleItemsTotal.ShouldBe(10);
+        stat.CycleItemsRemaining.ShouldBe(4);
+        stat.CycleItemsSearched.ShouldBe(6);
+        stat.CycleStartedAt.ShouldBe(Now.AddDays(-2));
+        stat.CycleCompletedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_LastCycle_IsTheNewestCompletedOtherCycle()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        AddInstanceConfig(radarr.Id, currentCycleId);
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 5, remainingUnits: 5, startedAt: Now);
+
+        Guid olderCompletedId = Guid.NewGuid();
+        Guid newerCompletedId = Guid.NewGuid();
+        AddCycle(olderCompletedId, radarr.Id, eligibleNow: 3, remainingUnits: 0, startedAt: Now.AddDays(-20), completedAt: Now.AddDays(-19));
+        AddCycle(newerCompletedId, radarr.Id, eligibleNow: 3, remainingUnits: 0, startedAt: Now.AddDays(-10), completedAt: Now.AddDays(-9));
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.LastCycleStartedAt.ShouldBe(Now.AddDays(-10));
+        stat.LastCycleCompletedAt.ShouldBe(Now.AddDays(-9));
+    }
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_DryRunOn_ShowsNewestDryCycleAndIgnoresLiveCycles()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        (await _dataContext.GeneralConfigs.FirstAsync()).DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        Guid currentCycleId = Guid.NewGuid();
+        AddInstanceConfig(radarr.Id, currentCycleId);
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 99, remainingUnits: 99, startedAt: Now.AddDays(-30), isDryRun: false);
+
+        Guid dryCycleId = Guid.NewGuid();
+        AddCycle(dryCycleId, radarr.Id, eligibleNow: 7, remainingUnits: 2, startedAt: Now.AddHours(-1), isDryRun: true);
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.CurrentCycleId.ShouldBe(dryCycleId);
+        stat.CycleItemsTotal.ShouldBe(7);
+        stat.CycleItemsRemaining.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_NoCycleRow_ValuesAreZeroOrNull()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddInstanceConfig(radarr.Id, Guid.NewGuid());
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.CycleItemsSearched.ShouldBe(0);
+        stat.CycleItemsTotal.ShouldBe(0);
+        stat.CycleItemsRemaining.ShouldBe(0);
+        stat.CycleStartedAt.ShouldBeNull();
+        stat.CycleCompletedAt.ShouldBeNull();
+        stat.LastCycleStartedAt.ShouldBeNull();
+        stat.LastCycleCompletedAt.ShouldBeNull();
+    }
+
+    private void AddInstanceConfig(Guid arrInstanceId, Guid currentCycleId)
+    {
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = arrInstanceId,
+            Enabled = true,
+            CurrentCycleId = currentCycleId,
+        });
+        _dataContext.SaveChanges();
+    }
+
+    private void AddCycle(
+        Guid id,
+        Guid arrInstanceId,
+        int eligibleNow,
+        int remainingUnits,
+        DateTimeOffset startedAt,
+        DateTimeOffset? completedAt = null,
+        bool isDryRun = false)
+    {
+        _eventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = id,
+            ArrInstanceId = arrInstanceId,
+            StartedAt = startedAt,
+            CompletedAt = completedAt,
+            CompletionReason = completedAt is null ? null : SeekerCycleCompletionReason.Completed,
+            EligibleAtStart = eligibleNow,
+            EligibleNow = eligibleNow,
+            RemainingUnits = remainingUnits,
+            IsDryRun = isDryRun,
+        });
+        _eventsContext.SaveChanges();
     }
 
     #endregion

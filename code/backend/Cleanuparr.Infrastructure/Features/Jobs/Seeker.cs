@@ -644,7 +644,6 @@ public sealed class Seeker : IHandler
         }
 
         int eligibleCount = candidates.Count;
-        instanceConfig.TotalEligibleItems = eligibleCount;
         cycle.EligibleNow = eligibleCount;
         cycle.RemainingUnits = 0;
 
@@ -842,7 +841,6 @@ public sealed class Seeker : IHandler
             .GroupBy(q => (q.SeriesId, q.SeasonNumber))
             .ToDictionary(g => g.Key, g => g.Select(q => q.Reason).ToList());
 
-        instanceConfig.TotalEligibleItems = seasons.Keys.Select(s => s.SeriesId).Distinct().Count();
         cycle.EligibleNow = seasons.Count;
         cycle.RemainingUnits = 0;
 

@@ -607,7 +607,9 @@ Console.WriteLine($"Built a media pool of {mediaPool.Count} distinct titles.");
 // ---- Seeker per-instance configs: capacity-driven so "cycle progress" and "cycle duration"
 // on the Seeker Stats page show real, non-zero values instead of "0 / N" and "-" ----
 List<SeekerHistory> seekerHistory = [];
-HashSet<(Guid, long, InstanceType, int, Guid)> seekerHistoryKeys = [];
+List<SeekerCycle> seekerCycles = [];
+// Matches the SeekerHistory unique index; EpisodeId and IsDryRun are always 0/false here.
+HashSet<(Guid, long, InstanceType, int)> seekerHistoryKeys = [];
 
 // Generic filler titles for library padding: real curated titles stay scarce (they're the
 // ones the docs gallery pool knows by name), so background capacity/cycle rows that exist
@@ -659,6 +661,9 @@ foreach (ArrInstance instance in seekerInstances)
     List<DateTimeOffset> curatedTimestamps = cycleTimestampsDesc.Take(cycleItemIds.Count).OrderBy(_ => rng.Next()).ToList();
     List<DateTimeOffset> fillerTimestamps = cycleTimestampsDesc.Skip(cycleItemIds.Count).OrderBy(_ => rng.Next()).ToList();
 
+    int searchedUnits = 0;
+    DateTimeOffset cycleStartedAt = now;
+
     for (int i = 0; i < cycleItemIds.Count; i++)
     {
         long externalId = cycleItemIds[i];
@@ -666,11 +671,17 @@ foreach (ArrInstance instance in seekerInstances)
             ? mediaPool.First(m => m.Instance?.Id == instance.Id && m.ExternalItemId == externalId).SeasonNumber
             : 0;
         string title = instanceType == InstanceType.Sonarr ? sonarrSeriesTitle[externalId] : radarrMovieTitle[externalId];
-        (Guid, long, InstanceType, int, Guid) key = (instance.Id, externalId, instanceType, seasonNumber, currentCycleId);
+        (Guid, long, InstanceType, int) key = (instance.Id, externalId, instanceType, seasonNumber);
 
         if (!seekerHistoryKeys.Add(key))
         {
             continue;
+        }
+
+        searchedUnits++;
+        if (curatedTimestamps[i] < cycleStartedAt)
+        {
+            cycleStartedAt = curatedTimestamps[i];
         }
 
         seekerHistory.Add(new SeekerHistory
@@ -692,11 +703,17 @@ foreach (ArrInstance instance in seekerInstances)
     {
         long fillerId = 100_000 + f;
         int seasonNumber = instanceType == InstanceType.Sonarr ? 1 : 0;
-        (Guid, long, InstanceType, int, Guid) key = (instance.Id, fillerId, instanceType, seasonNumber, currentCycleId);
+        (Guid, long, InstanceType, int) key = (instance.Id, fillerId, instanceType, seasonNumber);
 
         if (!seekerHistoryKeys.Add(key))
         {
             continue;
+        }
+
+        searchedUnits++;
+        if (fillerTimestamps[f] < cycleStartedAt)
+        {
+            cycleStartedAt = fillerTimestamps[f];
         }
 
         seekerHistory.Add(new SeekerHistory
@@ -721,8 +738,33 @@ foreach (ArrInstance instance in seekerInstances)
         MonitoredOnly = true,
         ActiveDownloadLimit = 3,
         MinCycleTimeDays = 7,
-        TotalEligibleItems = capacity,
         CurrentCycleId = currentCycleId,
+    });
+
+    seekerCycles.Add(new SeekerCycle
+    {
+        Id = currentCycleId,
+        ArrInstanceId = instance.Id,
+        StartedAt = cycleStartedAt,
+        EligibleAtStart = capacity,
+        EligibleNow = capacity,
+        SearchedUnits = searchedUnits,
+        RemainingUnits = Math.Max(0, capacity - searchedUnits),
+    });
+
+    // A closed previous cycle, a few days long, ending before the current one started.
+    DateTimeOffset previousCompletedAt = cycleStartedAt.AddDays(-rng.Next(1, 4));
+    seekerCycles.Add(new SeekerCycle
+    {
+        ArrInstanceId = instance.Id,
+        StartedAt = previousCompletedAt.AddDays(-rng.Next(3, 8)),
+        CompletedAt = previousCompletedAt,
+        CompletionReason = SeekerCycleCompletionReason.Completed,
+        EligibleAtStart = capacity,
+        EligibleNow = capacity,
+        SearchedUnits = capacity,
+        RemainingUnits = 0,
+        GrabbedUnits = rng.Next(0, capacity / 3 + 1),
     });
 }
 await data.SaveChangesAsync();
@@ -739,7 +781,7 @@ for (int i = 0; i < pastCycleHistoryCount; i++)
 
     MediaItem media = Pick(sonarrRadarrForHistory);
     Guid pastCycleId = Guid.NewGuid();
-    (Guid, long, InstanceType, int, Guid) key = (media.Instance!.Id, media.ExternalItemId, media.Type!.Value, media.SeasonNumber, pastCycleId);
+    (Guid, long, InstanceType, int) key = (media.Instance!.Id, media.ExternalItemId, media.Type!.Value, media.SeasonNumber);
 
     if (!seekerHistoryKeys.Add(key))
     {
@@ -760,6 +802,7 @@ for (int i = 0; i < pastCycleHistoryCount; i++)
     });
 }
 events.SeekerHistory.AddRange(seekerHistory);
+events.SeekerCycles.AddRange(seekerCycles);
 await events.SaveChangesAsync();
 
 // ---- Job runs: capped, recency/diurnal-biased sample per JobType (not literal cron replay,
