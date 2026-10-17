@@ -29,6 +29,13 @@ public sealed record DownloadClientConfigResponse
     [SensitiveData]
     public string? ApiKey { get; init; }
 
+    public HttpAuthType HttpAuthType { get; init; }
+
+    public string? HttpAuthUsername { get; init; }
+
+    [SensitiveData]
+    public string? HttpAuthPassword { get; init; }
+
     public string? UrlBase { get; init; }
 
     public Uri? ExternalUrl { get; init; }
@@ -48,6 +55,9 @@ public sealed record DownloadClientConfigResponse
         Username = config.Username,
         Password = config.Password,
         ApiKey = config.ApiKey,
+        HttpAuthType = config.HttpAuthType,
+        HttpAuthUsername = config.HttpAuthUsername,
+        HttpAuthPassword = config.HttpAuthPassword,
         UrlBase = config.UrlBase,
         ExternalUrl = config.ExternalUrl,
         DownloadDirectorySource = config.DownloadDirectorySource,

@@ -1,4 +1,7 @@
 using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +29,10 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
         using var scope = _scopeFactory.CreateScope();
         var configStore = scope.ServiceProvider.GetRequiredService<IHttpClientConfigStore>();
 
-        if (!configStore.TryGetConfiguration(name, out HttpClientConfig? config))
+        // The store keys on the bare name, IHttpClientFactory sees "name#generation".
+        string baseName = DynamicHttpClientFactory.StripVersion(name);
+
+        if (!configStore.TryGetConfiguration(baseName, out HttpClientConfig? config))
             return;
 
         if (config.SendUserAgent)
@@ -67,51 +73,62 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
     {
         using var scope = _scopeFactory.CreateScope();
         var certValidationService = scope.ServiceProvider.GetRequiredService<CertificateValidationService>();
-        
-        switch (config.Type)
+
+        bool ByPassValidation(HttpRequestMessage sender, X509Certificate2? certificate, X509Chain? chain, SslPolicyErrors policy) =>
+            certValidationService.ShouldByPassValidationError(config.CertificateValidationType, sender, certificate, chain, policy);
+
+        HttpClientHandler handler = config.Type switch
         {
-            case HttpClientType.WithRetry:
-                builder.PrimaryHandler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = (sender, certificate, chain, policy) =>
-                        certValidationService.ShouldByPassValidationError(config.CertificateValidationType, sender, certificate, chain, policy)
-                };
-                break;
+            HttpClientType.Deluge => new HttpClientHandler
+            {
+                AllowAutoRedirect = config.AllowAutoRedirect,
+                UseCookies = true,
+                CookieContainer = new CookieContainer(),
+                AutomaticDecompression = config.AutomaticDecompression,
+                ServerCertificateCustomValidationCallback = ByPassValidation,
+            },
 
-            case HttpClientType.Deluge:
-                builder.PrimaryHandler = new HttpClientHandler
-                {
-                    AllowAutoRedirect = config.AllowAutoRedirect,
-                    UseCookies = true,
-                    CookieContainer = new CookieContainer(),
-                    AutomaticDecompression = config.AutomaticDecompression,
-                    ServerCertificateCustomValidationCallback = (sender, certificate, chain, policy) =>
-                        certValidationService.ShouldByPassValidationError(config.CertificateValidationType, sender, certificate, chain, policy),
-                };
-                break;
+            // uTorrent's WebUI requires the GUID cookie+token pair set manually by UTorrentHttpService
+            // UseCookies=false prevents .NET's CookieContainer from injecting a competing Cookie header.
+            HttpClientType.UTorrent => new HttpClientHandler
+            {
+                UseCookies = false,
+                ServerCertificateCustomValidationCallback = ByPassValidation,
+            },
 
-            case HttpClientType.UTorrent:
-                // uTorrent's WebUI requires the GUID cookie+token pair set manually by UTorrentHttpService
-                // UseCookies=false prevents .NET's CookieContainer from injecting a competing Cookie header.
-                builder.PrimaryHandler = new HttpClientHandler
-                {
-                    UseCookies = false,
-                    ServerCertificateCustomValidationCallback = (sender, certificate, chain, policy) =>
-                        certValidationService.ShouldByPassValidationError(config.CertificateValidationType, sender, certificate, chain, policy),
-                };
-                break;
+            // WithRetry and Default use the same handler shape.
+            _ => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = ByPassValidation,
+            },
+        };
 
-            case HttpClientType.Default:
-            default:
-                // Use default handler with certificate validation
-                var defaultHandler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = (sender, certificate, chain, policy) =>
-                        certValidationService.ShouldByPassValidationError(config.CertificateValidationType, sender, certificate, chain, policy)
-                };
-                builder.PrimaryHandler = defaultHandler;
-                break;
+        ApplyHttpAuth(builder.AdditionalHandlers, handler, config);
+
+        builder.PrimaryHandler = handler;
+    }
+
+    /// <summary>
+    /// Digest goes on <see cref="HttpClientHandler.Credentials"/>, Basic on a delegating handler.
+    /// </summary>
+    internal static void ApplyHttpAuth(ICollection<DelegatingHandler> additionalHandlers, HttpClientHandler handler, HttpClientConfig config)
+    {
+        if (config.HttpAuthCredential is null)
+        {
+            return;
         }
+
+        if (config.HttpAuthType == HttpAuthType.Digest)
+        {
+            Uri baseUri = config.BaseUri ?? throw new InvalidOperationException("Digest authentication requires a base URI");
+
+            // The "Digest" key blocks a fallback to NTLM/Negotiate for this authority.
+            handler.Credentials = new CredentialCache { { baseUri, "Digest", config.HttpAuthCredential } };
+            handler.PreAuthenticate = true;
+            return;
+        }
+
+        additionalHandlers.Add(new BasicAuthHttpMessageHandler(config.HttpAuthCredential));
     }
 
     private void AddRetryPolicy(HttpMessageHandlerBuilder builder, RetryConfig retryConfig)

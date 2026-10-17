@@ -675,6 +675,19 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("host");
 
+                    b.Property<string>("HttpAuthPassword")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("http_auth_password");
+
+                    b.Property<string>("HttpAuthType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("http_auth_type");
+
+                    b.Property<string>("HttpAuthUsername")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("http_auth_username");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT")

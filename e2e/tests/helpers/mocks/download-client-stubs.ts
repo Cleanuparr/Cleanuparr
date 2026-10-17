@@ -183,6 +183,33 @@ export function sabRejectedApiKeyStub(apiKey: string): Mapping {
   };
 }
 
+/**
+ * Transmission CSRF handshake: 409 with a session id, then success on a retry carrying it.
+ */
+export function transmissionSessionGetStubs(sessionId = 'transmission-session'): Mapping[] {
+  return [
+    {
+      request: {
+        method: 'POST',
+        urlPath: '/transmission/rpc',
+        headers: { 'X-Transmission-Session-Id': { equalTo: sessionId } },
+      },
+      response: {
+        status: 200,
+        jsonBody: { result: 'success', arguments: {} },
+      },
+      priority: 1,
+    },
+    {
+      request: { method: 'POST', urlPath: '/transmission/rpc' },
+      response: {
+        status: 409,
+        headers: { 'X-Transmission-Session-Id': sessionId },
+      },
+    },
+  ];
+}
+
 export function rtorrentXmlRpcStub(): Mapping {
   return {
     request: { method: 'POST', urlPath: '/RPC2' },

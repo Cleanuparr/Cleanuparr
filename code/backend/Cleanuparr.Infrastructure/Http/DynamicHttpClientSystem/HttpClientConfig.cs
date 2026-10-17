@@ -23,4 +23,19 @@ public class HttpClientConfig
     /// Whether requests from this client carry a User-Agent header.
     /// </summary>
     public bool SendUserAgent { get; set; }
+
+    /// <summary>
+    /// HTTP authentication scheme to answer a reverse proxy's challenge with.
+    /// </summary>
+    public HttpAuthType HttpAuthType { get; set; } = HttpAuthType.Basic;
+
+    /// <summary>
+    /// Credential to send as HTTP auth, or null when this client has none configured.
+    /// </summary>
+    public NetworkCredential? HttpAuthCredential { get; set; }
+
+    /// <summary>
+    /// Scheme, host and port of the client's URL, used as the Digest <see cref="CredentialCache"/> key.
+    /// </summary>
+    public Uri? BaseUri { get; set; }
 }

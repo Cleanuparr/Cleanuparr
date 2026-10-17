@@ -4,12 +4,13 @@ import { loginAndGotoSettings, selectOption } from '../helpers/ui';
 // Behavior-parity spec for the Download Clients create/edit modal (client-type driven fields).
 
 /**
- * Matches a field by its label.
+ * Matches a field by its exact label.
  *
  * Field hints mention other fields by name, so filtering on the whole field's text picks up unrelated fields as well: the API Key hint says to leave the username and password empty.
+ * The match is exact because the HTTP Auth labels also contain "Username" and "Password".
  */
 function field(modal: Locator, label: string): Locator {
-  return modal.locator('app-input').filter({ has: modal.page().locator('label.input-label', { hasText: label }) });
+  return modal.locator('app-input').filter({ has: modal.page().locator('label.input-label', { hasText: new RegExp(`^\\s*${label}\\s*$`) }) });
 }
 test.describe('Download Clients UI', () => {
   test('client type switching shows/hides fields and auto-fills URL base', async ({ page }) => {

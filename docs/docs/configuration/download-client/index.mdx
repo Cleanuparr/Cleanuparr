@@ -147,6 +147,20 @@ qBittorrent 5.2+ also supports API key auth: generate one under Options &gt; Web
 
 </ConfigSection>
 
+<ConfigSection
+  title="HTTP Authentication"
+>
+
+Credentials for a reverse proxy in front of the download client.
+Pick **Basic** or **Digest** to match the proxy's challenge.
+
+- **qBittorrent, Deluge, SABnzbd**: Username and Password log into the client itself, so the proxy gets its own **HTTP Auth Username** and **HTTP Auth Password** fields.
+- **rTorrent, Transmission, uTorrent**: Username and Password already go out as HTTP authentication, so you only pick Basic or Digest.
+
+qBittorrent sends its API key in the `Authorization` header, which HTTP authentication also needs. Behind an HTTP auth proxy, use qBittorrent's username and password instead.
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>

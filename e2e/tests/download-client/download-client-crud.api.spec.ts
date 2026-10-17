@@ -17,7 +17,8 @@ test.describe('DownloadClient — CRUD', () => {
 
     const clientKeys = [
       'apiKey', 'downloadDirectorySource', 'downloadDirectoryTarget', 'enabled', 'externalUrl', 'host',
-      'id', 'name', 'password', 'type', 'typeName', 'urlBase', 'username',
+      'httpAuthPassword', 'httpAuthType', 'httpAuthUsername', 'id', 'name', 'password', 'type', 'typeName',
+      'urlBase', 'username',
     ];
     expectKeys(created, clientKeys);
     expect(created.password).toBe('\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022');

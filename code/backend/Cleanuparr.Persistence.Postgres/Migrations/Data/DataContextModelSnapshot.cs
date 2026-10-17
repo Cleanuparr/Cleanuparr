@@ -681,6 +681,19 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("text")
                         .HasColumnName("host");
 
+                    b.Property<string>("HttpAuthPassword")
+                        .HasColumnType("text")
+                        .HasColumnName("http_auth_password");
+
+                    b.Property<string>("HttpAuthType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("http_auth_type");
+
+                    b.Property<string>("HttpAuthUsername")
+                        .HasColumnType("text")
+                        .HasColumnName("http_auth_username");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")

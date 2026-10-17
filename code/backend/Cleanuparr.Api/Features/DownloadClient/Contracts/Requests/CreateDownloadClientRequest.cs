@@ -23,6 +23,12 @@ public sealed record CreateDownloadClientRequest
 
     public string? ApiKey { get; init; }
 
+    public HttpAuthType HttpAuthType { get; init; }
+
+    public string? HttpAuthUsername { get; init; }
+
+    public string? HttpAuthPassword { get; init; }
+
     public string? UrlBase { get; init; }
 
     public string? ExternalUrl { get; init; }
@@ -48,9 +54,15 @@ public sealed record CreateDownloadClientRequest
             throw new CustomValidationException("Host cannot be empty");
         }
 
-        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
+        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out Uri? parsedHost))
         {
             throw new CustomValidationException("Host is not a valid URL");
+        }
+
+        if (parsedHost.IsAbsoluteUri && parsedHost.UserInfo.Length > 0)
+        {
+            throw new CustomValidationException(
+                "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 
         if (!string.IsNullOrWhiteSpace(ExternalUrl) && !Uri.TryCreate(ExternalUrl, UriKind.RelativeOrAbsolute, out _))
@@ -66,6 +78,11 @@ public sealed record CreateDownloadClientRequest
         if (ApiKey.IsPlaceholder())
         {
             throw new CustomValidationException("API key cannot be a placeholder value");
+        }
+
+        if (HttpAuthPassword.IsPlaceholder())
+        {
+            throw new CustomValidationException("HTTP auth password cannot be a placeholder value");
         }
 
         if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey))
@@ -84,6 +101,9 @@ public sealed record CreateDownloadClientRequest
         Username = Username,
         Password = Password,
         ApiKey = ApiKey,
+        HttpAuthType = HttpAuthType,
+        HttpAuthUsername = HttpAuthUsername,
+        HttpAuthPassword = HttpAuthPassword,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
         DownloadDirectorySource = DownloadDirectorySource,

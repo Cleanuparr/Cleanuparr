@@ -42,4 +42,42 @@ public sealed class DownloadClientTypeNameExtensionsTests
     {
         DownloadClientTypeName.Transmission.SupportsApiKeyAndCredentials().ShouldBeFalse();
     }
+
+    [Theory]
+    [InlineData(DownloadClientTypeName.qBittorrent)]
+    [InlineData(DownloadClientTypeName.Deluge)]
+    [InlineData(DownloadClientTypeName.Sabnzbd)]
+    public void UsesDedicatedHttpAuthFields_AppLoginClients_IsTrue(DownloadClientTypeName typeName)
+    {
+        typeName.UsesDedicatedHttpAuthFields().ShouldBeTrue();
+        typeName.SupportsAuthField(DownloadClientAuthField.HttpAuthUsername).ShouldBeTrue();
+        typeName.SupportsAuthField(DownloadClientAuthField.HttpAuthPassword).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(DownloadClientTypeName.Transmission)]
+    [InlineData(DownloadClientTypeName.uTorrent)]
+    [InlineData(DownloadClientTypeName.rTorrent)]
+    public void UsesDedicatedHttpAuthFields_ReuseClients_IsFalse(DownloadClientTypeName typeName)
+    {
+        typeName.UsesDedicatedHttpAuthFields().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ApiKeyConflictsWithHttpAuth_QBittorrent_IsTrue()
+    {
+        DownloadClientTypeName.qBittorrent.ApiKeyConflictsWithHttpAuth().ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ApiKeyConflictsWithHttpAuth_Sabnzbd_IsFalse()
+    {
+        DownloadClientTypeName.Sabnzbd.ApiKeyConflictsWithHttpAuth().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ApiKeyConflictsWithHttpAuth_Transmission_IsFalse()
+    {
+        DownloadClientTypeName.Transmission.ApiKeyConflictsWithHttpAuth().ShouldBeFalse();
+    }
 }

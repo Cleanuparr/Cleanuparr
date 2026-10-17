@@ -74,6 +74,7 @@
     @if (showUsernameField()) {
       <app-input label="Username" placeholder="admin" [formField]="clientForm.username"
         [hint]="usernameHint()"
+        [error]="clientForm.username().errors()[0]?.message"
         helpKey="download-client:username" />
     }
     @if (showPasswordField()) {
@@ -87,6 +88,19 @@
         [error]="clientForm.apiKey().errors()[0]?.message"
         [featureId]="apiKeyFeatureId()"
         helpKey="download-client:apiKey" />
+    }
+    <app-select label="HTTP Authentication" [options]="httpAuthTypeOptions" [formField]="clientForm.httpAuthType"
+      [hint]="httpAuthHint()"
+      featureId="http-digest-auth"
+      helpKey="download-client:httpAuthType" />
+    @if (showHttpAuthCredentialFields()) {
+      <app-input label="HTTP Auth Username" placeholder="admin" [formField]="clientForm.httpAuthUsername"
+        hint="Username for the reverse proxy"
+        [error]="clientForm.httpAuthUsername().errors()[0]?.message"
+        helpKey="download-client:httpAuthUsername" />
+      <app-input label="HTTP Auth Password" placeholder="Enter password" type="password" [revealable]="false" [formField]="clientForm.httpAuthPassword"
+        hint="Password for the reverse proxy"
+        helpKey="download-client:httpAuthPassword" />
     }
     <app-input label="URL Base" placeholder="/api/v2" [formField]="clientForm.urlBase"
       [hint]="urlBaseHint()"

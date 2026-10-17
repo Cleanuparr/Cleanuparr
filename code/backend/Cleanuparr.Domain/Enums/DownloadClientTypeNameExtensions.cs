@@ -1,15 +1,27 @@
+using System.Linq;
+
 namespace Cleanuparr.Domain.Enums;
 
 public static class DownloadClientTypeNameExtensions
 {
+    private static readonly DownloadClientAuthField[] HttpAuthFields =
+    [
+        DownloadClientAuthField.HttpAuthUsername,
+        DownloadClientAuthField.HttpAuthPassword,
+    ];
+
     private static readonly Dictionary<DownloadClientTypeName, DownloadClientAuthField[]> AuthFields = new()
     {
-        [DownloadClientTypeName.qBittorrent] = [DownloadClientAuthField.Username, DownloadClientAuthField.Password, DownloadClientAuthField.ApiKey],
-        [DownloadClientTypeName.Deluge] = [DownloadClientAuthField.Password],
+        [DownloadClientTypeName.qBittorrent] =
+        [
+            DownloadClientAuthField.Username, DownloadClientAuthField.Password, DownloadClientAuthField.ApiKey,
+            ..HttpAuthFields,
+        ],
+        [DownloadClientTypeName.Deluge] = [DownloadClientAuthField.Password, ..HttpAuthFields],
         [DownloadClientTypeName.Transmission] = [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
         [DownloadClientTypeName.uTorrent] = [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
         [DownloadClientTypeName.rTorrent] = [DownloadClientAuthField.Username, DownloadClientAuthField.Password],
-        [DownloadClientTypeName.Sabnzbd] = [DownloadClientAuthField.ApiKey],
+        [DownloadClientTypeName.Sabnzbd] = [DownloadClientAuthField.ApiKey, ..HttpAuthFields],
     };
 
     /// <summary>
@@ -34,9 +46,12 @@ public static class DownloadClientTypeNameExtensions
 
     /// <summary>
     /// True when the field is the client's only credential, so leaving it blank means it cannot authenticate at all.
+    /// Proxy credential fields don't count.
     /// </summary>
     public static bool RequiresAuthField(this DownloadClientTypeName typeName, DownloadClientAuthField field) =>
-        AuthFields.TryGetValue(typeName, out var fields) && fields is [var only] && only == field;
+        AuthFields.TryGetValue(typeName, out var fields) &&
+        fields.Where(f => f != DownloadClientAuthField.HttpAuthUsername && f != DownloadClientAuthField.HttpAuthPassword)
+            .ToArray() is [var only] && only == field;
 
     /// <summary>
     /// True when the client type accepts an API key alongside a username or password, so the two must not be mixed.
@@ -44,6 +59,19 @@ public static class DownloadClientTypeNameExtensions
     public static bool SupportsApiKeyAndCredentials(this DownloadClientTypeName typeName) =>
         typeName.SupportsAuthField(DownloadClientAuthField.ApiKey) &&
         (typeName.SupportsAuthField(DownloadClientAuthField.Username) || typeName.SupportsAuthField(DownloadClientAuthField.Password));
+
+    /// <summary>
+    /// True when the API key needs the Authorization header that HTTP auth also uses.
+    /// SABnzbd sends its key as a query parameter.
+    /// </summary>
+    public static bool ApiKeyConflictsWithHttpAuth(this DownloadClientTypeName typeName) =>
+        typeName == DownloadClientTypeName.qBittorrent;
+
+    /// <summary>
+    /// True when Username/Password log into the client itself, so HTTP auth needs separate fields.
+    /// </summary>
+    public static bool UsesDedicatedHttpAuthFields(this DownloadClientTypeName typeName) =>
+        typeName.SupportsAuthField(DownloadClientAuthField.HttpAuthUsername);
 
     private static readonly DownloadClientCapability[] BaseTorrentCapabilities =
     [

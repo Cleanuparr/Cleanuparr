@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.General;
 
@@ -8,11 +9,6 @@ namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 /// </summary>
 public interface IDynamicHttpClientFactory
 {
-    /// <summary>
-    /// Creates an HttpClient with the specified configuration and registers it for future use
-    /// </summary>
-    HttpClient CreateClient(string clientName, HttpClientConfig config);
-    
     /// <summary>
     /// Creates an HttpClient using a previously registered configuration
     /// </summary>
@@ -36,7 +32,16 @@ public interface IDynamicHttpClientFactory
     /// <summary>
     /// Registers a configuration for a download client
     /// </summary>
-    void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent);
+    void RegisterDownloadClient(
+        string clientName,
+        int timeout,
+        HttpClientType clientType,
+        RetryConfig retryConfig,
+        CertificateValidationType certificateType,
+        bool sendUserAgent,
+        HttpAuthType httpAuthType = HttpAuthType.Basic,
+        NetworkCredential? httpAuthCredential = null,
+        Uri? baseUri = null);
 
     /// <summary>
     /// Registers a client that opts out of every handler setting and only carries the User-Agent.

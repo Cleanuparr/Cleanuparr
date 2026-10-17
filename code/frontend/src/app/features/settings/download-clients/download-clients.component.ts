@@ -14,7 +14,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import {
   DownloadClientTypeInfo, ClientConfig, CreateDownloadClientDto, UpdateDownloadClientDto, TestDownloadClientRequest,
 } from '@shared/models/download-client-config.model';
-import { DownloadClientAuthField, DownloadClientTypeName } from '@shared/models/enums';
+import { DownloadClientAuthField, DownloadClientTypeName, HttpAuthType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { createSettingsResource } from '@shared/utils/settings-resource.util';
 
@@ -32,13 +32,20 @@ const AUTOFILL_URL_BASES: Partial<Record<DownloadClientTypeName, string>> = {
   [DownloadClientTypeName.rTorrent]: 'plugins/httprpc/action.php',
 };
 
-type AuthField = 'username' | 'password' | 'apiKey';
+type AuthField = 'username' | 'password' | 'apiKey' | 'httpAuthUsername' | 'httpAuthPassword';
 
 const AUTH_FIELD_BY_API_FIELD: Record<DownloadClientAuthField, AuthField> = {
   [DownloadClientAuthField.Username]: 'username',
   [DownloadClientAuthField.Password]: 'password',
   [DownloadClientAuthField.ApiKey]: 'apiKey',
+  [DownloadClientAuthField.HttpAuthUsername]: 'httpAuthUsername',
+  [DownloadClientAuthField.HttpAuthPassword]: 'httpAuthPassword',
 };
+
+const HTTP_AUTH_TYPE_OPTIONS: SelectOption[] = [
+  { label: 'Basic', value: HttpAuthType.Basic },
+  { label: 'Digest', value: HttpAuthType.Digest },
+];
 
 interface DownloadClientFormModel {
   enabled: boolean;
@@ -48,6 +55,9 @@ interface DownloadClientFormModel {
   username: string;
   password: string;
   apiKey: string;
+  httpAuthType: HttpAuthType;
+  httpAuthUsername: string;
+  httpAuthPassword: string;
   urlBase: string;
   externalUrl: string;
   downloadDirectorySource: string;
@@ -104,7 +114,9 @@ export class DownloadClientsComponent implements HasPendingChanges {
 
   readonly clientModel = signal<DownloadClientFormModel>({
     enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
-    host: '', username: '', password: '', apiKey: '', urlBase: '', externalUrl: '',
+    host: '', username: '', password: '', apiKey: '',
+    httpAuthType: HttpAuthType.Basic, httpAuthUsername: '', httpAuthPassword: '',
+    urlBase: '', externalUrl: '',
     downloadDirectorySource: '', downloadDirectoryTarget: '',
   });
   readonly clientForm = form(this.clientModel, (p) => {
@@ -119,8 +131,32 @@ export class DownloadClientsComponent implements HasPendingChanges {
       const fields = this.authFieldsByType()[m.typeName] ?? [];
       const supportsBoth = fields.includes('apiKey') && (fields.includes('username') || fields.includes('password'));
       const has = (v: string | null | undefined): boolean => !!v && v.trim() !== '';
-      return supportsBoth && has(m.apiKey) && (has(m.username) || has(m.password))
-        ? { kind: 'exclusive', message: 'Use either an API key or a username and password, not both' }
+      if (supportsBoth && has(m.apiKey) && (has(m.username) || has(m.password))) {
+        return { kind: 'exclusive', message: 'Use either an API key or a username and password, not both' };
+      }
+      if (m.typeName === DownloadClientTypeName.qBittorrent && has(m.apiKey) && has(m.httpAuthUsername)) {
+        return {
+          kind: 'http-auth-conflict',
+          message: "API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.",
+        };
+      }
+      return undefined;
+    });
+    validate(p.httpAuthUsername, () => {
+      const m = this.clientModel();
+      const fields = this.authFieldsByType()[m.typeName] ?? [];
+      const has = (v: string | null | undefined): boolean => !!v && v.trim() !== '';
+      return fields.includes('httpAuthUsername') && m.httpAuthType === HttpAuthType.Digest && !has(m.httpAuthUsername)
+        ? { kind: 'digest-requires-username', message: 'HTTP Digest authentication requires a username' }
+        : undefined;
+    });
+    validate(p.username, () => {
+      const m = this.clientModel();
+      const fields = this.authFieldsByType()[m.typeName] ?? [];
+      const has = (v: string | null | undefined): boolean => !!v && v.trim() !== '';
+      return !fields.includes('httpAuthUsername') && fields.includes('username') &&
+        m.httpAuthType === HttpAuthType.Digest && !has(m.username)
+        ? { kind: 'digest-requires-username', message: 'HTTP Digest authentication requires a username' }
         : undefined;
     });
     disabled(p.typeName, () => this.editingClient() !== null);
@@ -142,6 +178,10 @@ export class DownloadClientsComponent implements HasPendingChanges {
   readonly showApiKeyField = computed(() =>
     (this.authFieldsByType()[this.clientModel().typeName] ?? []).includes('apiKey'));
 
+  /** Username/Password log into these clients, so proxy auth needs separate fields. */
+  readonly showHttpAuthCredentialFields = computed(() =>
+    (this.authFieldsByType()[this.clientModel().typeName] ?? []).includes('httpAuthUsername'));
+
   readonly apiKeyHint = computed(() => {
     if (this.clientModel().typeName === DownloadClientTypeName.qBittorrent) {
       return 'qBittorrent 5.2+: Options > WebUI > API key. Leave username and password empty.';
@@ -152,18 +192,23 @@ export class DownloadClientsComponent implements HasPendingChanges {
   readonly apiKeyFeatureId = computed(() =>
     this.clientModel().typeName === DownloadClientTypeName.qBittorrent ? 'qbit-api-key' : undefined);
 
-  readonly usernameHint = computed(() => {
-    if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
-      return 'Username for HTTP Basic Auth';
-    }
-    return 'Username for authentication';
-  });
+  readonly usernameHint = computed(() =>
+    this.showHttpAuthCredentialFields()
+      ? 'Username for authentication'
+      : 'Username for the client and its reverse proxy');
 
-  readonly passwordHint = computed(() => {
-    if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
-      return 'Password for HTTP Basic Auth';
-    }
-    return 'Password for authentication';
+  readonly passwordHint = computed(() =>
+    this.showHttpAuthCredentialFields()
+      ? 'Password for authentication'
+      : 'Password for the client and its reverse proxy');
+
+  readonly httpAuthTypeOptions = HTTP_AUTH_TYPE_OPTIONS;
+
+  readonly httpAuthHint = computed(() => {
+    const base = this.showHttpAuthCredentialFields()
+      ? 'For a reverse proxy that asks for HTTP auth.'
+      : 'For a reverse proxy that asks for HTTP auth. Uses the username and password above.';
+    return `${base} Pick Digest only if the proxy challenges with Digest.`;
   });
 
   readonly urlBaseHint = computed(() => {
@@ -189,6 +234,12 @@ export class DownloadClientsComponent implements HasPendingChanges {
     if (!fields.includes('apiKey') && m.apiKey !== '') {
       patch.apiKey = '';
     }
+    if (!fields.includes('httpAuthUsername') && m.httpAuthUsername !== '') {
+      patch.httpAuthUsername = '';
+    }
+    if (!fields.includes('httpAuthPassword') && m.httpAuthPassword !== '') {
+      patch.httpAuthPassword = '';
+    }
     const autofill = AUTOFILL_URL_BASES[newType];
     const replaceable = m.urlBase === '' || Object.values(AUTOFILL_URL_BASES).includes(m.urlBase);
     if (replaceable && (autofill ?? '') !== m.urlBase) {
@@ -207,7 +258,9 @@ export class DownloadClientsComponent implements HasPendingChanges {
     this.editingClient.set(null);
     this.clientModel.set({
       enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
-      host: '', username: '', password: '', apiKey: '', urlBase: '', externalUrl: '',
+      host: '', username: '', password: '', apiKey: '',
+      httpAuthType: HttpAuthType.Basic, httpAuthUsername: '', httpAuthPassword: '',
+      urlBase: '', externalUrl: '',
       downloadDirectorySource: '', downloadDirectoryTarget: '',
     });
     this.openSnapshot.set(JSON.stringify(this.clientModel()));
@@ -224,6 +277,9 @@ export class DownloadClientsComponent implements HasPendingChanges {
       username: client.username ?? '',
       password: client.password ?? '',
       apiKey: client.apiKey ?? '',
+      httpAuthType: client.httpAuthType ?? HttpAuthType.Basic,
+      httpAuthUsername: client.httpAuthUsername ?? '',
+      httpAuthPassword: client.httpAuthPassword ?? '',
       urlBase: client.urlBase,
       externalUrl: client.externalUrl ?? '',
       downloadDirectorySource: client.downloadDirectorySource ?? '',
@@ -241,6 +297,9 @@ export class DownloadClientsComponent implements HasPendingChanges {
       username: m.username,
       password: m.password,
       apiKey: m.apiKey,
+      httpAuthType: m.httpAuthType,
+      httpAuthUsername: m.httpAuthUsername,
+      httpAuthPassword: m.httpAuthPassword,
       urlBase: m.urlBase,
       clientId: this.editingClient()?.id,
     };
@@ -274,6 +333,9 @@ export class DownloadClientsComponent implements HasPendingChanges {
         username: m.username,
         password: m.password || undefined,
         apiKey: m.apiKey || undefined,
+        httpAuthType: m.httpAuthType,
+        httpAuthUsername: m.httpAuthUsername || undefined,
+        httpAuthPassword: m.httpAuthPassword || undefined,
         urlBase: m.urlBase,
         externalUrl: m.externalUrl || undefined,
         downloadDirectorySource: m.downloadDirectorySource || null,
@@ -300,6 +362,9 @@ export class DownloadClientsComponent implements HasPendingChanges {
         username: m.username,
         password: m.password,
         apiKey: m.apiKey,
+        httpAuthType: m.httpAuthType,
+        httpAuthUsername: m.httpAuthUsername,
+        httpAuthPassword: m.httpAuthPassword,
         urlBase: m.urlBase,
         externalUrl: m.externalUrl || undefined,
         downloadDirectorySource: m.downloadDirectorySource || null,
