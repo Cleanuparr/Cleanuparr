@@ -65,6 +65,7 @@ interface Episode {
   episodeNumber: number;
   hasFile: boolean;
   episodeFileId: number;
+  monitored: boolean;
 }
 
 type ProfileChanges = { upgradeAllowed: boolean; cutoffFormatScore?: number };
@@ -154,15 +155,24 @@ async function importLowQualityEpisode(profileChanges: ProfileChanges): Promise<
     .toBe(true);
 }
 
-async function dropImportedEpisode(): Promise<void> {
+/** Restores monitoring from the snapshot, because the seed leaves the specials unmonitored. */
+async function dropImportedEpisode(snapshot: Episode[]): Promise<void> {
   const series = await SONARR.arr.get<Series>(`/api/v3/series/${SONARR.itemId}`);
-  const episodes = await listEpisodes();
+  const imported = (await listEpisodes()).find(
+    (e) => e.seasonNumber === IMPORTED_EPISODE.seasonNumber && e.episodeNumber === IMPORTED_EPISODE.episodeNumber,
+  );
 
-  for (const episode of episodes.filter((e) => e.hasFile)) {
-    await SONARR.arr.delete(`/api/v3/episodefile/${episode.episodeFileId}`);
+  if (imported?.hasFile) {
+    await SONARR.arr.delete(`/api/v3/episodefile/${imported.episodeFileId}`);
   }
 
-  await SONARR.arr.put('/api/v3/episode/monitor', { episodeIds: episodes.map((e) => e.id), monitored: true });
+  for (const monitored of [true, false]) {
+    const episodeIds = snapshot.filter((e) => e.monitored === monitored).map((e) => e.id);
+    if (episodeIds.length > 0) {
+      await SONARR.arr.put('/api/v3/episode/monitor', { episodeIds, monitored });
+    }
+  }
+
   rmSync(join(seriesFolder(series), 'Season 01'), { recursive: true, force: true });
 }
 
@@ -260,18 +270,20 @@ test.describe('Seeker quality upgrades', () => {
 
 test.describe('Seeker custom format upgrades on Sonarr', () => {
   let library: Array<Record<string, unknown>> = [];
+  let episodes: Episode[] = [];
   let profile: Record<string, unknown> = {};
 
   test.beforeEach(async () => {
     await resetLiveArrState();
     library = await snapshotLibrary(SONARR);
+    episodes = await listEpisodes();
     profile = await SONARR.arr.get<Record<string, unknown>>(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`);
     await indexerMock.stub(torznabSearchStub(SONARR.searchMode, []));
   });
 
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
-    await dropImportedEpisode();
+    await dropImportedEpisode(episodes);
     await SONARR.arr.put(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`, profile);
     await restoreLibrary(SONARR, library);
     await resetLiveArrState();
