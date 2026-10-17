@@ -136,10 +136,11 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.UseCutoff = instanceReq.UseCutoff;
                     existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
                     existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
+                    existing.Validate();
                 }
                 else
                 {
-                    _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+                    SeekerInstanceConfig newInstanceConfig = new()
                     {
                         ArrInstanceId = instanceReq.ArrInstanceId,
                         Enabled = instanceReq.Enabled,
@@ -152,7 +153,9 @@ public sealed class SeekerConfigController : ControllerBase
                         UseCutoff = instanceReq.UseCutoff,
                         UseCustomFormatScore = instanceReq.UseCustomFormatScore,
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
-                    });
+                    };
+                    newInstanceConfig.Validate();
+                    _dataContext.SeekerInstanceConfigs.Add(newInstanceConfig);
                 }
             }
 

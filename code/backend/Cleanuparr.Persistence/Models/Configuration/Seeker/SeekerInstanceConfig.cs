@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Seeker;
@@ -95,4 +96,15 @@ public sealed record SeekerInstanceConfig
     /// Skips items the arr grabbed within this many hours, even after the download left the queue. 0 = disabled.
     /// </summary>
     public int RecentGrabWindowHours { get; set; } = 24;
+
+    /// <summary>
+    /// Validates this instance's configuration, throwing <see cref="CustomValidationException"/> on failure.
+    /// </summary>
+    public void Validate()
+    {
+        if (RecentGrabWindowHours is < 0 or > 168)
+        {
+            throw new CustomValidationException($"{nameof(RecentGrabWindowHours)} must be between 0 and 168");
+        }
+    }
 }

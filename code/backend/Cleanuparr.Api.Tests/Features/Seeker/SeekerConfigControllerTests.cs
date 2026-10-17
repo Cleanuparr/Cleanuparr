@@ -458,5 +458,95 @@ public class SeekerConfigControllerTests : IDisposable
         sonarrConfig.RecentGrabWindowHours.ShouldBe(6);
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(169)]
+    public async Task UpdateSeekerConfig_WithOutOfRangeRecentGrabWindowHours_OnExistingInstance_Throws(int recentGrabWindowHours)
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            RecentGrabWindowHours = 24
+        });
+        await _dataContext.SaveChangesAsync();
+
+        var request = new UpdateSeekerConfigRequest
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RecentGrabWindowHours = recentGrabWindowHours
+                }
+            ]
+        };
+
+        await Should.ThrowAsync<CustomValidationException>(() => _controller.UpdateSeekerConfig(request));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(169)]
+    public async Task UpdateSeekerConfig_WithOutOfRangeRecentGrabWindowHours_OnNewInstance_ThrowsAndSavesNothing(int recentGrabWindowHours)
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+
+        var request = new UpdateSeekerConfigRequest
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RecentGrabWindowHours = recentGrabWindowHours
+                }
+            ]
+        };
+
+        await Should.ThrowAsync<CustomValidationException>(() => _controller.UpdateSeekerConfig(request));
+
+        (await _dataContext.SeekerInstanceConfigs.AnyAsync(c => c.ArrInstanceId == radarr.Id)).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(168)]
+    public async Task UpdateSeekerConfig_WithBoundaryRecentGrabWindowHours_Succeeds(int recentGrabWindowHours)
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+
+        var request = new UpdateSeekerConfigRequest
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RecentGrabWindowHours = recentGrabWindowHours
+                }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        var config = await _dataContext.SeekerInstanceConfigs.FirstAsync(c => c.ArrInstanceId == radarr.Id);
+        config.RecentGrabWindowHours.ShouldBe(recentGrabWindowHours);
+    }
+
     #endregion
 }
