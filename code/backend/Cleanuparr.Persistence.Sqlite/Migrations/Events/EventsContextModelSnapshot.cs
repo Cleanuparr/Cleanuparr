@@ -599,6 +599,63 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.ToTable("seeker_command_trackers", (string)null);
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerCycle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ArrInstanceId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("arr_instance_id");
+
+                    b.Property<string>("CompletedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("completed_at");
+
+                    b.Property<string>("CompletionReason")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("completion_reason");
+
+                    b.Property<int>("EligibleAtStart")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("eligible_at_start");
+
+                    b.Property<int>("EligibleNow")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("eligible_now");
+
+                    b.Property<int>("GrabbedUnits")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("grabbed_units");
+
+                    b.Property<bool>("IsDryRun")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_dry_run");
+
+                    b.Property<int>("RemainingUnits")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("remaining_units");
+
+                    b.Property<int>("SearchedUnits")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("searched_units");
+
+                    b.Property<string>("StartedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("started_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_seeker_cycles");
+
+                    b.HasIndex("ArrInstanceId")
+                        .HasDatabaseName("ix_seeker_cycles_arr_instance_id");
+
+                    b.ToTable("seeker_cycles", (string)null);
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -614,9 +671,17 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("cycle_id");
 
+                    b.Property<long>("EpisodeId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("episode_id");
+
                     b.Property<long>("ExternalItemId")
                         .HasColumnType("INTEGER")
                         .HasColumnName("external_item_id");
+
+                    b.Property<int>("Grabs")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("grabs");
 
                     b.Property<bool>("IsDryRun")
                         .HasColumnType("INTEGER")
@@ -631,6 +696,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
+
+                    b.Property<string>("LastOutcome")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("last_outcome");
 
                     b.Property<string>("LastSearchedAt")
                         .IsRequired()
@@ -648,9 +717,9 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.HasKey("Id")
                         .HasName("pk_seeker_history");
 
-                    b.HasIndex("ArrInstanceId", "ExternalItemId", "ItemType", "SeasonNumber", "CycleId")
+                    b.HasIndex("ArrInstanceId", "ExternalItemId", "ItemType", "SeasonNumber", "EpisodeId", "IsDryRun")
                         .IsUnique()
-                        .HasDatabaseName("ix_seeker_history_arr_instance_id_external_item_id_item_type_season_number_cycle_id");
+                        .HasDatabaseName("ix_seeker_history_arr_instance_id_external_item_id_item_type_season_number_episode_id_is_dry_run");
 
                     b.ToTable("seeker_history", (string)null);
                 });

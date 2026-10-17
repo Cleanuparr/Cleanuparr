@@ -436,32 +436,13 @@ public sealed class Seeker : IHandler
         HashSet<(long SeriesId, long SeasonNumber)> recentlyGrabbedSeasons,
         CancellationToken cancellationToken)
     {
-        // Dry run tracks its own cycle through dry history rows.
-        Guid effectiveCycleId;
-        List<SeekerHistory> currentCycleHistory;
+        SeekerCycle cycle = await GetCurrentCycleAsync(arrInstance.Id, instanceConfig, isDryRun, cancellationToken);
 
-        if (isDryRun)
-        {
-            SeekerHistory? latestDryCycleRow = await _eventsContext.SeekerHistory
-                .AsNoTracking()
-                .Where(h => h.ArrInstanceId == arrInstance.Id
-                            && h.IsDryRun
-                            && h.CycleId != instanceConfig.CurrentCycleId)
-                .OrderByDescending(h => h.LastSearchedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            effectiveCycleId = latestDryCycleRow?.CycleId ?? instanceConfig.CurrentCycleId;
-        }
-        else
-        {
-            effectiveCycleId = instanceConfig.CurrentCycleId;
-        }
-
-        currentCycleHistory = await _eventsContext.SeekerHistory
+        List<SeekerHistory> currentCycleHistory = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id
-                        && h.CycleId == effectiveCycleId
-                        && (isDryRun || !h.IsDryRun))
+                        && h.CycleId == cycle.Id
+                        && h.IsDryRun == isDryRun)
             .ToListAsync(cancellationToken);
 
         // Load all history for stale cleanup
@@ -491,7 +472,7 @@ public sealed class Seeker : IHandler
                 .ToHashSet();
             queuedMovieIds.UnionWith(recentlyGrabbedMovieIds);
 
-            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, effectiveCycleId, isDryRun, queuedMovieIds, cancellationToken);
+            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, cycle, isDryRun, queuedMovieIds, cancellationToken);
         }
         else
         {
@@ -501,8 +482,10 @@ public sealed class Seeker : IHandler
                 .ToHashSet();
             queuedSeasons.UnionWith(recentlyGrabbedSeasons);
 
-            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, effectiveCycleId, isDryRun, queuedSeasons, cancellationToken);
+            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, cycle, isDryRun, queuedSeasons, cancellationToken);
         }
+
+        await _eventsContext.SaveChangesAsync(cancellationToken);
 
         if (result.Candidates.Count == 0)
         {
@@ -531,12 +514,15 @@ public sealed class Seeker : IHandler
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
-                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, result.CycleId, isDryRun);
+                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, result.Cycle.Id, isDryRun);
 
             _logger.LogInformation("Search triggered for {Item} ({Reason}) | {InstanceUrl}", candidate.Name, candidate.Reason, arrInstance.Url);
 
-            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, result.CycleId,
-                [candidate.ItemId], [candidate.Name], candidate.SeasonNumber, isDryRun);
+            result.Cycle.SearchedUnits++;
+            result.Cycle.RemainingUnits = Math.Max(0, result.Cycle.RemainingUnits - 1);
+
+            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, result.Cycle.Id,
+                candidate.ItemId, candidate.Name, candidate.SeasonNumber, isDryRun);
 
             if (!isDryRun)
             {
@@ -548,7 +534,6 @@ public sealed class Seeker : IHandler
         if (!isDryRun)
         {
             await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.AllLibraryIds, allHistoryExternalIds);
-            await CleanupOldCycleHistoryAsync(arrInstance, instanceConfig.CurrentCycleId);
         }
 
         return true;
@@ -559,7 +544,7 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTimeOffset> searchHistory,
-        Guid cycleId,
+        SeekerCycle cycle,
         bool isDryRun,
         HashSet<long> queuedMovieIds,
         CancellationToken cancellationToken)
@@ -634,7 +619,7 @@ public sealed class Seeker : IHandler
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
         {
             _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, it needs Radarr v5.6 or newer", arrInstance.Name);
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
         }
 
         List<SearchableMovie> candidates = new();
@@ -658,11 +643,14 @@ public sealed class Seeker : IHandler
             candidates.Add(movie);
         }
 
-        instanceConfig.TotalEligibleItems = candidates.Count;
+        int eligibleCount = candidates.Count;
+        instanceConfig.TotalEligibleItems = eligibleCount;
+        cycle.EligibleNow = eligibleCount;
+        cycle.RemainingUnits = 0;
 
         if (candidates.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
         }
 
         // Exclude movies already in the download queue
@@ -682,39 +670,22 @@ public sealed class Seeker : IHandler
 
             if (candidates.Count == 0)
             {
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
             }
         }
 
-        // Check for cycle completion: all candidates already searched in current cycle
-        bool cycleComplete = candidates.All(m => searchHistory.ContainsKey(m.Id));
-        if (cycleComplete)
+        cycle.RemainingUnits = candidates.Count(m => !searchHistory.ContainsKey(m.Id));
+
+        if (cycle.RemainingUnits == 0)
         {
-            // Respect MinCycleTimeDays even when cycle completes due to queue filtering
-            DateTimeOffset? cycleStartedAt = searchHistory.Count > 0 ? searchHistory.Values.Min() : null;
-            if (ShouldWaitForMinCycleTime(instanceConfig, cycleStartedAt))
+            SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, arrInstance.Name);
+            if (next is null)
             {
-                _logger.LogDebug(
-                    "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
-                    instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
             }
 
-            _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
-                candidates.Count, arrInstance.Name);
-
-            if (isDryRun)
-            {
-                // Live cycle id stays untouched.
-                cycleId = Guid.NewGuid();
-            }
-            else
-            {
-                instanceConfig.CurrentCycleId = Guid.NewGuid();
-                await _dataContext.SaveChangesAsync();
-                cycleId = instanceConfig.CurrentCycleId;
-            }
-
+            cycle = next;
+            cycle.RemainingUnits = candidates.Count;
             searchHistory = new Dictionary<long, DateTimeOffset>();
         }
 
@@ -762,7 +733,7 @@ public sealed class Seeker : IHandler
                 movie.Title, arrInstance.Name, reason);
         }
 
-        return new SeekerProcessResult { Candidates = searchCandidates, AllLibraryIds = allLibraryIds, CycleId = cycleId };
+        return new SeekerProcessResult { Candidates = searchCandidates, AllLibraryIds = allLibraryIds, Cycle = cycle };
     }
 
     private async Task<SeekerProcessResult> ProcessSonarrAsync(
@@ -771,7 +742,7 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTimeOffset> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
-        Guid cycleId,
+        SeekerCycle cycle,
         bool isDryRun,
         HashSet<(long SeriesId, long SeasonNumber)> queuedSeasons,
         CancellationToken cancellationToken)
@@ -872,10 +843,12 @@ public sealed class Seeker : IHandler
             .ToDictionary(g => g.Key, g => g.Select(q => q.Reason).ToList());
 
         instanceConfig.TotalEligibleItems = seasons.Keys.Select(s => s.SeriesId).Distinct().Count();
+        cycle.EligibleNow = seasons.Count;
+        cycle.RemainingUnits = 0;
 
         if (seasons.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
         }
 
         List<(long SeriesId, int SeasonNumber)> available = seasons.Keys
@@ -891,7 +864,7 @@ public sealed class Seeker : IHandler
 
         if (available.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
         }
 
         HashSet<(long SeriesId, int SeasonNumber)> searchedSeasons = currentCycleHistory
@@ -902,35 +875,20 @@ public sealed class Seeker : IHandler
             .Where(s => !searchedSeasons.Contains(s))
             .ToList();
 
+        cycle.RemainingUnits = remaining.Count;
+
         if (remaining.Count == 0)
         {
-            // Respect MinCycleTimeDays even when cycle completes due to queue filtering
-            DateTimeOffset? cycleStartedAt = seriesSearchHistory.Count > 0 ? seriesSearchHistory.Values.Min() : null;
-            if (ShouldWaitForMinCycleTime(instanceConfig, cycleStartedAt))
+            SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, seasons.Count, arrInstance.Name);
+            if (next is null)
             {
-                _logger.LogDebug(
-                    "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
-                    instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
             }
 
-            _logger.LogInformation("All {Count} series on {InstanceName} searched in current cycle, starting new cycle",
-                instanceConfig.TotalEligibleItems, arrInstance.Name);
-
-            if (isDryRun)
-            {
-                // Live cycle id stays untouched.
-                cycleId = Guid.NewGuid();
-            }
-            else
-            {
-                instanceConfig.CurrentCycleId = Guid.NewGuid();
-                await _dataContext.SaveChangesAsync();
-                cycleId = instanceConfig.CurrentCycleId;
-            }
-
+            cycle = next;
             seriesSearchHistory = new Dictionary<long, DateTimeOffset>();
             remaining = available;
+            cycle.RemainingUnits = remaining.Count;
         }
 
         Dictionary<long, List<int>> remainingSeasonsBySeries = remaining
@@ -993,7 +951,7 @@ public sealed class Seeker : IHandler
                 }
             ],
             AllLibraryIds = allLibraryIds,
-            CycleId = cycleId,
+            Cycle = cycle,
         };
     }
 
@@ -1016,74 +974,46 @@ public sealed class Seeker : IHandler
         Guid arrInstanceId,
         InstanceType instanceType,
         Guid cycleId,
-        List<long> searchedIds,
-        List<string>? itemTitles = null,
-        int seasonNumber = 0,
-        bool isDryRun = false)
+        long externalItemId,
+        string itemTitle,
+        int seasonNumber,
+        bool isDryRun)
     {
-        var now = _timeProvider.GetUtcNow();
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
-        for (int i = 0; i < searchedIds.Count; i++)
+        SeekerHistory? existing = await _eventsContext.SeekerHistory
+            .FirstOrDefaultAsync(h =>
+                h.ArrInstanceId == arrInstanceId
+                && h.ExternalItemId == externalItemId
+                && h.ItemType == instanceType
+                && h.SeasonNumber == seasonNumber
+                && h.EpisodeId == 0
+                && h.IsDryRun == isDryRun);
+
+        if (existing is not null)
         {
-            long id = searchedIds[i];
-            string title = itemTitles != null && i < itemTitles.Count ? itemTitles[i] : string.Empty;
-
-            SeekerHistory? existing = await _eventsContext.SeekerHistory
-                .FirstOrDefaultAsync(h =>
-                    h.ArrInstanceId == arrInstanceId
-                    && h.ExternalItemId == id
-                    && h.ItemType == instanceType
-                    && h.SeasonNumber == seasonNumber
-                    && h.CycleId == cycleId);
-
-            if (existing is not null)
+            existing.CycleId = cycleId;
+            existing.LastSearchedAt = now;
+            existing.SearchCount++;
+            existing.LastOutcome = null;
+            existing.ItemTitle = itemTitle;
+        }
+        else
+        {
+            _eventsContext.SeekerHistory.Add(new SeekerHistory
             {
-                if (SkipOrResetDryRunRow(existing, isDryRun, title))
-                {
-                    continue;
-                }
-
-                existing.LastSearchedAt = now;
-                existing.SearchCount++;
-                if (!string.IsNullOrEmpty(title))
-                {
-                    existing.ItemTitle = title;
-                }
-            }
-            else
-            {
-                _eventsContext.SeekerHistory.Add(new SeekerHistory
-                {
-                    ArrInstanceId = arrInstanceId,
-                    ExternalItemId = id,
-                    ItemType = instanceType,
-                    SeasonNumber = seasonNumber,
-                    CycleId = cycleId,
-                    LastSearchedAt = now,
-                    ItemTitle = title,
-                    IsDryRun = isDryRun,
-                });
-            }
+                ArrInstanceId = arrInstanceId,
+                ExternalItemId = externalItemId,
+                ItemType = instanceType,
+                SeasonNumber = seasonNumber,
+                CycleId = cycleId,
+                LastSearchedAt = now,
+                ItemTitle = itemTitle,
+                IsDryRun = isDryRun,
+            });
         }
 
         await _eventsContext.SaveChangesAsync();
-    }
-
-    private bool SkipOrResetDryRunRow(SeekerHistory existing, bool isDryRun, string title)
-    {
-        if (isDryRun && !existing.IsDryRun)
-        {
-            _logger.LogDebug("[DRY RUN] skipping search history update for live row | {Title}", title);
-            return true;
-        }
-
-        if (!isDryRun && existing.IsDryRun)
-        {
-            existing.IsDryRun = false;
-            existing.SearchCount = 0;
-        }
-
-        return false;
     }
 
     private async Task SaveCommandTrackerAsync(
@@ -1142,38 +1072,135 @@ public sealed class Seeker : IHandler
     }
 
     /// <summary>
-    /// Removes history entries from previous cycles that are older than 30 days.
-    /// Recent cycle history is retained for statistics and history viewing.
+    /// Loads the cycle the instance is in, creating its row when missing.
+    /// Dry run follows its own newest cycle and never touches the live one.
     /// </summary>
-    private async Task CleanupOldCycleHistoryAsync(ArrInstance arrInstance, Guid currentCycleId)
+    private async Task<SeekerCycle> GetCurrentCycleAsync(
+        Guid arrInstanceId,
+        SeekerInstanceConfig instanceConfig,
+        bool isDryRun,
+        CancellationToken cancellationToken)
     {
-        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-30);
-
-        int deleted = await _eventsContext.SeekerHistory
-            .Where(h => h.ArrInstanceId == arrInstance.Id
-                && h.CycleId != currentCycleId
-                && h.LastSearchedAt < cutoff)
-            .ExecuteDeleteAsync();
-
-        if (deleted > 0)
+        if (isDryRun)
         {
-            _logger.LogDebug("Cleaned up {Count} old cycle history entries (>30 days) for instance {InstanceName}",
-                deleted, arrInstance.Name);
+            SeekerCycle? dryCycle = await _eventsContext.SeekerCycles
+                .Where(c => c.ArrInstanceId == arrInstanceId && c.IsDryRun)
+                .OrderByDescending(c => c.StartedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return dryCycle ?? OpenCycle(arrInstanceId, isDryRun: true, eligibleAtStart: 0);
         }
+
+        Guid currentCycleId = instanceConfig.CurrentCycleId;
+        List<SeekerCycle> openOrCurrent = await _eventsContext.SeekerCycles
+            .Where(c => c.ArrInstanceId == arrInstanceId
+                        && !c.IsDryRun
+                        && (c.Id == currentCycleId || c.CompletedAt == null))
+            .ToListAsync(cancellationToken);
+
+        // The migration guesses the open cycle from search events, the config holds the real one.
+        foreach (SeekerCycle stale in openOrCurrent.Where(c => c.Id != currentCycleId))
+        {
+            stale.CompletedAt = await _eventsContext.Events
+                .Where(e => e.CycleId == stale.Id)
+                .OrderByDescending(e => e.Timestamp)
+                .Select(e => (DateTimeOffset?)e.Timestamp)
+                .FirstOrDefaultAsync(cancellationToken) ?? stale.StartedAt;
+            stale.CompletionReason = SeekerCycleCompletionReason.Completed;
+        }
+
+        SeekerCycle? cycle = openOrCurrent.FirstOrDefault(c => c.Id == currentCycleId);
+        if (cycle is not null)
+        {
+            return cycle;
+        }
+
+        List<DateTimeOffset> searchedAt = await _eventsContext.SeekerHistory
+            .Where(h => h.ArrInstanceId == arrInstanceId && h.CycleId == currentCycleId && !h.IsDryRun)
+            .Select(h => h.LastSearchedAt)
+            .ToListAsync(cancellationToken);
+
+        cycle = OpenCycle(arrInstanceId, isDryRun: false, eligibleAtStart: 0, currentCycleId);
+        cycle.SearchedUnits = searchedAt.Count;
+        if (searchedAt.Count > 0)
+        {
+            cycle.StartedAt = searchedAt.Min();
+        }
+
+        return cycle;
+    }
+
+    private SeekerCycle OpenCycle(Guid arrInstanceId, bool isDryRun, int eligibleAtStart, Guid? id = null)
+    {
+        SeekerCycle cycle = new()
+        {
+            Id = id ?? Guid.NewGuid(),
+            ArrInstanceId = arrInstanceId,
+            StartedAt = _timeProvider.GetUtcNow(),
+            EligibleAtStart = eligibleAtStart,
+            EligibleNow = eligibleAtStart,
+            IsDryRun = isDryRun,
+        };
+
+        _eventsContext.SeekerCycles.Add(cycle);
+        return cycle;
+    }
+
+    /// <summary>
+    /// Closes a cycle with nothing left to search and opens the next one once the minimum cycle time has passed.
+    /// Returns the new cycle, or null while the instance has to wait.
+    /// </summary>
+    private async Task<SeekerCycle?> CompleteCycleAsync(
+        SeekerCycle cycle,
+        SeekerInstanceConfig instanceConfig,
+        bool isDryRun,
+        int eligibleCount,
+        string instanceName)
+    {
+        // An empty cycle stays open, so an instance with nothing eligible does not complete a cycle every week.
+        if (cycle.SearchedUnits == 0)
+        {
+            return null;
+        }
+
+        if (cycle.CompletedAt is null)
+        {
+            cycle.CompletedAt = _timeProvider.GetUtcNow();
+            cycle.CompletionReason = SeekerCycleCompletionReason.Completed;
+
+            _logger.LogInformation("Cycle completed on {InstanceName} after {Count} searches",
+                instanceName, cycle.SearchedUnits);
+        }
+
+        if (ShouldWaitForMinCycleTime(instanceConfig, cycle.StartedAt))
+        {
+            _logger.LogDebug(
+                "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
+                instanceConfig.MinCycleTimeDays, cycle.StartedAt, instanceName);
+            return null;
+        }
+
+        SeekerCycle next = OpenCycle(cycle.ArrInstanceId, isDryRun, eligibleCount);
+
+        if (!isDryRun)
+        {
+            instanceConfig.CurrentCycleId = next.Id;
+            await _dataContext.SaveChangesAsync();
+        }
+
+        _logger.LogInformation("Starting new cycle on {InstanceName} with {Count} eligible items",
+            instanceName, eligibleCount);
+
+        return next;
     }
 
     /// <summary>
     /// Checks whether the minimum cycle time constraint prevents starting a new cycle.
     /// Returns true if the cycle started recently and MinCycleTimeDays has not yet elapsed.
     /// </summary>
-    private bool ShouldWaitForMinCycleTime(SeekerInstanceConfig instanceConfig, DateTimeOffset? cycleStartedAt)
+    private bool ShouldWaitForMinCycleTime(SeekerInstanceConfig instanceConfig, DateTimeOffset cycleStartedAt)
     {
-        if (cycleStartedAt is null)
-        {
-            return false;
-        }
-
-        var elapsed = _timeProvider.GetUtcNow() - cycleStartedAt.Value;
+        TimeSpan elapsed = _timeProvider.GetUtcNow() - cycleStartedAt;
         return elapsed.TotalDays < instanceConfig.MinCycleTimeDays;
     }
 

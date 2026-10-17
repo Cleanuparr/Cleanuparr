@@ -6,8 +6,8 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 namespace Cleanuparr.Persistence.Models.State;
 
 /// <summary>
-/// Tracks the last time each media item was searched by the Seeker job.
-/// Used by selection strategies to prioritize items that haven't been searched recently.
+/// One Seeker search unit: a movie, a season, or an episode.
+/// Tracks the last search and the lifetime results of searching it.
 /// </summary>
 public sealed record SeekerHistory
 {
@@ -36,8 +36,12 @@ public sealed record SeekerHistory
     public int SeasonNumber { get; set; }
 
     /// <summary>
-    /// The cycle ID. All searches in the same cycle share a CycleId.
-    /// When all items have been searched, a new CycleId is generated to start a fresh cycle.
+    /// For Sonarr episode searches, the episode that was searched. 0 for a season or movie unit.
+    /// </summary>
+    public long EpisodeId { get; set; }
+
+    /// <summary>
+    /// The last cycle this unit was searched in
     /// </summary>
     public Guid CycleId { get; set; }
 
@@ -52,9 +56,19 @@ public sealed record SeekerHistory
     public string ItemTitle { get; set; } = string.Empty;
 
     /// <summary>
-    /// Running count of how many times this item has been searched
+    /// Lifetime count of searches for this unit
     /// </summary>
     public int SearchCount { get; set; } = 1;
+
+    /// <summary>
+    /// Lifetime count of searches for this unit that grabbed a release
+    /// </summary>
+    public int Grabs { get; set; }
+
+    /// <summary>
+    /// Result of the last search. Null until that search finishes.
+    /// </summary>
+    public SeekerSearchOutcome? LastOutcome { get; set; }
 
     /// <summary>
     /// Whether this history entry was created during a dry run
