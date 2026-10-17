@@ -738,6 +738,19 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public async Task GetRecentlyGrabbedSeasonsAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        HashSet<(long SeriesId, long SeasonNumber)> seasons = await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow);
+
+        // Assert
+        seasons.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task GetRecentlyGrabbedSeasonsAsync_TheArrRefused_Throws()
     {
         // Arrange

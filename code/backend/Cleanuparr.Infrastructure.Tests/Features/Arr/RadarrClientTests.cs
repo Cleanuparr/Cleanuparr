@@ -574,6 +574,19 @@ public class RadarrClientTests
     }
 
     [Fact]
+    public async Task GetRecentlyGrabbedMovieIdsAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        HashSet<long> ids = await _client.GetRecentlyGrabbedMovieIdsAsync(_arrInstance, DateTimeOffset.UtcNow);
+
+        // Assert
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task GetRecentlyGrabbedMovieIdsAsync_TheArrRefused_Throws()
     {
         // Arrange
