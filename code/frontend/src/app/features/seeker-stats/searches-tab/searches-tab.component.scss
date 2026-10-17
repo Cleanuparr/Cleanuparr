@@ -127,6 +127,13 @@
     }
   }
 
+  &__progress-remaining {
+    margin-left: var(--space-1);
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
   &__progress-track {
     height: 5px;
     background: var(--glass-bg);
@@ -143,9 +150,16 @@
     min-width: 0;
   }
 
+  &__progress-complete {
+    display: inline-block;
+    margin-top: var(--space-1-5);
+    font-size: var(--font-size-xs);
+    color: var(--color-success);
+  }
+
   &__stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-3);
     padding-top: var(--space-3);
     border-top: 1px solid var(--divider);
@@ -347,6 +361,11 @@
 
   .instance-cards {
     grid-template-columns: 1fr;
+  }
+
+  .instance-card__stats {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: var(--space-3);
   }
 
   .list-row__main {

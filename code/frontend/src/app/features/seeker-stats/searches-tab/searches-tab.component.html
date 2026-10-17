@@ -54,16 +54,20 @@
 
           <div class="instance-card__progress">
             <div class="instance-card__progress-row">
-              <app-tooltip text="Items searched in the current cycle out of total eligible. For Sonarr, each series counts as one item regardless of how many seasons were searched.">
+              <app-tooltip text="Items searched in the current cycle out of total eligible. For Sonarr, each season counts as one item.">
                 <span class="instance-card__progress-label">Cycle Progress</span>
               </app-tooltip>
               <span class="instance-card__progress-count">
                 <strong>{{ inst.cycleItemsSearched }}</strong> / {{ inst.cycleItemsTotal }}
+                <span class="instance-card__progress-remaining">{{ inst.cycleItemsRemaining }} left</span>
               </span>
             </div>
             <div class="instance-card__progress-track">
               <div class="instance-card__progress-fill" [style.width.%]="cycleProgress(inst)"></div>
             </div>
+            @if (inst.cycleCompletedAt) {
+              <span class="instance-card__progress-complete">Complete, waiting for min cycle time</span>
+            }
           </div>
 
           <div class="instance-card__stats">
@@ -77,6 +81,17 @@
               </span>
               <app-tooltip text="How long the current search cycle has been running">
                 <span class="instance-card__stat-label">Cycle Duration</span>
+              </app-tooltip>
+            </div>
+            <div class="instance-card__stat">
+              <span class="instance-card__stat-value">
+                {{ lastCycleDuration(inst) }}
+              </span>
+              <app-tooltip text="How long the previous search cycle took">
+                <span class="instance-card__stat-label">
+                  Last Cycle
+                  <app-new-badge variant="inline" featureId="seeker-last-cycle-duration" />
+                </span>
               </app-tooltip>
             </div>
             <div class="instance-card__stat">

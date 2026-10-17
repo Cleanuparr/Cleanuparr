@@ -55,9 +55,12 @@ export function instanceHealthWarning(stat: InstanceSearchStat): string | null {
 
 /** Renders the age of a running cycle down to the largest non-zero unit. */
 export function formatCycleDuration(cycleStartedAt: string): string {
-  const start = new Date(cycleStartedAt);
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
+  return formatDurationBetween(cycleStartedAt, new Date().toISOString());
+}
+
+/** Renders the span between two timestamps down to the largest non-zero unit. */
+export function formatDurationBetween(start: string, end: string): string {
+  const diffMs = new Date(end).getTime() - new Date(start).getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 

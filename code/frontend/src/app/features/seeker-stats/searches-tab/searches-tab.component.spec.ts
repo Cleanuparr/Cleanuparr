@@ -28,6 +28,10 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     cycleItemsSearched: 3,
     cycleItemsTotal: 8,
     cycleStartedAt: '2026-07-29T09:00:00Z',
+    cycleItemsRemaining: 5,
+    cycleCompletedAt: null,
+    lastCycleStartedAt: '2026-07-27T09:00:00Z',
+    lastCycleCompletedAt: '2026-07-28T13:00:00Z',
     ...partial,
   };
 }
@@ -327,6 +331,36 @@ describe('SearchesTabComponent', () => {
     expect(fixture.nativeElement.querySelector('.list-row__detail-text').textContent).toContain(
       'Grabbed: Release.One, Release.Two',
     );
+  });
+
+  it('shows how many items remain in the cycle progress row', () => {
+    const { fixture } = setup();
+
+    const remaining = Array.from(fixture.nativeElement.querySelectorAll('.instance-card__progress-remaining')).map(
+      (el) => (el as HTMLElement).textContent!.trim(),
+    );
+    expect(remaining).toContain('5 left');
+  });
+
+  it('shows the completed status only for an instance whose cycle has finished', () => {
+    const { fixture } = setup({
+      summary: {
+        ...SUMMARY,
+        perInstanceStats: [SONARR_BETA, instance({ instanceId: 'done', instanceName: 'Done', cycleCompletedAt: '2026-07-31T10:00:00Z' })],
+      },
+    });
+
+    const completeLabels = Array.from(fixture.nativeElement.querySelectorAll('.instance-card__progress-complete'));
+    expect(completeLabels.length).toBe(1);
+    expect((completeLabels[0] as HTMLElement).textContent!.trim()).toBe('Complete, waiting for min cycle time');
+  });
+
+  it('shows the last cycle duration, falling back to an em dash when either timestamp is missing', () => {
+    const { component } = setup();
+
+    expect(component.lastCycleDuration(SONARR_BETA)).toBe('1d 4h');
+    expect(component.lastCycleDuration(instance({ lastCycleStartedAt: null }))).toBe('—');
+    expect(component.lastCycleDuration(instance({ lastCycleCompletedAt: null }))).toBe('—');
   });
 
   it('derives cycle progress, health warnings and badge severities from the instance stats', () => {
