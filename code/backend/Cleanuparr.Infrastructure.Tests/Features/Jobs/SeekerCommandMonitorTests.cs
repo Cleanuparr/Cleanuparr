@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
@@ -29,6 +30,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     private readonly FakeTimeProvider _timeProvider;
     private readonly IArrClient _arrClient;
     private readonly IEventPublisher _eventPublisher;
+    private readonly ILogger<SeekerCommandMonitor> _logger;
     private readonly SeekerCommandMonitor _sut;
     private readonly CancellationTokenSource _cts;
 
@@ -39,9 +41,9 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         _timeProvider = new FakeTimeProvider();
         _arrClient = Substitute.For<IArrClient>();
         _eventPublisher = Substitute.For<IEventPublisher>();
+        _logger = Substitute.For<ILogger<SeekerCommandMonitor>>();
         _cts = new CancellationTokenSource();
 
-        var logger = Substitute.For<ILogger<SeekerCommandMonitor>>();
         var arrClientFactory = Substitute.For<IArrClientFactory>();
 
         var serviceProvider = Substitute.For<IServiceProvider>();
@@ -60,7 +62,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
 
-        _sut = new SeekerCommandMonitor(logger, scopeFactory, _timeProvider);
+        _sut = new SeekerCommandMonitor(_logger, scopeFactory, _timeProvider);
     }
 
     public async ValueTask DisposeAsync()
@@ -1249,6 +1251,46 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         SeekerCycle cycle = await _eventsContext.SeekerCycles.AsNoTracking().SingleAsync(c => c.Id == cycleId);
         cycle.GrabbedUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Generic_exception_while_recording_the_outcome_is_logged_and_swallowed()
+    {
+        // Arrange: dispose the connection right as the outcome is published, so RecordUnitOutcomeAsync's own queries fail
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, cycleId, externalItemId: 508);
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 508);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse
+            {
+                TotalRecords = 1,
+                Records = [new QueueRecord { Id = 1, MovieId = 508, Title = "Grabbed.Movie", DownloadId = "HASH508", Protocol = "torrent", Status = "downloading" }]
+            });
+
+        _eventPublisher.PublishSearchCompleted(
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => _eventsContext.Database.GetDbConnection().Dispose());
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+
+        for (int attempt = 0; attempt < 200 && !_logger.HasLogContainingAtLeastOnce(LogLevel.Warning, "Failed to record the outcome of"); attempt++)
+        {
+            await Task.Delay(10);
+            _timeProvider.Advance(TimeSpan.FromSeconds(60));
+        }
+
+        // Assert: the inner catch logged the warning, and the exception never escaped the background service
+        _logger.HasLogContainingAtLeastOnce(LogLevel.Warning, "Failed to record the outcome of").ShouldBeTrue();
+        _sut.ExecuteTask!.IsFaulted.ShouldBeFalse();
     }
 
     /// <summary>
