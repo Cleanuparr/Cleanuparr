@@ -942,11 +942,6 @@ public sealed class Seeker : IHandler
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
         List<long> selectedIds = selector.Select(selectionCandidates, 1);
 
-        if (selectedIds.Count == 0)
-        {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
-        }
-
         long seriesId = selectedIds[0];
         List<int> seriesSeasons = remainingSeasonsBySeries[seriesId];
         int seasonNumber = seriesSeasons[Random.Shared.Next(seriesSeasons.Count)];
