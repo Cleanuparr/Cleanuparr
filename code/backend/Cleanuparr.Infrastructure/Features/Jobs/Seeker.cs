@@ -1092,8 +1092,7 @@ public sealed class Seeker : IHandler
         Guid currentCycleId = instanceConfig.CurrentCycleId;
         List<SeekerCycle> openOrCurrent = await _eventsContext.SeekerCycles
             .Where(c => c.ArrInstanceId == arrInstanceId
-                        && !c.IsDryRun
-                        && (c.Id == currentCycleId || c.CompletedAt == null))
+                        && (c.Id == currentCycleId || (!c.IsDryRun && c.CompletedAt == null)))
             .ToListAsync(cancellationToken);
 
         // The migration guesses the open cycle from search events, the config holds the real one.
@@ -1110,7 +1109,10 @@ public sealed class Seeker : IHandler
         SeekerCycle? cycle = openOrCurrent.FirstOrDefault(c => c.Id == currentCycleId);
         if (cycle is not null)
         {
-            return cycle;
+            // The all-dry-events migration can hand this id to a dry cycle; a live run reclaims it instead of colliding with it.
+            return cycle.IsDryRun
+                ? OpenCycle(arrInstanceId, isDryRun: false, eligibleAtStart: 0, reclaim: cycle)
+                : cycle;
         }
 
         List<DateTimeOffset> searchedAt = await _eventsContext.SeekerHistory
@@ -1128,8 +1130,22 @@ public sealed class Seeker : IHandler
         return cycle;
     }
 
-    private SeekerCycle OpenCycle(Guid arrInstanceId, bool isDryRun, int eligibleAtStart, Guid? id = null)
+    private SeekerCycle OpenCycle(Guid arrInstanceId, bool isDryRun, int eligibleAtStart, Guid? id = null, SeekerCycle? reclaim = null)
     {
+        if (reclaim is not null)
+        {
+            reclaim.StartedAt = _timeProvider.GetUtcNow();
+            reclaim.EligibleAtStart = eligibleAtStart;
+            reclaim.EligibleNow = eligibleAtStart;
+            reclaim.RemainingUnits = 0;
+            reclaim.SearchedUnits = 0;
+            reclaim.GrabbedUnits = 0;
+            reclaim.CompletedAt = null;
+            reclaim.CompletionReason = null;
+            reclaim.IsDryRun = isDryRun;
+            return reclaim;
+        }
+
         SeekerCycle cycle = new()
         {
             Id = id ?? Guid.NewGuid(),
