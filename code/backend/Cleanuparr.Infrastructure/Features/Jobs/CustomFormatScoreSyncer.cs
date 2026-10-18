@@ -23,8 +23,6 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private const int FetchConcurrency = 5;
     private static readonly TimeSpan HistoryRetention = TimeSpan.FromDays(120);
 
-    private sealed record SeriesFetch(SearchableSeries Series, List<SearchableEpisode> Episodes, List<ArrEpisodeFile> EpisodeFiles, bool Failed);
-
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;

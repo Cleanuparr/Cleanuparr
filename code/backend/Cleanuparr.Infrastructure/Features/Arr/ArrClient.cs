@@ -578,12 +578,6 @@ public abstract class ArrClient : IArrClient
         return result?.Id;
     }
 
-    private sealed class CommandIdResponse
-    {
-        [JsonPropertyName("id")]
-        public long? Id { get; init; }
-    }
-
     /// <summary>
     /// Determines whether the failed import record should be skipped
     /// </summary>
