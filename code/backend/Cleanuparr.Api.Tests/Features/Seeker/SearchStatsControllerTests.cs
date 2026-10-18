@@ -4,6 +4,7 @@ using Cleanuparr.Api.Features.Seeker.Controllers;
 using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.Events;
@@ -194,6 +195,21 @@ public class SearchStatsControllerTests : IDisposable
         stat.CycleCompletedAt.ShouldBeNull();
         stat.LastCycleStartedAt.ShouldBeNull();
         stat.LastCycleCompletedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_NoCurrentCycleRow_LastCycleIsTheNewestCompleted()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddInstanceConfig(radarr.Id, Guid.NewGuid());
+        AddCycle(Guid.NewGuid(), radarr.Id, eligibleNow: 3, remainingUnits: 0, startedAt: Now.AddDays(-10), completedAt: Now.AddDays(-9));
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.CycleStartedAt.ShouldBeNull();
+        stat.LastCycleStartedAt.ShouldBe(Now.AddDays(-10));
+        stat.LastCycleCompletedAt.ShouldBe(Now.AddDays(-9));
     }
 
     private void AddInstanceConfig(Guid arrInstanceId, Guid currentCycleId)
