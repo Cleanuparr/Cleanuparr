@@ -155,7 +155,7 @@ public sealed class SeekerConfigController : ControllerBase
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
                     };
                     newInstanceConfig.Validate();
-                    _dataContext.SeekerInstanceConfigs.Add(newInstanceConfig);
+                    await _dataContext.SeekerInstanceConfigs.AddAsync(newInstanceConfig);
                 }
             }
 
