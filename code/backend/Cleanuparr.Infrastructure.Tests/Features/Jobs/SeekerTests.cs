@@ -4889,7 +4889,7 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_Radarr_LiveRunAfterDryRun_ClaimsDryRunHistoryRow()
+    public async Task ExecuteAsync_Radarr_LiveRunAfterDryRun_CreatesSeparateHistoryRow()
     {
         // Arrange - a dry run searches the item first
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
@@ -4942,12 +4942,16 @@ public class SeekerTests : IDisposable
         _dryRunInterceptor.IsDryRunEnabled().Returns(false);
         await CreateSut().ExecuteAsync();
 
-        // Assert - live run owns the row, count restarts at 1
+        // Assert - live run creates its own row, the dry row is untouched
         var history = await _fixture.EventsContext.SeekerHistory
-            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1);
+            .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1 && !h.IsDryRun);
         history.ShouldNotBeNull();
         history.IsDryRun.ShouldBeFalse();
         history.SearchCount.ShouldBe(1);
+
+        int dryRowCount = await _fixture.EventsContext.SeekerHistory
+            .CountAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1 && h.IsDryRun);
+        dryRowCount.ShouldBe(1);
     }
 
     [Fact]
