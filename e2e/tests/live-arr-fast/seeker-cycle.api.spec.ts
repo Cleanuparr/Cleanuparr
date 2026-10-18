@@ -150,6 +150,43 @@ test.describe('Seeker search cycles', () => {
     expect(completed?.cycleItemsSearched).toBe(1);
   });
 
+  test('counts only the movie the Seeker itself searched', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    // The seed's second movie, grabbed directly against the arr so it sits queued
+    // without the Seeker ever searching it this cycle.
+    const others = (await RADARR.arr.get<Array<{ id: number }>>('/api/v3/movie')).filter(
+      (movie) => movie.id !== RADARR.itemId,
+    );
+    const secondMovieId = others[0].id;
+
+    const secondRelease = grabbableRelease(
+      RADARR.searchMode,
+      `The.Wild.Robot.2024.1080p.WEB-DL.DDP5.1.H.264-E2E${RUN_TAG}`,
+      RADARR.category,
+    );
+    await indexerMock.resetAll();
+    await indexerMock.stubMany(secondRelease.mappings);
+    await RADARR.arr.post('/api/v3/command', { name: 'MoviesSearch', movieIds: [secondMovieId] });
+    await waitForArrQueue(RADARR.arr, secondRelease.downloadId, TRIGGERED_SEARCH_TIMEOUT);
+
+    // The Seeker's own search returns nothing, so the queue above is the only exclusion.
+    await indexerMock.resetAll();
+    await indexerMock.stub(torznabSearchStub(RADARR.searchMode, []));
+
+    const instanceId = await arrangeInstance(api, RADARR, {
+      instance: { minCycleTimeDays: 0, monitoredOnly: false },
+    });
+
+    await triggerSeeker(api);
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const stat = await instanceStat(api, instanceId);
+    expect(stat?.cycleItemsTotal).toBe(2);
+    expect(stat?.cycleItemsSearched).toBe(1);
+    expect(stat?.cycleItemsRemaining).toBe(0);
+  });
+
   test('counts Sonarr cycle progress in seasons', async ({ api }) => {
     test.setTimeout(180_000);
     await indexerMock.stub(torznabSearchStub(SONARR.searchMode, []));
