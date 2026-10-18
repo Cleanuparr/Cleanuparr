@@ -520,6 +520,8 @@ public sealed class Seeker : IHandler
 
             result.Cycle.SearchedUnits++;
             result.Cycle.RemainingUnits = Math.Max(0, result.Cycle.RemainingUnits - 1);
+            result.Cycle.CompletedAt = null;
+            result.Cycle.CompletionReason = null;
 
             await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, result.Cycle.Id,
                 candidate.ItemId, candidate.Name, candidate.SeasonNumber, isDryRun);
