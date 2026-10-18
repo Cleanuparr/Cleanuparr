@@ -518,6 +518,11 @@ public sealed class Seeker : IHandler
 
             _logger.LogInformation("Search triggered for {Item} ({Reason}) | {InstanceUrl}", candidate.Name, candidate.Reason, arrInstance.Url);
 
+            if (result.Cycle.SearchedUnits == 0)
+            {
+                result.Cycle.StartedAt = _timeProvider.GetUtcNow();
+            }
+
             result.Cycle.SearchedUnits++;
             result.Cycle.RemainingUnits = Math.Max(0, result.Cycle.RemainingUnits - 1);
             result.Cycle.CompletedAt = null;
