@@ -736,11 +736,19 @@ public sealed class Seeker : IHandler
             {
                 continue;
             }
-            SeekerSearchReason reason = missingIds.Contains(movieId)
-                ? SeekerSearchReason.Missing
-                : cutoffUnmetIds.Contains(movieId)
-                    ? SeekerSearchReason.QualityCutoffNotMet
-                    : SeekerSearchReason.CustomFormatScoreBelowCutoff;
+            SeekerSearchReason reason;
+            if (missingIds.Contains(movieId))
+            {
+                reason = SeekerSearchReason.Missing;
+            }
+            else if (cutoffUnmetIds.Contains(movieId))
+            {
+                reason = SeekerSearchReason.QualityCutoffNotMet;
+            }
+            else
+            {
+                reason = SeekerSearchReason.CustomFormatScoreBelowCutoff;
+            }
 
             searchCandidates.Add(new SeekerSearchCandidate
             {
