@@ -301,6 +301,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("AirDateUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("air_date_utc");
+
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("uuid")
                         .HasColumnName("arr_instance_id");

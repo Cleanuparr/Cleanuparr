@@ -264,7 +264,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string profileName = profile?.Name ?? "Unknown";
 
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now, seasonNumber: null);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now, seasonNumber: null, airDateUtc: null);
 
                 synced++;
             }
@@ -417,7 +417,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
 
                     existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now, episode.SeasonNumber);
+                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now, episode.SeasonNumber, episode.AirDateUtc);
 
                     synced++;
                 }
@@ -513,7 +513,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         string profileName,
         bool isMonitored,
         DateTimeOffset now,
-        int? seasonNumber)
+        int? seasonNumber,
+        DateTimeOffset? airDateUtc)
     {
         if (existing is not null)
         {
@@ -545,6 +546,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             existing.IsMonitored = isMonitored;
             existing.LastSyncedAt = now;
             existing.SeasonNumber = seasonNumber;
+            existing.AirDateUtc = airDateUtc;
         }
         else
         {
@@ -562,6 +564,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 IsMonitored = isMonitored,
                 LastSyncedAt = now,
                 SeasonNumber = seasonNumber,
+                AirDateUtc = airDateUtc,
             });
 
             // Record initial score in history

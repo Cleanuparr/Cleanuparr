@@ -3532,6 +3532,7 @@ public class SeekerTests : IDisposable
             EpisodeId = 100,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
+            AirDateUtc = _fixture.TimeProvider.GetUtcNow().AddDays(-30),
             CurrentScore = 10,
             CutoffScore = 50,
             Title = "Below CF Cutoff"
@@ -3543,6 +3544,7 @@ public class SeekerTests : IDisposable
             EpisodeId = 101,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 2,
+            AirDateUtc = _fixture.TimeProvider.GetUtcNow().AddDays(-30),
             CurrentScore = 60,
             CutoffScore = 50,
             Title = "Above CF Cutoff"
@@ -3619,6 +3621,7 @@ public class SeekerTests : IDisposable
             EpisodeId = 100,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
+            AirDateUtc = _fixture.TimeProvider.GetUtcNow().AddDays(-30),
             CurrentScore = 10,
             CutoffScore = 50,
             Title = "Below CF Cutoff"
@@ -4209,6 +4212,141 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Sonarr_CustomFormatScoreEntryWithNullAirDate_IsNotACandidate()
+    {
+        // Arrange: a CF score row synced before the air date column existed carries no air date
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            AirDateUtc = null,
+            CurrentScore = 10,
+            CutoffScore = 50,
+            Title = "No Air Date Yet"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
+            ]));
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = true }]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: no air date to check against the grace period, so nothing was searched
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_CustomFormatScoreEntryWithinGracePeriod_IsNotACandidate()
+    {
+        // Arrange: grace period of 24 hours, entry's episode aired 1 hour ago
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 24;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            AirDateUtc = _fixture.TimeProvider.GetUtcNow().AddHours(-1),
+            CurrentScore = 10,
+            CutoffScore = 50,
+            Title = "Recently Aired"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
+            ]));
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 0, UpgradeAllowed = true }]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: episode is within the grace period, so nothing was searched
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Sonarr_CustomFormatScoreEntryWithSeasonNumber_SearchesThatSeasonWithCustomFormatReason()
     {
         // Arrange
@@ -4237,6 +4375,7 @@ public class SeekerTests : IDisposable
             EpisodeId = 100,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 3,
+            AirDateUtc = _fixture.TimeProvider.GetUtcNow().AddDays(-30),
             CurrentScore = 10,
             CutoffScore = 50,
             Title = "Below CF Cutoff"
@@ -4321,6 +4460,7 @@ public class SeekerTests : IDisposable
             EpisodeId = 100,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
+            AirDateUtc = _fixture.TimeProvider.GetUtcNow().AddDays(-30),
             CurrentScore = 10,
             CutoffScore = 50,
             Title = "Below CF Cutoff"

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Events
 {
     [DbContext(typeof(EventsContext))]
-    [Migration("20261017120316_AddCustomFormatScoreSeasonNumber")]
-    partial class AddCustomFormatScoreSeasonNumber
+    [Migration("20261018093103_AddCustomFormatScoreSeasonAndAirDate")]
+    partial class AddCustomFormatScoreSeasonAndAirDate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -298,6 +298,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
+
+                    b.Property<string>("AirDateUtc")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("air_date_utc");
 
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("TEXT")

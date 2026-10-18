@@ -452,10 +452,11 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
             ]));
 
+        DateTimeOffset airDateUtc = new(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
         _sonarrClient
             .GetEpisodesAsync(sonarrInstance, 10)
             .Returns([
-                new SearchableEpisode { Id = 100, SeasonNumber = 3, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true }
+                new SearchableEpisode { Id = 100, SeasonNumber = 3, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true, AirDateUtc = airDateUtc }
             ]);
 
         _sonarrClient
@@ -469,10 +470,11 @@ public class CustomFormatScoreSyncerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — the synced entry carries the episode's season number
+        // Assert: the synced entry carries the episode's season number and air date
         List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].SeasonNumber.ShouldBe(3);
+        entries[0].AirDateUtc.ShouldBe(airDateUtc);
     }
 
     [Fact]
@@ -489,7 +491,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             UseCustomFormatScore = true
         });
 
-        // Pre-existing entry from before SeasonNumber was tracked
+        // Pre-existing entry from before SeasonNumber/AirDateUtc were tracked
         _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = sonarrInstance.Id,
@@ -502,6 +504,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             CutoffScore = 500,
             QualityProfileName = "HD",
             SeasonNumber = null,
+            AirDateUtc = null,
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
@@ -517,10 +520,11 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
             ]));
 
+        DateTimeOffset airDateUtc = new(2026, 2, 20, 0, 0, 0, TimeSpan.Zero);
         _sonarrClient
             .GetEpisodesAsync(sonarrInstance, 10)
             .Returns([
-                new SearchableEpisode { Id = 100, SeasonNumber = 2, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true }
+                new SearchableEpisode { Id = 100, SeasonNumber = 2, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true, AirDateUtc = airDateUtc }
             ]);
 
         _sonarrClient
@@ -534,10 +538,11 @@ public class CustomFormatScoreSyncerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — the next sync backfills the season number on the existing row
+        // Assert: the next sync backfills the season number and air date on the existing row
         List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].SeasonNumber.ShouldBe(2);
+        entries[0].AirDateUtc.ShouldBe(airDateUtc);
     }
 
     [Fact]

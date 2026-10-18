@@ -80,4 +80,9 @@ public sealed record CustomFormatScoreEntry
     /// Sonarr season of the episode; null for Radarr and for rows not yet re-synced.
     /// </summary>
     public int? SeasonNumber { get; set; }
+
+    /// <summary>
+    /// Sonarr episode air date; null for Radarr and for rows not yet re-synced.
+    /// </summary>
+    public DateTimeOffset? AirDateUtc { get; set; }
 }

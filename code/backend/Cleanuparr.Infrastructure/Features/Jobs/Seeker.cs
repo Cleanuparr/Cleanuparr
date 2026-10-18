@@ -838,12 +838,14 @@ public sealed class Seeker : IHandler
 
         if (instanceConfig.UseCustomFormatScore)
         {
-            // Rows synced before the season column existed carry no season until the next sync.
+            // Rows synced before the season/air date columns existed carry neither until the next sync.
             List<CustomFormatScoreEntry> belowCutoff = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id
                     && e.ItemType == InstanceType.Sonarr
                     && e.SeasonNumber != null
+                    && e.AirDateUtc != null
+                    && e.AirDateUtc <= graceCutoff
                     && e.CurrentScore < e.CutoffScore
                     && (!instanceConfig.MonitoredOnly || e.IsMonitored))
                 .ToListAsync(cancellationToken);

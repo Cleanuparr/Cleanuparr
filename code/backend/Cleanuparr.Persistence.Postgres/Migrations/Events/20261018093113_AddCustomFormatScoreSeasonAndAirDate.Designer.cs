@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cleanuparr.Persistence.Postgres.Migrations.Events
 {
     [DbContext(typeof(EventsContext))]
-    [Migration("20261017120323_AddCustomFormatScoreSeasonNumber")]
-    partial class AddCustomFormatScoreSeasonNumber
+    [Migration("20261018093113_AddCustomFormatScoreSeasonAndAirDate")]
+    partial class AddCustomFormatScoreSeasonAndAirDate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -303,6 +303,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AirDateUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("air_date_utc");
 
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("uuid")
