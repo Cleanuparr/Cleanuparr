@@ -224,7 +224,7 @@ public class EventCleanupService : BackgroundService
         int deleted = await eventsContext.SeekerCycles
             .Where(c => c.CompletedAt != null && c.CompletedAt < cutoff)
             .Where(c => eventsContext.SeekerCycles.Any(o =>
-                o.ArrInstanceId == c.ArrInstanceId && o.IsDryRun == c.IsDryRun && o.StartedAt > c.StartedAt))
+                o.ArrInstanceId == c.ArrInstanceId && o.IsDryRun == c.IsDryRun && o.CompletedAt != null && o.CompletedAt > c.CompletedAt))
             .ExecuteDeleteAsync();
 
         if (deleted > 0)
