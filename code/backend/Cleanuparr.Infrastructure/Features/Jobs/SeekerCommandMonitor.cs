@@ -397,7 +397,7 @@ public class SeekerCommandMonitor : BackgroundService
                                           && h.EpisodeId == tracker.EpisodeId
                                           && !h.IsDryRun);
 
-            if (unit is not null)
+            if (unit is not null && unit.CycleId == cycleId.Value)
             {
                 unit.LastOutcome = outcome;
             }
