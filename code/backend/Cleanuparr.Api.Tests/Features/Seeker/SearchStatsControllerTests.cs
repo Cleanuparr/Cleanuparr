@@ -86,15 +86,52 @@ public class SearchStatsControllerTests : IDisposable
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         Guid currentCycleId = Guid.NewGuid();
         AddInstanceConfig(radarr.Id, currentCycleId);
-        AddCycle(currentCycleId, radarr.Id, eligibleNow: 10, remainingUnits: 4, startedAt: Now.AddDays(-2));
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 10, remainingUnits: 4, startedAt: Now.AddDays(-2), searchedUnits: 3);
 
         SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
 
         InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
         stat.CycleItemsTotal.ShouldBe(10);
         stat.CycleItemsRemaining.ShouldBe(4);
-        stat.CycleItemsSearched.ShouldBe(6);
+        stat.CycleItemsSearched.ShouldBe(3);
         stat.CycleStartedAt.ShouldBe(Now.AddDays(-2));
+        stat.CycleCompletedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_CycleItemsSearched_ExcludesQueuedItems()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        AddInstanceConfig(radarr.Id, currentCycleId);
+
+        // 5 eligible, 2 remaining, 1 actually searched: 2 are sitting in the download queue
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 5, remainingUnits: 2, startedAt: Now.AddDays(-1), searchedUnits: 1);
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.CycleItemsSearched.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetSummary_PerInstanceStats_DryRunOn_NoDryCycle_ValuesAreZeroOrNull()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        (await _dataContext.GeneralConfigs.FirstAsync()).DryRun = true;
+        await _dataContext.SaveChangesAsync();
+
+        Guid currentCycleId = Guid.NewGuid();
+        AddInstanceConfig(radarr.Id, currentCycleId);
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 10, remainingUnits: 4, startedAt: Now.AddDays(-2), isDryRun: false);
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.CycleItemsSearched.ShouldBe(0);
+        stat.CycleItemsTotal.ShouldBe(0);
+        stat.CycleItemsRemaining.ShouldBe(0);
+        stat.CycleStartedAt.ShouldBeNull();
         stat.CycleCompletedAt.ShouldBeNull();
     }
 
@@ -176,7 +213,8 @@ public class SearchStatsControllerTests : IDisposable
         int remainingUnits,
         DateTimeOffset startedAt,
         DateTimeOffset? completedAt = null,
-        bool isDryRun = false)
+        bool isDryRun = false,
+        int searchedUnits = 0)
     {
         _eventsContext.SeekerCycles.Add(new SeekerCycle
         {
@@ -188,6 +226,7 @@ public class SearchStatsControllerTests : IDisposable
             EligibleAtStart = eligibleNow,
             EligibleNow = eligibleNow,
             RemainingUnits = remainingUnits,
+            SearchedUnits = searchedUnits,
             IsDryRun = isDryRun,
         });
         _eventsContext.SaveChanges();

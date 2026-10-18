@@ -104,7 +104,7 @@ public sealed class SearchStatsController : ControllerBase
                 LastSearchedAt = history?.LastSearchedAt,
                 LastProcessedAt = ic.LastProcessedAt,
                 CurrentCycleId = current?.Id ?? ic.CurrentCycleId,
-                CycleItemsSearched = current is null ? 0 : Math.Max(0, current.EligibleNow - current.RemainingUnits),
+                CycleItemsSearched = current?.SearchedUnits ?? 0,
                 CycleItemsTotal = current?.EligibleNow ?? 0,
                 CycleItemsRemaining = current?.RemainingUnits ?? 0,
                 CycleStartedAt = current?.StartedAt,
