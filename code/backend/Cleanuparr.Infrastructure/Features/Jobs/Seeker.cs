@@ -633,7 +633,7 @@ public sealed class Seeker : IHandler
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
         {
-            _logger.LogWarning("Skipping proactive search for {InstanceName}, it needs Radarr v5.6 or newer", arrInstance.Name);
+            _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, it needs Radarr v5.6 or newer", arrInstance.Name);
             return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, CycleId = cycleId };
         }
 
