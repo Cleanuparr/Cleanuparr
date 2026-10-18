@@ -651,7 +651,7 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+            return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, arrInstance.Name, allLibraryIds);
         }
 
         // Exclude movies already in the download queue
@@ -671,7 +671,7 @@ public sealed class Seeker : IHandler
 
             if (candidates.Count == 0)
             {
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+                return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, arrInstance.Name, allLibraryIds);
             }
         }
 
@@ -848,7 +848,7 @@ public sealed class Seeker : IHandler
 
         if (seasons.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+            return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, seasons.Count, arrInstance.Name, allLibraryIds);
         }
 
         List<(long SeriesId, int SeasonNumber)> available = seasons.Keys
@@ -864,7 +864,7 @@ public sealed class Seeker : IHandler
 
         if (available.Count == 0)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+            return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, seasons.Count, arrInstance.Name, allLibraryIds);
         }
 
         HashSet<(long SeriesId, int SeasonNumber)> searchedSeasons = currentCycleHistory
@@ -1208,6 +1208,22 @@ public sealed class Seeker : IHandler
             instanceName, eligibleCount);
 
         return next;
+    }
+
+    /// <summary>
+    /// Early-exit helper for a run with no candidates to search: still completes the cycle when it already
+    /// searched something, so a cycle with nothing left does not stay "in progress" forever.
+    /// </summary>
+    private async Task<SeekerProcessResult> CompleteEmptyCycleAsync(
+        SeekerCycle cycle,
+        SeekerInstanceConfig instanceConfig,
+        bool isDryRun,
+        int eligibleCount,
+        string instanceName,
+        List<long> allLibraryIds)
+    {
+        SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, instanceName);
+        return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = next ?? cycle };
     }
 
     /// <summary>
