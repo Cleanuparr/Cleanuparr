@@ -7979,5 +7979,93 @@ public class SeekerTests : IDisposable
         cycle.CompletionReason.ShouldBe(SeekerCycleCompletionReason.Completed);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_Radarr_ReclaimedDryCycle_RebuildsSearchedUnitsFromLiveHistory()
+    {
+        // Arrange: the config's current cycle row is still a dry cycle, but live SeekerHistory rows already carry its id (upgrade path)
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var currentCycleId = Guid.NewGuid();
+        var now = _fixture.TimeProvider.GetUtcNow();
+        var earliest = now.AddDays(-10);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId
+        });
+
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = currentCycleId,
+            ArrInstanceId = radarrInstance.Id,
+            StartedAt = now,
+            IsDryRun = true
+        });
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = earliest,
+            ItemTitle = "Movie 1"
+        });
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 2,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-5),
+            ItemTitle = "Movie 2"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        // Both eligible movies were already searched in the reclaimed cycle, so nothing new gets searched
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]));
+        StubRadarrWanted(radarrInstance, [
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+            ]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the cycle was reclaimed as live and its SearchedUnits/StartedAt rebuilt from the live history, letting it complete
+        var cycle = await _fixture.EventsContext.SeekerCycles.FirstAsync(c => c.Id == currentCycleId);
+        cycle.IsDryRun.ShouldBeFalse();
+        cycle.SearchedUnits.ShouldBe(2);
+        cycle.StartedAt.ShouldBe(earliest);
+        cycle.CompletedAt.ShouldNotBeNull();
+        cycle.CompletionReason.ShouldBe(SeekerCycleCompletionReason.Completed);
+    }
+
     #endregion
 }

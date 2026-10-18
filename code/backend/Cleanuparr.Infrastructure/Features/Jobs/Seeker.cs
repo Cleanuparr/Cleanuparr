@@ -1111,25 +1111,42 @@ public sealed class Seeker : IHandler
         SeekerCycle? cycle = openOrCurrent.FirstOrDefault(c => c.Id == currentCycleId);
         if (cycle is not null)
         {
+            if (!cycle.IsDryRun)
+            {
+                return cycle;
+            }
+
             // The all-dry-events migration can hand this id to a dry cycle; a live run reclaims it instead of colliding with it.
-            return cycle.IsDryRun
-                ? OpenCycle(arrInstanceId, isDryRun: false, eligibleAtStart: 0, reclaim: cycle)
-                : cycle;
+            // Upgraded live history rows can already carry this id; reclaiming would zero their count.
+            SeekerCycle reclaimed = OpenCycle(arrInstanceId, isDryRun: false, eligibleAtStart: 0, reclaim: cycle);
+            await RebuildSearchedUnitsFromHistoryAsync(reclaimed, arrInstanceId, currentCycleId, cancellationToken);
+            return reclaimed;
         }
 
+        cycle = OpenCycle(arrInstanceId, isDryRun: false, eligibleAtStart: 0, currentCycleId);
+        await RebuildSearchedUnitsFromHistoryAsync(cycle, arrInstanceId, currentCycleId, cancellationToken);
+        return cycle;
+    }
+
+    /// <summary>
+    /// Restores SearchedUnits and StartedAt from live SeekerHistory rows already tagged with this cycle id.
+    /// </summary>
+    private async Task RebuildSearchedUnitsFromHistoryAsync(
+        SeekerCycle cycle,
+        Guid arrInstanceId,
+        Guid cycleId,
+        CancellationToken cancellationToken)
+    {
         List<DateTimeOffset> searchedAt = await _eventsContext.SeekerHistory
-            .Where(h => h.ArrInstanceId == arrInstanceId && h.CycleId == currentCycleId && !h.IsDryRun)
+            .Where(h => h.ArrInstanceId == arrInstanceId && h.CycleId == cycleId && !h.IsDryRun)
             .Select(h => h.LastSearchedAt)
             .ToListAsync(cancellationToken);
 
-        cycle = OpenCycle(arrInstanceId, isDryRun: false, eligibleAtStart: 0, currentCycleId);
         cycle.SearchedUnits = searchedAt.Count;
         if (searchedAt.Count > 0)
         {
             cycle.StartedAt = searchedAt.Min();
         }
-
-        return cycle;
     }
 
     private SeekerCycle OpenCycle(Guid arrInstanceId, bool isDryRun, int eligibleAtStart, Guid? id = null, SeekerCycle? reclaim = null)
