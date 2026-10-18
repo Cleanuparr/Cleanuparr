@@ -3,14 +3,17 @@ import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
+  RUN_TAG,
   SONARR,
+  TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   listSearchEvents,
   resetLiveArrState,
   teardownInstances,
   triggerSeeker,
+  waitForArrQueue,
 } from '../helpers/seeker-live';
-import { torznabSearchStub } from '../helpers/mocks/torznab-stubs';
+import { grabbableRelease, torznabSearchStub } from '../helpers/mocks/torznab-stubs';
 
 /**
  * What happens once every eligible item has been searched.
@@ -116,6 +119,35 @@ test.describe('Seeker search cycles', () => {
     expect(second?.lastCycleStartedAt).toBe(first?.cycleStartedAt);
     expect(second?.lastCycleCompletedAt).not.toBeNull();
     expect(second?.cycleItemsSearched).toBe(1);
+  });
+
+  test('completes the cycle once the only remaining movie is queued', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    const release = grabbableRelease(RADARR.searchMode, `F1.2025.1080p.WEB-DL.DDP5.1.H.264-E2E${RUN_TAG}`, RADARR.category);
+    await indexerMock.resetAll();
+    await indexerMock.stubMany(release.mappings);
+
+    // minCycleTimeDays keeps the same cycle alive across both triggers below.
+    // At 0 a new cycle would start on the second trigger instead of exhausting this one.
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { minCycleTimeDays: 7 } });
+
+    await triggerSeeker(api);
+    await waitForArrQueue(RADARR.arr, release.downloadId, TRIGGERED_SEARCH_TIMEOUT);
+
+    const searching = await instanceStat(api, instanceId);
+    expect(searching?.cycleItemsSearched).toBe(1);
+    expect(searching?.cycleCompletedAt).toBeNull();
+
+    // The movie is now queued, so the next run has nothing left to search.
+    await triggerSeeker(api);
+    await expect
+      .poll(async () => (await instanceStat(api, instanceId))?.cycleCompletedAt ?? null, { timeout: SETTLE_MS })
+      .not.toBeNull();
+
+    const completed = await instanceStat(api, instanceId);
+    expect(completed?.currentCycleId).toBe(searching?.currentCycleId);
+    expect(completed?.cycleItemsSearched).toBe(1);
   });
 
   test('counts Sonarr cycle progress in seasons', async ({ api }) => {
