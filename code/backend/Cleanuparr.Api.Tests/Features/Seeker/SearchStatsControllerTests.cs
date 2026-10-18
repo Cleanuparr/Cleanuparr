@@ -133,6 +133,7 @@ public class SearchStatsControllerTests : IDisposable
         stat.CycleItemsRemaining.ShouldBe(0);
         stat.CycleStartedAt.ShouldBeNull();
         stat.CycleCompletedAt.ShouldBeNull();
+        stat.CurrentCycleId.ShouldBeNull();
     }
 
     [Fact]

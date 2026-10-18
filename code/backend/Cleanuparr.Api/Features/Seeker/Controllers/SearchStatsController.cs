@@ -103,7 +103,7 @@ public sealed class SearchStatsController : ControllerBase
                 TotalSearchCount = history?.TotalSearchCount ?? 0,
                 LastSearchedAt = history?.LastSearchedAt,
                 LastProcessedAt = ic.LastProcessedAt,
-                CurrentCycleId = current?.Id ?? ic.CurrentCycleId,
+                CurrentCycleId = isDryRun ? current?.Id : current?.Id ?? ic.CurrentCycleId,
                 CycleItemsSearched = current?.SearchedUnits ?? 0,
                 CycleItemsTotal = current?.EligibleNow ?? 0,
                 CycleItemsRemaining = current?.RemainingUnits ?? 0,
