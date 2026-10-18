@@ -781,7 +781,7 @@ for (int i = 0; i < pastCycleHistoryCount; i++)
 
     MediaItem media = Pick(sonarrRadarrForHistory);
     Guid pastCycleId = Guid.NewGuid();
-    (Guid, long, InstanceType, int) key = (media.Instance!.Id, media.ExternalItemId, media.Type!.Value, media.SeasonNumber);
+    (Guid, long, InstanceType, int) key = (media.Instance.Id, media.ExternalItemId, media.Type.Value, media.SeasonNumber);
 
     if (!seekerHistoryKeys.Add(key))
     {
