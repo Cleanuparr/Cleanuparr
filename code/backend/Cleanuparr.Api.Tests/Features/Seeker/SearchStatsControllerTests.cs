@@ -444,6 +444,20 @@ public class SearchStatsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetEvents_WithContentKindFilter_ReturnsOnlyMatchingKind()
+    {
+        AddSearchEvent(itemTitle: "Show S01", contentKind: SeekerContentKind.Standard);
+        AddSearchEvent(itemTitle: "Show S00E01", contentKind: SeekerContentKind.Special);
+
+        IActionResult result = await _controller.GetEvents(contentKind: SeekerContentKind.Special);
+        JsonElement body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("ItemTitle").GetString().ShouldBe("Show S00E01");
+        body.GetProperty("Items")[0].GetProperty("ContentKind").GetString().ShouldBe("Special");
+    }
+
+    [Fact]
     public async Task GetEvents_WithGrabbedTrue_KeepsOnlyEventsWithGrabbedItems()
     {
         AddSearchEvent(itemTitle: "With Grabs", grabbedItems: ["movie (2024)"]);
@@ -477,6 +491,7 @@ public class SearchStatsControllerTests : IDisposable
         string? itemTitle = null,
         SeekerSearchType searchType = SeekerSearchType.Proactive,
         SeekerSearchReason searchReason = SeekerSearchReason.Missing,
+        SeekerContentKind? contentKind = null,
         List<string>? grabbedItems = null,
         Guid? arrInstanceId = null,
         Guid? cycleId = null,
@@ -499,6 +514,7 @@ public class SearchStatsControllerTests : IDisposable
             appEvent.ItemTitle = itemTitle;
             appEvent.SearchType = searchType;
             appEvent.SearchReason = searchReason;
+            appEvent.ContentKind = contentKind;
             appEvent.GrabbedItems = grabbedItems ?? [];
         }
 
