@@ -77,9 +77,9 @@
             </div>
             <div class="instance-card__stat">
               <span class="instance-card__stat-value">
-                {{ inst.cycleStartedAt ? formatCycleDuration(inst.cycleStartedAt) : '—' }}
+                {{ cycleDuration(inst) }}
               </span>
-              <app-tooltip text="How long the current search cycle has been running">
+              <app-tooltip text="How long the current search cycle has been running, or took if complete">
                 <span class="instance-card__stat-label">Cycle Duration</span>
               </app-tooltip>
             </div>

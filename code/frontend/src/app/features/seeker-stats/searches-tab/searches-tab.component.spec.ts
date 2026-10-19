@@ -403,15 +403,19 @@ describe('SearchesTabComponent', () => {
     expect(component.searchReasonSeverity('Whatever')).toBe('default');
   });
 
-  it('formats the cycle duration down to the largest non-zero unit', () => {
+  it('measures a running cycle until now and a completed cycle until its completion', () => {
     const { component } = setup();
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-31T12:00:00Z'));
 
-    expect(component.formatCycleDuration('2026-07-29T09:00:00Z')).toBe('2d 3h');
-    expect(component.formatCycleDuration('2026-07-31T07:00:00Z')).toBe('5h');
-    expect(component.formatCycleDuration('2026-07-31T11:30:00Z')).toBe('30m');
+    expect(component.cycleDuration(instance({ cycleStartedAt: '2026-07-29T09:00:00Z' }))).toBe('2d 3h');
+    expect(component.cycleDuration(instance({ cycleStartedAt: '2026-07-31T11:30:00Z' }))).toBe('30m');
+    expect(component.cycleDuration(instance({
+      cycleStartedAt: '2026-07-29T09:00:00Z',
+      cycleCompletedAt: '2026-07-29T09:20:00Z',
+    }))).toBe('20m');
+    expect(component.cycleDuration(instance({ cycleStartedAt: null }))).toBe('—');
   });
 
   it('toasts the error message when loading search stats fails', () => {

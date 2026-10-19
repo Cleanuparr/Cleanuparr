@@ -316,7 +316,16 @@ export class SearchesTabComponent {
   readonly searchReasonSeverity = searchReasonSeverity;
   readonly cycleProgress = cycleProgress;
   readonly instanceHealthWarning = instanceHealthWarning;
-  readonly formatCycleDuration = formatCycleDuration;
+
+  cycleDuration(inst: InstanceSearchStat): string {
+    const { cycleStartedAt, cycleCompletedAt } = inst;
+    if (!cycleStartedAt) {
+      return '—';
+    }
+    return cycleCompletedAt
+      ? formatDurationBetween(cycleStartedAt, cycleCompletedAt)
+      : formatCycleDuration(cycleStartedAt);
+  }
 
   lastCycleDuration(inst: InstanceSearchStat): string {
     const { lastCycleStartedAt, lastCycleCompletedAt } = inst;
