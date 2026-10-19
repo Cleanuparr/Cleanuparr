@@ -8792,6 +8792,58 @@ public class SeekerTests : IDisposable
         capturedSearchItem.Id.ShouldBe(701);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_PropagatesCancellationFromAnimeEpisodesFetch()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Anime Series", Status = "continuing", Monitored = true, Tags = [], SeriesType = "anime" }
+            ]));
+
+        DateTime pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+        StubSonarrWanted(sonarrInstance,
+        [
+            new SearchableEpisode { Id = 801, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = false }
+        ]);
+
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Is<ArrInstance>(a => a.Id == sonarrInstance.Id), 10, Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<List<SearchableEpisode>>(new OperationCanceledException()));
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => sut.ExecuteAsync());
+    }
+
     [Theory]
     [InlineData("daily", SeekerContentKind.Daily)]
     [InlineData("standard", SeekerContentKind.Standard)]
