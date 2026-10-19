@@ -31,6 +31,9 @@ QBIT_PORT=8090
 
 # Agatha All Along: one season, recent, unambiguous release names.
 SONARR_TVDB_ID=412429
+# Sherlock: aired specials, added unmonitored.
+# The specials spec monitors one special itself and restores it after.
+SONARR_SPECIALS_TVDB_ID=176941
 # F1: recent, and its releases parse cleanly against the movie title plus year.
 RADARR_TMDB_ID=911430
 # The Wild Robot, added second and left unmonitored.
@@ -218,6 +221,14 @@ seed_sonarr() {
   arr_post "$SONARR_URL" "$SONARR_API_KEY" '/api/v3/series' "$series" > /dev/null
 
   wait_for_items "$SONARR_URL" "$SONARR_API_KEY" '/api/v3/episode?seriesId=1' 'sonarr episodes'
+
+  log "adding the specials series"
+  local specials
+  specials=$(arr_get "$SONARR_URL" "$SONARR_API_KEY" "/api/v3/series/lookup?term=tvdb%3A$SONARR_SPECIALS_TVDB_ID" \
+    | merge_add_options '/tv' '{"monitor":"none","searchForMissingEpisodes":false,"searchForCutoffUnmetEpisodes":false}' 'false')
+  arr_post "$SONARR_URL" "$SONARR_API_KEY" '/api/v3/series' "$specials" > /dev/null
+
+  wait_for_items "$SONARR_URL" "$SONARR_API_KEY" '/api/v3/episode?seriesId=2' 'sonarr specials episodes'
 }
 
 seed_radarr() {
