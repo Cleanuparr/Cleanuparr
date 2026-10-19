@@ -732,6 +732,43 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
         }
 
         [Fact]
+        public async Task AllFilesAreMalware_PrivateTorrentKeptInClient_CallsChangeFilesPriority()
+        {
+            const string hash = "all-malware-private-kept-hash";
+            DelugeService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { DeletePrivate = false });
+
+            _fixture.ClientWrapper
+                .GetTorrentStatus(hash)
+                .Returns(MakeDownloadStatus(hash) with { Private = true });
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "malware.exe", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "malware.exe" } },
+                    },
+                });
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .ChangeFilesPriority(hash, Arg.Is<List<int>>(p => p.Count == 1 && p[0] == 0));
+        }
+
+        [Fact]
         public async Task PartialMalware_CallsChangeFilesPriority_AndDoesNotMarkForRemoval()
         {
             const string hash = "partial-malware-hash";

@@ -73,8 +73,9 @@ public partial class DelugeService
 
         await ApplyFileBlockingAsync(result, download.Name, scanItems, malwareBlockerConfig.DeleteIfAnyFileBlocked, async unwantedIndices =>
         {
-            // Zeroing every priority before removal crashes Deluge (#281)
-            if (result.DeleteReason is DeleteReason.AllFilesBlocked)
+            // Zeroing every priority before removal crashes Deluge (#281); a kept private torrent still needs it
+            bool staysInClient = result.IsPrivate && !malwareBlockerConfig.DeletePrivate;
+            if (result.DeleteReason is DeleteReason.AllFilesBlocked && !staysInClient)
             {
                 return;
             }
