@@ -14,7 +14,7 @@ import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/sea
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
 import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
-import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
@@ -46,6 +46,7 @@ interface AdvancedFilters extends Record<string, unknown> {
   statuses: SearchCommandStatus[];
   searchType: SeekerSearchType | '';
   searchReason: SeekerSearchReason | '';
+  contentKind: SeekerContentKind | '';
   grabbed: TriState;
 }
 
@@ -55,6 +56,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
   statuses: [],
   searchType: '',
   searchReason: '',
+  contentKind: '',
   grabbed: 'any',
 };
 
@@ -163,6 +165,7 @@ export class SearchesTabComponent {
       searchStatus: a.statuses.length ? a.statuses : undefined,
       searchType: a.searchType || undefined,
       searchReason: a.searchReason || undefined,
+      contentKind: a.contentKind || undefined,
       grabbed: triToBool(a.grabbed),
     };
   });
@@ -205,6 +208,14 @@ export class SearchesTabComponent {
     { label: 'Cutoff Unmet', value: SeekerSearchReason.QualityCutoffNotMet },
     { label: 'CF Below Cutoff', value: SeekerSearchReason.CustomFormatScoreBelowCutoff },
     { label: 'Replacement', value: SeekerSearchReason.Replacement },
+  ];
+
+  readonly contentKindOptions: SelectOption[] = [
+    { label: 'Any', value: '' },
+    { label: 'Standard', value: SeekerContentKind.Standard },
+    { label: 'Daily', value: SeekerContentKind.Daily },
+    { label: 'Anime', value: SeekerContentKind.Anime },
+    { label: 'Special', value: SeekerContentKind.Special },
   ];
 
   readonly triStateOptions: SelectOption[] = [

@@ -38,6 +38,13 @@ export enum SeekerSearchReason {
   Replacement = 'Replacement',
 }
 
+export enum SeekerContentKind {
+  Standard = 'Standard',
+  Daily = 'Daily',
+  Anime = 'Anime',
+  Special = 'Special',
+}
+
 export enum SearchCommandStatus {
   Pending = 'Pending',
   Started = 'Started',
@@ -59,4 +66,5 @@ export interface SearchEvent {
   grabbedItems: string[] | null;
   cycleId: string | null;
   isDryRun: boolean;
+  contentKind: SeekerContentKind | null;
 }

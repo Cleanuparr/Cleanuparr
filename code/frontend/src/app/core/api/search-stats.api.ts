@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
-import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 
 export enum SortDirection {
@@ -28,6 +28,7 @@ export interface SearchEventsQuery {
   searchStatus?: SearchCommandStatus[];
   searchType?: SeekerSearchType;
   searchReason?: SeekerSearchReason;
+  contentKind?: SeekerContentKind;
   grabbed?: boolean;
 }
 
@@ -51,6 +52,7 @@ export class SearchStatsApi {
     if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
     if (query.searchType) params = params.set('searchType', query.searchType);
     if (query.searchReason) params = params.set('searchReason', query.searchReason);
+    if (query.contentKind) params = params.set('contentKind', query.contentKind);
     if (query.grabbed !== undefined) params = params.set('grabbed', String(query.grabbed));
 
     if (query.searchStatus?.length) {
