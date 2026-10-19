@@ -934,6 +934,11 @@ public sealed class Seeker : IHandler
             remaining = units.Where(u => !IsQueued(u)).ToList();
             cycle.EligibleNow = units.Count;
             cycle.RemainingUnits = remaining.Count;
+
+            if (remaining.Count == 0)
+            {
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+            }
         }
 
         Dictionary<long, List<SonarrSearchUnit>> remainingBySeries = remaining

@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
@@ -2147,6 +2148,96 @@ public class SeekerTests : IDisposable
             .SearchItemAsync(sonarrInstance, Arg.Any<SearchItem>());
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
+        instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_RolloverLeavesOnlyQueuedSeason_SearchesNothing()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        DateTime now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = currentCycleId,
+            MinCycleTimeDays = 7
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            EpisodeId = 500,
+            CycleId = currentCycleId,
+            LastSearchedAt = now.AddDays(-10),
+            ItemTitle = "Anime Series S01E05",
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        QueueRecord[] queuedRecords =
+        [
+            new() { Id = 1, Title = "Anime Episode", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, SeriesId = 10, SeasonNumber = 1, EpisodeId = 501, TrackedDownloadState = "downloading" }
+        ];
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns(queuedRecords.ToList());
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Anime Series", Status = "continuing", Monitored = true, Tags = [], SeriesType = "anime" }
+            ]));
+
+        DateTime pastDate = now.AddDays(-30);
+        StubSonarrWanted(sonarrInstance,
+        [
+            new SearchableEpisode { Id = 500, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 5, Monitored = true, AirDateUtc = pastDate, HasFile = false },
+            new SearchableEpisode { Id = 501, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 6, Monitored = true, AirDateUtc = pastDate, HasFile = false }
+        ]);
+
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Is<ArrInstance>(a => a.Id == sonarrInstance.Id), 10, Arg.Any<CancellationToken>())
+            .Returns(
+            [
+                new SearchableEpisode { Id = 500, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 5, AirDateUtc = pastDate, HasFile = false },
+                new SearchableEpisode { Id = 501, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 6, AirDateUtc = pastDate, HasFile = false }
+            ]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+
+        _logger.HasNoLogContaining(LogLevel.Error, "Failed to process").ShouldBeTrue();
+
+        SeekerInstanceConfig instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
         instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
     }
