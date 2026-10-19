@@ -153,18 +153,19 @@ public class DownloadHashCasingMigrationTests
         AddStrikes(context, ThirdId, StrikeType.Stalled, StrikeType.FailedImport, StrikeType.DeadTorrent);
         AddStrikes(context, ControlId, StrikeType.Stalled, StrikeType.SlowSpeed);
 
-        context.Events.Add(new AppEvent
-        {
-            EventType = EventType.QueueItemDeleted,
-            Message = "hash casing",
-            Severity = EventSeverity.Information,
-            ItemHash = "placeholder-hash",
-        });
-
         await context.SaveChangesAsync();
 
         string downloadItems = provider.QualifyTable("download_items", DbContextKind.Events);
         string events = provider.QualifyTable("events", DbContextKind.Events);
+
+        // An EF write would name every column of today's model, and the old schema lacks the newer ones.
+        string emptyList = provider is PostgresDatabaseProvider ? "'{{}}'" : "'[]'";
+        await context.Database.ExecuteSqlRawAsync(
+            $"INSERT INTO {events} (id, timestamp, event_type, message, severity, item_hash, failed_import_reasons, grabbed_items, is_dry_run) " +
+            $"VALUES ({{0}}, {{1}}, 'queueitemdeleted', 'hash casing', 'information', 'placeholder-hash', {emptyList}, {emptyList}, {{2}})",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow,
+            false);
 
         await StoreHashAsync(context, downloadItems, SurvivorId, UpperHash);
         await StoreHashAsync(context, downloadItems, SecondId, LowerHash);

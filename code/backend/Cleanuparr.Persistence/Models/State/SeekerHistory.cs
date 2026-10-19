@@ -43,7 +43,7 @@ public sealed record SeekerHistory
     /// <summary>
     /// What the unit holds
     /// </summary>
-    public SeekerContentKind ContentKind { get; set; }
+    public SeekerContentKind ContentKind { get; set; } = SeekerContentKind.Standard;
 
     /// <summary>
     /// The last cycle this unit was searched in
