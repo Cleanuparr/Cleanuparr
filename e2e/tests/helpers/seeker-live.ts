@@ -107,6 +107,7 @@ export interface SearchEvent {
   isDryRun: boolean;
   grabbedItems: string[] | null;
   searchReason: string;
+  contentKind: string | null;
 }
 
 export async function listSearchEvents(api: CleanuparrApi, instanceId: string): Promise<SearchEvent[]> {
