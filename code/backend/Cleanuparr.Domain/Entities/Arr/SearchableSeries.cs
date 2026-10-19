@@ -16,5 +16,7 @@ public sealed record SearchableSeries
 
     public string Status { get; init; } = string.Empty;
 
+    public string SeriesType { get; init; } = string.Empty;
+
     public SeriesStatistics? Statistics { get; init; }
 }

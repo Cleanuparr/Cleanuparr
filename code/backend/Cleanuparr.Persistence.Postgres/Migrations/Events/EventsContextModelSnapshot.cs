@@ -48,6 +48,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
 
+                    b.Property<string>("ContentKind")
+                        .HasColumnType("text")
+                        .HasColumnName("content_kind");
+
                     b.Property<Guid?>("CycleId")
                         .HasColumnType("uuid")
                         .HasColumnName("cycle_id");
@@ -665,6 +669,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("uuid")
                         .HasColumnName("arr_instance_id");
+
+                    b.Property<string>("ContentKind")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_kind");
 
                     b.Property<Guid>("CycleId")
                         .HasColumnType("uuid")

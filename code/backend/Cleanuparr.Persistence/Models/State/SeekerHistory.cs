@@ -41,6 +41,11 @@ public sealed record SeekerHistory
     public long EpisodeId { get; set; }
 
     /// <summary>
+    /// What the unit holds
+    /// </summary>
+    public SeekerContentKind ContentKind { get; set; }
+
+    /// <summary>
     /// The last cycle this unit was searched in
     /// </summary>
     public Guid CycleId { get; set; }
