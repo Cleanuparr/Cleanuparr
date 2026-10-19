@@ -81,8 +81,11 @@ async function arrangeSearchableInstance(
     searchInterval: config.searchInterval,
   };
 
+  // The arr mock stubs no grab history, so a window would skip the search.
   const instances = config.instances.map((i: { arrInstanceId: string }) =>
-    i.arrInstanceId === instance.id ? { ...i, enabled: true, monitoredOnly: true } : i,
+    i.arrInstanceId === instance.id
+      ? { ...i, enabled: true, monitoredOnly: true, recentGrabWindowHours: 0 }
+      : i,
   );
 
   await api.seeker.updateConfig({
