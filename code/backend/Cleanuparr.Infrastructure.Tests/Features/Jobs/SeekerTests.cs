@@ -8082,7 +8082,8 @@ public class SeekerTests : IDisposable
             ArrInstance = radarrInstance,
             Enabled = true,
             MonitoredOnly = false,
-            CurrentCycleId = currentCycleId
+            CurrentCycleId = currentCycleId,
+            MinCycleTimeDays = 30
         });
 
         _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
@@ -8141,7 +8142,11 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: the cycle was reclaimed as live and its SearchedUnits/StartedAt rebuilt from the live history, letting it complete
+        // Assert: MinCycleTimeDays holds the completed cycle open, so no new cycle searches
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+
+        // the cycle was reclaimed as live and its SearchedUnits/StartedAt rebuilt from the live history, letting it complete
         var cycle = await _fixture.EventsContext.SeekerCycles.FirstAsync(c => c.Id == currentCycleId);
         cycle.IsDryRun.ShouldBeFalse();
         cycle.SearchedUnits.ShouldBe(2);
