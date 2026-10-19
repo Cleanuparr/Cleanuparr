@@ -10,6 +10,7 @@ import {
   arrCommandTriggerStub,
   arrMoviesStub,
   arrQualityProfilesStub,
+  arrWantedStub,
 } from '../helpers/mocks/arr-stubs';
 
 const COMMAND_ID = 4242;
@@ -58,6 +59,8 @@ async function arrangeSearchableInstance(
   await applyArrDefaults(mocks.arr);
   await mocks.arr.stubMany([
     arrMoviesStub([{ id: 1, title: movieTitle }]),
+    arrWantedStub('missing', [{ id: 1 }]),
+    arrWantedStub('cutoff', []),
     arrQualityProfilesStub(),
     arrCommandTriggerStub(COMMAND_ID),
     ...commandStubs,
