@@ -880,7 +880,7 @@ public sealed class Seeker : IHandler
             arrInstance, seriesById, wanted, cancellationToken);
 
         HashSet<(long SeriesId, int SeasonNumber)> searchedSeasons = currentCycleHistory
-            .Where(h => h.EpisodeId == 0)
+            .Where(h => h.EpisodeId == 0 && h.SeasonNumber > 0)
             .Select(h => (h.ExternalItemId, h.SeasonNumber))
             .ToHashSet();
         HashSet<long> searchedEpisodeIds = currentCycleHistory
