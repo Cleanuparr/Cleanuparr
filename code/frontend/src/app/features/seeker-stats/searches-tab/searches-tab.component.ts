@@ -115,7 +115,7 @@ export class SearchesTabComponent {
   );
 
   readonly selectedInstanceId = signal<string>('');
-  readonly resettingId = signal<string | null>(null);
+  readonly resettingIds = signal<ReadonlySet<string>>(new Set());
   readonly instanceOptions = computed<SelectOption[]>(() => {
     return [
       { label: 'All Instances', value: '' },
@@ -323,6 +323,14 @@ export class SearchesTabComponent {
     this.eventsResource.reload();
   }
 
+  private finishReset(instanceId: string): void {
+    this.resettingIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(instanceId);
+      return next;
+    });
+  }
+
   async resetCycle(inst: InstanceSearchStat): Promise<void> {
     const confirmed = await this.confirmService.confirm({
       title: 'Reset Cycle',
@@ -334,15 +342,15 @@ export class SearchesTabComponent {
       return;
     }
 
-    this.resettingId.set(inst.instanceId);
+    this.resettingIds.update((ids) => new Set(ids).add(inst.instanceId));
     this.api.resetCycle(inst.instanceId).subscribe({
       next: () => {
-        this.resettingId.set(null);
+        this.finishReset(inst.instanceId);
         this.toast.success(`Cycle reset for ${inst.instanceName}`);
         this.summaryResource.reload();
       },
       error: (err: ApiError) => {
-        this.resettingId.set(null);
+        this.finishReset(inst.instanceId);
         this.toast.error(err.message);
       },
     });

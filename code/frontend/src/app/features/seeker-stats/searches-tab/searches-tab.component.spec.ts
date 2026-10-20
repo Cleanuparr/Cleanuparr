@@ -572,6 +572,37 @@ describe('SearchesTabComponent', () => {
       expect(resetButton(fixture, 'Zulu').disabled).toBe(false);
     });
 
+    it('keeps a reset in progress when another instance finishes meanwhile', async () => {
+      const { fixture, component, confirm, resetCycle } = setup();
+      const zulu = new Subject<null>();
+      const beta = new Subject<null>();
+      resetCycle.mockImplementation((id: string) => (id === 'radarr-zulu' ? zulu : beta));
+
+      const zuluAccepted = component.resetCycle(RADARR_ZULU);
+      confirm.accept();
+      await zuluAccepted;
+      fixture.detectChanges();
+      const betaAccepted = component.resetCycle(SONARR_BETA);
+      confirm.accept();
+      await betaAccepted;
+      fixture.detectChanges();
+
+      beta.next(null);
+      beta.complete();
+      fixture.detectChanges();
+
+      expect(resetButton(fixture, 'Beta').disabled).toBe(false);
+      expect(resetButton(fixture, 'Zulu').disabled).toBe(true);
+      expect(resetButton(fixture, 'Zulu').classList).toContain('btn--loading');
+
+      zulu.next(null);
+      zulu.complete();
+      fixture.detectChanges();
+
+      expect(resetButton(fixture, 'Zulu').disabled).toBe(false);
+      expect(resetButton(fixture, 'Zulu').classList).not.toContain('btn--loading');
+    });
+
     it('re-enables the button when the reset fails', async () => {
       const { fixture, component, confirm, resetCycle } = setup();
       const inFlight = new Subject<null>();

@@ -112,8 +112,8 @@
               class="instance-card__reset"
               variant="ghost"
               size="sm"
-              [disabled]="inst.cycleItemsSearched === 0 || resettingId() === inst.instanceId"
-              [loading]="resettingId() === inst.instanceId"
+              [disabled]="inst.cycleItemsSearched === 0 || resettingIds().has(inst.instanceId)"
+              [loading]="resettingIds().has(inst.instanceId)"
               (clicked)="resetCycle(inst)"
             >
               Reset cycle
