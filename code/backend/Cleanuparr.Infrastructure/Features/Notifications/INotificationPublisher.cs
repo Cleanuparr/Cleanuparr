@@ -22,4 +22,9 @@ public interface INotificationPublisher
     Task NotifySearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason);
 
     Task NotifySearchItemGrabbed(string itemTitle, List<string> grabbedItems, InstanceType instanceType, string instanceUrl);
+
+    /// <summary>
+    /// Reports that Seeker searched every eligible item of an arr instance once.
+    /// </summary>
+    Task NotifySeekerCycleCompleted(string instanceName, TimeSpan duration, int searchedUnits, int grabbedUnits, int upgradesGrabbed);
 }

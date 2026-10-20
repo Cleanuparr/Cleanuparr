@@ -505,6 +505,62 @@ public class NotificationPublisherTests
 
     #endregion
 
+    #region NotifySeekerCycleCompleted Tests
+
+    [Fact]
+    public async Task NotifySeekerCycleCompleted_PublishesNotificationWithCorrectContext()
+    {
+        // Arrange
+        SetupContext(InstanceType.Radarr);
+
+        // Act
+        await _publisher.NotifySeekerCycleCompleted("Radarr Main", TimeSpan.FromHours(5) + TimeSpan.FromMinutes(30), 120, 14, 6);
+
+        // Assert
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.EventType.ShouldBe(NotificationEventType.SeekerCycleCompleted);
+        m.Context.EventType.ShouldBe(NotificationEventType.SeekerCycleCompleted);
+        m.Context.Severity.ShouldBe(EventSeverity.Information);
+        m.Context.Data["Instance"].ShouldBe("Radarr Main");
+        m.Context.Data["Instance type"].ShouldBe("Radarr");
+        m.Context.Data["Url"].ShouldBe("http://sonarr.local/");
+        m.Context.Data["Duration"].ShouldBe("5h 30m");
+        m.Context.Data["Searched"].ShouldBe("120");
+        m.Context.Data["Grabbed"].ShouldBe("14");
+        m.Context.Data["Upgrades grabbed"].ShouldBe("6");
+    }
+
+    [Fact]
+    public async Task NotifySeekerCycleCompleted_WithMultiDayDuration_FormatsDaysAndHours()
+    {
+        // Arrange
+        SetupContext();
+
+        // Act
+        await _publisher.NotifySeekerCycleCompleted("Sonarr", TimeSpan.FromDays(3) + TimeSpan.FromHours(4) + TimeSpan.FromMinutes(20), 1, 1, 0);
+
+        // Assert
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Data["Duration"].ShouldBe("3d 4h");
+    }
+
+    [Fact]
+    public async Task NotifySeekerCycleCompleted_WhenExceptionOccurs_LogsError()
+    {
+        // Arrange
+        SetupContext();
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ThrowsAsync(new Exception("Error"));
+
+        // Act
+        await _publisher.NotifySeekerCycleCompleted("Sonarr", TimeSpan.FromHours(1), 1, 1, 0);
+
+        // Assert
+        _logger.HasLogContaining(LogLevel.Error, "Failed to notify seeker cycle completed").ShouldBeTrue();
+    }
+
+    #endregion
+
     #region NotifyForceImported Tests
 
     [Fact]

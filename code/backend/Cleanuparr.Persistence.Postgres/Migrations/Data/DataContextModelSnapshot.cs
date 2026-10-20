@@ -1217,6 +1217,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("on_search_triggered");
 
+                    b.Property<bool>("OnSeekerCycleCompleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_seeker_cycle_completed");
+
                     b.Property<bool>("OnSlowStrike")
                         .HasColumnType("boolean")
                         .HasColumnName("on_slow_strike");

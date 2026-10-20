@@ -1406,6 +1406,8 @@ public sealed class Seeker : IHandler
 
             _logger.LogInformation("Cycle completed on {InstanceName} after {Count} searches",
                 instanceName, cycle.SearchedUnits);
+
+            await _eventPublisher.PublishSeekerCycleCompleted(cycle, instanceName);
         }
 
         if (ShouldWaitForMinCycleTime(instanceConfig, cycle.StartedAt))

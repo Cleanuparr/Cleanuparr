@@ -23,4 +23,6 @@ public record NotificationEventFlags
     public bool OnForceImported { get; init; }
 
     public bool OnErroredStrike { get; init; }
+
+    public bool OnSeekerCycleCompleted { get; init; }
 }

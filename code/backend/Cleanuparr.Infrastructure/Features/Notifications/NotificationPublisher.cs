@@ -139,6 +139,19 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
+    public virtual async Task NotifySeekerCycleCompleted(string instanceName, TimeSpan duration, int searchedUnits, int grabbedUnits, int upgradesGrabbed)
+    {
+        try
+        {
+            NotificationContext context = BuildSeekerCycleCompletedContext(instanceName, duration, searchedUnits, grabbedUnits, upgradesGrabbed);
+            await SendNotificationAsync(NotificationEventType.SeekerCycleCompleted, context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify seeker cycle completed");
+        }
+    }
+
     private async Task SendNotificationAsync(NotificationEventType eventType, NotificationContext context)
     {
         await _dryRunInterceptor.InterceptAsync(() => SendNotificationInternalAsync((eventType, context)));
@@ -356,6 +369,40 @@ public class NotificationPublisher : INotificationPublisher
                 ["Url"] = instanceUrl,
             }
         };
+    }
+
+    private static NotificationContext BuildSeekerCycleCompletedContext(string instanceName, TimeSpan duration, int searchedUnits, int grabbedUnits, int upgradesGrabbed)
+    {
+        InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        Uri instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
+
+        return new NotificationContext
+        {
+            EventType = NotificationEventType.SeekerCycleCompleted,
+            Title = "Seeker cycle completed",
+            Description = $"Searched every eligible item on {instanceName} once",
+            Severity = EventSeverity.Information,
+            Data = new Dictionary<string, string>
+            {
+                ["Instance"] = instanceName,
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl.ToString(),
+                ["Duration"] = FormatDuration(duration),
+                ["Searched"] = searchedUnits.ToString(CultureInfo.InvariantCulture),
+                ["Grabbed"] = grabbedUnits.ToString(CultureInfo.InvariantCulture),
+                ["Upgrades grabbed"] = upgradesGrabbed.ToString(CultureInfo.InvariantCulture),
+            }
+        };
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+        {
+            return $"{(int)duration.TotalDays}d {duration.Hours}h";
+        }
+
+        return $"{duration.Hours}h {duration.Minutes}m";
     }
 
     private static NotificationEventType MapStrikeTypeToEventType(StrikeType strikeType)

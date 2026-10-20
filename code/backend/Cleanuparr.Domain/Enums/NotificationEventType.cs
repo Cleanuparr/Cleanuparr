@@ -14,5 +14,6 @@ public enum NotificationEventType
     SearchItemGrabbed,
     DownloadStopped,
     ForceImported,
-    ErroredStrike
+    ErroredStrike,
+    SeekerCycleCompleted
 }

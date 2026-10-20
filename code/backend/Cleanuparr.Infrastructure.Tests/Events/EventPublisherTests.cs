@@ -1115,4 +1115,102 @@ public class EventPublisherTests : IDisposable
     }
 
     #endregion
+
+    #region PublishSeekerCycleCompleted Tests
+
+    private async Task SeedSearchTriggered(Guid cycleId, SeekerSearchReason reason, bool grabbed)
+    {
+        _context.Events.Add(new AppEvent
+        {
+            EventType = EventType.SearchTriggered,
+            Message = "Search triggered",
+            Severity = EventSeverity.Information,
+            CycleId = cycleId,
+            SearchReason = reason,
+            GrabbedItems = grabbed ? ["Release A"] : []
+        });
+        await _context.SaveChangesAsync();
+    }
+
+    private static SeekerCycle CreateCompletedCycle(bool isDryRun = false)
+    {
+        DateTimeOffset startedAt = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        return new SeekerCycle
+        {
+            StartedAt = startedAt,
+            CompletedAt = startedAt.AddHours(5).AddMinutes(30),
+            SearchedUnits = 120,
+            GrabbedUnits = 14,
+            IsDryRun = isDryRun
+        };
+    }
+
+    [Fact]
+    public async Task PublishSeekerCycleCompleted_SavesEventAndNotifies()
+    {
+        // Arrange
+        SeekerCycle cycle = CreateCompletedCycle();
+
+        // Act
+        await _publisher.PublishSeekerCycleCompleted(cycle, "Radarr Main");
+
+        // Assert
+        AppEvent? savedEvent = await _context.Events.SingleOrDefaultAsync(e => e.EventType == EventType.SeekerCycleCompleted);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.CycleId.ShouldBe(cycle.Id);
+        await _notificationPublisher.Received(1).NotifySeekerCycleCompleted(
+            "Radarr Main", TimeSpan.FromHours(5.5), 120, 14, 0);
+    }
+
+    [Fact]
+    public async Task PublishSeekerCycleCompleted_CalledTwiceForSameCycle_PublishesOnce()
+    {
+        // Arrange
+        SeekerCycle cycle = CreateCompletedCycle();
+
+        // Act
+        await _publisher.PublishSeekerCycleCompleted(cycle, "Radarr Main");
+        await _publisher.PublishSeekerCycleCompleted(cycle, "Radarr Main");
+
+        // Assert
+        (await _context.Events.CountAsync(e => e.EventType == EventType.SeekerCycleCompleted)).ShouldBe(1);
+        await _notificationPublisher.Received(1).NotifySeekerCycleCompleted(
+            Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>());
+    }
+
+    [Fact]
+    public async Task PublishSeekerCycleCompleted_CountsOnlyGrabbedUpgradeSearchesOfThisCycle()
+    {
+        // Arrange
+        SeekerCycle cycle = CreateCompletedCycle();
+        await SeedSearchTriggered(cycle.Id, SeekerSearchReason.QualityCutoffNotMet, grabbed: true);
+        await SeedSearchTriggered(cycle.Id, SeekerSearchReason.CustomFormatScoreBelowCutoff, grabbed: true);
+        await SeedSearchTriggered(cycle.Id, SeekerSearchReason.Missing, grabbed: true);
+        await SeedSearchTriggered(cycle.Id, SeekerSearchReason.QualityCutoffNotMet, grabbed: false);
+        await SeedSearchTriggered(Guid.NewGuid(), SeekerSearchReason.QualityCutoffNotMet, grabbed: true);
+
+        // Act
+        await _publisher.PublishSeekerCycleCompleted(cycle, "Radarr Main");
+
+        // Assert
+        await _notificationPublisher.Received(1).NotifySeekerCycleCompleted(
+            "Radarr Main", Arg.Any<TimeSpan>(), 120, 14, 2);
+    }
+
+    [Fact]
+    public async Task PublishSeekerCycleCompleted_ForDryRunCycle_SavesDryRunEvent()
+    {
+        // Arrange
+        SeekerCycle cycle = CreateCompletedCycle(isDryRun: true);
+
+        // Act
+        await _publisher.PublishSeekerCycleCompleted(cycle, "Radarr Main");
+
+        // Assert
+        AppEvent? savedEvent = await _context.Events.SingleOrDefaultAsync(e => e.EventType == EventType.SeekerCycleCompleted);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.IsDryRun.ShouldBeTrue();
+    }
+
+    #endregion
 }
