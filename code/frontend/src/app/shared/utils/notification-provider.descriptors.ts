@@ -88,6 +88,7 @@ function eventFlags(m: NotificationProviderFormModel): NotificationEventFlags {
     onSearchItemGrabbed: m.onSearchItemGrabbed,
     onForceImported: m.onForceImported,
     onErroredStrike: m.onErroredStrike,
+    onSeekerCycleCompleted: m.onSeekerCycleCompleted,
   };
 }
 

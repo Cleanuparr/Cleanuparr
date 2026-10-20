@@ -65,6 +65,7 @@ function createDefaultModalModel(): NotificationProviderFormModel {
     onFailedImportStrike: false, onStalledStrike: false, onSlowStrike: false, onQueueItemDeleted: false,
     onDownloadCleaned: false, onDownloadStopped: false, onCategoryChanged: false, onSearchTriggered: false, onSearchItemGrabbed: false, onForceImported: false,
     onErroredStrike: false,
+    onSeekerCycleCompleted: false,
   };
 }
 
@@ -358,6 +359,7 @@ export class NotificationProviderModalComponent {
     model.onSearchItemGrabbed = provider.events.onSearchItemGrabbed;
     model.onForceImported = provider.events.onForceImported;
     model.onErroredStrike = provider.events.onErroredStrike;
+    model.onSeekerCycleCompleted = provider.events.onSeekerCycleCompleted;
 
     return model;
   }

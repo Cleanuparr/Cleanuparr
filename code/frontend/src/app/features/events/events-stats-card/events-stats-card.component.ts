@@ -33,6 +33,7 @@ const TYPE_COLORS: Record<string, string> = {
   [EventType.DownloadCleaned]: '#22c55e',
   [EventType.DownloadStopped]: '#6366f1',
   [EventType.StrikeReset]: '#10b981',
+  [EventType.SeekerCycleCompleted]: '#a855f7',
 };
 
 const FALLBACK_COLOR = '#94a3b8';

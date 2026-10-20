@@ -27,6 +27,7 @@ const DISCORD_PROVIDER: NotificationProviderDto = {
     onSearchItemGrabbed: false,
     onForceImported: false,
     onErroredStrike: false,
+    onSeekerCycleCompleted: false,
   },
   configuration: { webhookUrl: 'https://discord.com/api/webhooks/abc' },
 };
@@ -48,6 +49,7 @@ const TELEGRAM_PROVIDER: NotificationProviderDto = {
     onSearchItemGrabbed: false,
     onForceImported: false,
     onErroredStrike: false,
+    onSeekerCycleCompleted: false,
   },
   configuration: { botToken: 'token', chatId: '-100' },
 };

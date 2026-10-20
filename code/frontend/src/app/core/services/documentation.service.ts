@@ -156,6 +156,7 @@ export class DocumentationService {
       'onSearchItemGrabbed': 'event-configuration',
       'onForceImported': 'event-configuration',
       'onErroredStrike': 'event-configuration',
+      'onSeekerCycleCompleted': 'event-configuration',
     },
     'notifications/notifiarr': {
       'apiKey': 'api-key',
