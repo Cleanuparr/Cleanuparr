@@ -603,6 +603,18 @@ describe('SearchesTabComponent', () => {
       expect(resetButton(fixture, 'Zulu').classList).not.toContain('btn--loading');
     });
 
+    it('starts a reset when the button is clicked', async () => {
+      const { fixture, confirm, resetCycle } = setup();
+
+      resetButton(fixture, 'Zulu').click();
+      fixture.detectChanges();
+      expect(confirm.state()).not.toBeNull();
+      confirm.accept();
+      await fixture.whenStable();
+
+      expect(resetCycle).toHaveBeenCalledWith('radarr-zulu');
+    });
+
     it('re-enables the button when the reset fails', async () => {
       const { fixture, component, confirm, resetCycle } = setup();
       const inFlight = new Subject<null>();
