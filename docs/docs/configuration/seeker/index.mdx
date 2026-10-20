@@ -68,6 +68,8 @@ For Radarr, each movie is one item. For Sonarr, a cycle holds season units and e
 
 The Searches tab shows per instance how many items the current cycle searched, how many are left, how long it has been running and how long the previous cycle took. Items in the download queue are not counted as left. Dry run tracks its own cycles and never moves the live one.
 
+**Reset cycle** on an instance card closes the current cycle and starts a new one right away, so every eligible item can be searched again. It skips the minimum cycle time once. The button stays disabled until the cycle has searched something. With dry run on, it resets the dry run cycle.
+
 Each Sonarr search event records a content kind: `Standard` (a regular season), `Daily` (a daily series season), `Anime` (an anime season or episode) or `Special` (an episode from season 0). Radarr and replacement searches carry none. The Searches tab can filter events by content kind.
 </Note>
 
@@ -276,6 +278,8 @@ Default is `24`, maximum is `168`.
 >
 
 The minimum number of days that a complete search cycle must span before a new cycle can begin. Once all eligible items in an instance have been searched, Seeker will not start a new cycle until this many days have passed since the cycle started.
+
+**Reset cycle** on the Searches tab skips this wait once.
 
 </ConfigSection>
 
