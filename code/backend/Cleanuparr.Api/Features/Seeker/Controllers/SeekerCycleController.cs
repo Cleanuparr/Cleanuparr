@@ -90,7 +90,7 @@ public sealed class SeekerCycleController : ControllerBase
                 RemainingUnits = cycle.EligibleNow,
                 IsDryRun = isDryRun,
             };
-            _eventsContext.SeekerCycles.Add(next);
+            await _eventsContext.SeekerCycles.AddAsync(next);
 
             if (!isDryRun)
             {
