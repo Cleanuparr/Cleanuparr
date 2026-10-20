@@ -202,7 +202,8 @@
 
   &__footer {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
     margin-top: var(--space-3);
     padding-top: var(--space-2);
     border-top: 1px solid var(--divider);

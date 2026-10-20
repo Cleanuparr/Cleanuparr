@@ -105,9 +105,20 @@
           </div>
 
           <div class="instance-card__footer">
-            <app-tooltip text="Unique identifier for the current search cycle. Changes when all items have been searched">
+            <app-tooltip text="Unique identifier for the current search cycle. Changes when all items have been searched or the cycle is reset">
               <span class="instance-card__cycle-chip">{{ inst.currentCycleId ? inst.currentCycleId.substring(0, 8) : '—' }}</span>
             </app-tooltip>
+            <app-button
+              class="instance-card__reset"
+              variant="ghost"
+              size="sm"
+              [disabled]="inst.cycleItemsSearched === 0 || resettingId() === inst.instanceId"
+              [loading]="resettingId() === inst.instanceId"
+              (clicked)="resetCycle(inst)"
+            >
+              Reset cycle
+              <app-new-badge variant="inline" featureId="seeker-reset-cycle" />
+            </app-button>
           </div>
         </app-card>
       }

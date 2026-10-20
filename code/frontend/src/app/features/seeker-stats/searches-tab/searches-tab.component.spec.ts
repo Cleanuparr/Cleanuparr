@@ -1,7 +1,7 @@
 import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
 import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
@@ -9,6 +9,7 @@ import type { InstanceSearchStat, SearchEvent, SearchStatsSummary } from '@core/
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
+import { ConfirmService } from '@core/services/confirm.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { SearchesTabComponent } from './searches-tab.component';
 import { IntersectionObserverStub } from '../../../../testing/intersection-observer.stub';
@@ -110,6 +111,10 @@ interface Harness {
   queries: SearchEventsQuery[];
   lastQuery: () => SearchEventsQuery;
   toastError: ReturnType<typeof vi.fn>;
+  toastSuccess: ReturnType<typeof vi.fn>;
+  resetCycle: ReturnType<typeof vi.fn>;
+  summaryCalls: () => number;
+  confirm: ConfirmService;
 }
 
 describe('SearchesTabComponent', () => {
@@ -123,6 +128,9 @@ describe('SearchesTabComponent', () => {
     vi.stubGlobal('IntersectionObserver', IntersectionObserverStub);
     const queries: SearchEventsQuery[] = [];
     const toastErrorSpy = vi.fn();
+    const toastSuccessSpy = vi.fn();
+    const resetCycleSpy = vi.fn(() => of(null));
+    let summaryCalls = 0;
 
     TestBed.configureTestingModule({
       providers: [
@@ -130,6 +138,7 @@ describe('SearchesTabComponent', () => {
           provide: SearchStatsApi,
           useValue: {
             getSummary: () => {
+              summaryCalls++;
               if (options.summaryLoadFails) {
                 return throwError(() => new ApiError('summary unavailable'));
               }
@@ -142,6 +151,7 @@ describe('SearchesTabComponent', () => {
               }
               return of(EVENTS);
             },
+            resetCycle: resetCycleSpy,
           },
         },
         {
@@ -150,7 +160,7 @@ describe('SearchesTabComponent', () => {
         },
         {
           provide: ToastService,
-          useValue: { error: toastErrorSpy, success: vi.fn() },
+          useValue: { error: toastErrorSpy, success: toastSuccessSpy },
         },
       ],
     });
@@ -164,6 +174,10 @@ describe('SearchesTabComponent', () => {
       queries,
       lastQuery: () => queries[queries.length - 1],
       toastError: toastErrorSpy,
+      toastSuccess: toastSuccessSpy,
+      resetCycle: resetCycleSpy,
+      summaryCalls: () => summaryCalls,
+      confirm: TestBed.inject(ConfirmService),
     };
   }
 
@@ -493,5 +507,94 @@ describe('SearchesTabComponent', () => {
     fixture.detectChanges();
 
     expect(queries.length).toBe(initialQueryCount);
+  });
+
+  describe('reset cycle', () => {
+    function resetButton(fixture: ComponentFixture<SearchesTabComponent>, instanceName: string): HTMLButtonElement {
+      const card = Array.from(fixture.nativeElement.querySelectorAll('.instance-card') as NodeListOf<HTMLElement>)
+        .find((el) => el.querySelector('.instance-card__name')!.textContent!.trim() === instanceName)!;
+      return card.querySelector('.instance-card__reset button') as HTMLButtonElement;
+    }
+
+    it('disables the button until the cycle has searched something', () => {
+      const { fixture } = setup();
+
+      expect(resetButton(fixture, 'Alpha').disabled).toBe(true);
+      expect(resetButton(fixture, 'Zulu').disabled).toBe(false);
+    });
+
+    it('resets the cycle and reloads the summary once the confirmation is accepted', async () => {
+      const { fixture, component, confirm, resetCycle, toastSuccess, summaryCalls } = setup();
+      const before = summaryCalls();
+
+      const accepted = component.resetCycle(RADARR_ZULU);
+      expect(confirm.state()).toMatchObject({ title: 'Reset Cycle', confirmLabel: 'Reset', destructive: true });
+      expect(confirm.state()!.message).toContain('Zulu');
+      confirm.accept();
+      await accepted;
+      fixture.detectChanges();
+
+      expect(resetCycle).toHaveBeenCalledWith('radarr-zulu');
+      expect(toastSuccess).toHaveBeenCalledWith('Cycle reset for Zulu');
+      expect(summaryCalls()).toBe(before + 1);
+    });
+
+    it('leaves the cycle alone when the confirmation is cancelled', async () => {
+      const { component, confirm, resetCycle } = setup();
+
+      const cancelled = component.resetCycle(RADARR_ZULU);
+      confirm.cancel();
+      await cancelled;
+
+      expect(resetCycle).not.toHaveBeenCalled();
+    });
+
+    it('disables the button while the reset is in flight', async () => {
+      const { fixture, component, confirm, resetCycle } = setup();
+      const inFlight = new Subject<null>();
+      resetCycle.mockReturnValueOnce(inFlight);
+
+      const accepted = component.resetCycle(RADARR_ZULU);
+      confirm.accept();
+      await accepted;
+      fixture.detectChanges();
+
+      expect(resetButton(fixture, 'Zulu').disabled).toBe(true);
+      resetButton(fixture, 'Zulu').click();
+      fixture.detectChanges();
+      expect(confirm.state()).toBeNull();
+      expect(resetCycle).toHaveBeenCalledTimes(1);
+
+      inFlight.next(null);
+      inFlight.complete();
+      fixture.detectChanges();
+
+      expect(resetButton(fixture, 'Zulu').disabled).toBe(false);
+    });
+
+    it('re-enables the button when the reset fails', async () => {
+      const { fixture, component, confirm, resetCycle } = setup();
+      const inFlight = new Subject<null>();
+      resetCycle.mockReturnValueOnce(inFlight);
+
+      const accepted = component.resetCycle(RADARR_ZULU);
+      confirm.accept();
+      await accepted;
+      inFlight.error(new ApiError('boom'));
+      fixture.detectChanges();
+
+      expect(resetButton(fixture, 'Zulu').disabled).toBe(false);
+    });
+
+    it('shows the error when the reset fails', async () => {
+      const { component, confirm, resetCycle, toastError } = setup();
+      resetCycle.mockReturnValueOnce(throwError(() => new ApiError('nothing searched yet')));
+
+      const accepted = component.resetCycle(RADARR_ZULU);
+      confirm.accept();
+      await accepted;
+
+      expect(toastError).toHaveBeenCalledWith('nothing searched yet');
+    });
   });
 });

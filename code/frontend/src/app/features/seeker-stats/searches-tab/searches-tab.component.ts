@@ -17,6 +17,8 @@ import type { PaginatedResult } from '@core/models/pagination.model';
 import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
+import { ConfirmService } from '@core/services/confirm.service';
+import type { ApiError } from '@core/interceptors/error.interceptor';
 import { PaginationService, PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
@@ -94,6 +96,7 @@ export class SearchesTabComponent {
   private readonly api = inject(SearchStatsApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
 
@@ -112,6 +115,7 @@ export class SearchesTabComponent {
   );
 
   readonly selectedInstanceId = signal<string>('');
+  readonly resettingId = signal<string | null>(null);
   readonly instanceOptions = computed<SelectOption[]>(() => {
     return [
       { label: 'All Instances', value: '' },
@@ -317,6 +321,31 @@ export class SearchesTabComponent {
   refresh(): void {
     this.summaryResource.reload();
     this.eventsResource.reload();
+  }
+
+  async resetCycle(inst: InstanceSearchStat): Promise<void> {
+    const confirmed = await this.confirmService.confirm({
+      title: 'Reset Cycle',
+      message: `Start a new search cycle for "${inst.instanceName}"? Items searched in this cycle become eligible again, and the minimum cycle time is skipped once.`,
+      confirmLabel: 'Reset',
+      destructive: true,
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.resettingId.set(inst.instanceId);
+    this.api.resetCycle(inst.instanceId).subscribe({
+      next: () => {
+        this.resettingId.set(null);
+        this.toast.success(`Cycle reset for ${inst.instanceName}`);
+        this.summaryResource.reload();
+      },
+      error: (err: ApiError) => {
+        this.resettingId.set(null);
+        this.toast.error(err.message);
+      },
+    });
   }
 
   readonly searchTypeSeverity = searchTypeSeverity;
