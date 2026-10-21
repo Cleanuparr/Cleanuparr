@@ -114,7 +114,6 @@ public sealed class SeekerPreviewController : ControllerBase
             return this.ProblemResult(StatusCodes.Status502BadGateway, "Seeker needs Radarr v5.6 or newer");
         }
 
-        InstanceFunnelStat funnel = ToFunnel(evaluation);
         DateTimeOffset? waitingUntil = null;
 
         // Same rollover as the Seeker job: a cycle with nothing left waits out the minimum cycle time, then starts over.
@@ -130,6 +129,8 @@ public sealed class SeekerPreviewController : ControllerBase
                 evaluation = evaluation.WithoutCycleHistory();
             }
         }
+
+        InstanceFunnelStat funnel = ToFunnel(evaluation);
 
         List<SeekerSearchCandidate> nextUp = waitingUntil is null
             ? SeekerUnitEvaluator.SelectNext(evaluation, config.SelectionStrategy, NextUpCount)

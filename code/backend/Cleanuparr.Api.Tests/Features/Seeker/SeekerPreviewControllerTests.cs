@@ -247,6 +247,8 @@ public class SeekerPreviewControllerTests : IDisposable
         response.CycleWaitingUntil.ShouldBeNull();
         response.NextUp.Count.ShouldBe(2);
         response.Excluded.ShouldBeEmpty();
+        response.Funnel.RemainingUnits.ShouldBe(2);
+        response.Funnel.SearchedUnits.ShouldBe(0);
     }
 
     [Fact]
