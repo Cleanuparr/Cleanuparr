@@ -161,7 +161,7 @@ The notification shows:
 - how many of those searches grabbed a release
 - how many of those grabs were upgrades, from the quality cutoff or the custom format score
 
-**The numbers are a snapshot.** This notification is sent as soon as the last search of the cycle is triggered. It does not wait for that search to finish. The *arr may still be searching, and the Seeker checks the queue for grabs for up to 30 minutes after each search. Grabs that show up after the notification are missing from its numbers. The Searches tab shows the final numbers.
+**The numbers are a snapshot.** This notification is sent on the first Seeker run after the last search of the cycle was triggered, once that run finds nothing left to search. It does not wait for that search to finish. The *arr may still be searching, and the Seeker checks the queue for grabs for up to 30 minutes after each search. Grabs that show up after the notification are missing from its numbers. The Searches tab shows the final numbers.
 
 **You get one notification per cycle.** After a cycle completes, the next one waits for the Min Cycle Time. If new items show up during that wait, such as an episode that just aired or a movie you just added, the Seeker searches them as part of the same current cycle. The cycle then completes again, but you are not notified again.
 
