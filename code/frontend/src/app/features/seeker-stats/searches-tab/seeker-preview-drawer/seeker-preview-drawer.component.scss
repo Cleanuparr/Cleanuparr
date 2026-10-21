@@ -76,6 +76,6 @@
     flex: 1;
     min-width: 0;
     color: var(--text-primary);
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }

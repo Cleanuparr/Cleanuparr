@@ -352,7 +352,7 @@
     font-weight: 500;
     color: var(--text-primary);
     padding: 0 var(--space-4) var(--space-2);
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &__cycle {
@@ -388,7 +388,7 @@
 
   &__detail-text {
     min-width: 0;
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }
 
