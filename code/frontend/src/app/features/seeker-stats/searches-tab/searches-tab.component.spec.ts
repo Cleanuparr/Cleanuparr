@@ -2,6 +2,7 @@ import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
 import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
@@ -114,6 +115,7 @@ interface Harness {
   toastError: ReturnType<typeof vi.fn>;
   toastSuccess: ReturnType<typeof vi.fn>;
   resetCycle: ReturnType<typeof vi.fn>;
+  getPreview: ReturnType<typeof vi.fn>;
   summaryCalls: () => number;
   confirm: ConfirmService;
 }
@@ -131,6 +133,7 @@ describe('SearchesTabComponent', () => {
     const toastErrorSpy = vi.fn();
     const toastSuccessSpy = vi.fn();
     const resetCycleSpy = vi.fn(() => of(null));
+    const getPreviewSpy = vi.fn<(instanceId: string) => Observable<null>>(() => of(null));
     let summaryCalls = 0;
 
     TestBed.configureTestingModule({
@@ -153,6 +156,7 @@ describe('SearchesTabComponent', () => {
               return of(EVENTS);
             },
             resetCycle: resetCycleSpy,
+            getPreview: getPreviewSpy,
           },
         },
         {
@@ -177,6 +181,7 @@ describe('SearchesTabComponent', () => {
       toastError: toastErrorSpy,
       toastSuccess: toastSuccessSpy,
       resetCycle: resetCycleSpy,
+      getPreview: getPreviewSpy,
       summaryCalls: () => summaryCalls,
       confirm: TestBed.inject(ConfirmService),
     };
@@ -187,6 +192,21 @@ describe('SearchesTabComponent', () => {
       (row as HTMLElement).textContent!.trim(),
     );
   }
+
+  it('opens the preview drawer and requests the preview for the clicked instance', () => {
+    const { fixture, component, getPreview } = setup();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('.instance-card__actions button'),
+    ) as HTMLButtonElement[];
+    const previewButton = buttons.find((button) => button.textContent!.includes('Preview'))!;
+    previewButton.click();
+    fixture.detectChanges();
+
+    expect(component.previewOpen()).toBe(true);
+    expect(component.previewInstance()?.instanceId).toBe(component.sortedInstanceStats()[0].instanceId);
+    expect(getPreview).toHaveBeenCalledWith(component.sortedInstanceStats()[0].instanceId);
+  });
 
   it('sorts the instance cards by type then name while leaving the filter options in API order', () => {
     const { component } = setup();
