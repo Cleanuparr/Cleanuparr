@@ -427,12 +427,12 @@ public class EventPublisher : IEventPublisher
         }
     }
 
+    /// <summary>
+    /// Publishes the cycle completed event and notification once per cycle
+    /// </summary>
     public async Task PublishSeekerCycleCompleted(SeekerCycle cycle, string instanceName)
     {
-        bool alreadyPublished = await _context.Events
-            .AnyAsync(e => e.EventType == EventType.SeekerCycleCompleted && e.CycleId == cycle.Id);
-
-        if (alreadyPublished)
+        if (cycle.NotifiedAt is not null)
         {
             return;
         }
@@ -445,6 +445,9 @@ public class EventPublisher : IEventPublisher
             .CountAsync();
 
         TimeSpan duration = (cycle.CompletedAt ?? _timeProvider.GetUtcNow()) - cycle.StartedAt;
+
+        // Set before the event save so a failed notification cannot cause a second send
+        cycle.NotifiedAt = _timeProvider.GetUtcNow();
 
         await PublishAsync(
             EventType.SeekerCycleCompleted,
