@@ -47,6 +47,8 @@ export class SeekerPreviewDrawerComponent {
   readonly loading = computed(() => this.previewResource.isLoading());
   readonly error = computed(() => this.previewResource.error()?.message ?? null);
 
+  readonly excluded = computed(() => this.preview()?.excluded ?? []);
+
   readonly stages = computed(() => {
     const preview = this.preview();
     const instance = this.instance();
@@ -68,7 +70,7 @@ export class SeekerPreviewDrawerComponent {
 
   readonly reasonOptions = computed<SelectOption[]>(() => {
     const counts = new Map<SeekerExclusionReason, number>();
-    for (const item of this.preview()?.excluded ?? []) {
+    for (const item of this.excluded()) {
       counts.set(item.reason, (counts.get(item.reason) ?? 0) + 1);
     }
     return [
@@ -80,7 +82,7 @@ export class SeekerPreviewDrawerComponent {
   readonly filteredExcluded = computed(() => {
     const reason = this.reasonFilter();
     const title = this.titleFilter().trim().toLowerCase();
-    return (this.preview()?.excluded ?? []).filter(
+    return this.excluded().filter(
       (item) => (!reason || item.reason === reason) && (!title || item.name.toLowerCase().includes(title)),
     );
   });
