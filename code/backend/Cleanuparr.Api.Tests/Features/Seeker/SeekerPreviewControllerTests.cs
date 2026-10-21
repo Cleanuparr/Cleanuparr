@@ -407,4 +407,16 @@ public class SeekerPreviewControllerTests : IDisposable
         response.NextUp.ShouldHaveSingleItem();
         response.RandomPick.ShouldBeFalse();
     }
+
+    [Fact]
+    public async Task GetPreview_QueueReadCancelled_Rethrows()
+    {
+        ArrInstance radarr = AddRadarr();
+        SetupMovies(Movie(1));
+        _arrQueueReader.ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => _controller.GetPreview(radarr.Id, CancellationToken.None));
+    }
 }
