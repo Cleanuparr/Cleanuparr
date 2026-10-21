@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { NEVER, of, throwError } from 'rxjs';
 import { SearchStatsApi } from '@core/api/search-stats.api';
 import { SeekerContentKind, SeekerExclusionReason, SeekerSearchReason } from '@core/models/search-stats.models';
 import type { InstanceFunnel, InstanceSearchStat, SeekerPreview, SeekerPreviewExclusion } from '@core/models/search-stats.models';
@@ -227,5 +227,49 @@ describe('SeekerPreviewDrawerComponent', () => {
     fixture.detectChanges();
 
     expect(getPreview).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows a spinner while the preview loads', () => {
+    const { fixture, host } = setup(NEVER);
+
+    open(fixture, host);
+
+    expect(document.body.querySelector('app-spinner')).not.toBeNull();
+  });
+
+  it('shows the empty note when nothing is left to search', () => {
+    const { fixture, host } = setup(of(preview({ nextUp: [] })));
+
+    open(fixture, host);
+
+    expect(document.body.querySelector('.preview__note')!.textContent).toContain('Nothing left to search.');
+  });
+
+  it('filters the excluded list from the title input and shows a note when nothing matches', () => {
+    const { fixture, host } = setup();
+    open(fixture, host);
+    const input = document.body.querySelector('input[type="search"]') as HTMLInputElement;
+
+    input.value = 'gamma';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(names('.preview__row--excluded')).toEqual(['Gamma Show']);
+
+    input.value = 'zzz';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(names('.preview__row--excluded')).toEqual([]);
+    expect(document.body.textContent).toContain('No excluded items match.');
+  });
+
+  it('titles the drawer Preview when no instance is set', () => {
+    const { fixture, host } = setup();
+    host.instance.set(null);
+
+    open(fixture, host);
+
+    expect(document.body.querySelector('.drawer__title')!.textContent!.trim()).toBe('Preview');
   });
 });
