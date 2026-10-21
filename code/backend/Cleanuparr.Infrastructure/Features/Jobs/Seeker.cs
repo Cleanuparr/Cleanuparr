@@ -445,6 +445,11 @@ public sealed class Seeker : IHandler
 
         SeekerProcessResult result = await SelectCandidatesAsync(config, instanceConfig, arrInstance, evaluation, cycle, isDryRun);
 
+        if (!result.Evaluation.WantedUnsupported)
+        {
+            RecordFunnel(result.Cycle, result.Evaluation);
+        }
+
         await _eventsContext.SaveChangesAsync(cancellationToken);
 
         if (result.Candidates.Count == 0)
@@ -452,7 +457,7 @@ public sealed class Seeker : IHandler
             _logger.LogDebug("No items selected for search on {InstanceName}", arrInstance.Name);
             if (!isDryRun)
             {
-                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.AllLibraryIds, allHistoryExternalIds);
+                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.Evaluation.AllLibraryIds, allHistoryExternalIds);
             }
             return false;
         }
@@ -507,7 +512,7 @@ public sealed class Seeker : IHandler
 
         if (!isDryRun)
         {
-            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.AllLibraryIds, allHistoryExternalIds);
+            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.Evaluation.AllLibraryIds, allHistoryExternalIds);
         }
 
         return true;
@@ -524,11 +529,9 @@ public sealed class Seeker : IHandler
         SeekerCycle cycle,
         bool isDryRun)
     {
-        List<long> allLibraryIds = evaluation.AllLibraryIds;
-
         if (evaluation.WantedUnsupported)
         {
-            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+            return new SeekerProcessResult { Candidates = [], Cycle = cycle, Evaluation = evaluation };
         }
 
         int eligibleCount = evaluation.Units.Count;
@@ -544,7 +547,7 @@ public sealed class Seeker : IHandler
 
         if (blockedCount == eligibleCount)
         {
-            return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, arrInstance.Name, allLibraryIds);
+            return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, arrInstance.Name, evaluation);
         }
 
         cycle.RemainingUnits = evaluation.Remaining.Count;
@@ -554,7 +557,7 @@ public sealed class Seeker : IHandler
             SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, arrInstance.Name);
             if (next is null)
             {
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+                return new SeekerProcessResult { Candidates = [], Cycle = cycle, Evaluation = evaluation };
             }
 
             cycle = next;
@@ -564,7 +567,7 @@ public sealed class Seeker : IHandler
 
             if (cycle.RemainingUnits == 0)
             {
-                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = cycle };
+                return new SeekerProcessResult { Candidates = [], Cycle = cycle, Evaluation = evaluation };
             }
         }
 
@@ -576,7 +579,18 @@ public sealed class Seeker : IHandler
                 candidate.Name, candidate.ContentKind, arrInstance.Name, candidate.Reason);
         }
 
-        return new SeekerProcessResult { Candidates = candidates, AllLibraryIds = allLibraryIds, Cycle = cycle };
+        return new SeekerProcessResult { Candidates = candidates, Cycle = cycle, Evaluation = evaluation };
+    }
+
+    private void RecordFunnel(SeekerCycle cycle, SeekerEvaluation evaluation)
+    {
+        cycle.LibraryItems = evaluation.AllLibraryIds.Count;
+        cycle.ReleasedItems = evaluation.ReleasedItems;
+        cycle.MonitoredItems = evaluation.MonitoredItems;
+        cycle.TagFilteredItems = evaluation.TagFilteredItems;
+        cycle.QueuedUnits = evaluation.Units.Count(u => u.BlockedBy is SeekerExclusionReason.InQueue);
+        cycle.RecentlyGrabbedUnits = evaluation.Units.Count(u => u.BlockedBy is SeekerExclusionReason.RecentlyGrabbed);
+        cycle.FunnelCountedAt = _timeProvider.GetUtcNow();
     }
 
     private async Task UpdateSearchHistoryAsync(
@@ -848,12 +862,11 @@ public sealed class Seeker : IHandler
         SeekerCycle cycle,
         SeekerInstanceConfig instanceConfig,
         bool isDryRun,
-        int eligibleCount,
         string instanceName,
-        List<long> allLibraryIds)
+        SeekerEvaluation evaluation)
     {
-        SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, instanceName);
-        return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds, Cycle = next ?? cycle };
+        SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, evaluation.Units.Count, instanceName);
+        return new SeekerProcessResult { Candidates = [], Cycle = next ?? cycle, Evaluation = evaluation };
     }
 
     /// <summary>

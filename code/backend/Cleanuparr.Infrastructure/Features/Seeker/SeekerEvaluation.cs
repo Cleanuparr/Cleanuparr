@@ -1,3 +1,5 @@
+using Cleanuparr.Domain.Enums;
+
 namespace Cleanuparr.Infrastructure.Features.Seeker;
 
 /// <summary>
@@ -11,6 +13,26 @@ internal sealed record SeekerEvaluation
     /// Radarr older than v5.6 has no wanted endpoints, so nothing got evaluated.
     /// </summary>
     public bool WantedUnsupported { get; init; }
+
+    /// <summary>
+    /// Movies or series past the release and grace period stage.
+    /// </summary>
+    public int ReleasedItems { get; init; }
+
+    /// <summary>
+    /// Released items past the monitored stage.
+    /// </summary>
+    public int MonitoredItems { get; init; }
+
+    /// <summary>
+    /// Monitored items past the tag filters.
+    /// </summary>
+    public int TagFilteredItems { get; init; }
+
+    /// <summary>
+    /// Items and episodes dropped before they became units.
+    /// </summary>
+    public List<SeekerExclusion> ItemExclusions { get; init; } = [];
 
     /// <summary>
     /// Every unit that needs a search, including the blocked and searched ones.
@@ -28,4 +50,11 @@ internal sealed record SeekerEvaluation
     public required Func<SeekerEvaluation> WithoutCycleHistory { get; init; }
 
     public List<SeekerSearchUnit> Remaining => Units.Where(u => u.BlockedBy is null && !u.Searched).ToList();
+
+    /// <summary>
+    /// Everything that did not reach <see cref="Remaining"/>, with one reason each.
+    /// </summary>
+    public IEnumerable<SeekerExclusion> Excluded => ItemExclusions.Concat(Units
+        .Where(u => u.BlockedBy is not null || u.Searched)
+        .Select(u => new SeekerExclusion(u.Name, u.BlockedBy ?? SeekerExclusionReason.SearchedThisCycle)));
 }

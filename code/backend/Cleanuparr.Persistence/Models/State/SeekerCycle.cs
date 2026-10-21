@@ -65,6 +65,41 @@ public sealed record SeekerCycle
     public int GrabbedUnits { get; set; }
 
     /// <summary>
+    /// Movies or series in the library on the latest run
+    /// </summary>
+    public int LibraryItems { get; set; }
+
+    /// <summary>
+    /// Library items released and past the grace period on the latest run
+    /// </summary>
+    public int ReleasedItems { get; set; }
+
+    /// <summary>
+    /// Released items that passed the monitored filter on the latest run
+    /// </summary>
+    public int MonitoredItems { get; set; }
+
+    /// <summary>
+    /// Monitored items that passed the tag filters on the latest run
+    /// </summary>
+    public int TagFilteredItems { get; set; }
+
+    /// <summary>
+    /// Eligible units on the latest run that wait on a queued download
+    /// </summary>
+    public int QueuedUnits { get; set; }
+
+    /// <summary>
+    /// Eligible units on the latest run that wait on a recent grab
+    /// </summary>
+    public int RecentlyGrabbedUnits { get; set; }
+
+    /// <summary>
+    /// When the latest run counted the funnel. Null until a run does.
+    /// </summary>
+    public DateTimeOffset? FunnelCountedAt { get; set; }
+
+    /// <summary>
     /// Whether the cycle ran in dry run mode
     /// </summary>
     public bool IsDryRun { get; set; }

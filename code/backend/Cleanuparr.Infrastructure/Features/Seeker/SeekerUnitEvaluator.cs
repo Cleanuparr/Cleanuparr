@@ -154,6 +154,9 @@ public sealed class SeekerUnitEvaluator
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
 
         List<long> allLibraryIds = new();
+        List<SeekerExclusion> exclusions = [];
+        int releasedCount = 0;
+        int monitoredCount = 0;
         List<SearchableMovie> released = new();
         await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
         {
@@ -161,21 +164,30 @@ public sealed class SeekerUnitEvaluator
 
             if (movie.Status is not "released")
             {
+                exclusions.Add(new SeekerExclusion(movie.Title, SeekerExclusionReason.NotReleased));
                 continue;
             }
 
             if (!IsMoviePastGracePeriod(movie, graceCutoff))
             {
+                exclusions.Add(new SeekerExclusion(movie.Title, SeekerExclusionReason.InGracePeriod));
                 continue;
             }
+
+            releasedCount++;
 
             if (instanceConfig.MonitoredOnly && !movie.Monitored)
             {
+                exclusions.Add(new SeekerExclusion(movie.Title, SeekerExclusionReason.NotMonitored));
                 continue;
             }
 
-            if (!PassesTagFilter(movie.Tags, tagsById, skipTagSet, includeTagSet))
+            monitoredCount++;
+
+            SeekerExclusionReason? tagExclusion = GetTagExclusion(movie.Tags, tagsById, skipTagSet, includeTagSet);
+            if (tagExclusion is not null)
             {
+                exclusions.Add(new SeekerExclusion(movie.Title, tagExclusion.Value));
                 continue;
             }
 
@@ -207,6 +219,10 @@ public sealed class SeekerUnitEvaluator
             {
                 AllLibraryIds = allLibraryIds,
                 WantedUnsupported = true,
+                ReleasedItems = releasedCount,
+                MonitoredItems = monitoredCount,
+                TagFilteredItems = released.Count,
+                ItemExclusions = exclusions,
                 Units = [],
                 LastSearchedByItem = lastSearchedByItem,
                 WithoutCycleHistory = Unsupported,
@@ -249,6 +265,8 @@ public sealed class SeekerUnitEvaluator
                     _logger.LogDebug("skip | upgrades disabled in profile | {Title} | {InstanceName}", movie.Title, arrInstance.Name);
                 }
 
+                exclusions.Add(new SeekerExclusion(movie.Title,
+                    upgradesDisabled ? SeekerExclusionReason.UpgradesDisabled : SeekerExclusionReason.NothingToSearch));
                 continue;
             }
 
@@ -270,6 +288,10 @@ public sealed class SeekerUnitEvaluator
         SeekerEvaluation Build(Dictionary<long, DateTimeOffset> searched) => new()
         {
             AllLibraryIds = allLibraryIds,
+            ReleasedItems = releasedCount,
+            MonitoredItems = monitoredCount,
+            TagFilteredItems = released.Count,
+            ItemExclusions = exclusions,
             Units = units.Select(u => u with { Searched = searched.ContainsKey(u.ItemId) }).ToList(),
             LastSearchedByItem = searched,
             WithoutCycleHistory = () => Build(new Dictionary<long, DateTimeOffset>()),
@@ -303,6 +325,9 @@ public sealed class SeekerUnitEvaluator
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
 
         List<long> allLibraryIds = new();
+        List<SeekerExclusion> exclusions = [];
+        int releasedCount = 0;
+        int monitoredCount = 0;
         Dictionary<long, SearchableSeries> seriesById = new();
         await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
         {
@@ -310,16 +335,24 @@ public sealed class SeekerUnitEvaluator
 
             if (series.Status is not ("continuing" or "ended" or "released"))
             {
+                exclusions.Add(new SeekerExclusion(series.Title, SeekerExclusionReason.NotReleased));
                 continue;
             }
+
+            releasedCount++;
 
             if (instanceConfig.MonitoredOnly && !series.Monitored)
             {
+                exclusions.Add(new SeekerExclusion(series.Title, SeekerExclusionReason.NotMonitored));
                 continue;
             }
 
-            if (!PassesTagFilter(series.Tags, tagsById, skipTagSet, includeTagSet))
+            monitoredCount++;
+
+            SeekerExclusionReason? tagExclusion = GetTagExclusion(series.Tags, tagsById, skipTagSet, includeTagSet);
+            if (tagExclusion is not null)
             {
+                exclusions.Add(new SeekerExclusion(series.Title, tagExclusion.Value));
                 continue;
             }
 
@@ -327,9 +360,37 @@ public sealed class SeekerUnitEvaluator
         }
 
         List<SonarrWantedEpisode> wanted = [];
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        HashSet<long> excludedEpisodeIds = [];
+        HashSet<long> seriesWithExcludedEpisodes = [];
 
-        bool IsReleasedEpisodeOfCandidate(SearchableEpisode e) =>
-            seriesById.ContainsKey(e.SeriesId) && e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff;
+        void ExcludeEpisode(long seriesId, long episodeId, string name, SeekerExclusionReason reason)
+        {
+            seriesWithExcludedEpisodes.Add(seriesId);
+            if (excludedEpisodeIds.Add(episodeId))
+            {
+                exclusions.Add(new SeekerExclusion(name, reason));
+            }
+        }
+
+        bool IsReleasedEpisodeOfCandidate(SearchableEpisode e)
+        {
+            if (!seriesById.TryGetValue(e.SeriesId, out SearchableSeries? series))
+            {
+                return false;
+            }
+
+            if (e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff)
+            {
+                return true;
+            }
+
+            ExcludeEpisode(e.SeriesId, e.Id, $"{series.Title} S{e.SeasonNumber:D2}E{e.EpisodeNumber:D2}",
+                e.AirDateUtc is null || e.AirDateUtc.Value > now
+                    ? SeekerExclusionReason.NotReleased
+                    : SeekerExclusionReason.InGracePeriod);
+            return false;
+        }
 
         SonarrWantedEpisode ToWanted(SearchableEpisode e, SeekerSearchReason reason) => new()
         {
@@ -382,6 +443,7 @@ public sealed class SeekerUnitEvaluator
                 if (upgradesDisabledProfileIds.Contains(series.QualityProfileId))
                 {
                     _logger.LogDebug("skip | upgrades disabled in profile | {Title} | {InstanceName}", entry.Title, arrInstance.Name);
+                    ExcludeEpisode(entry.ExternalItemId, entry.EpisodeId, entry.Title, SeekerExclusionReason.UpgradesDisabled);
                     continue;
                 }
 
@@ -399,6 +461,11 @@ public sealed class SeekerUnitEvaluator
 
         HashSet<(long SeriesId, int SeasonNumber)> finishedAnimeSeasons = await GetFinishedAnimeSeasonsAsync(
             arrInstance, seriesById, wanted, cancellationToken);
+
+        HashSet<long> wantedSeriesIds = wanted.Select(w => w.SeriesId).ToHashSet();
+        exclusions.AddRange(seriesById.Values
+            .Where(s => !wantedSeriesIds.Contains(s.Id) && !seriesWithExcludedEpisodes.Contains(s.Id))
+            .Select(s => new SeekerExclusion(s.Title, SeekerExclusionReason.NothingToSearch)));
 
         HashSet<(long SeriesId, long SeasonNumber)> queuedSeasons = activeQueueRecords
             .Where(r => r.SeriesId > 0)
@@ -445,6 +512,10 @@ public sealed class SeekerUnitEvaluator
             return new SeekerEvaluation
             {
                 AllLibraryIds = allLibraryIds,
+                ReleasedItems = releasedCount,
+                MonitoredItems = monitoredCount,
+                TagFilteredItems = seriesById.Count,
+                ItemExclusions = exclusions,
                 Units = BuildSonarrUnits(wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds)
                     .Select(u => u with { BlockedBy = GetBlockedBy(u) })
                     .ToList(),
@@ -639,7 +710,10 @@ public sealed class SeekerUnitEvaluator
         return releaseDate is null || releaseDate.Value <= graceCutoff;
     }
 
-    private static bool PassesTagFilter(
+    /// <summary>
+    /// Returns why the tags keep the item out, or null when they let it through. A skip tag wins over an include tag.
+    /// </summary>
+    private static SeekerExclusionReason? GetTagExclusion(
         List<long> itemTagIds,
         Dictionary<long, string> tagsById,
         HashSet<string> skipTags,
@@ -652,9 +726,11 @@ public sealed class SeekerUnitEvaluator
 
         if (labels.Any(skipTags.Contains))
         {
-            return false;
+            return SeekerExclusionReason.SkipTag;
         }
 
-        return includeTags.Count == 0 || labels.Any(includeTags.Contains);
+        return includeTags.Count == 0 || labels.Any(includeTags.Contains)
+            ? null
+            : SeekerExclusionReason.MissingIncludeTag;
     }
 }

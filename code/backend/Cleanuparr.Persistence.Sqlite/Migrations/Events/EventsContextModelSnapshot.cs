@@ -630,6 +630,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("INTEGER")
                         .HasColumnName("eligible_now");
 
+                    b.Property<string>("FunnelCountedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("funnel_counted_at");
+
                     b.Property<int>("GrabbedUnits")
                         .HasColumnType("INTEGER")
                         .HasColumnName("grabbed_units");
@@ -638,9 +642,29 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("INTEGER")
                         .HasColumnName("is_dry_run");
 
+                    b.Property<int>("LibraryItems")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("library_items");
+
+                    b.Property<int>("MonitoredItems")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("monitored_items");
+
                     b.Property<string>("NotifiedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("notified_at");
+
+                    b.Property<int>("QueuedUnits")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("queued_units");
+
+                    b.Property<int>("RecentlyGrabbedUnits")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("recently_grabbed_units");
+
+                    b.Property<int>("ReleasedItems")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("released_items");
 
                     b.Property<int>("RemainingUnits")
                         .HasColumnType("INTEGER")
@@ -654,6 +678,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("started_at");
+
+                    b.Property<int>("TagFilteredItems")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("tag_filtered_items");
 
                     b.HasKey("Id")
                         .HasName("pk_seeker_cycles");

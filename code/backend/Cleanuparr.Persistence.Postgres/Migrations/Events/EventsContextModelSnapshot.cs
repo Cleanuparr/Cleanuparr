@@ -630,6 +630,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("integer")
                         .HasColumnName("eligible_now");
 
+                    b.Property<DateTimeOffset?>("FunnelCountedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("funnel_counted_at");
+
                     b.Property<int>("GrabbedUnits")
                         .HasColumnType("integer")
                         .HasColumnName("grabbed_units");
@@ -638,9 +642,29 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("boolean")
                         .HasColumnName("is_dry_run");
 
+                    b.Property<int>("LibraryItems")
+                        .HasColumnType("integer")
+                        .HasColumnName("library_items");
+
+                    b.Property<int>("MonitoredItems")
+                        .HasColumnType("integer")
+                        .HasColumnName("monitored_items");
+
                     b.Property<DateTimeOffset?>("NotifiedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("notified_at");
+
+                    b.Property<int>("QueuedUnits")
+                        .HasColumnType("integer")
+                        .HasColumnName("queued_units");
+
+                    b.Property<int>("RecentlyGrabbedUnits")
+                        .HasColumnType("integer")
+                        .HasColumnName("recently_grabbed_units");
+
+                    b.Property<int>("ReleasedItems")
+                        .HasColumnType("integer")
+                        .HasColumnName("released_items");
 
                     b.Property<int>("RemainingUnits")
                         .HasColumnType("integer")
@@ -653,6 +677,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
+
+                    b.Property<int>("TagFilteredItems")
+                        .HasColumnType("integer")
+                        .HasColumnName("tag_filtered_items");
 
                     b.HasKey("Id")
                         .HasName("pk_seeker_cycles");
