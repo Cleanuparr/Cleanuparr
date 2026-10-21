@@ -70,6 +70,28 @@
             }
           </div>
 
+          @if (inst.funnel; as funnel) {
+            @let stages = funnelStages(funnel, inst.instanceType);
+            <div class="instance-card__funnel">
+              <app-tooltip [text]="'How many items passed each filter on the latest run, counted ' + (funnel.countedAt | date:'MM/dd HH:mm')">
+                <span class="instance-card__progress-label">
+                  Eligibility
+                  <app-new-badge variant="inline" featureId="seeker-eligibility-funnel" />
+                </span>
+              </app-tooltip>
+              <ol class="instance-card__funnel-stages">
+                @for (stage of stages.narrowing; track stage.label) {
+                  <li class="instance-card__funnel-stage"><strong>{{ stage.value }}</strong> {{ stage.label }}</li>
+                }
+              </ol>
+              <ul class="instance-card__funnel-split">
+                @for (stage of stages.split; track stage.label) {
+                  <li class="instance-card__funnel-stage"><strong>{{ stage.value }}</strong> {{ stage.label }}</li>
+                }
+              </ul>
+            </div>
+          }
+
           <div class="instance-card__stats">
             <div class="instance-card__stat">
               <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>

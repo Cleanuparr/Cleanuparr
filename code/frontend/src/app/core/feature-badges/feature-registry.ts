@@ -60,4 +60,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-search-anime' },
   { id: 'seeker-reset-cycle' },
   { id: 'seeker-cycle-notification' },
+  { id: 'seeker-eligibility-funnel' },
 ];

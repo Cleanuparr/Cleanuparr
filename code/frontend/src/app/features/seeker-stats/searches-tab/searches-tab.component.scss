@@ -157,6 +157,41 @@
     color: var(--color-success);
   }
 
+  &__funnel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+  }
+
+  &__funnel-stages,
+  &__funnel-split {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
+  &__funnel-stages &__funnel-stage + &__funnel-stage::before {
+    content: '›';
+    margin-right: var(--space-2);
+  }
+
+  &__funnel-split &__funnel-stage + &__funnel-stage::before {
+    content: '·';
+    margin-right: var(--space-2);
+  }
+
+  &__funnel-stage strong {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
   &__stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

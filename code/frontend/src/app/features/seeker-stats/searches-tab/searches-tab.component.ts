@@ -29,6 +29,7 @@ import {
   formatDurationBetween,
   formatGrabbedItems,
   formatSearchReason,
+  funnelStages,
   instanceHealthWarning,
   searchReasonSeverity,
   searchStatusSeverity,
@@ -364,6 +365,7 @@ export class SearchesTabComponent {
   readonly searchReasonSeverity = searchReasonSeverity;
   readonly cycleProgress = cycleProgress;
   readonly instanceHealthWarning = instanceHealthWarning;
+  readonly funnelStages = funnelStages;
 
   cycleDuration(inst: InstanceSearchStat): string {
     const { cycleStartedAt, cycleCompletedAt } = inst;

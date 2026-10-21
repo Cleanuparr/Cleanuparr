@@ -1,6 +1,6 @@
 import type { BadgeSeverity } from '@ui/badge/badge.component';
-import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
-import type { InstanceSearchStat } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus, SeekerExclusionReason } from '@core/models/search-stats.models';
+import type { InstanceFunnel, InstanceSearchStat } from '@core/models/search-stats.models';
 
 export function formatSearchReason(reason: string): string {
   switch (reason) {
@@ -73,3 +73,43 @@ export function formatDurationBetween(start: string, end: string): string {
   const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
   return `${diffMinutes}m`;
 }
+
+export interface FunnelStage {
+  label: string;
+  value: number;
+}
+
+/**
+ * Splits the funnel into the stages that narrow the library down to units needing a search,
+ * and the split of those units by state.
+ */
+export function funnelStages(funnel: InstanceFunnel, instanceType: string): { narrowing: FunnelStage[]; split: FunnelStage[] } {
+  return {
+    narrowing: [
+      { label: instanceType === 'Radarr' ? 'movies' : 'series', value: funnel.libraryItems },
+      { label: 'released', value: funnel.releasedItems },
+      { label: 'monitored', value: funnel.monitoredItems },
+      { label: 'tag filtered', value: funnel.tagFilteredItems },
+      { label: 'need search', value: funnel.eligibleUnits },
+    ],
+    split: [
+      { label: 'in queue', value: funnel.queuedUnits },
+      { label: 'grabbed', value: funnel.recentlyGrabbedUnits },
+      { label: 'searched', value: funnel.searchedUnits },
+      { label: 'left', value: funnel.remainingUnits },
+    ],
+  };
+}
+
+export const EXCLUSION_REASON_LABELS: Record<SeekerExclusionReason, string> = {
+  [SeekerExclusionReason.NotReleased]: 'Not released',
+  [SeekerExclusionReason.InGracePeriod]: 'In grace period',
+  [SeekerExclusionReason.NotMonitored]: 'Not monitored',
+  [SeekerExclusionReason.SkipTag]: 'Skip tag',
+  [SeekerExclusionReason.MissingIncludeTag]: 'No include tag',
+  [SeekerExclusionReason.NothingToSearch]: 'Nothing to search',
+  [SeekerExclusionReason.UpgradesDisabled]: 'Upgrades disabled',
+  [SeekerExclusionReason.InQueue]: 'In queue',
+  [SeekerExclusionReason.RecentlyGrabbed]: 'Recently grabbed',
+  [SeekerExclusionReason.SearchedThisCycle]: 'Searched this cycle',
+};
