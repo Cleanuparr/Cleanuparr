@@ -36,6 +36,7 @@ import {
   searchTypeSeverity,
 } from './search-display.util';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { SeekerPreviewDrawerComponent } from './seeker-preview-drawer/seeker-preview-drawer.component';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -88,6 +89,7 @@ const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] =
     DrawerComponent,
     StickyAwareDirective,
     NewBadgeComponent,
+    SeekerPreviewDrawerComponent,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',
@@ -117,6 +119,8 @@ export class SearchesTabComponent {
 
   readonly selectedInstanceId = signal<string>('');
   readonly resettingIds = signal<ReadonlySet<string>>(new Set());
+  readonly previewInstance = signal<InstanceSearchStat | null>(null);
+  readonly previewOpen = signal(false);
   readonly instanceOptions = computed<SelectOption[]>(() => {
     return [
       { label: 'All Instances', value: '' },
@@ -330,6 +334,11 @@ export class SearchesTabComponent {
       next.delete(instanceId);
       return next;
     });
+  }
+
+  openPreview(inst: InstanceSearchStat): void {
+    this.previewInstance.set(inst);
+    this.previewOpen.set(true);
   }
 
   async resetCycle(inst: InstanceSearchStat): Promise<void> {

@@ -61,4 +61,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-reset-cycle' },
   { id: 'seeker-cycle-notification' },
   { id: 'seeker-eligibility-funnel' },
+  { id: 'seeker-preview' },
 ];
