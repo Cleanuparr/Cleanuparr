@@ -413,6 +413,7 @@ public sealed class SeekerUnitEvaluator
             EpisodeId = e.Id,
             EpisodeNumber = e.EpisodeNumber,
             AirDateUtc = e.AirDateUtc,
+            Monitored = e.Monitored,
             Reason = reason,
         };
 
@@ -474,6 +475,7 @@ public sealed class SeekerUnitEvaluator
                     EpisodeId = entry.EpisodeId,
                     Title = entry.Title,
                     AirDateUtc = entry.AirDateUtc,
+                    Monitored = entry.IsMonitored,
                     Reason = SeekerSearchReason.CustomFormatScoreBelowCutoff,
                 });
             }
@@ -536,7 +538,7 @@ public sealed class SeekerUnitEvaluator
                 MonitoredItems = monitoredCount,
                 TagFilteredItems = seriesById.Count,
                 ItemExclusions = exclusions,
-                Units = BuildSonarrUnits(wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds)
+                Units = BuildSonarrUnits(wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds, instanceConfig.SonarrSearchMode)
                     .Select(u => u with { BlockedBy = GetBlockedBy(u) })
                     .ToList(),
                 LastSearchedByItem = searched,
@@ -550,6 +552,7 @@ public sealed class SeekerUnitEvaluator
     /// <summary>
     /// Groups wanted episodes into season and episode units.
     /// Sonarr runs one query per episode for a specials or airing anime season search, so those get episode units.
+    /// The search mode decides the unit for standard and daily seasons.
     /// A season partly searched in this cycle continues by episode.
     /// </summary>
     private static List<SeekerSearchUnit> BuildSonarrUnits(
@@ -557,7 +560,8 @@ public sealed class SeekerUnitEvaluator
         Dictionary<long, SearchableSeries> seriesById,
         HashSet<(long SeriesId, int SeasonNumber)> finishedAnimeSeasons,
         HashSet<(long SeriesId, int SeasonNumber)> searchedSeasons,
-        HashSet<long> searchedEpisodeIds)
+        HashSet<long> searchedEpisodeIds,
+        SonarrSearchMode mode)
     {
         List<SeekerSearchUnit> units = [];
 
@@ -570,7 +574,12 @@ public sealed class SeekerUnitEvaluator
             {
                 SeekerContentKind.Special => false,
                 SeekerContentKind.Anime => finishedAnimeSeasons.Contains(season.Key),
-                _ => true,
+                _ => mode switch
+                {
+                    SonarrSearchMode.Season => true,
+                    SonarrSearchMode.Episode => false,
+                    _ => IsFullSeasonSearch(series, season),
+                },
             };
 
             if (canSearchSeason && (seasonSearched || !season.Any(w => searchedEpisodeIds.Contains(w.EpisodeId))))
@@ -612,6 +621,22 @@ public sealed class SeekerUnitEvaluator
         }
 
         return units;
+    }
+
+    /// <summary>
+    /// Every aired monitored episode of a finished season needs a search, read from Sonarr's season statistics.
+    /// </summary>
+    private static bool IsFullSeasonSearch(SearchableSeries series, IGrouping<(long SeriesId, int SeasonNumber), SonarrWantedEpisode> season)
+    {
+        SeasonStatistics? stats = series.Seasons.FirstOrDefault(s => s.SeasonNumber == season.Key.SeasonNumber)?.Statistics;
+
+        if (stats is null || stats.NextAiring is not null || season.Any(w => !w.Monitored))
+        {
+            return false;
+        }
+
+        // EpisodeCount holds the monitored aired episodes plus any episode with a file
+        return season.Select(w => w.EpisodeId).Distinct().Count() == stats.EpisodeCount;
     }
 
     /// <summary>
