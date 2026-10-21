@@ -276,6 +276,16 @@ public sealed class SeekerUnitEvaluator
                 continue;
             }
 
+            SeekerExclusionReason? blockedBy = null;
+            if (queuedMovieIds.Contains(movie.Id))
+            {
+                blockedBy = SeekerExclusionReason.InQueue;
+            }
+            else if (recentlyGrabbedMovieIds.Contains(movie.Id))
+            {
+                blockedBy = SeekerExclusionReason.RecentlyGrabbed;
+            }
+
             units.Add(new SeekerSearchUnit
             {
                 ItemId = movie.Id,
@@ -285,9 +295,7 @@ public sealed class SeekerUnitEvaluator
                 Reasons = reasons,
                 Added = movie.Added,
                 Searched = false,
-                BlockedBy = queuedMovieIds.Contains(movie.Id)
-                    ? SeekerExclusionReason.InQueue
-                    : recentlyGrabbedMovieIds.Contains(movie.Id) ? SeekerExclusionReason.RecentlyGrabbed : null,
+                BlockedBy = blockedBy,
             });
         }
 
@@ -628,12 +636,23 @@ public sealed class SeekerUnitEvaluator
         SeasonNumber = unit.SeasonNumber,
         EpisodeId = unit.EpisodeId,
         ContentKind = unit.ContentKind,
-        Reason = unit.Reasons.Contains(SeekerSearchReason.Missing)
-            ? SeekerSearchReason.Missing
-            : unit.Reasons.Contains(SeekerSearchReason.QualityCutoffNotMet)
-                ? SeekerSearchReason.QualityCutoffNotMet
-                : SeekerSearchReason.CustomFormatScoreBelowCutoff,
+        Reason = PrimaryReason(unit.Reasons),
     };
+
+    private static SeekerSearchReason PrimaryReason(List<SeekerSearchReason> reasons)
+    {
+        if (reasons.Contains(SeekerSearchReason.Missing))
+        {
+            return SeekerSearchReason.Missing;
+        }
+
+        if (reasons.Contains(SeekerSearchReason.QualityCutoffNotMet))
+        {
+            return SeekerSearchReason.QualityCutoffNotMet;
+        }
+
+        return SeekerSearchReason.CustomFormatScoreBelowCutoff;
+    }
 
     private static SeekerContentKind GetContentKind(SearchableSeries series, int seasonNumber)
     {
