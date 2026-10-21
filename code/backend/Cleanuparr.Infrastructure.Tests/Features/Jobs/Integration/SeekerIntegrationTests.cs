@@ -40,8 +40,6 @@ public class SeekerIntegrationTests : IDisposable
             Substitute.For<ILogger<SeekerJob>>(),
             _fixture.DataContext,
             _fixture.EventsContext,
-            Substitute.For<IRadarrClient>(),
-            Substitute.For<ISonarrClient>(),
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.EventPublisher,
@@ -49,7 +47,13 @@ public class SeekerIntegrationTests : IDisposable
             environment,
             _fixture.TimeProvider,
             _fixture.StatusNotifier,
-            new SeekerCycleLock());
+            new SeekerCycleLock(),
+            new SeekerUnitEvaluator(
+                Substitute.For<ILogger<SeekerUnitEvaluator>>(),
+                _fixture.EventsContext,
+                Substitute.For<IRadarrClient>(),
+                Substitute.For<ISonarrClient>(),
+                _fixture.TimeProvider));
     }
 
     [Fact]

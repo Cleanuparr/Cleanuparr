@@ -108,8 +108,6 @@ public class SeekerTests : IDisposable
             _logger,
             _fixture.DataContext,
             _fixture.EventsContext,
-            _radarrClient,
-            _sonarrClient,
             _fixture.ArrClientFactory,
             _fixture.ArrQueueReader,
             _fixture.EventPublisher,
@@ -117,7 +115,13 @@ public class SeekerTests : IDisposable
             _hostingEnvironment,
             _fixture.TimeProvider,
             _statusNotifier,
-            _cycleLock
+            _cycleLock,
+            new SeekerUnitEvaluator(
+                Substitute.For<ILogger<SeekerUnitEvaluator>>(),
+                _fixture.EventsContext,
+                _radarrClient,
+                _sonarrClient,
+                _fixture.TimeProvider)
         );
     }
 
