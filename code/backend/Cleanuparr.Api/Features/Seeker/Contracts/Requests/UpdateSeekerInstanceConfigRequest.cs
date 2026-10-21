@@ -1,3 +1,5 @@
+using Cleanuparr.Domain.Enums;
+
 namespace Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 
 public sealed record UpdateSeekerInstanceConfigRequest
@@ -23,4 +25,6 @@ public sealed record UpdateSeekerInstanceConfigRequest
     public bool UseCustomFormatScore { get; init; }
 
     public int RecentGrabWindowHours { get; init; } = 24;
+
+    public SonarrSearchMode SonarrSearchMode { get; init; } = SonarrSearchMode.Auto;
 }

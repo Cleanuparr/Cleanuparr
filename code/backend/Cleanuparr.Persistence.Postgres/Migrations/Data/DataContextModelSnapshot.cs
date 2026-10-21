@@ -1744,6 +1744,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("text[]")
                         .HasColumnName("skip_tags");
 
+                    b.Property<string>("SonarrSearchMode")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("sonarr_search_mode");
+
                     b.Property<bool>("UseCustomFormatScore")
                         .HasColumnType("boolean")
                         .HasColumnName("use_custom_format_score");
