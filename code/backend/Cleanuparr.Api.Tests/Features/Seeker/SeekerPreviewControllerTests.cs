@@ -106,6 +106,57 @@ public class SeekerPreviewControllerTests : IDisposable
             .Returns([]);
     }
 
+    private static SearchableEpisode Episode(long id, long seriesId, int season, int number)
+    {
+        return new SearchableEpisode
+        {
+            Id = id,
+            SeriesId = seriesId,
+            SeasonNumber = season,
+            EpisodeNumber = number,
+            Monitored = true,
+            AirDateUtc = Now.AddDays(-30),
+        };
+    }
+
+    private ArrInstance AddSonarrWithSeries(SelectionStrategy strategy, long seriesId, params SearchableEpisode[] missing)
+    {
+        SeekerConfig config = _dataContext.SeekerConfigs.First();
+        config.SelectionStrategy = strategy;
+        ArrInstance sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarr.Id,
+            Enabled = true,
+            CurrentCycleId = Guid.NewGuid(),
+        });
+        _dataContext.SaveChanges();
+
+        SearchableSeries series = new()
+        {
+            Id = seriesId,
+            Title = $"Series {seriesId}",
+            Status = "continuing",
+            Monitored = true,
+            Tags = [],
+            SeriesType = "standard",
+        };
+        _sonarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _sonarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _sonarrClient.StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable([series]));
+        _sonarrClient.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(missing.ToList());
+        _sonarrClient.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns([]);
+        _sonarrClient.GetCutoffUnmetEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _sonarrClient
+            .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)>());
+        return sonarr;
+    }
+
     private ArrInstance AddRadarr(Guid? currentCycleId = null, int minCycleTimeDays = 7)
     {
         ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
@@ -331,5 +382,29 @@ public class SeekerPreviewControllerTests : IDisposable
         IActionResult result = await _controller.GetPreview(radarr.Id, CancellationToken.None);
 
         StatusOf(result).ShouldBe(StatusCodes.Status502BadGateway);
+    }
+
+    [Fact]
+    public async Task GetPreview_SonarrSeriesMissingInTwoSeasons_FlagsRandomPickUnderOldestFirst()
+    {
+        ArrInstance sonarr = AddSonarrWithSeries(
+            SelectionStrategy.OldestSearchFirst, 100, Episode(501, 100, 1, 1), Episode(502, 100, 2, 1));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(sonarr.Id, CancellationToken.None));
+
+        response.NextUp.ShouldHaveSingleItem();
+        response.RandomPick.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task GetPreview_SonarrSeriesMissingInOneSeason_DoesNotFlagRandomPickUnderOldestFirst()
+    {
+        ArrInstance sonarr = AddSonarrWithSeries(
+            SelectionStrategy.OldestSearchFirst, 100, Episode(501, 100, 1, 1), Episode(502, 100, 1, 2));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(sonarr.Id, CancellationToken.None));
+
+        response.NextUp.ShouldHaveSingleItem();
+        response.RandomPick.ShouldBeFalse();
     }
 }

@@ -136,11 +136,17 @@ public sealed class SeekerPreviewController : ControllerBase
             ? SeekerUnitEvaluator.SelectNext(evaluation, config.SelectionStrategy, NextUpCount)
             : [];
 
+        HashSet<long> nextUpIds = nextUp.Select(c => c.ItemId).ToHashSet();
+        bool randomSeason = evaluation.Remaining
+            .Where(u => nextUpIds.Contains(u.ItemId))
+            .GroupBy(u => u.ItemId)
+            .Any(g => g.Select(u => u.SeasonNumber).Distinct().Count() > 1);
+
         return Ok(new SeekerPreviewResponse
         {
             Funnel = funnel,
             CycleWaitingUntil = waitingUntil,
-            RandomPick = config.SelectionStrategy is not (SelectionStrategy.OldestSearchFirst or SelectionStrategy.NewestFirst),
+            RandomPick = randomSeason || config.SelectionStrategy is not (SelectionStrategy.OldestSearchFirst or SelectionStrategy.NewestFirst),
             NextUp = nextUp
                 .Select(c => new SeekerPreviewUnitResponse { Name = c.Name, Reason = c.Reason, ContentKind = c.ContentKind })
                 .ToList(),

@@ -10,7 +10,7 @@ public sealed record SeekerPreviewResponse
     public DateTimeOffset? CycleWaitingUntil { get; init; }
 
     /// <summary>
-    /// Whether the selection strategy draws at random, so the next run can pick differently.
+    /// Whether the selection strategy draws at random or a listed series has several seasons to draw from, so the next run can pick differently.
     /// </summary>
     public bool RandomPick { get; init; }
 
