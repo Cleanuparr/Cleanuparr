@@ -765,7 +765,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.Random, 10);
 
         // Assert
-        evaluation.Remaining.Count.ShouldBe(4);
+        evaluation.Remaining.Count().ShouldBe(4);
         candidates.Count.ShouldBe(2);
         candidates.Select(c => c.ItemId).OrderBy(id => id).ShouldBe([1L, 2L]);
     }
@@ -833,7 +833,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Assert
         fresh.Units.ShouldAllBe(u => !u.Searched);
-        fresh.Remaining.Count.ShouldBe(2);
+        fresh.Remaining.Count().ShouldBe(2);
         fresh.LastSearchedByItem.ShouldBeEmpty();
         fresh.Excluded.ShouldBeEmpty();
     }

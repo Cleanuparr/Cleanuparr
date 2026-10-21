@@ -49,7 +49,7 @@ public sealed record SeekerEvaluation
     /// </summary>
     public required Func<SeekerEvaluation> WithoutCycleHistory { get; init; }
 
-    public List<SeekerSearchUnit> Remaining => Units.Where(u => u.BlockedBy is null && !u.Searched).ToList();
+    public IEnumerable<SeekerSearchUnit> Remaining => Units.Where(u => u.BlockedBy is null && !u.Searched);
 
     public int QueuedUnits => Units.Count(u => u.BlockedBy is SeekerExclusionReason.InQueue);
 

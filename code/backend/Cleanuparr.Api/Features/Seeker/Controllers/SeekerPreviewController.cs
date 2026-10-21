@@ -117,7 +117,7 @@ public sealed class SeekerPreviewController : ControllerBase
         DateTimeOffset? waitingUntil = null;
 
         // Same rollover as the Seeker job: a cycle with nothing left waits out the minimum cycle time, then starts over.
-        if (evaluation.Remaining.Count == 0 && cycle is { SearchedUnits: > 0 })
+        if (!evaluation.Remaining.Any() && cycle is { SearchedUnits: > 0 })
         {
             DateTimeOffset minCycleEnd = cycle.StartedAt.AddDays(instanceConfig.MinCycleTimeDays);
             if (_timeProvider.GetUtcNow() < minCycleEnd)
@@ -158,7 +158,7 @@ public sealed class SeekerPreviewController : ControllerBase
 
     private InstanceFunnelStat ToFunnel(SeekerEvaluation evaluation)
     {
-        int remaining = evaluation.Remaining.Count;
+        int remaining = evaluation.Remaining.Count();
 
         return new InstanceFunnelStat
         {

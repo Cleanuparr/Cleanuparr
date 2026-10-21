@@ -550,7 +550,7 @@ public sealed class Seeker : IHandler
             return await CompleteEmptyCycleAsync(cycle, instanceConfig, isDryRun, arrInstance.Name, evaluation);
         }
 
-        cycle.RemainingUnits = evaluation.Remaining.Count;
+        cycle.RemainingUnits = evaluation.Remaining.Count();
 
         if (cycle.RemainingUnits == 0)
         {
@@ -563,7 +563,7 @@ public sealed class Seeker : IHandler
             cycle = next;
             evaluation = evaluation.WithoutCycleHistory();
             cycle.EligibleNow = evaluation.Units.Count;
-            cycle.RemainingUnits = evaluation.Remaining.Count;
+            cycle.RemainingUnits = evaluation.Remaining.Count();
 
             if (cycle.RemainingUnits == 0)
             {
