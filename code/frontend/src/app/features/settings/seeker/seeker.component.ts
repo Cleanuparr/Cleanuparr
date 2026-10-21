@@ -16,7 +16,7 @@ import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { createSettingsResource } from '@shared/utils/settings-resource.util';
 import { createDirtyTracker, SAVED_FLASH_MS } from '@shared/utils/dirty-tracker.util';
-import { SelectionStrategy } from '@shared/models/enums';
+import { SelectionStrategy, SonarrSearchMode } from '@shared/models/enums';
 import { instanceTypeSeverity } from '@shared/utils/instance-display.util';
 
 const INTERVAL_OPTIONS: SelectOption[] = [
@@ -44,6 +44,12 @@ const STRATEGY_OPTIONS: SelectOption[] = [
   { label: 'Newest First', value: SelectionStrategy.NewestFirst },
   { label: 'Newest Weighted', value: SelectionStrategy.NewestWeighted },
   { label: 'Random', value: SelectionStrategy.Random },
+];
+
+const SONARR_SEARCH_MODE_OPTIONS: SelectOption[] = [
+  { label: 'Auto', value: SonarrSearchMode.Auto },
+  { label: 'Season', value: SonarrSearchMode.Season },
+  { label: 'Episode', value: SonarrSearchMode.Episode },
 ];
 
 const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
@@ -80,6 +86,7 @@ interface InstanceState {
   monitoredOnly: boolean;
   useCutoff: boolean;
   useCustomFormatScore: boolean;
+  sonarrSearchMode: SonarrSearchMode;
 }
 
 @Component({
@@ -107,6 +114,7 @@ export class SeekerComponent implements HasPendingChanges {
 
   readonly intervalOptions = INTERVAL_OPTIONS;
   readonly strategyOptions = STRATEGY_OPTIONS;
+  readonly sonarrSearchModeOptions = SONARR_SEARCH_MODE_OPTIONS;
   readonly loader = this.settings.loader;
   readonly loadError = this.settings.loadError;
   readonly saving = signal(false);
@@ -179,6 +187,7 @@ export class SeekerComponent implements HasPendingChanges {
           monitoredOnly: i.monitoredOnly,
           useCutoff: i.useCutoff,
           useCustomFormatScore: i.useCustomFormatScore,
+          sonarrSearchMode: i.sonarrSearchMode,
         })));
         this.dirtyTracker.markSaved();
       });
@@ -225,6 +234,10 @@ export class SeekerComponent implements HasPendingChanges {
     this.patchInstance(index, { recentGrabWindowHours: hours ?? 24 });
   }
 
+  updateInstanceSonarrSearchMode(index: number, mode: unknown): void {
+    this.patchInstance(index, { sonarrSearchMode: mode as SonarrSearchMode });
+  }
+
   getInstanceIcon(instanceType: string): string {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
   }
@@ -252,6 +265,7 @@ export class SeekerComponent implements HasPendingChanges {
         monitoredOnly: i.monitoredOnly,
         useCutoff: i.useCutoff,
         useCustomFormatScore: i.useCustomFormatScore,
+        sonarrSearchMode: i.sonarrSearchMode,
       })),
     };
 

@@ -63,4 +63,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-cycle-notification' },
   { id: 'seeker-eligibility-funnel' },
   { id: 'seeker-preview' },
+  { id: 'seeker-sonarr-search-mode' },
 ];
