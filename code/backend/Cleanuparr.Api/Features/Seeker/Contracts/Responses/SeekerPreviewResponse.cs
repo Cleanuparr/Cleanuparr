@@ -1,5 +1,8 @@
 namespace Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 
+/// <summary>
+/// What a Seeker run would search next and what it leaves out, without searching anything.
+/// </summary>
 public sealed record SeekerPreviewResponse
 {
     public InstanceFunnelStat Funnel { get; init; } = new();
