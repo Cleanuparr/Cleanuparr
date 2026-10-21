@@ -5,7 +5,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker;
 /// <summary>
 /// Represents a single item selected for proactive search.
 /// </summary>
-internal sealed record SeekerSearchCandidate
+public sealed record SeekerSearchCandidate
 {
     /// <summary>
     /// MovieId (Radarr) or SeriesId (Sonarr)

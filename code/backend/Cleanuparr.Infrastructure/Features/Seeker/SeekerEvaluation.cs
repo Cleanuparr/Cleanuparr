@@ -5,7 +5,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker;
 /// <summary>
 /// The units an instance needs searched, against the current cycle's history.
 /// </summary>
-internal sealed record SeekerEvaluation
+public sealed record SeekerEvaluation
 {
     public required List<long> AllLibraryIds { get; init; }
 
@@ -50,6 +50,10 @@ internal sealed record SeekerEvaluation
     public required Func<SeekerEvaluation> WithoutCycleHistory { get; init; }
 
     public List<SeekerSearchUnit> Remaining => Units.Where(u => u.BlockedBy is null && !u.Searched).ToList();
+
+    public int QueuedUnits => Units.Count(u => u.BlockedBy is SeekerExclusionReason.InQueue);
+
+    public int RecentlyGrabbedUnits => Units.Count(u => u.BlockedBy is SeekerExclusionReason.RecentlyGrabbed);
 
     /// <summary>
     /// Everything that did not reach <see cref="Remaining"/>, with one reason each.

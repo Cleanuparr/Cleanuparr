@@ -50,7 +50,10 @@ public sealed class SeekerUnitEvaluator
         _timeProvider = timeProvider;
     }
 
-    internal async Task<SeekerRecentGrabs> ReadRecentGrabsAsync(
+    /// <summary>
+    /// Reads what the arr grabbed within the instance's recent grab window. Empty when the window is off.
+    /// </summary>
+    public async Task<SeekerRecentGrabs> ReadRecentGrabsAsync(
         SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
         CancellationToken cancellationToken)
@@ -76,7 +79,10 @@ public sealed class SeekerUnitEvaluator
         };
     }
 
-    internal async Task<SeekerEvaluation> EvaluateAsync(
+    /// <summary>
+    /// Runs the library through every filter and builds the units that need a search.
+    /// </summary>
+    public async Task<SeekerEvaluation> EvaluateAsync(
         SeekerConfig config,
         SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
@@ -106,7 +112,7 @@ public sealed class SeekerUnitEvaluator
     /// <summary>
     /// Picks up to <paramref name="count"/> unsearched units, at most one per movie or series.
     /// </summary>
-    internal static List<SeekerSearchCandidate> SelectNext(SeekerEvaluation evaluation, SelectionStrategy strategy, int count)
+    public static List<SeekerSearchCandidate> SelectNext(SeekerEvaluation evaluation, SelectionStrategy strategy, int count)
     {
         Dictionary<long, List<SeekerSearchUnit>> remainingByItem = evaluation.Remaining
             .GroupBy(u => u.ItemId)

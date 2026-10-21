@@ -5,7 +5,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker;
 /// <summary>
 /// One search: a movie, a whole Sonarr season, or a single episode when <see cref="EpisodeId"/> is set.
 /// </summary>
-internal sealed record SeekerSearchUnit
+public sealed record SeekerSearchUnit
 {
     /// <summary>
     /// MovieId (Radarr) or SeriesId (Sonarr)

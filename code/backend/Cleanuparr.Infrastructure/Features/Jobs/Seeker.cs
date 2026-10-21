@@ -588,8 +588,8 @@ public sealed class Seeker : IHandler
         cycle.ReleasedItems = evaluation.ReleasedItems;
         cycle.MonitoredItems = evaluation.MonitoredItems;
         cycle.TagFilteredItems = evaluation.TagFilteredItems;
-        cycle.QueuedUnits = evaluation.Units.Count(u => u.BlockedBy is SeekerExclusionReason.InQueue);
-        cycle.RecentlyGrabbedUnits = evaluation.Units.Count(u => u.BlockedBy is SeekerExclusionReason.RecentlyGrabbed);
+        cycle.QueuedUnits = evaluation.QueuedUnits;
+        cycle.RecentlyGrabbedUnits = evaluation.RecentlyGrabbedUnits;
         cycle.FunnelCountedAt = _timeProvider.GetUtcNow();
     }
 
