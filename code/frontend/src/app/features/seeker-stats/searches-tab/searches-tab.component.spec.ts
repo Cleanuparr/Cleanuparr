@@ -208,6 +208,21 @@ describe('SearchesTabComponent', () => {
     expect(getPreview).toHaveBeenCalledWith(component.sortedInstanceStats()[0].instanceId);
   });
 
+  it('closes the preview drawer from its close control', () => {
+    const { fixture, component } = setup();
+    const previewButton = (
+      Array.from(fixture.nativeElement.querySelectorAll('.instance-card__actions button')) as HTMLButtonElement[]
+    ).find((button) => button.textContent!.includes('Preview'))!;
+    previewButton.click();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    (document.body.querySelector('.drawer__close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(component.previewOpen()).toBe(false);
+  });
+
   it('sorts the instance cards by type then name while leaving the filter options in API order', () => {
     const { component } = setup();
 
