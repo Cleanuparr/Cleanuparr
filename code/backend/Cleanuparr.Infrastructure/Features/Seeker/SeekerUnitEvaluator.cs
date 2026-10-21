@@ -439,6 +439,8 @@ public sealed class SeekerUnitEvaluator
                     && (!instanceConfig.MonitoredOnly || e.IsMonitored))
                 .ToListAsync(cancellationToken);
 
+            HashSet<long> wantedEpisodeIds = wanted.Select(w => w.EpisodeId).ToHashSet();
+
             foreach (CustomFormatScoreEntry entry in belowCutoff)
             {
                 if (!seriesById.TryGetValue(entry.ExternalItemId, out SearchableSeries? series))
@@ -448,8 +450,12 @@ public sealed class SeekerUnitEvaluator
 
                 if (upgradesDisabledProfileIds.Contains(series.QualityProfileId))
                 {
-                    _logger.LogDebug("skip | upgrades disabled in profile | {Title} | {InstanceName}", entry.Title, arrInstance.Name);
-                    ExcludeEpisode(entry.ExternalItemId, entry.EpisodeId, entry.Title, SeekerExclusionReason.UpgradesDisabled);
+                    if (!wantedEpisodeIds.Contains(entry.EpisodeId))
+                    {
+                        _logger.LogDebug("skip | upgrades disabled in profile | {Title} | {InstanceName}", entry.Title, arrInstance.Name);
+                        ExcludeEpisode(entry.ExternalItemId, entry.EpisodeId, entry.Title, SeekerExclusionReason.UpgradesDisabled);
+                    }
+
                     continue;
                 }
 

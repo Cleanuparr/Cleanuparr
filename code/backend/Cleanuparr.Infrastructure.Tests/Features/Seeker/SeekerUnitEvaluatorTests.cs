@@ -100,7 +100,8 @@ public class SeekerUnitEvaluatorTests : IDisposable
         long id,
         string status = "continuing",
         bool monitored = true,
-        List<long>? tags = null)
+        List<long>? tags = null,
+        int qualityProfileId = 0)
     {
         return new SearchableSeries
         {
@@ -110,6 +111,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             Monitored = monitored,
             Tags = tags ?? [],
             SeriesType = "standard",
+            QualityProfileId = qualityProfileId,
         };
     }
 
@@ -600,7 +602,38 @@ public class SeekerUnitEvaluatorTests : IDisposable
         ReasonOf(evaluation, "Series 1 S01").ShouldBe(SeekerExclusionReason.SearchedThisCycle);
     }
 
-    #endregion
+        [Fact]
+    public async Task EvaluateAsync_Sonarr_MissingEpisodeWithStaleCustomFormatRowAndUpgradesDisabled_IsNotExcluded()
+    {
+        // Arrange
+        SetupSonarr([Series(1, qualityProfileId: 4)], [Episode(20, 1)]);
+        _sonarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 4, Name = "Locked", UpgradeAllowed = false }]);
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _sonarr.Id,
+            ExternalItemId = 1,
+            EpisodeId = 20,
+            Title = "Series 1 S01E01",
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            AirDateUtc = _timeProvider.GetUtcNow().AddDays(-30),
+            IsMonitored = true,
+            CurrentScore = 5,
+            CutoffScore = 10,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.Reasons.ShouldBe([SeekerSearchReason.Missing]);
+        evaluation.Excluded.ShouldNotContain(e => e.Reason == SeekerExclusionReason.UpgradesDisabled);
+    }
+
+#endregion
 
     #region Stage counts
 
