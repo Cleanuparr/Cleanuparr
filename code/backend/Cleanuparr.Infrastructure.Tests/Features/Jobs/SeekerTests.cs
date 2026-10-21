@@ -2889,6 +2889,224 @@ public class SeekerTests : IDisposable
 
     #endregion
 
+    #region Funnel Counts
+
+    private async Task<(ArrInstance Instance, IArrClient ArrClient)> SetupFunnelInstanceAsync(
+        InstanceType type,
+        Action<SeekerInstanceConfig>? configure = null)
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+
+        ArrInstance instance = type == InstanceType.Radarr
+            ? TestDataContextFactory.AddRadarrInstance(_fixture.DataContext)
+            : TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        SeekerInstanceConfig instanceConfig = new()
+        {
+            ArrInstanceId = instance.Id,
+            ArrInstance = instance,
+            Enabled = true,
+        };
+        configure?.Invoke(instanceConfig);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(instanceConfig);
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient arrClient = Substitute.For<IArrClient>();
+        arrClient.SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>()).Returns(100L);
+        _fixture.ArrClientFactory.GetClient(type, Arg.Any<float>()).Returns(arrClient);
+        _fixture.ArrQueueReader.ReadAllAsync(arrClient, Arg.Any<ArrInstance>()).Returns([]);
+
+        return (instance, arrClient);
+    }
+
+    private void StubFunnelMovies(ArrInstance instance, List<SearchableMovie> movies)
+    {
+        _radarrClient
+            .StreamAllMoviesAsync(instance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(movies));
+        StubRadarrWanted(instance, movies);
+    }
+
+    private void StubQueue(IArrClient arrClient, params QueueRecord[] records)
+    {
+        _fixture.ArrQueueReader
+            .ReadAllAsync(arrClient, Arg.Any<ArrInstance>())
+            .Returns(records.ToList());
+    }
+
+    private static SearchableMovie ReleasedMovie(long id, bool monitored = true)
+    {
+        return new SearchableMovie { Id = id, Title = $"Movie {id}", Status = "released", Monitored = monitored, Tags = [] };
+    }
+
+    private async Task<SeekerCycle> GetCycleAsync(Guid arrInstanceId, bool isDryRun = false)
+    {
+        return await _fixture.EventsContext.SeekerCycles
+            .AsNoTracking()
+            .SingleAsync(c => c.ArrInstanceId == arrInstanceId && c.IsDryRun == isDryRun);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_RecordsFunnelCountsOnTheCurrentCycle()
+    {
+        // Arrange
+        (ArrInstance radarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Radarr);
+        StubFunnelMovies(radarrInstance,
+        [
+            ReleasedMovie(1),
+            ReleasedMovie(2),
+            ReleasedMovie(3),
+            ReleasedMovie(4, monitored: false),
+            new SearchableMovie { Id = 5, Title = "Movie 5", Status = "announced", Monitored = true, Tags = [] },
+        ]);
+        StubQueue(arrClient, new QueueRecord { Id = 1, Title = "Movie 2 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 2, TrackedDownloadState = "downloading" });
+        _radarrClient
+            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long> { 3 });
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
+        cycle.LibraryItems.ShouldBe(5);
+        cycle.ReleasedItems.ShouldBe(4);
+        cycle.MonitoredItems.ShouldBe(3);
+        cycle.TagFilteredItems.ShouldBe(3);
+        cycle.QueuedUnits.ShouldBe(1);
+        cycle.RecentlyGrabbedUnits.ShouldBe(1);
+        cycle.FunnelCountedAt.ShouldBe(_fixture.TimeProvider.GetUtcNow());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_RecordsFunnelCountsOnTheCurrentCycle()
+    {
+        // Arrange
+        (ArrInstance sonarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Sonarr);
+        _sonarrClient
+            .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable<SearchableSeries>(
+            [
+                new SearchableSeries { Id = 10, Title = "Series 10", Status = "continuing", Monitored = true, Tags = [], SeriesType = "standard" },
+                new SearchableSeries { Id = 11, Title = "Series 11", Status = "continuing", Monitored = false, Tags = [], SeriesType = "standard" },
+                new SearchableSeries { Id = 12, Title = "Series 12", Status = "upcoming", Monitored = true, Tags = [], SeriesType = "standard" },
+            ]));
+        DateTimeOffset pastDate = _fixture.TimeProvider.GetUtcNow().AddDays(-30);
+        StubSonarrWanted(sonarrInstance,
+        [
+            new SearchableEpisode { Id = 100, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate },
+            new SearchableEpisode { Id = 101, SeriesId = 10, SeasonNumber = 2, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate },
+        ]);
+        StubQueue(arrClient, new QueueRecord { Id = 1, Title = "Season 1", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, SeriesId = 10, SeasonNumber = 1, TrackedDownloadState = "downloading" });
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        SeekerCycle cycle = await GetCycleAsync(sonarrInstance.Id);
+        cycle.LibraryItems.ShouldBe(3);
+        cycle.ReleasedItems.ShouldBe(2);
+        cycle.MonitoredItems.ShouldBe(1);
+        cycle.TagFilteredItems.ShouldBe(1);
+        cycle.QueuedUnits.ShouldBe(1);
+        cycle.RecentlyGrabbedUnits.ShouldBe(0);
+        cycle.FunnelCountedAt.ShouldBe(_fixture.TimeProvider.GetUtcNow());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_MovieQueuedAndRecentlyGrabbed_CountsAsQueuedOnly()
+    {
+        // Arrange
+        (ArrInstance radarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Radarr);
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1), ReleasedMovie(2), ReleasedMovie(3), ReleasedMovie(4)]);
+        StubQueue(arrClient,
+            new QueueRecord { Id = 1, Title = "Movie 1 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 1, TrackedDownloadState = "downloading" },
+            new QueueRecord { Id = 2, Title = "Movie 3 Download", DownloadId = "hash2", Protocol = "torrent", SizeLeft = 1000, MovieId = 3, TrackedDownloadState = "importing" });
+        _radarrClient
+            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long> { 2, 3 });
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
+        cycle.QueuedUnits.ShouldBe(2);
+        cycle.RecentlyGrabbedUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_DryRun_RecordsFunnelCountsOnTheDryCycle()
+    {
+        // Arrange
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        (ArrInstance radarrInstance, _) = await SetupFunnelInstanceAsync(InstanceType.Radarr);
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1), ReleasedMovie(2, monitored: false)]);
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        SeekerCycle dryCycle = await GetCycleAsync(radarrInstance.Id, isDryRun: true);
+        dryCycle.LibraryItems.ShouldBe(2);
+        dryCycle.MonitoredItems.ShouldBe(1);
+        dryCycle.FunnelCountedAt.ShouldNotBeNull();
+
+        int liveCyclesWithFunnel = await _fixture.EventsContext.SeekerCycles
+            .CountAsync(c => c.ArrInstanceId == radarrInstance.Id && !c.IsDryRun && c.FunnelCountedAt != null);
+        liveCyclesWithFunnel.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_CycleRollsOver_NewCycleCarriesTheFunnelCounts()
+    {
+        // Arrange: movies 1 and 2 were searched long ago, movie 3 sits in the queue
+        Guid oldCycleId = Guid.NewGuid();
+        (ArrInstance radarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Radarr, c =>
+        {
+            c.MonitoredOnly = false;
+            c.CurrentCycleId = oldCycleId;
+        });
+        DateTime now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+        foreach (long movieId in new long[] { 1, 2 })
+        {
+            _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+            {
+                ArrInstanceId = radarrInstance.Id,
+                ExternalItemId = movieId,
+                ItemType = InstanceType.Radarr,
+                CycleId = oldCycleId,
+                LastSearchedAt = now.AddDays(-10),
+                ItemTitle = $"Movie {movieId}",
+            });
+        }
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1), ReleasedMovie(2), ReleasedMovie(3)]);
+        StubQueue(arrClient, new QueueRecord { Id = 1, Title = "Movie 3 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 3, TrackedDownloadState = "downloading" });
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        _fixture.DataContext.ChangeTracker.Clear();
+        SeekerInstanceConfig instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
+        instanceConfig.CurrentCycleId.ShouldNotBe(oldCycleId);
+
+        SeekerCycle newCycle = await _fixture.EventsContext.SeekerCycles
+            .AsNoTracking()
+            .SingleAsync(c => c.Id == instanceConfig.CurrentCycleId);
+        newCycle.LibraryItems.ShouldBe(3);
+        newCycle.ReleasedItems.ShouldBe(3);
+        newCycle.QueuedUnits.ShouldBe(1);
+        newCycle.FunnelCountedAt.ShouldBe(_fixture.TimeProvider.GetUtcNow());
+    }
+
+    #endregion
+
     #region Post-Release Grace Period Tests
 
     [Fact]
