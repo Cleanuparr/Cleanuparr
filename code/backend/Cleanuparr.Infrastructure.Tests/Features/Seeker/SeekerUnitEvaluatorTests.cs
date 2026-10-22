@@ -1193,6 +1193,42 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task SelectNext_CustomFormatGapWeighted_FavoursTheMissingMovie()
+    {
+        // Arrange
+        SearchableMovie upgradable = Movie(2, hasFile: true);
+        SetupRadarr([Movie(1), upgradable]);
+        _radarrClient.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns([upgradable]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.UseCutoff = true));
+
+        // Act
+        int missingPicks = Enumerable.Range(0, 1000)
+            .Count(_ => SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.CustomFormatGapWeighted, 1)[0].ItemId == 1);
+
+        // Assert
+        // The missing movie takes 60% or 80% of the weight, depending on the shuffled recency rank
+        missingPicks.ShouldBeGreaterThan(600);
+    }
+
+    [Theory]
+    [InlineData(SelectionStrategy.CustomFormatGapWeighted, false, SelectionStrategy.BalancedWeighted)]
+    [InlineData(SelectionStrategy.CustomFormatGapWeighted, true, SelectionStrategy.CustomFormatGapWeighted)]
+    [InlineData(SelectionStrategy.NewestFirst, false, SelectionStrategy.NewestFirst)]
+    public void EffectiveStrategy_FallsBackToBalancedOnlyForTheGapStrategyWithoutCustomFormatScores(
+        SelectionStrategy strategy, bool useCustomFormatScore, SelectionStrategy expected)
+    {
+        // Arrange
+        SeekerInstanceConfig instanceConfig = InstanceConfig(_radarr, c => c.UseCustomFormatScore = useCustomFormatScore);
+
+        // Act
+        SelectionStrategy effective = SeekerUnitEvaluator.EffectiveStrategy(strategy, instanceConfig);
+
+        // Assert
+        effective.ShouldBe(expected);
+    }
+
+    [Fact]
     public async Task HasTiedPicks_OldestSearchFirst_NeverSearchedMovies_ReturnsTrue()
     {
         // Arrange

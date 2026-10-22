@@ -110,6 +110,16 @@ public sealed class SeekerUnitEvaluator
     }
 
     /// <summary>
+    /// The strategy the instance runs: <see cref="SelectionStrategy.CustomFormatGapWeighted"/> needs custom format scores.
+    /// </summary>
+    public static SelectionStrategy EffectiveStrategy(SelectionStrategy strategy, SeekerInstanceConfig instanceConfig)
+    {
+        return strategy is SelectionStrategy.CustomFormatGapWeighted && !instanceConfig.UseCustomFormatScore
+            ? SelectionStrategy.BalancedWeighted
+            : strategy;
+    }
+
+    /// <summary>
     /// Picks up to <paramref name="count"/> unsearched units, at most one per movie or series.
     /// </summary>
     public static List<SeekerSearchCandidate> SelectNext(SeekerEvaluation evaluation, SelectionStrategy strategy, int count)
@@ -118,7 +128,7 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] selectionCandidates = BuildSelectionCandidates(evaluation, remainingByItem);
+        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)[] selectionCandidates = BuildSelectionCandidates(evaluation, remainingByItem);
 
         // The selectors sort stably, so unshuffled ties would favour the arr's lowest ids
         Random.Shared.Shuffle(selectionCandidates);
@@ -143,7 +153,7 @@ public sealed class SeekerUnitEvaluator
             .Any(g => g.Count() > 1 && g.Any(c => pickedIds.Contains(c.Id)));
     }
 
-    private static (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] BuildSelectionCandidates(
+    private static (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)[] BuildSelectionCandidates(
         SeekerEvaluation evaluation,
         Dictionary<long, List<SeekerSearchUnit>> remainingByItem)
     {
@@ -151,12 +161,25 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.Max(u => u.LastSearchTime));
 
+        HashSet<long> missingItemIds = remainingByItem
+            .Where(p => p.Value.Any(u => u.Reasons.Contains(SeekerSearchReason.Missing)))
+            .Select(p => p.Key)
+            .ToHashSet();
+
+        // Missing items rank as furthest below the cutoff
+        int missingGap = Math.Max(1, remainingByItem
+            .Where(p => !missingItemIds.Contains(p.Key))
+            .Select(p => p.Value.Max(u => u.CustomFormatGap))
+            .DefaultIfEmpty(0)
+            .Max());
+
         return remainingByItem
             .Select(p =>
             {
                 DateTimeOffset? cycleSearched = evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? at : null;
                 DateTimeOffset? lastSearched = new[] { arrSearchedByItem[p.Key], cycleSearched }.Max();
-                return (p.Key, p.Value[0].Added, lastSearched);
+                int gap = missingItemIds.Contains(p.Key) ? missingGap : p.Value.Max(u => u.CustomFormatGap);
+                return (p.Key, p.Value[0].Added, lastSearched, (double)gap);
             })
             .ToArray();
     }

@@ -8,8 +8,8 @@ public interface IItemSelector
     /// <summary>
     /// Selects up to <paramref name="count"/> item IDs from the candidates
     /// </summary>
-    /// <param name="candidates">List of (id, dateAdded, lastSearched) tuples</param>
+    /// <param name="candidates">List of (id, dateAdded, lastSearched, customFormatGap) tuples</param>
     /// <param name="count">Maximum number of items to select</param>
     /// <returns>Selected item IDs</returns>
-    List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count);
+    List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> candidates, int count);
 }

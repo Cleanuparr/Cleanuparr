@@ -6,7 +6,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class NewestFirstSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> candidates, int count)
     {
         return candidates
             .OrderByDescending(c => c.Added ?? DateTimeOffset.MinValue)
