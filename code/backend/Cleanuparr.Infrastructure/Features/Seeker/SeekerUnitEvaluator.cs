@@ -277,7 +277,8 @@ public sealed class SeekerUnitEvaluator
         List<SeekerSearchUnit> units = [];
         foreach (SearchableMovie movie in released)
         {
-            bool belowCustomFormatCutoff = instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(movie.Id, out var entry) && entry.CurrentScore < entry.CutoffScore;
+            CustomFormatScoreEntry? entry = cfScores?.GetValueOrDefault(movie.Id);
+            bool belowCustomFormatCutoff = entry is not null && entry.CurrentScore < entry.CutoffScore;
             bool upgradesDisabled = belowCustomFormatCutoff && upgradesDisabledProfileIds.Contains(movie.QualityProfileId);
 
             List<SeekerSearchReason> reasons = [];
@@ -291,9 +292,11 @@ public sealed class SeekerUnitEvaluator
                 reasons.Add(SeekerSearchReason.QualityCutoffNotMet);
             }
 
+            int customFormatGap = 0;
             if (belowCustomFormatCutoff && !upgradesDisabled)
             {
                 reasons.Add(SeekerSearchReason.CustomFormatScoreBelowCutoff);
+                customFormatGap = entry!.CutoffScore - entry.CurrentScore;
             }
 
             if (reasons.Count == 0)
@@ -327,6 +330,7 @@ public sealed class SeekerUnitEvaluator
                 Reasons = reasons,
                 Added = movie.Added,
                 LastSearchTime = movie.LastSearchTime,
+                CustomFormatGap = customFormatGap,
                 Searched = false,
                 BlockedBy = blockedBy,
             });
@@ -511,6 +515,7 @@ public sealed class SeekerUnitEvaluator
                     AirDateUtc = entry.AirDateUtc,
                     LastSearchTime = entry.LastSearchTime,
                     Monitored = entry.IsMonitored,
+                    CustomFormatGap = entry.CutoffScore - entry.CurrentScore,
                     Reason = SeekerSearchReason.CustomFormatScoreBelowCutoff,
                 });
             }
@@ -629,6 +634,7 @@ public sealed class SeekerUnitEvaluator
                     Reasons = season.Select(w => w.Reason).ToList(),
                     Added = series.Added,
                     LastSearchTime = season.Max(w => w.LastSearchTime),
+                    CustomFormatGap = season.Max(w => w.CustomFormatGap),
                     Searched = seasonSearched,
                 });
                 continue;
@@ -652,6 +658,7 @@ public sealed class SeekerUnitEvaluator
                     AirDateUtc = first.AirDateUtc,
                     Added = series.Added,
                     LastSearchTime = episode.Max(w => w.LastSearchTime),
+                    CustomFormatGap = episode.Max(w => w.CustomFormatGap),
                     Searched = seasonSearched || searchedEpisodeIds.Contains(episode.Key),
                 });
             }
