@@ -1107,6 +1107,24 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task SelectNext_OldestSearchFirst_BreaksTiesAtRandom()
+    {
+        // Arrange
+        SetupRadarr([Movie(1), Movie(2)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+        HashSet<long> picked = [];
+
+        // Act
+        for (int i = 0; i < 64; i++)
+        {
+            picked.Add(SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.OldestSearchFirst, 1).Single().ItemId);
+        }
+
+        // Assert
+        picked.ShouldBe([1L, 2L], ignoreOrder: true);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_Sonarr_CustomFormatOnlyEpisode_TakesTheCachedLastSearchTime()
     {
         // Arrange

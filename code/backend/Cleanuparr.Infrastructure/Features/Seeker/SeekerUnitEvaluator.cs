@@ -122,17 +122,20 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.Max(u => u.LastSearchTime));
 
-        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> selectionCandidates = remainingByItem
+        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] selectionCandidates = remainingByItem
             .Select(p =>
             {
                 DateTimeOffset? cycleSearched = evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? at : null;
                 DateTimeOffset? lastSearched = new[] { arrSearchedByItem[p.Key], cycleSearched }.Max();
                 return (p.Key, p.Value[0].Added, lastSearched);
             })
-            .ToList();
+            .ToArray();
+
+        // The selectors sort stably, so unshuffled ties would favour the arr's lowest ids
+        Random.Shared.Shuffle(selectionCandidates);
 
         return ItemSelectorFactory.Create(strategy)
-            .Select(selectionCandidates, count)
+            .Select([.. selectionCandidates], count)
             .Select(id => ToCandidate(PickUnit(remainingByItem[id])))
             .ToList();
     }
