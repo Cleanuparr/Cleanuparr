@@ -33,7 +33,6 @@ public sealed class OldestSearchWeightedSelector : IItemSelector
         int count)
     {
         int n = ranked.Count;
-        var selected = new List<long>(count);
 
         // Build initial weights from rank: highest rank (index 0) gets weight N, lowest gets 1
         var pool = new List<(long Id, double Weight)>(n);
@@ -41,6 +40,16 @@ public sealed class OldestSearchWeightedSelector : IItemSelector
         {
             pool.Add((ranked[i].Id, n - i));
         }
+
+        return WeightedRandom(pool, count);
+    }
+
+    /// <summary>
+    /// Performs weighted random selection without replacement. Consumes <paramref name="pool"/>.
+    /// </summary>
+    internal static List<long> WeightedRandom(List<(long Id, double Weight)> pool, int count)
+    {
+        List<long> selected = new(count);
 
         for (int i = 0; i < count && pool.Count > 0; i++)
         {

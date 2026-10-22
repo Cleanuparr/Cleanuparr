@@ -25,37 +25,10 @@ public sealed class CustomFormatGapWeightedSelector : IItemSelector
         double maxGap = candidates.Max(c => c.Gap);
 
         // The recency half is at least 1/n, so every weight stays above zero
-        List<long> selected = new(count);
         List<(long Id, double Weight)> pool = candidates
             .Select(c => (c.Id, Weight: 0.5 * (maxGap > 0 ? c.Gap / maxGap : 0) + 0.5 * searchRanks[c.Id] / n))
             .ToList();
 
-        for (int i = 0; i < count && pool.Count > 0; i++)
-        {
-            double totalWeight = 0;
-            for (int j = 0; j < pool.Count; j++)
-            {
-                totalWeight += pool[j].Weight;
-            }
-
-            double target = Random.Shared.NextDouble() * totalWeight;
-            double cumulative = 0;
-            int selectedIndex = pool.Count - 1;
-
-            for (int j = 0; j < pool.Count; j++)
-            {
-                cumulative += pool[j].Weight;
-                if (cumulative >= target)
-                {
-                    selectedIndex = j;
-                    break;
-                }
-            }
-
-            selected.Add(pool[selectedIndex].Id);
-            pool.RemoveAt(selectedIndex);
-        }
-
-        return selected;
+        return OldestSearchWeightedSelector.WeightedRandom(pool, count);
     }
 }

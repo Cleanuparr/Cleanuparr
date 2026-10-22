@@ -30,37 +30,10 @@ public sealed class BalancedWeightedSelector : IItemSelector
             .ToDictionary(x => x.Id, x => x.Rank);
 
         // Composite weight = average of both ranks (higher = more likely to be selected)
-        var selected = new List<long>(count);
         var pool = candidates
             .Select(c => (c.Id, Weight: (searchRanks[c.Id] + ageRanks[c.Id]) / 2.0))
             .ToList();
 
-        for (int i = 0; i < count && pool.Count > 0; i++)
-        {
-            double totalWeight = 0;
-            for (int j = 0; j < pool.Count; j++)
-            {
-                totalWeight += pool[j].Weight;
-            }
-
-            double target = Random.Shared.NextDouble() * totalWeight;
-            double cumulative = 0;
-            int selectedIndex = pool.Count - 1;
-
-            for (int j = 0; j < pool.Count; j++)
-            {
-                cumulative += pool[j].Weight;
-                if (cumulative >= target)
-                {
-                    selectedIndex = j;
-                    break;
-                }
-            }
-
-            selected.Add(pool[selectedIndex].Id);
-            pool.RemoveAt(selectedIndex);
-        }
-
-        return selected;
+        return OldestSearchWeightedSelector.WeightedRandom(pool, count);
     }
 }
