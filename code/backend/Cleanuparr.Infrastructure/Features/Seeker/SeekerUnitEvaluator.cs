@@ -118,18 +118,7 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        Dictionary<long, DateTimeOffset?> arrSearchedByItem = evaluation.Units
-            .GroupBy(u => u.ItemId)
-            .ToDictionary(g => g.Key, g => g.Max(u => u.LastSearchTime));
-
-        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] selectionCandidates = remainingByItem
-            .Select(p =>
-            {
-                DateTimeOffset? cycleSearched = evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? at : null;
-                DateTimeOffset? lastSearched = new[] { arrSearchedByItem[p.Key], cycleSearched }.Max();
-                return (p.Key, p.Value[0].Added, lastSearched);
-            })
-            .ToArray();
+        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] selectionCandidates = BuildSelectionCandidates(evaluation, remainingByItem);
 
         // The selectors sort stably, so unshuffled ties would favour the arr's lowest ids
         Random.Shared.Shuffle(selectionCandidates);
@@ -138,6 +127,38 @@ public sealed class SeekerUnitEvaluator
             .Select([.. selectionCandidates], count)
             .Select(id => ToCandidate(PickUnit(remainingByItem[id])))
             .ToList();
+    }
+
+    /// <summary>
+    /// Whether a picked item ties with another remaining item on the strategy's sort key, so the job can pick differently.
+    /// </summary>
+    public static bool HasTiedPicks(SeekerEvaluation evaluation, SelectionStrategy strategy, IReadOnlySet<long> pickedIds)
+    {
+        Dictionary<long, List<SeekerSearchUnit>> remainingByItem = evaluation.Remaining
+            .GroupBy(u => u.ItemId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        return BuildSelectionCandidates(evaluation, remainingByItem)
+            .GroupBy(c => strategy == SelectionStrategy.NewestFirst ? c.Added : c.LastSearched)
+            .Any(g => g.Count() > 1 && g.Any(c => pickedIds.Contains(c.Id)));
+    }
+
+    private static (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] BuildSelectionCandidates(
+        SeekerEvaluation evaluation,
+        Dictionary<long, List<SeekerSearchUnit>> remainingByItem)
+    {
+        Dictionary<long, DateTimeOffset?> arrSearchedByItem = evaluation.Units
+            .GroupBy(u => u.ItemId)
+            .ToDictionary(g => g.Key, g => g.Max(u => u.LastSearchTime));
+
+        return remainingByItem
+            .Select(p =>
+            {
+                DateTimeOffset? cycleSearched = evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? at : null;
+                DateTimeOffset? lastSearched = new[] { arrSearchedByItem[p.Key], cycleSearched }.Max();
+                return (p.Key, p.Value[0].Added, lastSearched);
+            })
+            .ToArray();
     }
 
     private async Task<SeekerEvaluation> EvaluateRadarrAsync(

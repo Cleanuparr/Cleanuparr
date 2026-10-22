@@ -1125,6 +1125,65 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task HasTiedPicks_OldestSearchFirst_NeverSearchedMovies_ReturnsTrue()
+    {
+        // Arrange
+        SetupRadarr([Movie(1), Movie(2)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.OldestSearchFirst, new HashSet<long> { 1 });
+
+        // Assert
+        tied.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_OldestSearchFirst_DistinctSearchTimes_ReturnsFalse()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupRadarr([Movie(1, lastSearchTime: now.AddDays(-1)), Movie(2, lastSearchTime: now.AddDays(-5))]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.OldestSearchFirst, new HashSet<long> { 2 });
+
+        // Assert
+        tied.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_NewestFirst_SameAddedDate_ReturnsTrue()
+    {
+        // Arrange
+        DateTimeOffset added = _timeProvider.GetUtcNow().AddDays(-3);
+        SetupRadarr([Movie(1, added: added), Movie(2, added: added)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.NewestFirst, new HashSet<long> { 1 });
+
+        // Assert
+        tied.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_NewestFirst_DistinctAddedDates_ReturnsFalse()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupRadarr([Movie(1, added: now.AddDays(-3)), Movie(2, added: now.AddDays(-4))]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.NewestFirst, new HashSet<long> { 1 });
+
+        // Assert
+        tied.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task EvaluateAsync_Sonarr_CustomFormatOnlyEpisode_TakesTheCachedLastSearchTime()
     {
         // Arrange
