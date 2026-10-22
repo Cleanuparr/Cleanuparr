@@ -115,6 +115,7 @@ Controls how Seeker selects which item to search next from the pool of eligible 
 - **Newest First**: Always picks the most recently added items first. Best for keeping new additions up to date quickly.
 - **Newest Weighted**: Favors recently added items, but still gives older items a chance.
 - **Random**: Every eligible item has an equal chance of being picked with no prioritization.
+- **Custom Format Gap Weighted**: Favors items furthest below their custom format cutoff, while still rotating through items that were searched long ago. Missing items count as furthest below. It needs **Use Custom Format Score** on the instance; instances without it use Balanced Weighted.
 
 <Note>
 Regardless of the strategy, items already searched in the current cycle are excluded from selection. The strategy only determines the order in which unsearched items are considered.
