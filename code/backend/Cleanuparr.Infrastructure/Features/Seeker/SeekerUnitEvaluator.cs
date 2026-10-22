@@ -118,9 +118,17 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        Dictionary<long, DateTimeOffset?> arrSearchedByItem = evaluation.Units
+            .GroupBy(u => u.ItemId)
+            .ToDictionary(g => g.Key, g => g.Max(u => u.LastSearchTime));
+
         List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> selectionCandidates = remainingByItem
-            .Select(p => (p.Key, p.Value[0].Added,
-                LastSearched: evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? (DateTimeOffset?)at : null))
+            .Select(p =>
+            {
+                DateTimeOffset? cycleSearched = evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? at : null;
+                DateTimeOffset? lastSearched = new[] { arrSearchedByItem[p.Key], cycleSearched }.Max();
+                return (p.Key, p.Value[0].Added, lastSearched);
+            })
             .ToList();
 
         return ItemSelectorFactory.Create(strategy)
@@ -294,6 +302,7 @@ public sealed class SeekerUnitEvaluator
                 Name = movie.Title,
                 Reasons = reasons,
                 Added = movie.Added,
+                LastSearchTime = movie.LastSearchTime,
                 Searched = false,
                 BlockedBy = blockedBy,
             });
@@ -413,6 +422,7 @@ public sealed class SeekerUnitEvaluator
             EpisodeId = e.Id,
             EpisodeNumber = e.EpisodeNumber,
             AirDateUtc = e.AirDateUtc,
+            LastSearchTime = e.LastSearchTime,
             Monitored = e.Monitored,
             Reason = reason,
         };
@@ -475,6 +485,7 @@ public sealed class SeekerUnitEvaluator
                     EpisodeId = entry.EpisodeId,
                     Title = entry.Title,
                     AirDateUtc = entry.AirDateUtc,
+                    LastSearchTime = entry.LastSearchTime,
                     Monitored = entry.IsMonitored,
                     Reason = SeekerSearchReason.CustomFormatScoreBelowCutoff,
                 });
@@ -593,6 +604,7 @@ public sealed class SeekerUnitEvaluator
                     ContentKind = kind,
                     Reasons = season.Select(w => w.Reason).ToList(),
                     Added = series.Added,
+                    LastSearchTime = season.Max(w => w.LastSearchTime),
                     Searched = seasonSearched,
                 });
                 continue;
@@ -615,6 +627,7 @@ public sealed class SeekerUnitEvaluator
                     Reasons = episode.Select(w => w.Reason).ToList(),
                     AirDateUtc = first.AirDateUtc,
                     Added = series.Added,
+                    LastSearchTime = episode.Max(w => w.LastSearchTime),
                     Searched = seasonSearched || searchedEpisodeIds.Contains(episode.Key),
                 });
             }
