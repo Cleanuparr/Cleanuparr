@@ -54,7 +54,7 @@ const SONARR_SEARCH_MODE_OPTIONS: SelectOption[] = [
 
 const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
   [SelectionStrategy.BalancedWeighted]: 'Prioritizes items that are both newly added and haven\'t been searched recently. Good default for most libraries.',
-  [SelectionStrategy.OldestSearchFirst]: 'Works through your library in order, starting with items that haven\'t been searched the longest. Guarantees every item gets covered.',
+  [SelectionStrategy.OldestSearchFirst]: 'Picks the items Sonarr or Radarr searched longest ago, never-searched items first. Manual searches and other tools count too.',
   [SelectionStrategy.OldestSearchWeighted]: 'Favors items that haven\'t been searched recently, but still gives other items a chance.',
   [SelectionStrategy.NewestFirst]: 'Always picks the most recently added items first. Best for keeping new additions up to date quickly.',
   [SelectionStrategy.NewestWeighted]: 'Favors recently added items, but still gives older items a chance.',
