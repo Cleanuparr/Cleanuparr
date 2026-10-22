@@ -80,7 +80,9 @@ test.describe('Seeker selection strategies', () => {
     const candidates = await monitorEveryMovie();
     expect(candidates.length).toBeGreaterThan(1);
 
-    const newest = [...candidates].sort((a, b) => b.added.localeCompare(a.added))[0];
+    // The seed adds both movies in the same second, and Radarr ignores edits to the date.
+    const newestAdded = Math.max(...candidates.map((c) => Date.parse(c.added)));
+    const newest = candidates.filter((c) => Date.parse(c.added) === newestAdded).map((c) => c.title);
 
     const instanceId = await arrangeInstance(api, RADARR, { config: { selectionStrategy: 'NewestFirst' } });
     await triggerSeeker(api);
@@ -88,7 +90,7 @@ test.describe('Seeker selection strategies', () => {
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
 
     const event = await firstSearchEvent(api, instanceId);
-    expect(event?.itemTitle).toBe(newest.title);
+    expect(newest).toContain(event?.itemTitle);
   });
 
   test("oldest search first follows the arr's last search time", async ({ api }) => {
