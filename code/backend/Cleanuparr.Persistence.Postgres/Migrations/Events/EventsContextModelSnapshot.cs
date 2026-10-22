@@ -342,6 +342,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("text")
                         .HasColumnName("item_type");
 
+                    b.Property<DateTimeOffset?>("LastSearchTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_search_time");
+
                     b.Property<DateTimeOffset>("LastSyncedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_synced_at");
