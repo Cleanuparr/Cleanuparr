@@ -44,6 +44,7 @@ const STRATEGY_OPTIONS: SelectOption[] = [
   { label: 'Newest First', value: SelectionStrategy.NewestFirst },
   { label: 'Newest Weighted', value: SelectionStrategy.NewestWeighted },
   { label: 'Random', value: SelectionStrategy.Random },
+  { label: 'Custom Format Gap Weighted', value: SelectionStrategy.CustomFormatGapWeighted },
 ];
 
 const SONARR_SEARCH_MODE_OPTIONS: SelectOption[] = [
@@ -59,6 +60,7 @@ const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
   [SelectionStrategy.NewestFirst]: 'Always picks the most recently added items first. Best for keeping new additions up to date quickly.',
   [SelectionStrategy.NewestWeighted]: 'Favors recently added items, but still gives older items a chance.',
   [SelectionStrategy.Random]: 'Every item has an equal chance of being picked. No prioritization.',
+  [SelectionStrategy.CustomFormatGapWeighted]: 'Favors items furthest below their custom format cutoff, while still rotating through items that were searched long ago. Instances without custom format scores use Balanced Weighted.',
 };
 
 interface SeekerFormModel {

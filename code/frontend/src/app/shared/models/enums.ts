@@ -119,6 +119,7 @@ export enum SelectionStrategy {
   NewestFirst = 'NewestFirst',
   NewestWeighted = 'NewestWeighted',
   Random = 'Random',
+  CustomFormatGapWeighted = 'CustomFormatGapWeighted',
 }
 
 export enum SonarrSearchMode {
