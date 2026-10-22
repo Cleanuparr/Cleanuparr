@@ -1211,6 +1211,28 @@ public class SeekerUnitEvaluatorTests : IDisposable
         missingPicks.ShouldBeGreaterThan(600);
     }
 
+    [Fact]
+    public async Task SelectNext_CustomFormatGapWeighted_Sonarr_SearchesTheLargestGapUnit()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], []);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 20, currentScore: 5, cutoffScore: 10);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 21, currentScore: 0, cutoffScore: 30);
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c =>
+        {
+            c.UseCustomFormatScore = true;
+            c.SonarrSearchMode = SonarrSearchMode.Episode;
+        }));
+
+        // Act
+        List<long> picked = Enumerable.Range(0, 50)
+            .Select(_ => SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.CustomFormatGapWeighted, 1)[0].EpisodeId)
+            .ToList();
+
+        // Assert
+        picked.ShouldAllBe(id => id == 21);
+    }
+
     [Theory]
     [InlineData(SelectionStrategy.CustomFormatGapWeighted, false, SelectionStrategy.BalancedWeighted)]
     [InlineData(SelectionStrategy.CustomFormatGapWeighted, true, SelectionStrategy.CustomFormatGapWeighted)]

@@ -135,7 +135,7 @@ public sealed class SeekerUnitEvaluator
 
         return ItemSelectorFactory.Create(strategy)
             .Select([.. selectionCandidates], count)
-            .Select(id => ToCandidate(PickUnit(remainingByItem[id])))
+            .Select(id => ToCandidate(PickUnit(remainingByItem[id], strategy)))
             .ToList();
     }
 
@@ -708,9 +708,20 @@ public sealed class SeekerUnitEvaluator
 
     /// <summary>
     /// Picks a random season of the item, then its earliest airing unit.
+    /// Under <see cref="SelectionStrategy.CustomFormatGapWeighted"/> it picks the missing unit, else the largest gap unit.
     /// </summary>
-    private static SeekerSearchUnit PickUnit(List<SeekerSearchUnit> itemUnits)
+    private static SeekerSearchUnit PickUnit(List<SeekerSearchUnit> itemUnits, SelectionStrategy strategy)
     {
+        if (strategy is SelectionStrategy.CustomFormatGapWeighted)
+        {
+            return itemUnits
+                .OrderByDescending(u => u.Reasons.Contains(SeekerSearchReason.Missing))
+                .ThenByDescending(u => u.CustomFormatGap)
+                .ThenBy(u => u.AirDateUtc ?? DateTimeOffset.MaxValue)
+                .ThenBy(u => u.EpisodeId)
+                .First();
+        }
+
         List<int> seasons = itemUnits.Select(u => u.SeasonNumber).Distinct().ToList();
         int seasonNumber = seasons[Random.Shared.Next(seasons.Count)];
 
