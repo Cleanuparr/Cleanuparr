@@ -1664,6 +1664,18 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("proactive_search_enabled");
 
+                    b.Property<bool>("QuietHoursEnabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("quiet_hours_enabled");
+
+                    b.Property<TimeOnly>("QuietHoursEnd")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("quiet_hours_end");
+
+                    b.Property<TimeOnly>("QuietHoursStart")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("quiet_hours_start");
+
                     b.Property<bool>("SearchEnabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("search_enabled");

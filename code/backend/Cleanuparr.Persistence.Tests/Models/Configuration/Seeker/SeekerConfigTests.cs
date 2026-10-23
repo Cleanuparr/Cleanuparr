@@ -99,4 +99,63 @@ public sealed class SeekerConfigTests
     }
 
     #endregion
+
+    #region Quiet Hours
+
+    [Fact]
+    public void Validate_WithEqualQuietHours_ThrowsValidationException()
+    {
+        SeekerConfig config = new()
+        {
+            QuietHoursStart = new TimeOnly(5, 0),
+            QuietHoursEnd = new TimeOnly(5, 0)
+        };
+
+        Should.Throw<CustomValidationException>(() => config.Validate());
+    }
+
+    [Fact]
+    public void IsQuietTime_WhenDisabled_ReturnsFalse()
+    {
+        SeekerConfig config = new() { QuietHoursEnabled = false };
+
+        config.IsQuietTime(new TimeOnly(23, 30)).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, 59, false)]
+    [InlineData(1, 0, true)]
+    [InlineData(4, 59, true)]
+    [InlineData(5, 0, false)]
+    public void IsQuietTime_WithSameDayWindow_RespectsBounds(int hour, int minute, bool expected)
+    {
+        SeekerConfig config = new()
+        {
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(1, 0),
+            QuietHoursEnd = new TimeOnly(5, 0)
+        };
+
+        config.IsQuietTime(new TimeOnly(hour, minute)).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(22, 59, false)]
+    [InlineData(23, 0, true)]
+    [InlineData(0, 0, true)]
+    [InlineData(6, 59, true)]
+    [InlineData(7, 0, false)]
+    public void IsQuietTime_WithOvernightWindow_RespectsBounds(int hour, int minute, bool expected)
+    {
+        SeekerConfig config = new()
+        {
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(23, 0),
+            QuietHoursEnd = new TimeOnly(7, 0)
+        };
+
+        config.IsQuietTime(new TimeOnly(hour, minute)).ShouldBe(expected);
+    }
+
+    #endregion
 }

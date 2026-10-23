@@ -1668,6 +1668,18 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("proactive_search_enabled");
 
+                    b.Property<bool>("QuietHoursEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("quiet_hours_enabled");
+
+                    b.Property<TimeOnly>("QuietHoursEnd")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("quiet_hours_end");
+
+                    b.Property<TimeOnly>("QuietHoursStart")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("quiet_hours_start");
+
                     b.Property<bool>("SearchEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("search_enabled");

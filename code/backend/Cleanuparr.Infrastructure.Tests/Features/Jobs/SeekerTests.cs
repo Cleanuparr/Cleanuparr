@@ -245,6 +245,121 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_DuringQuietHours_SkipsProactiveSearch()
+    {
+        IArrClient mockArrClient = await ArrangeRadarrProactiveSearchAsync(new TimeOnly(23, 0), new TimeOnly(1, 0));
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.DidNotReceive().SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+        _fixture.ArrClientFactory.DidNotReceive().GetClient(Arg.Any<InstanceType>(), Arg.Any<float>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OutsideQuietHours_RunsProactiveSearch()
+    {
+        IArrClient mockArrClient = await ArrangeRadarrProactiveSearchAsync(new TimeOnly(1, 0), new TimeOnly(2, 0));
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.Received(1).SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_QuietHours_UsesLocalTime()
+    {
+        // Local 05:00 (UTC+5) sits inside 04:00-06:00, UTC 00:00 does not
+        _fixture.TimeProvider.SetLocalTimeZone(TimeZoneInfo.CreateCustomTimeZone("test", TimeSpan.FromHours(5), "test", "test"));
+        IArrClient mockArrClient = await ArrangeRadarrProactiveSearchAsync(new TimeOnly(4, 0), new TimeOnly(6, 0));
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.DidNotReceive().SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DuringQuietHours_StillProcessesReplacement()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.QuietHoursEnabled = true;
+        config.QuietHoursStart = new TimeOnly(23, 0);
+        config.QuietHoursEnd = new TimeOnly(1, 0);
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ItemId = 42,
+            Title = "Test Movie",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.Received(1).SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+    }
+
+    /// <summary>
+    /// Arranges one enabled Radarr instance with a single missing movie, quiet hours on.
+    /// The fake clock starts at midnight UTC.
+    /// </summary>
+    private async Task<IArrClient> ArrangeRadarrProactiveSearchAsync(TimeOnly quietStart, TimeOnly quietEnd)
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.QuietHoursEnabled = true;
+        config.QuietHoursStart = quietStart;
+        config.QuietHoursEnd = quietEnd;
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        List<SearchableMovie> movies =
+        [
+            new SearchableMovie { Id = 1, Title = "Movie", Status = "released", Monitored = true, Tags = [] }
+        ];
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>(movies));
+        StubRadarrWanted(radarrInstance, movies);
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        return mockArrClient;
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenReplacementItemExists_ProcessesReplacementFirst()
     {
         // Arrange

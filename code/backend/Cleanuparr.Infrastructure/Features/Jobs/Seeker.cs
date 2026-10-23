@@ -111,6 +111,12 @@ public sealed class Seeker : IHandler
             return;
         }
 
+        if (config.IsQuietTime(TimeOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime)))
+        {
+            _logger.LogDebug("Quiet hours, skipping proactive search");
+            return;
+        }
+
         await ProcessProactiveSearchAsync(config, isDryRun, cancellationToken);
 
         await _statusNotifier.NotifySearchStatsUpdatedAsync(cancellationToken);
