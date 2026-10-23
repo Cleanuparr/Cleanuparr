@@ -278,6 +278,62 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenQuietHoursStartMidRun_StopsBeforeSearching()
+    {
+        IArrClient mockArrClient = await ArrangeRadarrProactiveSearchAsync(new TimeOnly(0, 30), new TimeOnly(2, 0));
+        ArrInstance radarrInstance = await _fixture.DataContext.ArrInstances.FirstAsync();
+        List<SearchableMovie> movies =
+        [
+            new SearchableMovie { Id = 1, Title = "Movie", Status = "released", Monitored = true, Tags = [] }
+        ];
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                _fixture.TimeProvider.Advance(TimeSpan.FromHours(1));
+                return ToAsyncEnumerable<SearchableMovie>(movies);
+            });
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.DidNotReceive().SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenQuietHoursStartMidRun_SkipsRemainingInstances()
+    {
+        IArrClient mockArrClient = await ArrangeRadarrProactiveSearchAsync(new TimeOnly(0, 30), new TimeOnly(2, 0));
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.UseRoundRobin = false;
+        ArrInstance secondInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr2:7878");
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = secondInstance.Id,
+            ArrInstance = secondInstance,
+            Enabled = true,
+            MonitoredOnly = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        List<SearchableMovie> movies =
+        [
+            new SearchableMovie { Id = 1, Title = "Movie", Status = "released", Monitored = true, Tags = [] }
+        ];
+        _radarrClient
+            .StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                _fixture.TimeProvider.Advance(TimeSpan.FromHours(1));
+                return ToAsyncEnumerable<SearchableMovie>(movies);
+            });
+
+        await CreateSut().ExecuteAsync();
+
+        _radarrClient.Received(1).StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>());
+        await mockArrClient.DidNotReceive().SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_DuringQuietHours_StillProcessesReplacement()
     {
         SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
