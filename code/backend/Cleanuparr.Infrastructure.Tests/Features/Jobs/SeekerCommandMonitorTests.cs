@@ -1184,6 +1184,95 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task NothingGrabbed_outcome_sets_the_last_miss_to_the_search_time()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        DateTimeOffset searchedAt = _timeProvider.GetUtcNow().AddHours(-1);
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, Guid.NewGuid(), externalItemId: 516, consecutiveMisses: 2, lastSearchedAt: searchedAt);
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 516);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse());
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastMissAt.ShouldBe(searchedAt);
+    }
+
+    [Fact]
+    public async Task Failed_command_leaves_the_last_miss_unchanged()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        DateTimeOffset searchedAt = _timeProvider.GetUtcNow().AddHours(-1);
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, Guid.NewGuid(), externalItemId: 517, consecutiveMisses: 3, lastSearchedAt: searchedAt, lastMissAt: searchedAt.AddDays(-9));
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 517);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Failed);
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastMissAt.ShouldBe(searchedAt.AddDays(-9));
+    }
+
+    [Fact]
+    public async Task Grabbed_outcome_clears_the_last_miss()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        DateTimeOffset searchedAt = _timeProvider.GetUtcNow().AddHours(-1);
+        Guid eventId = SetUpUnitOutcomeScenario(radarrInstance.Id, Guid.NewGuid(), externalItemId: 515, consecutiveMisses: 4, lastSearchedAt: searchedAt, lastMissAt: searchedAt.AddDays(-9));
+
+        AddTracker(radarrInstance.Id, eventId, externalItemId: 515);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse
+            {
+                TotalRecords = 1,
+                Records = [new QueueRecord { Id = 1, MovieId = 515, Title = "Grabbed.Movie", DownloadId = "HASH515", Protocol = "torrent", Status = "downloading" }]
+            });
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        SeekerHistory unit = await _eventsContext.SeekerHistory.AsNoTracking().SingleAsync(h => h.ArrInstanceId == radarrInstance.Id);
+        unit.LastMissAt.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Failed_command_leaves_the_consecutive_misses_unchanged()
     {
         // Arrange
@@ -1521,7 +1610,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     /// <summary>
     /// Adds the search-triggered event and matching unit history row RecordUnitOutcomeAsync reads to attribute an outcome.
     /// </summary>
-    private Guid SetUpUnitOutcomeScenario(Guid arrInstanceId, Guid? cycleId, long externalItemId, int consecutiveMisses = 0)
+    private Guid SetUpUnitOutcomeScenario(Guid arrInstanceId, Guid? cycleId, long externalItemId, int consecutiveMisses = 0, DateTimeOffset lastSearchedAt = default, DateTimeOffset? lastMissAt = null)
     {
         Guid eventId = Guid.NewGuid();
 
@@ -1547,6 +1636,8 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             CycleId = cycleId ?? Guid.NewGuid(),
             ItemTitle = "Test Item",
             ConsecutiveMisses = consecutiveMisses,
+            LastSearchedAt = lastSearchedAt,
+            LastMissAt = lastMissAt,
         });
 
         return eventId;

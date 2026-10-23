@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -18,6 +19,13 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                 nullable: false,
                 defaultValue: 0);
 
+            migrationBuilder.AddColumn<DateTimeOffset>(
+                name: "last_miss_at",
+                schema: "events",
+                table: "seeker_history",
+                type: "timestamp with time zone",
+                nullable: true);
+
             migrationBuilder.AddColumn<int>(
                 name: "resting_units",
                 schema: "events",
@@ -32,6 +40,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
         {
             migrationBuilder.DropColumn(
                 name: "consecutive_misses",
+                schema: "events",
+                table: "seeker_history");
+
+            migrationBuilder.DropColumn(
+                name: "last_miss_at",
                 schema: "events",
                 table: "seeker_history");
 

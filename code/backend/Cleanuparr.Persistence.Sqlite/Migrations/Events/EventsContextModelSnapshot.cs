@@ -750,6 +750,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
 
+                    b.Property<string>("LastMissAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("last_miss_at");
+
                     b.Property<string>("LastOutcome")
                         .HasColumnType("TEXT")
                         .HasColumnName("last_outcome");

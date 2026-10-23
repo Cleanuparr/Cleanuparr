@@ -1586,6 +1586,36 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public void GetRest_LastMissAtSet_AnchorsTheRestOnTheMiss()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(3, RestNow.AddDays(-1));
+        unit.LastMissAt = RestNow.AddDays(-5);
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [RestNow.AddDays(-3)], 30, RestNow);
+
+        // Assert
+        rest.ShouldNotBeNull();
+        rest.CyclesLeft.ShouldBe(1);
+        rest.Until.ShouldBe(unit.LastMissAt.Value.AddDays(30));
+    }
+
+    [Fact]
+    public void GetRest_LastMissAtPastRestMaxDays_ReturnsNull()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(3, RestNow.AddDays(-1));
+        unit.LastMissAt = RestNow.AddDays(-31);
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [], 30, RestNow);
+
+        // Assert
+        rest.ShouldBeNull();
+    }
+
+    [Fact]
     public void GetRest_ThreeMissesAndOneCycleSince_RestsForOneMoreCycleEnd()
     {
         // Arrange

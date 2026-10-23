@@ -17,6 +17,12 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 nullable: false,
                 defaultValue: 0);
 
+            migrationBuilder.AddColumn<string>(
+                name: "last_miss_at",
+                table: "seeker_history",
+                type: "TEXT",
+                nullable: true);
+
             migrationBuilder.AddColumn<int>(
                 name: "resting_units",
                 table: "seeker_cycles",
@@ -30,6 +36,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
         {
             migrationBuilder.DropColumn(
                 name: "consecutive_misses",
+                table: "seeker_history");
+
+            migrationBuilder.DropColumn(
+                name: "last_miss_at",
                 table: "seeker_history");
 
             migrationBuilder.DropColumn(

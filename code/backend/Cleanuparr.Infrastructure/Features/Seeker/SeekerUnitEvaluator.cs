@@ -128,14 +128,15 @@ public sealed class SeekerUnitEvaluator
             return null;
         }
 
-        DateTimeOffset until = unit.LastSearchedAt.AddDays(maxRestDays);
+        DateTimeOffset anchor = unit.LastMissAt ?? unit.LastSearchedAt;
+        DateTimeOffset until = anchor.AddDays(maxRestDays);
         if (now >= until)
         {
             return null;
         }
 
         int restCycles = (int)Math.Min(Math.Pow(2, unit.ConsecutiveMisses - MissesBeforeRest), MaxRestCycles);
-        int cyclesSince = cycleStarts.Count(s => s > unit.LastSearchedAt);
+        int cyclesSince = cycleStarts.Count(s => s > anchor);
         if (cyclesSince > restCycles)
         {
             return null;
@@ -165,7 +166,7 @@ public sealed class SeekerUnitEvaluator
             .Where(h => h.ArrInstanceId == arrInstance.Id
                         && !h.IsDryRun
                         && h.ConsecutiveMisses >= MissesBeforeRest
-                        && h.LastSearchedAt > restCap)
+                        && (h.LastMissAt ?? h.LastSearchedAt) > restCap)
             .ToListAsync(cancellationToken);
 
         if (missed.Count == 0)
@@ -173,7 +174,7 @@ public sealed class SeekerUnitEvaluator
             return [];
         }
 
-        DateTimeOffset earliestSearch = missed.Min(h => h.LastSearchedAt);
+        DateTimeOffset earliestSearch = missed.Min(h => h.LastMissAt ?? h.LastSearchedAt);
         List<DateTimeOffset> cycleStarts = await _eventsContext.SeekerCycles
             .AsNoTracking()
             .Where(c => c.ArrInstanceId == arrInstance.Id && !c.IsDryRun && c.StartedAt > earliestSearch)

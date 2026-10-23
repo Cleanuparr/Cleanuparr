@@ -3108,7 +3108,7 @@ public class SeekerTests : IDisposable
         newCycle.FunnelCountedAt.ShouldBe(_fixture.TimeProvider.GetUtcNow());
     }
 
-    private void AddRestingMovieHistory(ArrInstance instance, long movieId, Guid cycleId)
+    private void AddRestingMovieHistory(ArrInstance instance, long movieId, Guid cycleId, DateTimeOffset? lastMissAt = null)
     {
         _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
@@ -3119,6 +3119,7 @@ public class SeekerTests : IDisposable
             LastSearchedAt = _fixture.TimeProvider.GetUtcNow().AddDays(-2),
             ItemTitle = $"Movie {movieId}",
             ConsecutiveMisses = 3,
+            LastMissAt = lastMissAt,
         });
     }
 
@@ -3138,6 +3139,24 @@ public class SeekerTests : IDisposable
         SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
         cycle.RestingUnits.ShouldBe(1);
         cycle.QueuedUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_RetryFailedAfterTheRestEnded_SearchesTheMovieAgain()
+    {
+        // Arrange: failed retry two days ago, last miss past RestMaxDays
+        (ArrInstance radarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Radarr, c => c.RestUnitsEnabled = true);
+        AddRestingMovieHistory(radarrInstance, 1, Guid.NewGuid(), _fixture.TimeProvider.GetUtcNow().AddDays(-40));
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1)]);
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        await arrClient.Received(1).SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+        SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
+        cycle.RestingUnits.ShouldBe(0);
     }
 
     [Fact]

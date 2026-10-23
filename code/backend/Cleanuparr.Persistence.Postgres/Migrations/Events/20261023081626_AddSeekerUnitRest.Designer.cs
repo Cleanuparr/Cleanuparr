@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cleanuparr.Persistence.Postgres.Migrations.Events
 {
     [DbContext(typeof(EventsContext))]
-    [Migration("20261022235247_AddSeekerUnitRest")]
+    [Migration("20261023081626_AddSeekerUnitRest")]
     partial class AddSeekerUnitRest
     {
         /// <inheritdoc />
@@ -751,6 +751,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("item_type");
+
+                    b.Property<DateTimeOffset?>("LastMissAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_miss_at");
 
                     b.Property<string>("LastOutcome")
                         .HasColumnType("text")

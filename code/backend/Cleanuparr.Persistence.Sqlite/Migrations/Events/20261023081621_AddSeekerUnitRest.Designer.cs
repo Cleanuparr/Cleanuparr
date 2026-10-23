@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Events
 {
     [DbContext(typeof(EventsContext))]
-    [Migration("20261022235242_AddSeekerUnitRest")]
+    [Migration("20261023081621_AddSeekerUnitRest")]
     partial class AddSeekerUnitRest
     {
         /// <inheritdoc />
@@ -752,6 +752,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
+
+                    b.Property<string>("LastMissAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("last_miss_at");
 
                     b.Property<string>("LastOutcome")
                         .HasColumnType("TEXT")

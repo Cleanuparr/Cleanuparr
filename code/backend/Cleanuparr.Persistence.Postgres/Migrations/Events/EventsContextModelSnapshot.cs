@@ -749,6 +749,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("text")
                         .HasColumnName("item_type");
 
+                    b.Property<DateTimeOffset?>("LastMissAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_miss_at");
+
                     b.Property<string>("LastOutcome")
                         .HasColumnType("text")
                         .HasColumnName("last_outcome");
