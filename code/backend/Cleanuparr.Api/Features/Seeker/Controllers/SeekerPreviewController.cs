@@ -117,7 +117,7 @@ public sealed class SeekerPreviewController : ControllerBase
         DateTimeOffset? waitingUntil = null;
 
         // Same rollover as the Seeker job: a cycle with nothing left waits out the minimum cycle time, then starts over.
-        if (!evaluation.Remaining.Any() && cycle is { SearchedUnits: > 0 })
+        if (!evaluation.Remaining.Any() && cycle is not null && (cycle.SearchedUnits > 0 || evaluation.RestingUnits > 0))
         {
             DateTimeOffset minCycleEnd = cycle.StartedAt.AddDays(instanceConfig.MinCycleTimeDays);
             if (_timeProvider.GetUtcNow() < minCycleEnd)

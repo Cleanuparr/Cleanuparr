@@ -351,6 +351,47 @@ public class SeekerPreviewControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPreview_UnsearchedCycleWithEveryMovieResting_WaitsForMinCycleTime()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 7, restUnitsEnabled: true);
+        DateTimeOffset startedAt = Now.AddDays(-2);
+        AddCycle(cycleId, radarr.Id, startedAt, searchedUnits: 0);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = Guid.NewGuid(),
+            LastSearchedAt = Now.AddDays(-3),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        response.CycleWaitingUntil.ShouldBe(startedAt.AddDays(7));
+        response.NextUp.ShouldBeEmpty();
+        response.Excluded.ShouldHaveSingleItem().Reason.ShouldBe(SeekerExclusionReason.Resting);
+    }
+
+    [Fact]
+    public async Task GetPreview_UnsearchedCycleWithNothingLeftOrResting_DoesNotWait()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 7);
+        AddCycle(cycleId, radarr.Id, Now.AddDays(-2), searchedUnits: 0);
+        SetupMovies(Movie(1, status: "announced"));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        response.CycleWaitingUntil.ShouldBeNull();
+        response.NextUp.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task GetPreview_DryRun_ReadsTheNewestDryCyclesHistory()
     {
         (await _dataContext.GeneralConfigs.FirstAsync()).DryRun = true;
