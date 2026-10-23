@@ -116,9 +116,12 @@ export class SeekerPreviewDrawerComponent {
     if (item.reason !== SeekerExclusionReason.Resting) {
       return '';
     }
-    const cycles = item.restCyclesLeft ?? 0;
+    if (item.restCyclesLeft == null || item.consecutiveMisses == null) {
+      return '';
+    }
+    const cycles = item.restCyclesLeft;
     const until = item.restUntil ? ` or on ${formatDate(item.restUntil, 'MM/dd', this.locale)}` : '';
-    return `${item.consecutiveMisses ?? 0} misses in a row · back after ${cycles} ${cycles === 1 ? 'cycle' : 'cycles'} end${until}`;
+    return `${item.consecutiveMisses} misses in a row · back after ${cycles} ${cycles === 1 ? 'cycle' : 'cycles'} end${until}`;
   }
 
   refresh(): void {

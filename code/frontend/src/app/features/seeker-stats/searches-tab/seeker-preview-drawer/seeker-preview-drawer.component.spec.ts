@@ -138,6 +138,16 @@ describe('SeekerPreviewDrawerComponent', () => {
     ]);
   });
 
+  it('renders no detail line for a resting exclusion without rest fields', () => {
+    const { fixture, host } = setup(of(preview({
+      excluded: [{ name: 'Iota', reason: SeekerExclusionReason.Resting }],
+    })));
+
+    open(fixture, host);
+
+    expect(texts('.preview__detail')).toEqual([]);
+  });
+
   it('requests the preview for the instance when opened', () => {
     const { fixture, host, getPreview } = setup();
 
