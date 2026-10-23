@@ -446,7 +446,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
             .Returns(new QueueListResponse());
 
-        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus(out Task savedAfterPublish);
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -454,6 +454,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
 
         // Assert
+        await savedAfterPublish.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForTrackerCountAsync(0);
     }
 
@@ -537,7 +538,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         AddTracker(Guid.NewGuid(), eventId, status: SearchCommandStatus.Completed);
         await _eventsContext.SaveChangesAsync();
 
-        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus(out Task savedAfterPublish);
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -550,6 +551,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventPublisher.Received(1).PublishSearchCompleted(
             eventId, SearchCommandStatus.Failed, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
 
+        await savedAfterPublish.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForTrackerCountAsync(0);
     }
 
@@ -561,7 +563,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         AddTracker(Guid.NewGuid(), eventId);
         await _eventsContext.SaveChangesAsync();
 
-        Task<SearchCommandStatus> pendingPublishTask = CaptureNextPublishedStatus();
+        Task<SearchCommandStatus> pendingPublishTask = CaptureNextPublishedStatus(out Task savedAfterPublish);
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -576,6 +578,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         await _arrClient.DidNotReceive().GetCommandsAsync(Arg.Any<ArrInstance>());
 
+        await savedAfterPublish.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForTrackerCountAsync(0);
     }
 
@@ -600,11 +603,12 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
             .Returns(new QueueListResponse());
 
-        CaptureNextPublishedStatus();
+        CaptureNextPublishedStatus(out Task savedAfterPublish);
 
         // Act
         await _sut.StartAsync(_cts.Token);
         _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await savedAfterPublish.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForTrackerCountAsync(0);
 
         // Assert
@@ -736,7 +740,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
                 });
             });
 
-        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus(out Task savedAfterPublish);
 
         // Act: the first poll hits a failing queue read
         await _sut.StartAsync(_cts.Token);
@@ -758,6 +762,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         await _eventPublisher.Received(1).PublishSearchCompleted(
             eventId, SearchCommandStatus.Completed, Arg.Any<InstanceType>(), Arg.Any<string>(),
             Arg.Is<List<string>?>(items => items != null && items.Count == 1 && items[0] == "Test.Item.1080p"));
+        await savedAfterPublish.WaitAsync(TimeSpan.FromSeconds(5));
         await WaitForTrackerCountAsync(0);
     }
 
@@ -1756,17 +1761,28 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         (await _eventsContext.SeekerCommandTrackers.CountAsync()).ShouldBe(expected);
     }
 
-    private Task<SearchCommandStatus> CaptureNextPublishedStatus()
+    private Task<SearchCommandStatus> CaptureNextPublishedStatus(out Task savedAfterPublish)
     {
+        TaskCompletionSource saved = new();
+        savedAfterPublish = saved.Task;
+
         TaskCompletionSource<SearchCommandStatus> tcs = new();
 
         _eventPublisher.PublishSearchCompleted(
                 Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => tcs.TrySetResult(ci.ArgAt<SearchCommandStatus>(1)));
+            .AndDoes(ci =>
+            {
+                // armed here so the save before the publish cannot complete it
+                _eventsContext.SavedChanges += (_, _) => saved.TrySetResult();
+                _eventsContext.SaveChangesFailed += (_, _) => saved.TrySetResult();
+                tcs.TrySetResult(ci.ArgAt<SearchCommandStatus>(1));
+            });
 
         return tcs.Task;
     }
+
+    private Task<SearchCommandStatus> CaptureNextPublishedStatus() => CaptureNextPublishedStatus(out _);
 
     private Task CaptureNthPoll(int count)
     {
