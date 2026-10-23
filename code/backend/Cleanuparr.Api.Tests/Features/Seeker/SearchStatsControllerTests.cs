@@ -119,6 +119,22 @@ public class SearchStatsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSummary_Funnel_SearchedUnitsSubtractsRestingUnits()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        Guid currentCycleId = Guid.NewGuid();
+        AddInstanceConfig(radarr.Id, currentCycleId);
+        AddCycle(currentCycleId, radarr.Id, eligibleNow: 10, remainingUnits: 4, startedAt: Now.AddDays(-1),
+            funnelCountedAt: Now, queuedUnits: 1, recentlyGrabbedUnits: 1, restingUnits: 2);
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceFunnelStat funnel = summary.PerInstanceStats.ShouldHaveSingleItem().Funnel.ShouldNotBeNull();
+        funnel.RestingUnits.ShouldBe(2);
+        funnel.SearchedUnits.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task GetSummary_Funnel_SearchedUnitsNeverGoesNegative()
     {
         ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
@@ -289,7 +305,8 @@ public class SearchStatsControllerTests : IDisposable
         int searchedUnits = 0,
         DateTimeOffset? funnelCountedAt = null,
         int queuedUnits = 0,
-        int recentlyGrabbedUnits = 0)
+        int recentlyGrabbedUnits = 0,
+        int restingUnits = 0)
     {
         _eventsContext.SeekerCycles.Add(new SeekerCycle
         {
@@ -309,6 +326,7 @@ public class SearchStatsControllerTests : IDisposable
             TagFilteredItems = 20,
             QueuedUnits = queuedUnits,
             RecentlyGrabbedUnits = recentlyGrabbedUnits,
+            RestingUnits = restingUnits,
             FunnelCountedAt = funnelCountedAt,
         });
         _eventsContext.SaveChanges();

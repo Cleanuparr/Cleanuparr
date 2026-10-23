@@ -3108,6 +3108,99 @@ public class SeekerTests : IDisposable
         newCycle.FunnelCountedAt.ShouldBe(_fixture.TimeProvider.GetUtcNow());
     }
 
+    private void AddRestingMovieHistory(ArrInstance instance, long movieId, Guid cycleId)
+    {
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = instance.Id,
+            ExternalItemId = movieId,
+            ItemType = InstanceType.Radarr,
+            CycleId = cycleId,
+            LastSearchedAt = _fixture.TimeProvider.GetUtcNow().AddDays(-2),
+            ItemTitle = $"Movie {movieId}",
+            ConsecutiveMisses = 3,
+        });
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_RestingMovie_RecordsRestingUnitsOnTheCurrentCycle()
+    {
+        // Arrange
+        (ArrInstance radarrInstance, _) = await SetupFunnelInstanceAsync(InstanceType.Radarr, c => c.RestUnitsEnabled = true);
+        AddRestingMovieHistory(radarrInstance, 1, Guid.NewGuid());
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1), ReleasedMovie(2), ReleasedMovie(3)]);
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
+        cycle.RestingUnits.ShouldBe(1);
+        cycle.QueuedUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_EveryUnsearchedUnitRests_TriggersNoSearch()
+    {
+        // Arrange: movie 1 was searched in the open cycle, movies 2 and 3 rest
+        Guid currentCycleId = Guid.NewGuid();
+        (ArrInstance radarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Radarr, c =>
+        {
+            c.RestUnitsEnabled = true;
+            c.CurrentCycleId = currentCycleId;
+        });
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = currentCycleId,
+            ArrInstanceId = radarrInstance.Id,
+            StartedAt = _fixture.TimeProvider.GetUtcNow().AddHours(-1),
+            SearchedUnits = 1,
+        });
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = currentCycleId,
+            LastSearchedAt = _fixture.TimeProvider.GetUtcNow().AddHours(-1),
+            ItemTitle = "Movie 1",
+        });
+        AddRestingMovieHistory(radarrInstance, 2, Guid.NewGuid());
+        AddRestingMovieHistory(radarrInstance, 3, Guid.NewGuid());
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1), ReleasedMovie(2), ReleasedMovie(3)]);
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        await arrClient.DidNotReceive().SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_EveryUnitRestsAndNoneWasSearched_DoesNotCompleteTheCycle()
+    {
+        // Arrange
+        (ArrInstance radarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Radarr, c => c.RestUnitsEnabled = true);
+        AddRestingMovieHistory(radarrInstance, 1, Guid.NewGuid());
+        AddRestingMovieHistory(radarrInstance, 2, Guid.NewGuid());
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubFunnelMovies(radarrInstance, [ReleasedMovie(1), ReleasedMovie(2)]);
+
+        // Act
+        await CreateSut().ExecuteAsync();
+
+        // Assert
+        await arrClient.DidNotReceive().SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+        await _fixture.EventPublisher.DidNotReceive()
+            .PublishSeekerCycleCompleted(Arg.Any<SeekerCycle>(), Arg.Any<string>());
+
+        SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
+        cycle.RestingUnits.ShouldBe(2);
+        cycle.CompletedAt.ShouldBeNull();
+    }
+
     #endregion
 
     #region Post-Release Grace Period Tests

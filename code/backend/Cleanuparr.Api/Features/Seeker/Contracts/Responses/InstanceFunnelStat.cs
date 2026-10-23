@@ -15,6 +15,7 @@ public sealed record InstanceFunnelStat
     public int EligibleUnits { get; init; }
     public int QueuedUnits { get; init; }
     public int RecentlyGrabbedUnits { get; init; }
+    public int RestingUnits { get; init; }
     public int SearchedUnits { get; init; }
     public int RemainingUnits { get; init; }
     public DateTimeOffset CountedAt { get; init; }
@@ -33,7 +34,8 @@ public sealed record InstanceFunnelStat
             EligibleUnits = cycle.EligibleNow,
             QueuedUnits = cycle.QueuedUnits,
             RecentlyGrabbedUnits = cycle.RecentlyGrabbedUnits,
-            SearchedUnits = Math.Max(0, cycle.EligibleNow - cycle.QueuedUnits - cycle.RecentlyGrabbedUnits - cycle.RemainingUnits),
+            RestingUnits = cycle.RestingUnits,
+            SearchedUnits = Math.Max(0, cycle.EligibleNow - cycle.QueuedUnits - cycle.RecentlyGrabbedUnits - cycle.RestingUnits - cycle.RemainingUnits),
             RemainingUnits = cycle.RemainingUnits,
             CountedAt = countedAt,
         };

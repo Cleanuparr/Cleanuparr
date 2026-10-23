@@ -591,6 +591,7 @@ public sealed class Seeker : IHandler
         cycle.TagFilteredItems = evaluation.TagFilteredItems;
         cycle.QueuedUnits = evaluation.QueuedUnits;
         cycle.RecentlyGrabbedUnits = evaluation.RecentlyGrabbedUnits;
+        cycle.RestingUnits = evaluation.RestingUnits;
         cycle.FunnelCountedAt = _timeProvider.GetUtcNow();
     }
 

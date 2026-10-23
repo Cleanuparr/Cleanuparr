@@ -157,7 +157,7 @@ public class SeekerPreviewControllerTests : IDisposable
         return sonarr;
     }
 
-    private ArrInstance AddRadarr(Guid? currentCycleId = null, int minCycleTimeDays = 7)
+    private ArrInstance AddRadarr(Guid? currentCycleId = null, int minCycleTimeDays = 7, bool restUnitsEnabled = false)
     {
         ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -166,6 +166,7 @@ public class SeekerPreviewControllerTests : IDisposable
             Enabled = true,
             CurrentCycleId = currentCycleId ?? Guid.NewGuid(),
             MinCycleTimeDays = minCycleTimeDays,
+            RestUnitsEnabled = restUnitsEnabled,
         });
         _dataContext.SaveChanges();
         return radarr;
@@ -245,6 +246,53 @@ public class SeekerPreviewControllerTests : IDisposable
         response.Funnel.RemainingUnits.ShouldBe(2);
         response.Funnel.SearchedUnits.ShouldBe(0);
         response.Funnel.CountedAt.ShouldBe(Now);
+    }
+
+    [Fact]
+    public async Task GetPreview_RestingMovie_MapsTheRestFieldsAndCountsItInTheFunnel()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, restUnitsEnabled: true);
+        AddCycle(cycleId, radarr.Id, Now.AddDays(-1), searchedUnits: 1);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = Guid.NewGuid(),
+            LastSearchedAt = Now.AddDays(-2),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1), Movie(2));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        SeekerPreviewExclusionResponse excluded = response.Excluded.ShouldHaveSingleItem();
+        excluded.Name.ShouldBe("Movie 1");
+        excluded.Reason.ShouldBe(SeekerExclusionReason.Resting);
+        excluded.ConsecutiveMisses.ShouldBe(4);
+        excluded.RestCyclesLeft.ShouldBe(2);
+        excluded.RestUntil.ShouldBe(Now.AddDays(-2).AddDays(30));
+        response.NextUp.ShouldHaveSingleItem().Name.ShouldBe("Movie 2");
+        response.Funnel.RestingUnits.ShouldBe(1);
+        response.Funnel.SearchedUnits.ShouldBe(0);
+        response.Funnel.RemainingUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetPreview_NonRestingExclusion_LeavesTheRestFieldsNull()
+    {
+        ArrInstance radarr = AddRadarr();
+        SetupMovies(Movie(1), Movie(3, status: "announced"));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        SeekerPreviewExclusionResponse excluded = response.Excluded.ShouldHaveSingleItem();
+        excluded.ConsecutiveMisses.ShouldBeNull();
+        excluded.RestCyclesLeft.ShouldBeNull();
+        excluded.RestUntil.ShouldBeNull();
     }
 
     [Fact]

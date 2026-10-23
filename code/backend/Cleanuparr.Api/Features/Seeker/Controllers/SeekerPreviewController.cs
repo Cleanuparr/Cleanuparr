@@ -154,7 +154,14 @@ public sealed class SeekerPreviewController : ControllerBase
                 .Select(c => new SeekerPreviewUnitResponse { Name = c.Name, Reason = c.Reason, ContentKind = c.ContentKind })
                 .ToList(),
             Excluded = evaluation.Excluded
-                .Select(e => new SeekerPreviewExclusionResponse { Name = e.Name, Reason = e.Reason })
+                .Select(e => new SeekerPreviewExclusionResponse
+                {
+                    Name = e.Name,
+                    Reason = e.Reason,
+                    ConsecutiveMisses = e.Rest?.ConsecutiveMisses,
+                    RestCyclesLeft = e.Rest?.CyclesLeft,
+                    RestUntil = e.Rest?.Until,
+                })
                 .ToList(),
         });
     }
@@ -172,7 +179,8 @@ public sealed class SeekerPreviewController : ControllerBase
             EligibleUnits = evaluation.Units.Count,
             QueuedUnits = evaluation.QueuedUnits,
             RecentlyGrabbedUnits = evaluation.RecentlyGrabbedUnits,
-            SearchedUnits = evaluation.Units.Count - evaluation.QueuedUnits - evaluation.RecentlyGrabbedUnits - remaining,
+            RestingUnits = evaluation.RestingUnits,
+            SearchedUnits = Math.Max(0, evaluation.Units.Count - evaluation.QueuedUnits - evaluation.RecentlyGrabbedUnits - evaluation.RestingUnits - remaining),
             RemainingUnits = remaining,
             CountedAt = _timeProvider.GetUtcNow(),
         };
