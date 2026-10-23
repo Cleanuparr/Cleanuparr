@@ -121,7 +121,7 @@ export class SeekerPreviewDrawerComponent {
     }
     const cycles = item.restCyclesLeft;
     const until = item.restUntil ? ` or on ${formatDate(item.restUntil, 'MM/dd', this.locale)}` : '';
-    return `${item.consecutiveMisses} misses in a row · back after ${cycles} ${cycles === 1 ? 'cycle' : 'cycles'} end${until}`;
+    return `${item.consecutiveMisses} misses in a row · back after ${cycles} ${cycles === 1 ? 'cycle ends' : 'cycles end'}${until}`;
   }
 
   refresh(): void {

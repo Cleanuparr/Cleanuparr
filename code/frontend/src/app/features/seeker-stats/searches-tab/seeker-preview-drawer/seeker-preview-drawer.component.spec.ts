@@ -134,7 +134,7 @@ describe('SeekerPreviewDrawerComponent', () => {
     ]);
     expect(texts('.preview__detail')).toEqual([
       '5 misses in a row · back after 2 cycles end or on 08/15',
-      '3 misses in a row · back after 1 cycle end',
+      '3 misses in a row · back after 1 cycle ends',
     ]);
   });
 
