@@ -158,6 +158,9 @@ export async function arrangeInstance(
     selectionStrategy: config.selectionStrategy,
     useRoundRobin: config.useRoundRobin,
     postReleaseGraceHours: config.postReleaseGraceHours,
+    quietHoursEnabled: config.quietHoursEnabled,
+    quietHoursStart: config.quietHoursStart,
+    quietHoursEnd: config.quietHoursEnd,
   };
 
   const instances = config.instances.map((i: { arrInstanceId: string }) =>
