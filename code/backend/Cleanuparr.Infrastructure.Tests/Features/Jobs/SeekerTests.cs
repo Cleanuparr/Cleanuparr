@@ -3217,6 +3217,7 @@ public class SeekerTests : IDisposable
 
         SeekerCycle cycle = await GetCycleAsync(radarrInstance.Id);
         cycle.RestingUnits.ShouldBe(2);
+        cycle.CompletedAt.ShouldBeNull();
         (await _fixture.EventsContext.SeekerCycles.CountAsync()).ShouldBe(1);
     }
 

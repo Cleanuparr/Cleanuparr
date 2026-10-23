@@ -818,8 +818,8 @@ public sealed class Seeker : IHandler
         int restingUnits,
         string instanceName)
     {
-        // An empty cycle with nothing resting stays open, so an idle instance does not roll a cycle every week.
-        if (cycle.SearchedUnits == 0 && restingUnits == 0)
+        // An empty cycle stays open until resting units let it roll after the minimum cycle time.
+        if (cycle.SearchedUnits == 0 && (restingUnits == 0 || ShouldWaitForMinCycleTime(instanceConfig, cycle.StartedAt)))
         {
             return null;
         }
