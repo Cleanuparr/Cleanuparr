@@ -152,6 +152,7 @@ describe('funnelStages', () => {
     eligibleUnits: 6,
     queuedUnits: 1,
     recentlyGrabbedUnits: 2,
+    restingUnits: 0,
     searchedUnits: 1,
     remainingUnits: 2,
     countedAt: '2026-07-30T10:00:00Z',
@@ -164,5 +165,14 @@ describe('funnelStages', () => {
 
   it('splits the units needing a search by state', () => {
     expect(funnelStages(funnel, 'Sonarr').split.map((s) => s.value)).toEqual([1, 2, 1, 2]);
+  });
+
+  it('adds the resting stage only when units are resting', () => {
+    expect(funnelStages(funnel, 'Sonarr').split.map((s) => s.label)).not.toContain('resting');
+
+    const split = funnelStages({ ...funnel, restingUnits: 4 }, 'Sonarr').split;
+
+    expect(split.map((s) => s.label)).toEqual(['in queue', 'grabbed', 'resting', 'searched', 'left']);
+    expect(split[2].value).toBe(4);
   });
 });

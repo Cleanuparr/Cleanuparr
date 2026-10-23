@@ -84,6 +84,7 @@ export interface FunnelStage {
  * and the split of those units by state.
  */
 export function funnelStages(funnel: InstanceFunnel, instanceType: string): { narrowing: FunnelStage[]; split: FunnelStage[] } {
+  const resting: FunnelStage[] = funnel.restingUnits > 0 ? [{ label: 'resting', value: funnel.restingUnits }] : [];
   return {
     narrowing: [
       { label: instanceType === 'Radarr' ? 'movies' : 'series', value: funnel.libraryItems },
@@ -95,6 +96,7 @@ export function funnelStages(funnel: InstanceFunnel, instanceType: string): { na
     split: [
       { label: 'in queue', value: funnel.queuedUnits },
       { label: 'grabbed', value: funnel.recentlyGrabbedUnits },
+      ...resting,
       { label: 'searched', value: funnel.searchedUnits },
       { label: 'left', value: funnel.remainingUnits },
     ],
@@ -111,5 +113,6 @@ export const EXCLUSION_REASON_LABELS: Record<SeekerExclusionReason, string> = {
   [SeekerExclusionReason.UpgradesDisabled]: 'Upgrades disabled',
   [SeekerExclusionReason.InQueue]: 'In queue',
   [SeekerExclusionReason.RecentlyGrabbed]: 'Recently grabbed',
+  [SeekerExclusionReason.Resting]: 'Resting after repeated misses',
   [SeekerExclusionReason.SearchedThisCycle]: 'Searched this cycle',
 };

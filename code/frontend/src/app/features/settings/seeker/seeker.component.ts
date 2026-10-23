@@ -84,6 +84,8 @@ interface InstanceState {
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
   recentGrabWindowHours: number;
+  restUnitsEnabled: boolean;
+  restMaxDays: number;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;
@@ -185,6 +187,8 @@ export class SeekerComponent implements HasPendingChanges {
           activeDownloadLimit: i.activeDownloadLimit,
           ignoreStruckDownloads: i.ignoreStruckDownloads,
           recentGrabWindowHours: i.recentGrabWindowHours,
+          restUnitsEnabled: i.restUnitsEnabled,
+          restMaxDays: i.restMaxDays,
           minCycleTimeDays: i.minCycleTimeDays,
           monitoredOnly: i.monitoredOnly,
           useCutoff: i.useCutoff,
@@ -236,6 +240,14 @@ export class SeekerComponent implements HasPendingChanges {
     this.patchInstance(index, { recentGrabWindowHours: hours ?? 24 });
   }
 
+  updateInstanceRestUnitsEnabled(index: number, enabled: boolean): void {
+    this.patchInstance(index, { restUnitsEnabled: enabled });
+  }
+
+  updateInstanceRestMaxDays(index: number, days: number | null): void {
+    this.patchInstance(index, { restMaxDays: days ?? 30 });
+  }
+
   updateInstanceSonarrSearchMode(index: number, mode: unknown): void {
     this.patchInstance(index, { sonarrSearchMode: mode as SonarrSearchMode });
   }
@@ -263,6 +275,8 @@ export class SeekerComponent implements HasPendingChanges {
         activeDownloadLimit: i.activeDownloadLimit,
         ignoreStruckDownloads: i.ignoreStruckDownloads,
         recentGrabWindowHours: i.recentGrabWindowHours,
+        restUnitsEnabled: i.restUnitsEnabled,
+        restMaxDays: i.restMaxDays,
         minCycleTimeDays: i.minCycleTimeDays,
         monitoredOnly: i.monitoredOnly,
         useCutoff: i.useCutoff,

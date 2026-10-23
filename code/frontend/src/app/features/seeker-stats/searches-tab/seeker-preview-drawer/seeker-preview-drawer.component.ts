@@ -1,13 +1,14 @@
-import { Component, ChangeDetectionStrategy, inject, input, model, computed, linkedSignal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, LOCALE_ID, inject, input, model, computed, linkedSignal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { DatePipe } from '@angular/common';
+import { DatePipe, formatDate } from '@angular/common';
 import {
   BadgeComponent, ButtonComponent, DrawerComponent, EmptyStateComponent,
   InputComponent, PaginatorComponent, SelectComponent, SpinnerComponent,
 } from '@ui';
 import type { SelectOption } from '@ui';
 import { SearchStatsApi } from '@core/api/search-stats.api';
-import type { InstanceSearchStat, SeekerExclusionReason, SeekerPreview } from '@core/models/search-stats.models';
+import { SeekerExclusionReason } from '@core/models/search-stats.models';
+import type { InstanceSearchStat, SeekerPreview, SeekerPreviewExclusion } from '@core/models/search-stats.models';
 import { EXCLUSION_REASON_LABELS, formatSearchReason, funnelStages, searchReasonSeverity } from '../search-display.util';
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -32,6 +33,7 @@ const DEFAULT_PAGE_SIZE = 25;
 })
 export class SeekerPreviewDrawerComponent {
   private readonly api = inject(SearchStatsApi);
+  private readonly locale = inject(LOCALE_ID);
 
   readonly instance = input<InstanceSearchStat | null>(null);
   readonly visible = model(false);
@@ -108,6 +110,15 @@ export class SeekerPreviewDrawerComponent {
 
   onReasonChange(value: unknown): void {
     this.reasonFilter.set(value as SeekerExclusionReason | '');
+  }
+
+  restDetail(item: SeekerPreviewExclusion): string {
+    if (item.reason !== SeekerExclusionReason.Resting) {
+      return '';
+    }
+    const cycles = item.restCyclesLeft ?? 0;
+    const until = item.restUntil ? ` or on ${formatDate(item.restUntil, 'MM/dd', this.locale)}` : '';
+    return `${item.consecutiveMisses ?? 0} misses in a row · back after ${cycles} ${cycles === 1 ? 'cycle' : 'cycles'} end${until}`;
   }
 
   refresh(): void {
