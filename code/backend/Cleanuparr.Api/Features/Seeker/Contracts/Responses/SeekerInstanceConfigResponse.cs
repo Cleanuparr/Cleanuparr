@@ -35,4 +35,8 @@ public sealed record SeekerInstanceConfigResponse
     public int RecentGrabWindowHours { get; init; }
 
     public SonarrSearchMode SonarrSearchMode { get; init; }
+
+    public bool RestUnitsEnabled { get; init; }
+
+    public int RestMaxDays { get; init; }
 }
