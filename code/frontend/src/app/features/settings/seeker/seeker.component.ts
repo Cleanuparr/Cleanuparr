@@ -144,13 +144,18 @@ export class SeekerComponent implements HasPendingChanges {
   readonly seekerForm = form(this.model, (p) => {
     min(p.postReleaseGraceHours, 0);
     max(p.postReleaseGraceHours, 72);
-    required(p.quietHoursStart, { message: 'Start time is required' });
-    required(p.quietHoursEnd, { message: 'End time is required' });
+    required(p.quietHoursStart, { when: () => this.quietHoursVisible(), message: 'Start time is required' });
+    required(p.quietHoursEnd, { when: () => this.quietHoursVisible(), message: 'End time is required' });
     validate(p.quietHoursEnd, ({ valueOf }) =>
-      valueOf(p.quietHoursStart) === valueOf(p.quietHoursEnd)
+      this.quietHoursVisible() && valueOf(p.quietHoursStart) === valueOf(p.quietHoursEnd)
         ? { kind: 'sameTime', message: 'Start and end must differ' }
         : undefined);
   });
+
+  private quietHoursVisible(): boolean {
+    const m: SeekerFormModel = this.model();
+    return m.searchEnabled && m.proactiveSearchEnabled && m.quietHoursEnabled;
+  }
 
   readonly instances = signal<InstanceState[]>([]);
 
@@ -283,8 +288,8 @@ export class SeekerComponent implements HasPendingChanges {
       useRoundRobin: m.useRoundRobin,
       postReleaseGraceHours: m.postReleaseGraceHours ?? 6,
       quietHoursEnabled: m.quietHoursEnabled,
-      quietHoursStart: m.quietHoursStart,
-      quietHoursEnd: m.quietHoursEnd,
+      quietHoursStart: m.quietHoursStart || '23:00',
+      quietHoursEnd: m.quietHoursEnd || '07:00',
       instances: this.instances().map(i => ({
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,

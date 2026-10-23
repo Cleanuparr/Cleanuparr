@@ -78,7 +78,9 @@ test.describe.serial('Seeker — config', () => {
     const current = await (await api.seeker.getConfig()).json();
     const res = await api.seeker.updateConfig({
       ...current,
-      quietHoursEnabled: false,
+      searchEnabled: true,
+      proactiveSearchEnabled: true,
+      quietHoursEnabled: true,
       quietHoursStart: '08:00',
       quietHoursEnd: '08:00',
     });

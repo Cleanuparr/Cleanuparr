@@ -107,11 +107,31 @@ public sealed class SeekerConfigTests
     {
         SeekerConfig config = new()
         {
+            ProactiveSearchEnabled = true,
+            QuietHoursEnabled = true,
             QuietHoursStart = new TimeOnly(5, 0),
             QuietHoursEnd = new TimeOnly(5, 0)
         };
 
         Should.Throw<CustomValidationException>(() => config.Validate());
+    }
+
+    [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public void Validate_WithEqualQuietHoursThatNeverApply_DoesNotThrow(bool searchEnabled, bool proactiveSearchEnabled, bool quietHoursEnabled)
+    {
+        SeekerConfig config = new()
+        {
+            SearchEnabled = searchEnabled,
+            ProactiveSearchEnabled = proactiveSearchEnabled,
+            QuietHoursEnabled = quietHoursEnabled,
+            QuietHoursStart = new TimeOnly(5, 0),
+            QuietHoursEnd = new TimeOnly(5, 0)
+        };
+
+        Should.NotThrow(() => config.Validate());
     }
 
     [Fact]

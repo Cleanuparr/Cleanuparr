@@ -252,6 +252,7 @@ public class SeekerConfigControllerTests : IDisposable
         {
             SearchEnabled = true,
             SearchInterval = 5,
+            ProactiveSearchEnabled = true,
             QuietHoursEnabled = true,
             QuietHoursStart = new TimeOnly(7, 0),
             QuietHoursEnd = new TimeOnly(7, 0),

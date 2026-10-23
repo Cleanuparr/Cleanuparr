@@ -608,6 +608,53 @@ describe('SeekerComponent', () => {
     expect(saveButton(fixture).disabled).toBe(false);
   });
 
+  it('blocks saving while a visible quiet hours time is cleared', () => {
+    const { fixture, component } = setup();
+
+    component.seekerForm.quietHoursStart().value.set('');
+    fixture.detectChanges();
+
+    expect(component.hasErrors()).toBe(true);
+    expect(saveButton(fixture).disabled).toBe(true);
+  });
+
+  it('allows saving a cleared quiet hours time once quiet hours are off', () => {
+    const { fixture, component } = setup();
+
+    component.seekerForm.quietHoursStart().value.set('');
+    component.seekerForm.quietHoursEnabled().value.set(false);
+    fixture.detectChanges();
+
+    expect(component.hasErrors()).toBe(false);
+    expect(saveButton(fixture).disabled).toBe(false);
+  });
+
+  it('allows saving a cleared quiet hours time once proactive search is off', () => {
+    const { fixture, component } = setup();
+
+    component.seekerForm.quietHoursEnd().value.set('');
+    component.seekerForm.proactiveSearchEnabled().value.set(false);
+    fixture.detectChanges();
+
+    expect(component.hasErrors()).toBe(false);
+    expect(saveButton(fixture).disabled).toBe(false);
+  });
+
+  it('sends default quiet hours for cleared times', () => {
+    const { fixture, component, updateConfig } = setup();
+
+    component.seekerForm.quietHoursStart().value.set('');
+    component.seekerForm.quietHoursEnd().value.set('');
+    component.seekerForm.quietHoursEnabled().value.set(false);
+    fixture.detectChanges();
+
+    component.save();
+
+    expect(updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ quietHoursStart: '23:00', quietHoursEnd: '07:00' }),
+    );
+  });
+
   it('confirms before turning round robin off and leaves it on when cancelled', async () => {
     const { fixture, component, confirm } = setup();
 

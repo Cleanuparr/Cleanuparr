@@ -90,7 +90,7 @@ public sealed record SeekerConfig : IConfig
             throw new CustomValidationException($"{nameof(PostReleaseGraceHours)} must be between 0 and 72");
         }
 
-        if (QuietHoursStart == QuietHoursEnd)
+        if (SearchEnabled && ProactiveSearchEnabled && QuietHoursEnabled && QuietHoursStart == QuietHoursEnd)
         {
             throw new CustomValidationException($"{nameof(QuietHoursStart)} and {nameof(QuietHoursEnd)} must differ");
         }
