@@ -400,6 +400,11 @@ public class SeekerCommandMonitor : BackgroundService
             if (unit is not null && unit.CycleId == cycleId.Value)
             {
                 unit.LastOutcome = outcome;
+
+                if (outcome is SeekerSearchOutcome.NothingGrabbed)
+                {
+                    unit.ConsecutiveMisses++;
+                }
             }
 
             if (outcome is not SeekerSearchOutcome.Grabbed)
@@ -410,6 +415,7 @@ public class SeekerCommandMonitor : BackgroundService
             if (unit is not null)
             {
                 unit.Grabs++;
+                unit.ConsecutiveMisses = 0;
             }
 
             SeekerCycle? cycle = await eventsContext.SeekerCycles.FindAsync(cycleId.Value);

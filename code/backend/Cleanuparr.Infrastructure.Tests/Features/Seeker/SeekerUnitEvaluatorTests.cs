@@ -1514,6 +1514,339 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
     #endregion
 
+    #region Resting
+
+    private static readonly DateTimeOffset RestNow = new(2026, 1, 10, 12, 0, 0, TimeSpan.Zero);
+
+    private static SeekerHistory Missed(int misses, DateTimeOffset searchedAt)
+    {
+        return new SeekerHistory
+        {
+            ArrInstanceId = Guid.NewGuid(),
+            ExternalItemId = 1,
+            ConsecutiveMisses = misses,
+            LastSearchedAt = searchedAt,
+        };
+    }
+
+    private async Task SeedMissesAsync(
+        ArrInstance instance,
+        long itemId,
+        int misses,
+        DateTimeOffset searchedAt,
+        int seasonNumber = 0,
+        long episodeId = 0,
+        bool isDryRun = false)
+    {
+        await _eventsContext.SeekerHistory.AddAsync(History(instance, itemId, searchedAt, seasonNumber, episodeId) with
+        {
+            ConsecutiveMisses = misses,
+            IsDryRun = isDryRun,
+        });
+        await _eventsContext.SaveChangesAsync();
+    }
+
+    private async Task SeedCycleStartsAsync(ArrInstance instance, params DateTimeOffset[] startedAt)
+    {
+        foreach (DateTimeOffset start in startedAt)
+        {
+            await _eventsContext.SeekerCycles.AddAsync(new SeekerCycle { ArrInstanceId = instance.Id, StartedAt = start });
+        }
+
+        await _eventsContext.SaveChangesAsync();
+    }
+
+    [Fact]
+    public void GetRest_TwoMisses_ReturnsNull()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(2, RestNow.AddDays(-2));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [], 30, RestNow);
+
+        // Assert
+        rest.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetRest_ThreeMissesAndNoCycleSince_RestsForTwoMoreCycleEnds()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(3, RestNow.AddDays(-2));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [], 30, RestNow);
+
+        // Assert
+        rest.ShouldNotBeNull();
+        rest.ConsecutiveMisses.ShouldBe(3);
+        rest.CyclesLeft.ShouldBe(2);
+        rest.Until.ShouldBe(unit.LastSearchedAt.AddDays(30));
+    }
+
+    [Fact]
+    public void GetRest_ThreeMissesAndOneCycleSince_RestsForOneMoreCycleEnd()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(3, RestNow.AddDays(-2));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [RestNow.AddDays(-1)], 30, RestNow);
+
+        // Assert
+        rest.ShouldNotBeNull();
+        rest.CyclesLeft.ShouldBe(1);
+    }
+
+    [Fact]
+    public void GetRest_ThreeMissesAndTwoCyclesSince_ReturnsNull()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(3, RestNow.AddDays(-2));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [RestNow.AddDays(-1), RestNow.AddHours(-1)], 30, RestNow);
+
+        // Assert
+        rest.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(3, 2)]
+    [InlineData(4, 3)]
+    [InlineData(5, 5)]
+    [InlineData(6, 9)]
+    [InlineData(10, 9)]
+    public void GetRest_RestDoublesPerMissAndCapsAtEightCycles(int misses, int expectedCyclesLeft)
+    {
+        // Arrange
+        SeekerHistory unit = Missed(misses, RestNow.AddDays(-2));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [], 30, RestNow);
+
+        // Assert
+        rest.ShouldNotBeNull();
+        rest.CyclesLeft.ShouldBe(expectedCyclesLeft);
+    }
+
+    [Fact]
+    public void GetRest_DayCapPassedWithCyclesLeft_ReturnsNull()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(6, RestNow.AddDays(-5));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [], 5, RestNow);
+
+        // Assert
+        rest.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetRest_CycleStartEqualToLastSearchedAt_DoesNotCount()
+    {
+        // Arrange
+        SeekerHistory unit = Missed(3, RestNow.AddDays(-2));
+
+        // Act
+        SeekerUnitRest? rest = SeekerUnitEvaluator.GetRest(unit, [unit.LastSearchedAt], 30, RestNow);
+
+        // Assert
+        rest.ShouldNotBeNull();
+        rest.CyclesLeft.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_RestingMovie_ExcludesAsRestingWithRestDetail()
+    {
+        // Arrange
+        SetupRadarr([Movie(1), Movie(2)]);
+        await SeedMissesAsync(_radarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.RestUnitsEnabled = true));
+
+        // Assert
+        SeekerExclusion exclusion = evaluation.Excluded.Single(e => e.Name == "Movie 1");
+        exclusion.Reason.ShouldBe(SeekerExclusionReason.Resting);
+        exclusion.Rest.ShouldNotBeNull();
+        exclusion.Rest.ConsecutiveMisses.ShouldBe(3);
+        exclusion.Rest.CyclesLeft.ShouldBe(2);
+        evaluation.Remaining.ShouldHaveSingleItem().ItemId.ShouldBe(2);
+        evaluation.RestingUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_RestingAndQueued_QueueWins()
+    {
+        // Arrange
+        SetupRadarr([Movie(1)]);
+        await SeedMissesAsync(_radarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            InstanceConfig(_radarr, c => c.RestUnitsEnabled = true),
+            queue: [Queued(movieId: 1)]);
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.InQueue);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_RestingAndRecentlyGrabbed_RecentlyGrabbedWins()
+    {
+        // Arrange
+        SetupRadarr([Movie(1)]);
+        await SeedMissesAsync(_radarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            InstanceConfig(_radarr, c => c.RestUnitsEnabled = true),
+            recentGrabs: new SeekerRecentGrabs { MovieIds = [1] });
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.RecentlyGrabbed);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_RestingDisabled_StaysSearchable()
+    {
+        // Arrange
+        SetupRadarr([Movie(1)]);
+        await SeedMissesAsync(_radarr, 1, 5, _timeProvider.GetUtcNow().AddDays(-2));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr));
+
+        // Assert
+        evaluation.Remaining.ShouldHaveSingleItem().ItemId.ShouldBe(1);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_DryRunHistoryRow_IsIgnored()
+    {
+        // Arrange
+        SetupRadarr([Movie(1)]);
+        await SeedMissesAsync(_radarr, 1, 5, _timeProvider.GetUtcNow().AddDays(-2), isDryRun: true);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.RestUnitsEnabled = true));
+
+        // Assert
+        evaluation.Remaining.ShouldHaveSingleItem().ItemId.ShouldBe(1);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_RestEndsAfterEnoughCycles_StaysSearchable()
+    {
+        // Arrange
+        SetupRadarr([Movie(1)]);
+        DateTimeOffset searchedAt = _timeProvider.GetUtcNow().AddDays(-3);
+        await SeedMissesAsync(_radarr, 1, 3, searchedAt);
+        await SeedCycleStartsAsync(_radarr, searchedAt.AddDays(1), searchedAt.AddDays(2));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.RestUnitsEnabled = true));
+
+        // Assert
+        evaluation.Remaining.ShouldHaveSingleItem().ItemId.ShouldBe(1);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_DayCapPassed_UnitIsBackInRemaining()
+    {
+        // Arrange
+        SetupRadarr([Movie(1)]);
+        await SeedMissesAsync(_radarr, 1, 8, _timeProvider.GetUtcNow().AddDays(-2));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            InstanceConfig(_radarr, c =>
+            {
+                c.RestUnitsEnabled = true;
+                c.RestMaxDays = 1;
+            }));
+
+        // Assert
+        evaluation.Remaining.ShouldHaveSingleItem().ItemId.ShouldBe(1);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_RestingSeasonUnit_ExcludesAsResting()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], [Episode(10, 1), Episode(20, 1, season: 2)]);
+        await SeedMissesAsync(_sonarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2), seasonNumber: 1);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c =>
+            {
+                c.SonarrSearchMode = SonarrSearchMode.Season;
+                c.RestUnitsEnabled = true;
+            }));
+
+        // Assert
+        SeekerExclusion exclusion = evaluation.Excluded.Single(e => e.Name == "Series 1 S01");
+        exclusion.Reason.ShouldBe(SeekerExclusionReason.Resting);
+        exclusion.Rest.ShouldNotBeNull();
+        evaluation.Remaining.ShouldHaveSingleItem().SeasonNumber.ShouldBe(2);
+        evaluation.RestingUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_RestingEpisodeUnit_RestsByExactEpisodeId()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(1, 2)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+        await SeedMissesAsync(_sonarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2), seasonNumber: 1, episodeId: 102);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c =>
+            {
+                c.SonarrSearchMode = SonarrSearchMode.Episode;
+                c.RestUnitsEnabled = true;
+            }));
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 102).BlockedBy.ShouldBe(SeekerExclusionReason.Resting);
+        evaluation.Units.Single(u => u.EpisodeId == 103).BlockedBy.ShouldBeNull();
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(103);
+        evaluation.RestingUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_DayCapPassed_UnitIsBackInRemaining()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], [Episode(10, 1)]);
+        await SeedMissesAsync(_sonarr, 1, 8, _timeProvider.GetUtcNow().AddDays(-2), seasonNumber: 1);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c =>
+            {
+                c.SonarrSearchMode = SonarrSearchMode.Season;
+                c.RestUnitsEnabled = true;
+                c.RestMaxDays = 1;
+            }));
+
+        // Assert
+        evaluation.Remaining.ShouldHaveSingleItem().SeasonNumber.ShouldBe(1);
+        evaluation.RestingUnits.ShouldBe(0);
+    }
+
+    #endregion
+
     #region ReadRecentGrabsAsync
 
     [Fact]

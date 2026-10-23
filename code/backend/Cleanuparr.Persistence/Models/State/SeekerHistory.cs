@@ -71,6 +71,11 @@ public sealed record SeekerHistory
     public int Grabs { get; set; }
 
     /// <summary>
+    /// Searches in a row that grabbed nothing; a grab clears it
+    /// </summary>
+    public int ConsecutiveMisses { get; set; }
+
+    /// <summary>
     /// Result of the last search. Null until that search finishes.
     /// </summary>
     public SeekerSearchOutcome? LastOutcome { get; set; }

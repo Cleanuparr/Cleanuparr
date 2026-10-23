@@ -95,6 +95,11 @@ public sealed record SeekerCycle
     public int RecentlyGrabbedUnits { get; set; }
 
     /// <summary>
+    /// Eligible units on the latest run that rest after repeated searches found nothing
+    /// </summary>
+    public int RestingUnits { get; set; }
+
+    /// <summary>
     /// When the latest run counted the funnel. Null until a run does.
     /// </summary>
     public DateTimeOffset? FunnelCountedAt { get; set; }

@@ -98,6 +98,16 @@ public sealed record SeekerInstanceConfig
     public SonarrSearchMode SonarrSearchMode { get; set; } = SonarrSearchMode.Auto;
 
     /// <summary>
+    /// Skips units whose recent searches in a row found nothing, for a rest that doubles with each further miss.
+    /// </summary>
+    public bool RestUnitsEnabled { get; set; }
+
+    /// <summary>
+    /// Days after which a rest ends, however many cycles it had left.
+    /// </summary>
+    public int RestMaxDays { get; set; } = 30;
+
+    /// <summary>
     /// Validates this instance's configuration, throwing <see cref="CustomValidationException"/> on failure.
     /// </summary>
     public void Validate()
@@ -105,6 +115,11 @@ public sealed record SeekerInstanceConfig
         if (RecentGrabWindowHours is < 0 or > 168)
         {
             throw new CustomValidationException($"{nameof(RecentGrabWindowHours)} must be between 0 and 168");
+        }
+
+        if (RestMaxDays is < 1 or > 365)
+        {
+            throw new CustomValidationException($"{nameof(RestMaxDays)} must be between 1 and 365");
         }
     }
 }

@@ -674,6 +674,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("INTEGER")
                         .HasColumnName("remaining_units");
 
+                    b.Property<int>("RestingUnits")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("resting_units");
+
                     b.Property<int>("SearchedUnits")
                         .HasColumnType("INTEGER")
                         .HasColumnName("searched_units");
@@ -706,6 +710,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("TEXT")
                         .HasColumnName("arr_instance_id");
+
+                    b.Property<int>("ConsecutiveMisses")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("consecutive_misses");
 
                     b.Property<string>("ContentKind")
                         .IsRequired()

@@ -27,6 +27,17 @@ public sealed class SeekerInstanceConfigTests
         Should.NotThrow(() => config.Validate());
     }
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(30)]
+    [InlineData(365)]
+    public void Validate_WithBoundaryRestMaxDays_DoesNotThrow(int days)
+    {
+        var config = new SeekerInstanceConfig { RestMaxDays = days };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
     #endregion
 
     #region Validate - Invalid Configurations
@@ -40,6 +51,18 @@ public sealed class SeekerInstanceConfigTests
 
         var exception = Should.Throw<CustomValidationException>(() => config.Validate());
         exception.Message.ShouldContain("between 0 and 168");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(366)]
+    public void Validate_WithOutOfRangeRestMaxDays_ThrowsValidationException(int days)
+    {
+        var config = new SeekerInstanceConfig { RestMaxDays = days };
+
+        var exception = Should.Throw<CustomValidationException>(() => config.Validate());
+        exception.Message.ShouldContain("between 1 and 365");
     }
 
     #endregion
