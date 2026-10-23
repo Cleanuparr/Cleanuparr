@@ -17,6 +17,12 @@ public sealed record UpdateSeekerConfigRequest
 
     public int PostReleaseGraceHours { get; init; } = 6;
 
+    public bool QuietHoursEnabled { get; init; }
+
+    public TimeOnly QuietHoursStart { get; init; } = new(23, 0);
+
+    public TimeOnly QuietHoursEnd { get; init; } = new(7, 0);
+
     public List<UpdateSeekerInstanceConfigRequest> Instances { get; init; } = [];
 
     public SeekerConfig ApplyTo(SeekerConfig config)
@@ -27,6 +33,9 @@ public sealed record UpdateSeekerConfigRequest
         config.SelectionStrategy = SelectionStrategy;
         config.UseRoundRobin = UseRoundRobin;
         config.PostReleaseGraceHours = PostReleaseGraceHours;
+        config.QuietHoursEnabled = QuietHoursEnabled;
+        config.QuietHoursStart = QuietHoursStart;
+        config.QuietHoursEnd = QuietHoursEnd;
 
         return config;
     }

@@ -85,6 +85,9 @@ public sealed class SeekerConfigController : ControllerBase
             SelectionStrategy = config.SelectionStrategy,
             UseRoundRobin = config.UseRoundRobin,
             PostReleaseGraceHours = config.PostReleaseGraceHours,
+            QuietHoursEnabled = config.QuietHoursEnabled,
+            QuietHoursStart = config.QuietHoursStart,
+            QuietHoursEnd = config.QuietHoursEnd,
             Instances = instanceResponses,
         };
 
