@@ -378,6 +378,33 @@ public class SeekerPreviewControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPreview_RestEndsBeforeMinCycleTime_WaitsForTheRestEnd()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 60, restUnitsEnabled: true);
+        DateTimeOffset startedAt = Now.AddDays(-2);
+        AddCycle(cycleId, radarr.Id, startedAt, searchedUnits: 0);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = Guid.NewGuid(),
+            LastSearchedAt = Now.AddDays(-3),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        DateTimeOffset restUntil = response.Excluded.ShouldHaveSingleItem().RestUntil.ShouldNotBeNull();
+        restUntil.ShouldBeLessThan(startedAt.AddDays(60));
+        response.CycleWaitingUntil.ShouldBe(restUntil);
+    }
+
+    [Fact]
     public async Task GetPreview_UnsearchedCycleWithNothingLeftOrResting_DoesNotWait()
     {
         Guid cycleId = Guid.NewGuid();
