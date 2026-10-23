@@ -56,6 +56,9 @@ const CONFIG: SeekerConfig = {
   selectionStrategy: SelectionStrategy.BalancedWeighted,
   useRoundRobin: true,
   postReleaseGraceHours: 6,
+  quietHoursEnabled: true,
+  quietHoursStart: '23:00:00',
+  quietHoursEnd: '07:30:00',
   instances: [SONARR, RADARR],
 };
 
@@ -623,6 +626,35 @@ describe('SeekerComponent', () => {
     expect(confirm.state()).toBeNull();
   });
 
+  it('loads quiet hours trimmed to HH:mm', () => {
+    const { component } = setup();
+
+    expect(component.seekerForm.quietHoursEnabled().value()).toBe(true);
+    expect(component.seekerForm.quietHoursStart().value()).toBe('23:00');
+    expect(component.seekerForm.quietHoursEnd().value()).toBe('07:30');
+  });
+
+  it('renders the time inputs only when quiet hours are enabled', () => {
+    const { fixture, component } = setup();
+
+    expect(fixture.nativeElement.querySelectorAll('input[type="time"]').length).toBe(2);
+
+    component.seekerForm.quietHoursEnabled().value.set(false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelectorAll('input[type="time"]').length).toBe(0);
+  });
+
+  it('marks the form invalid when quiet hours start and end match', () => {
+    const { fixture, component } = setup();
+
+    component.seekerForm.quietHoursEnd().value.set('23:00');
+    fixture.detectChanges();
+
+    expect(component.hasErrors()).toBe(true);
+    expect(text(fixture)).toContain('Start and end must differ');
+  });
+
   it('posts every edited field and goes clean again', () => {
     const { fixture, component, updateConfig, toasts } = setup();
 
@@ -644,6 +676,9 @@ describe('SeekerComponent', () => {
       selectionStrategy: SelectionStrategy.NewestFirst,
       useRoundRobin: true,
       postReleaseGraceHours: 24,
+      quietHoursEnabled: true,
+      quietHoursStart: '23:00',
+      quietHoursEnd: '07:30',
       instances: [
         {
           arrInstanceId: SONARR.arrInstanceId,

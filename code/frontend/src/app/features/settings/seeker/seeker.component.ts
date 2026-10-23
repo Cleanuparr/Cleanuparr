@@ -1,10 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
-import { form, min, max, FormField } from '@angular/forms/signals';
+import { form, min, max, required, validate, FormField } from '@angular/forms/signals';
 import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
-  SelectComponent, ChipInputComponent, NumberInputComponent,
+  SelectComponent, ChipInputComponent, NumberInputComponent, InputComponent,
   EmptyStateComponent, LoadingStateComponent, BadgeComponent,
   type SelectOption,
 } from '@ui';
@@ -70,6 +70,9 @@ interface SeekerFormModel {
   selectionStrategy: SelectionStrategy;
   useRoundRobin: boolean;
   postReleaseGraceHours: number | null;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
 }
 
 interface InstanceState {
@@ -98,7 +101,7 @@ interface InstanceState {
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent,
+    ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent, InputComponent,
     EmptyStateComponent, LoadingStateComponent, BadgeComponent, DatePipe, FormField,
   ],
   templateUrl: './seeker.component.html',
@@ -133,11 +136,20 @@ export class SeekerComponent implements HasPendingChanges {
     selectionStrategy: SelectionStrategy.BalancedWeighted,
     useRoundRobin: true,
     postReleaseGraceHours: 6,
+    quietHoursEnabled: false,
+    quietHoursStart: '23:00',
+    quietHoursEnd: '07:00',
   });
 
   readonly seekerForm = form(this.model, (p) => {
     min(p.postReleaseGraceHours, 0);
     max(p.postReleaseGraceHours, 72);
+    required(p.quietHoursStart, { message: 'Start time is required' });
+    required(p.quietHoursEnd, { message: 'End time is required' });
+    validate(p.quietHoursEnd, ({ valueOf }) =>
+      valueOf(p.quietHoursStart) === valueOf(p.quietHoursEnd)
+        ? { kind: 'sameTime', message: 'Start and end must differ' }
+        : undefined);
   });
 
   readonly instances = signal<InstanceState[]>([]);
@@ -174,6 +186,9 @@ export class SeekerComponent implements HasPendingChanges {
           selectionStrategy: config.selectionStrategy,
           useRoundRobin: config.useRoundRobin,
           postReleaseGraceHours: config.postReleaseGraceHours,
+          quietHoursEnabled: config.quietHoursEnabled,
+          quietHoursStart: config.quietHoursStart.slice(0, 5),
+          quietHoursEnd: config.quietHoursEnd.slice(0, 5),
         });
         this.instances.set(config.instances.map(i => ({
           arrInstanceId: i.arrInstanceId,
@@ -267,6 +282,9 @@ export class SeekerComponent implements HasPendingChanges {
       selectionStrategy: m.selectionStrategy,
       useRoundRobin: m.useRoundRobin,
       postReleaseGraceHours: m.postReleaseGraceHours ?? 6,
+      quietHoursEnabled: m.quietHoursEnabled,
+      quietHoursStart: m.quietHoursStart,
+      quietHoursEnd: m.quietHoursEnd,
       instances: this.instances().map(i => ({
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,

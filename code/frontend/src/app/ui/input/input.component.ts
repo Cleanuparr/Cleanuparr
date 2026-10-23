@@ -21,7 +21,7 @@ export class InputComponent {
   label = input<string>();
   featureId = input<string>();
   placeholder = input('');
-  type = input<'text' | 'password' | 'email' | 'url' | 'search' | 'datetime-local' | 'date' | 'number'>('text');
+  type = input<'text' | 'password' | 'email' | 'url' | 'search' | 'datetime-local' | 'date' | 'time' | 'number'>('text');
   disabled = input(false);
   readonly = input(false);
   revealable = input(true);

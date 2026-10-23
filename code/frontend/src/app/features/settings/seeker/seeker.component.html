@@ -64,6 +64,18 @@
           [formField]="seekerForm.postReleaseGraceHours"
           helpKey="seeker:postReleaseGraceHours"
         />
+        <app-toggle label="Quiet Hours" [formField]="seekerForm.quietHoursEnabled"
+          hint="Pause proactive search between these times. Replacement searches keep running. Times follow the container's TZ setting."
+          helpKey="seeker:quietHoursEnabled" featureId="seeker-quiet-hours" />
+        @if (seekerForm.quietHoursEnabled().value()) {
+          <app-input type="time" label="Quiet From" [formField]="seekerForm.quietHoursStart"
+            [error]="seekerForm.quietHoursStart().errors()[0]?.message"
+            helpKey="seeker:quietHoursEnabled" />
+          <app-input type="time" label="Quiet Until" [formField]="seekerForm.quietHoursEnd"
+            hint="A window that ends before it starts runs past midnight, for example 23:00 to 07:00."
+            [error]="seekerForm.quietHoursEnd().errors()[0]?.message"
+            helpKey="seeker:quietHoursEnabled" />
+        }
       }
     </div>
   </app-card>
