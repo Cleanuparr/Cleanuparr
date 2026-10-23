@@ -122,10 +122,10 @@ public sealed class SeekerPreviewController : ControllerBase
             DateTimeOffset minCycleEnd = cycle.StartedAt.AddDays(instanceConfig.MinCycleTimeDays);
             if (_timeProvider.GetUtcNow() < minCycleEnd)
             {
-                // A rest ending first frees its unit for the next run.
-                DateTimeOffset? earliestRestUntil = evaluation.Excluded
-                    .Where(e => e.Reason == SeekerExclusionReason.Resting)
-                    .Select(e => e.Rest?.Until)
+                // A rest ending first frees its unit for the next run, unless the unit was searched this cycle.
+                DateTimeOffset? earliestRestUntil = evaluation.Units
+                    .Where(u => u.BlockedBy == SeekerExclusionReason.Resting && !u.Searched)
+                    .Select(u => u.Rest?.Until)
                     .Min();
                 waitingUntil = earliestRestUntil is { } restUntil && restUntil < minCycleEnd
                     ? restUntil
