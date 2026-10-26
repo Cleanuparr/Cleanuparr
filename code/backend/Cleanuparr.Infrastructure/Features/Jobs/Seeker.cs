@@ -377,9 +377,12 @@ public sealed class Seeker : IHandler
                 instanceType, arrInstance.Name);
         }
 
-        // Update LastProcessedAt so round-robin moves on
-        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
-        await _dataContext.SaveChangesAsync();
+        // A run cut short by quiet hours keeps this instance first in the round-robin order
+        if (searched || !IsQuietNow(config))
+        {
+            instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
+            await _dataContext.SaveChangesAsync();
+        }
 
         return searched;
     }

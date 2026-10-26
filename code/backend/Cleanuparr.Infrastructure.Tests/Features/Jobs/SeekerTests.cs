@@ -297,6 +297,10 @@ public class SeekerTests : IDisposable
         await CreateSut().ExecuteAsync();
 
         await mockArrClient.DidNotReceive().SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+
+        _fixture.DataContext.ChangeTracker.Clear();
+        SeekerInstanceConfig instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs.FirstAsync();
+        instanceConfig.LastProcessedAt.ShouldBeNull();
     }
 
     [Fact]
