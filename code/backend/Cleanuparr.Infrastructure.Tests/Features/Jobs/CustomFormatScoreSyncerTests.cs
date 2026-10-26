@@ -29,6 +29,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IStatusNotifier _statusNotifier;
 
     public CustomFormatScoreSyncerTests(JobHandlerFixture fixture)
@@ -39,6 +40,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         _logger = Substitute.For<ILogger<CustomFormatScoreSyncer>>();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _statusNotifier = Substitute.For<IStatusNotifier>();
 
     }
@@ -56,6 +58,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             _fixture.EventsContext,
             _radarrClient,
             _sonarrClient,
+            _whisparrV3Client,
             _fixture.TimeProvider,
             _statusNotifier,
             new SqliteDatabaseProvider()
@@ -167,6 +170,73 @@ public class CustomFormatScoreSyncerTests : IDisposable
         history.ShouldHaveSingleItem();
         history[0].Score.ShouldBe(250);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WhisparrV3_SyncsMovieScoresAsWhisparrEntries()
+    {
+        // Arrange
+        ArrInstance whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 3);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = whisparrInstance.Id,
+            ArrInstance = whisparrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        _fixture.EventsContext.CustomFormatScoreEntries.AddRange(
+            StaleEntry(whisparrInstance.Id, 999, InstanceType.Whisparr),
+            StaleEntry(whisparrInstance.Id, 998, InstanceType.Radarr));
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _whisparrV3Client
+            .GetQualityProfilesAsync(whisparrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+        _whisparrV3Client
+            .StreamAllMoviesAsync(whisparrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie
+                {
+                    Id = 10, Title = "Test Scene", HasFile = true,
+                    MovieFile = new MovieFileInfo { Id = 100, QualityCutoffNotMet = false },
+                    QualityProfileId = 1, Status = "released", Monitored = true
+                }
+            ]));
+        _whisparrV3Client
+            .GetMovieFileScoresAsync(whisparrInstance, Arg.Any<List<long>>())
+            .Returns(new Dictionary<long, int> { { 100, 250 } });
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries
+            .OrderBy(e => e.ExternalItemId)
+            .ToListAsync();
+        entries.Count.ShouldBe(2);
+        entries[0].ExternalItemId.ShouldBe(10);
+        entries[0].ItemType.ShouldBe(InstanceType.Whisparr);
+        entries[0].CurrentScore.ShouldBe(250);
+        entries[1].ExternalItemId.ShouldBe(998);
+        entries[1].ItemType.ShouldBe(InstanceType.Radarr);
+        _radarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    private static CustomFormatScoreEntry StaleEntry(Guid arrInstanceId, long externalItemId, InstanceType itemType) => new()
+    {
+        ArrInstanceId = arrInstanceId,
+        ExternalItemId = externalItemId,
+        ItemType = itemType,
+        Title = "Deleted Movie",
+        FileId = externalItemId,
+        CurrentScore = 100,
+        CutoffScore = 500,
+        QualityProfileName = "HD",
+        LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+    };
 
     [Fact]
     public async Task ExecuteAsync_RecordsHistoryOnScoreChange()
@@ -805,6 +875,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 eventsContext,
                 _radarrClient,
                 _sonarrClient,
+                _whisparrV3Client,
                 new FakeTimeProvider(),
                 _statusNotifier,
                 new SqliteDatabaseProvider());
@@ -1423,6 +1494,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 eventsContext,
                 _radarrClient,
                 _sonarrClient,
+                _whisparrV3Client,
                 new FakeTimeProvider(),
                 _statusNotifier,
                 new SqliteDatabaseProvider());
