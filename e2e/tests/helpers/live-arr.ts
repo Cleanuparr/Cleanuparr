@@ -2,7 +2,7 @@ import { TEST_CONFIG } from './test-config';
 import { WireMockClient } from './mocks/wiremock-client';
 
 /**
- * Direct access to the real Sonarr, Radarr and Whisparr v3 containers.
+ * Direct access to the real Sonarr, Radarr, Whisparr v3 and Lidarr containers.
  *
  * The specs drive Cleanuparr through its own API, like every other spec.
  * This is the other side of the contract: what the arr itself ended up with.
@@ -18,6 +18,8 @@ export interface LiveArrQueueRecord {
   seriesId?: number;
   seasonNumber?: number;
   movieId?: number;
+  artistId?: number;
+  albumId?: number;
 }
 
 export interface LiveArrCommand {
@@ -32,6 +34,7 @@ export class LiveArr {
     readonly url: string,
     private readonly apiKey: string,
     private readonly queueQuery: string,
+    readonly apiVersion: string = 'v3',
   ) {}
 
   get<T>(path: string): Promise<T> {
@@ -52,14 +55,14 @@ export class LiveArr {
 
   /** Creates the tag if the arr does not have it yet, and returns its id. */
   async ensureTag(label: string): Promise<number> {
-    const tags = await this.get<Array<{ id: number; label: string }>>('/api/v3/tag');
+    const tags = await this.get<Array<{ id: number; label: string }>>(`/api/${this.apiVersion}/tag`);
     const existing = tags.find((tag) => tag.label === label);
 
     if (existing) {
       return existing.id;
     }
 
-    return (await this.post<{ id: number }>('/api/v3/tag', { label })).id;
+    return (await this.post<{ id: number }>(`/api/${this.apiVersion}/tag`, { label })).id;
   }
 
   private async request(path: string, init?: RequestInit): Promise<unknown> {
@@ -83,19 +86,19 @@ export class LiveArr {
   }
 
   async queuePage(page = 1): Promise<{ records?: LiveArrQueueRecord[]; totalRecords: number }> {
-    return (await this.request(`/api/v3/queue?page=${page}&pageSize=200&${this.queueQuery}`)) as {
+    return (await this.request(`/api/${this.apiVersion}/queue?page=${page}&pageSize=200&${this.queueQuery}`)) as {
       records?: LiveArrQueueRecord[];
       totalRecords: number;
     };
   }
 
   async commands(): Promise<LiveArrCommand[]> {
-    return (await this.request('/api/v3/command')) as LiveArrCommand[];
+    return (await this.request(`/api/${this.apiVersion}/command`)) as LiveArrCommand[];
   }
 
   /** The arr only queues a grab on its own refresh, which runs once a minute. */
   async refreshMonitoredDownloads(): Promise<void> {
-    await this.request('/api/v3/command', {
+    await this.request(`/api/${this.apiVersion}/command`, {
       method: 'POST',
       body: JSON.stringify({ name: 'RefreshMonitoredDownloads' }),
     });
@@ -105,7 +108,7 @@ export class LiveArr {
   async clearQueue(): Promise<void> {
     for (const record of await this.queue()) {
       await this.request(
-        `/api/v3/queue/${record.id}?removeFromClient=true&blocklist=false&skipRedownload=true`,
+        `/api/${this.apiVersion}/queue/${record.id}?removeFromClient=true&blocklist=false&skipRedownload=true`,
         { method: 'DELETE' },
       );
     }
@@ -145,6 +148,13 @@ export const liveWhisparr = new LiveArr(
   TEST_CONFIG.liveArr.whisparrUrl,
   TEST_CONFIG.liveArr.whisparrApiKey,
   'includeUnknownMovieItems=true&includeMovie=true',
+);
+
+export const liveLidarr = new LiveArr(
+  TEST_CONFIG.liveArr.lidarrUrl,
+  TEST_CONFIG.liveArr.lidarrApiKey,
+  'includeUnknownArtistItems=true&includeArtist=true&includeAlbum=true',
+  'v1',
 );
 
 /** The fake Torznab indexer, kept out of MockServers: other suites lack its container. */

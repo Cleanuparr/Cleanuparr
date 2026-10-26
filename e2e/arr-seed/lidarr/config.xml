@@ -1,0 +1,20 @@
+<Config>
+  <BindAddress>*</BindAddress>
+  <Port>8686</Port>
+  <EnableSsl>False</EnableSsl>
+  <LaunchBrowser>False</LaunchBrowser>
+  <ApiKey>0000000000000000000000000000e2e7</ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <Branch>master</Branch>
+  <LogLevel>info</LogLevel>
+  <UrlBase></UrlBase>
+  <InstanceName>Lidarr</InstanceName>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <AnalyticsEnabled>False</AnalyticsEnabled>
+  <AllowedHosts></AllowedHosts>
+  <TrustedNetworks></TrustedNetworks>
+  <SslPort>6868</SslPort>
+  <SslCertPath></SslCertPath>
+  <SslCertPassword></SslCertPassword>
+</Config>

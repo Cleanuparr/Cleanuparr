@@ -7,7 +7,7 @@
 # CI therefore needs no network and every run sees the same library.
 #
 # Needs internet: each arr reads its metadata provider.
-# Stops the sonarr, radarr and whisparr containers.
+# Stops the sonarr, radarr, whisparr and lidarr containers.
 #
 # Re-run it when the pinned image tags change, or when the library has to change.
 #
@@ -21,9 +21,11 @@ COMPOSE="docker compose -f $HERE/docker-compose.e2e.yml"
 SONARR_URL="http://localhost:8989"
 RADARR_URL="http://localhost:7878"
 WHISPARR_URL="http://localhost:6970"
+LIDARR_URL="http://localhost:8686"
 SONARR_API_KEY="0000000000000000000000000000e2e1"
 RADARR_API_KEY="0000000000000000000000000000e2e2"
 WHISPARR_API_KEY="0000000000000000000000000000e2e6"
+LIDARR_API_KEY="0000000000000000000000000000e2e7"
 
 # The mock Torznab indexer, and qBittorrent, both on the host network.
 INDEXER_URL="http://127.0.0.1:9500"
@@ -43,6 +45,8 @@ RADARR_TMDB_ID=911430
 RADARR_SECOND_TMDB_ID=1184918
 # Package Holiday (2004): a plain title, since the seed database is public.
 WHISPARR_TMDB_ID=1253309
+# Jeff Buckley: one studio album and a plain name.
+LIDARR_MBID=e6e879c0-3d56-4f12-b3c5-3ce459661a8e
 
 log() {
   echo "[seed-arr] $*"
@@ -134,7 +138,7 @@ wait_for_items() {
   log "waiting for $name"
   for _ in $(seq 1 90); do
     local count
-    count=$(arr_get "$url" "$api_key" "$path" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))' 2>/dev/null || echo 0)
+    count=$(arr_get "$url" "$api_key" "$path" | python3 -c 'import sys,json; d = json.load(sys.stdin); print(len(d["records"]) if isinstance(d, dict) else len(d))' 2>/dev/null || echo 0)
     if [[ "$count" -gt 0 ]]; then
       log "$name ready ($count)"
       return 0
@@ -149,9 +153,9 @@ wait_for_items() {
 # forceSave skips the field validation, but not the connection test.
 # The mock indexer has to be up and answering caps.
 add_indexer() {
-  local url="$1" api_key="$2" categories="$3"
+  local url="$1" api_key="$2" categories="$3" api_version="${4:-v3}"
 
-  arr_post "$url" "$api_key" '/api/v3/indexer?forceSave=true' "$(cat <<EOF
+  arr_post "$url" "$api_key" "/api/$api_version/indexer?forceSave=true" "$(cat <<EOF
 {
   "name": "E2E Torznab",
   "implementation": "Torznab",
@@ -179,9 +183,9 @@ EOF
 }
 
 add_download_client() {
-  local url="$1" api_key="$2" category_field="$3" category="$4"
+  local url="$1" api_key="$2" category_field="$3" category="$4" api_version="${5:-v3}"
 
-  arr_post "$url" "$api_key" '/api/v3/downloadclient?forceSave=true' "$(cat <<EOF
+  arr_post "$url" "$api_key" "/api/$api_version/downloadclient?forceSave=true" "$(cat <<EOF
 {
   "name": "qBittorrent",
   "implementation": "QBittorrent",
@@ -271,6 +275,35 @@ seed_whisparr() {
   wait_for_items "$WHISPARR_URL" "$WHISPARR_API_KEY" '/api/v3/movie' 'whisparr movies'
 }
 
+seed_lidarr() {
+  log "configuring lidarr"
+  arr_post "$LIDARR_URL" "$LIDARR_API_KEY" '/api/v1/rootfolder' \
+    '{"name":"Music","path":"/music","defaultMetadataProfileId":1,"defaultQualityProfileId":1,"defaultMonitorOption":"all"}' > /dev/null
+  add_indexer "$LIDARR_URL" "$LIDARR_API_KEY" '[3000]' 'v1'
+  add_download_client "$LIDARR_URL" "$LIDARR_API_KEY" 'musicCategory' 'lidarr' 'v1'
+
+  log "adding the artist"
+  local artist
+  artist=$(arr_get "$LIDARR_URL" "$LIDARR_API_KEY" "/api/v1/artist/lookup?term=lidarr%3A$LIDARR_MBID" \
+    | python3 -c '
+import json
+import sys
+
+item = json.load(sys.stdin)[0]
+item.update({
+    "qualityProfileId": 1,
+    "metadataProfileId": 1,
+    "rootFolderPath": "/music",
+    "monitored": True,
+    "addOptions": {"monitor": "all", "searchForMissingAlbums": False},
+})
+print(json.dumps(item))
+')
+  arr_post "$LIDARR_URL" "$LIDARR_API_KEY" '/api/v1/artist' "$artist" > /dev/null
+
+  wait_for_items "$LIDARR_URL" "$LIDARR_API_KEY" '/api/v1/wanted/missing' 'lidarr missing albums'
+}
+
 # Keeps the database and config.xml, drops everything the arr rebuilds on start.
 # Whisparr v3 names its database whisparr3.db.
 snapshot() {
@@ -302,29 +335,35 @@ main() {
   write_config_xml "$TEST_DATA/sonarr-config" 8989 "$SONARR_API_KEY" 'Sonarr'
   write_config_xml "$TEST_DATA/radarr-config" 7878 "$RADARR_API_KEY" 'Radarr'
   write_config_xml "$TEST_DATA/whisparr-config" 6970 "$WHISPARR_API_KEY" 'Whisparr'
+  write_config_xml "$TEST_DATA/lidarr-config" 8686 "$LIDARR_API_KEY" 'Lidarr'
 
   # An arr tests the indexer and the download client before it saves them.
   # Both have to answer during seeding.
   log "starting the arrs"
-  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr
+  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr lidarr
 
   wait_for_arr "$SONARR_URL" 'sonarr'
   wait_for_arr "$RADARR_URL" 'radarr'
   wait_for_arr "$WHISPARR_URL" 'whisparr'
+  wait_for_arr "$LIDARR_URL" 'lidarr'
 
   seed_sonarr
   seed_radarr
   seed_whisparr
+  seed_lidarr
 
   log "stopping the arrs"
-  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr
+  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr lidarr
 
   snapshot sonarr
   snapshot radarr
   snapshot whisparr whisparr3
+  snapshot lidarr
 
   # The seed is public, so it keeps the title and drops the synopsis, posters and cast.
   sqlite3 "$ARR_SEED/whisparr/whisparr3.db" "UPDATE MovieMetadata SET Overview = '', Images = '[]', Credits = '[]'; VACUUM;"
+
+  sqlite3 "$ARR_SEED/lidarr/lidarr.db" "UPDATE ArtistMetadata SET Overview = '', Images = '[]', Links = '[]'; UPDATE Albums SET Overview = '', Images = '[]', Links = '[]'; VACUUM;"
 
   log "seed written to $ARR_SEED"
 }
