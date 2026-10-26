@@ -6,11 +6,11 @@ namespace Cleanuparr.Infrastructure.Features.Seeker;
 public static class SeekerApps
 {
     /// <summary>
-    /// True for the instances Seeker searches proactively: Sonarr, Radarr and Whisparr v3.
+    /// True for the instances Seeker searches proactively: Sonarr, Radarr, Lidarr and Whisparr v3.
     /// </summary>
     public static bool IsSupported(ArrInstance arrInstance) => arrInstance.ArrConfig.Type switch
     {
-        InstanceType.Sonarr or InstanceType.Radarr => true,
+        InstanceType.Sonarr or InstanceType.Radarr or InstanceType.Lidarr => true,
         InstanceType.Whisparr => arrInstance.Version is 3,
         _ => false,
     };

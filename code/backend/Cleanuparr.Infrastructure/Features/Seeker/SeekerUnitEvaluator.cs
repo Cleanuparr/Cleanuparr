@@ -38,6 +38,7 @@ public sealed class SeekerUnitEvaluator
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly ILidarrClient _lidarrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
 
@@ -46,6 +47,7 @@ public sealed class SeekerUnitEvaluator
         EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
+        ILidarrClient lidarrClient,
         IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider)
     {
@@ -53,6 +55,7 @@ public sealed class SeekerUnitEvaluator
         _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
+        _lidarrClient = lidarrClient;
         _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
     }
@@ -77,6 +80,14 @@ public sealed class SeekerUnitEvaluator
             return new SeekerRecentGrabs
             {
                 MovieIds = await MovieClient(arrInstance).GetRecentlyGrabbedMovieIdsAsync(arrInstance, since, cancellationToken)
+            };
+        }
+
+        if (arrInstance.ArrConfig.Type is InstanceType.Lidarr)
+        {
+            return new SeekerRecentGrabs
+            {
+                AlbumIds = await _lidarrClient.GetRecentlyGrabbedAlbumIdsAsync(arrInstance, since, cancellationToken)
             };
         }
 
@@ -113,6 +124,12 @@ public sealed class SeekerUnitEvaluator
         {
             return await EvaluateMoviesAsync(config, instanceConfig, arrInstance, activeQueueRecords,
                 recentGrabs.MovieIds, rests, lastSearchedByItem, cancellationToken);
+        }
+
+        if (arrInstance.ArrConfig.Type is InstanceType.Lidarr)
+        {
+            return await EvaluateLidarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
+                recentGrabs.AlbumIds, rests, currentCycleHistory, lastSearchedByItem, cancellationToken);
         }
 
         return await EvaluateSonarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
@@ -208,7 +225,7 @@ public sealed class SeekerUnitEvaluator
     }
 
     /// <summary>
-    /// Picks up to <paramref name="count"/> unsearched units, at most one per movie or series.
+    /// Picks up to <paramref name="count"/> unsearched units, at most one per movie, series or artist.
     /// </summary>
     public static List<SeekerSearchCandidate> SelectNext(SeekerEvaluation evaluation, SelectionStrategy strategy, int count)
     {
@@ -712,6 +729,237 @@ public sealed class SeekerUnitEvaluator
                 Units = BuildSonarrUnits(wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds, instanceConfig.SonarrSearchMode)
                     .Select(WithBlockedBy)
                     .ToList(),
+                LastSearchedByItem = searched,
+                // Keeps this run's rests, so a rest that ends with the rollover ends one run late
+                WithoutCycleHistory = () => Build([], new Dictionary<long, DateTimeOffset>()),
+            };
+        }
+
+        return Build(currentCycleHistory, lastSearchedByItem);
+    }
+
+    private async Task<SeekerEvaluation> EvaluateLidarrAsync(
+        SeekerConfig config,
+        SeekerInstanceConfig instanceConfig,
+        ArrInstance arrInstance,
+        List<QueueRecord> activeQueueRecords,
+        HashSet<long> recentlyGrabbedAlbumIds,
+        Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests,
+        List<SeekerHistory> currentCycleHistory,
+        Dictionary<long, DateTimeOffset> lastSearchedByItem,
+        CancellationToken cancellationToken)
+    {
+        List<Tag> tags = await _lidarrClient.GetAllTagsAsync(arrInstance);
+        Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
+        HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
+        HashSet<string> includeTagSet = new(instanceConfig.IncludeTags, StringComparer.InvariantCultureIgnoreCase);
+
+        HashSet<int> upgradesDisabledProfileIds = [];
+        if (instanceConfig.UseCustomFormatScore)
+        {
+            List<ArrQualityProfile> profiles = await _lidarrClient.GetQualityProfilesAsync(arrInstance);
+            upgradesDisabledProfileIds = profiles.Where(p => !p.UpgradeAllowed).Select(p => p.Id).ToHashSet();
+        }
+
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
+
+        List<long> allLibraryIds = new();
+        List<SeekerExclusion> exclusions = [];
+        int releasedCount = 0;
+        int monitoredCount = 0;
+        Dictionary<long, SearchableArtist> artistsById = new();
+        await foreach (SearchableArtist artist in _lidarrClient.StreamAllArtistsAsync(arrInstance, cancellationToken))
+        {
+            allLibraryIds.Add(artist.Id);
+            releasedCount++;
+
+            if (instanceConfig.MonitoredOnly && !artist.Monitored)
+            {
+                exclusions.Add(new SeekerExclusion(artist.ArtistName, SeekerExclusionReason.NotMonitored));
+                continue;
+            }
+
+            monitoredCount++;
+
+            SeekerExclusionReason? tagExclusion = GetTagExclusion(artist.Tags, tagsById, skipTagSet, includeTagSet);
+            if (tagExclusion is not null)
+            {
+                exclusions.Add(new SeekerExclusion(artist.ArtistName, tagExclusion.Value));
+                continue;
+            }
+
+            artistsById[artist.Id] = artist;
+        }
+
+        List<SonarrWantedEpisode> wanted = [];
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        HashSet<long> excludedAlbumIds = [];
+        HashSet<long> artistsWithExcludedAlbums = [];
+
+        void ExcludeAlbum(long artistId, long albumId, string name, SeekerExclusionReason reason)
+        {
+            artistsWithExcludedAlbums.Add(artistId);
+            if (excludedAlbumIds.Add(albumId))
+            {
+                exclusions.Add(new SeekerExclusion(name, reason));
+            }
+        }
+
+        bool IsReleasedAlbumOfCandidate(SearchableAlbum a)
+        {
+            if (!artistsById.TryGetValue(a.ArtistId, out SearchableArtist? artist))
+            {
+                return false;
+            }
+
+            if (a.ReleaseDate is null || a.ReleaseDate.Value <= graceCutoff)
+            {
+                return true;
+            }
+
+            ExcludeAlbum(a.ArtistId, a.Id, $"{artist.ArtistName} - {a.Title}",
+                a.ReleaseDate.Value > now
+                    ? SeekerExclusionReason.NotReleased
+                    : SeekerExclusionReason.InGracePeriod);
+            return false;
+        }
+
+        SonarrWantedEpisode ToWanted(SearchableAlbum a, SeekerSearchReason reason) => new()
+        {
+            SeriesId = a.ArtistId,
+            SeasonNumber = 0,
+            EpisodeId = a.Id,
+            Title = $"{artistsById[a.ArtistId].ArtistName} - {a.Title}",
+            AirDateUtc = a.ReleaseDate,
+            LastSearchTime = a.LastSearchTime,
+            Monitored = a.Monitored,
+            Reason = reason,
+        };
+
+        List<SearchableAlbum> missing = await ReadWantedAsync(
+            monitored => _lidarrClient.GetMissingAlbumsAsync(arrInstance, monitored, cancellationToken),
+            instanceConfig.MonitoredOnly);
+        wanted.AddRange(missing
+            .Where(IsReleasedAlbumOfCandidate)
+            .Select(a => ToWanted(a, SeekerSearchReason.Missing)));
+
+        if (instanceConfig.UseCutoff)
+        {
+            List<SearchableAlbum> cutoffUnmet = await ReadWantedAsync(
+                monitored => _lidarrClient.GetCutoffUnmetAlbumsAsync(arrInstance, monitored, cancellationToken),
+                instanceConfig.MonitoredOnly);
+            wanted.AddRange(cutoffUnmet
+                .Where(IsReleasedAlbumOfCandidate)
+                .Select(a => ToWanted(a, SeekerSearchReason.QualityCutoffNotMet)));
+        }
+
+        if (instanceConfig.UseCustomFormatScore)
+        {
+            List<CustomFormatScoreEntry> belowCutoff = await _eventsContext.CustomFormatScoreEntries
+                .AsNoTracking()
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Lidarr
+                    && (e.AirDateUtc == null || e.AirDateUtc <= graceCutoff)
+                    && e.CurrentScore < e.CutoffScore
+                    && (!instanceConfig.MonitoredOnly || e.IsMonitored))
+                .ToListAsync(cancellationToken);
+
+            HashSet<long> wantedAlbumIds = wanted.Select(w => w.EpisodeId).ToHashSet();
+
+            foreach (CustomFormatScoreEntry entry in belowCutoff)
+            {
+                if (!artistsById.TryGetValue(entry.ExternalItemId, out SearchableArtist? artist))
+                {
+                    continue;
+                }
+
+                if (upgradesDisabledProfileIds.Contains(artist.QualityProfileId))
+                {
+                    if (!wantedAlbumIds.Contains(entry.EpisodeId))
+                    {
+                        _logger.LogDebug("skip | upgrades disabled in profile | {Title} | {InstanceName}", entry.Title, arrInstance.Name);
+                        ExcludeAlbum(entry.ExternalItemId, entry.EpisodeId, entry.Title, SeekerExclusionReason.UpgradesDisabled);
+                    }
+
+                    continue;
+                }
+
+                wanted.Add(new SonarrWantedEpisode
+                {
+                    SeriesId = entry.ExternalItemId,
+                    SeasonNumber = 0,
+                    EpisodeId = entry.EpisodeId,
+                    Title = entry.Title,
+                    AirDateUtc = entry.AirDateUtc,
+                    LastSearchTime = entry.LastSearchTime,
+                    Monitored = entry.IsMonitored,
+                    CustomFormatGap = entry.CutoffScore - entry.CurrentScore,
+                    Reason = SeekerSearchReason.CustomFormatScoreBelowCutoff,
+                });
+            }
+        }
+
+        HashSet<long> wantedArtistIds = wanted.Select(w => w.SeriesId).ToHashSet();
+        exclusions.AddRange(artistsById.Values
+            .Where(a => !wantedArtistIds.Contains(a.Id) && !artistsWithExcludedAlbums.Contains(a.Id))
+            .Select(a => new SeekerExclusion(a.ArtistName, SeekerExclusionReason.NothingToSearch)));
+
+        HashSet<long> queuedAlbumIds = activeQueueRecords
+            .Where(r => r.AlbumId > 0)
+            .Select(r => r.AlbumId)
+            .ToHashSet();
+
+        SeekerEvaluation Build(List<SeekerHistory> history, Dictionary<long, DateTimeOffset> searched)
+        {
+            HashSet<long> searchedAlbumIds = history
+                .Where(h => h.EpisodeId > 0)
+                .Select(h => h.EpisodeId)
+                .ToHashSet();
+
+            List<SeekerSearchUnit> units = [];
+            foreach (IGrouping<long, SonarrWantedEpisode> album in wanted.GroupBy(w => w.EpisodeId))
+            {
+                SonarrWantedEpisode first = album.First();
+                SeekerExclusionReason? blockedBy = null;
+                SeekerUnitRest? rest = null;
+                if (queuedAlbumIds.Contains(album.Key))
+                {
+                    blockedBy = SeekerExclusionReason.InQueue;
+                }
+                else if (recentlyGrabbedAlbumIds.Contains(album.Key))
+                {
+                    blockedBy = SeekerExclusionReason.RecentlyGrabbed;
+                }
+                else if (rests.TryGetValue((first.SeriesId, 0, album.Key), out rest))
+                {
+                    blockedBy = SeekerExclusionReason.Resting;
+                }
+
+                units.Add(new SeekerSearchUnit
+                {
+                    ItemId = first.SeriesId,
+                    SeasonNumber = 0,
+                    EpisodeId = album.Key,
+                    Name = first.Title!,
+                    Reasons = album.Select(w => w.Reason).ToList(),
+                    AirDateUtc = first.AirDateUtc,
+                    Added = artistsById[first.SeriesId].Added,
+                    LastSearchTime = album.Max(w => w.LastSearchTime),
+                    CustomFormatGap = album.Max(w => w.CustomFormatGap),
+                    Searched = searchedAlbumIds.Contains(album.Key),
+                    BlockedBy = blockedBy,
+                    Rest = rest,
+                });
+            }
+
+            return new SeekerEvaluation
+            {
+                AllLibraryIds = allLibraryIds,
+                ReleasedItems = releasedCount,
+                MonitoredItems = monitoredCount,
+                TagFilteredItems = artistsById.Count,
+                ItemExclusions = exclusions,
+                Units = units,
                 LastSearchedByItem = searched,
                 // Keeps this run's rests, so a rest that ends with the rollover ends one run late
                 WithoutCycleHistory = () => Build([], new Dictionary<long, DateTimeOffset>()),

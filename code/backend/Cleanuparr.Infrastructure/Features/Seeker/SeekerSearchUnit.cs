@@ -3,29 +3,29 @@ using Cleanuparr.Domain.Enums;
 namespace Cleanuparr.Infrastructure.Features.Seeker;
 
 /// <summary>
-/// One search: a movie, a whole Sonarr season, or a single episode when <see cref="EpisodeId"/> is set.
+/// One search: a movie, a whole Sonarr season, a single episode when <see cref="EpisodeId"/> is set, or a Lidarr album.
 /// </summary>
 public sealed record SeekerSearchUnit
 {
     /// <summary>
-    /// MovieId (Radarr) or SeriesId (Sonarr)
+    /// MovieId (Radarr), SeriesId (Sonarr) or ArtistId (Lidarr)
     /// </summary>
     public required long ItemId { get; init; }
 
     /// <summary>
-    /// 0 for a movie.
+    /// 0 for a movie or a Lidarr album.
     /// </summary>
     public required int SeasonNumber { get; init; }
 
     /// <summary>
-    /// 0 for a movie or a season unit.
+    /// 0 for a movie or a season unit, the AlbumId for a Lidarr album.
     /// </summary>
     public required long EpisodeId { get; init; }
 
     public required string Name { get; init; }
 
     /// <summary>
-    /// Null for a movie.
+    /// Null for a movie or a Lidarr album.
     /// </summary>
     public SeekerContentKind? ContentKind { get; init; }
 

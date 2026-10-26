@@ -30,6 +30,7 @@ public class SeekerPreviewControllerTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly ILidarrClient _lidarrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IArrQueueReader _arrQueueReader;
@@ -41,6 +42,7 @@ public class SeekerPreviewControllerTests : IDisposable
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _lidarrClient = Substitute.For<ILidarrClient>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrQueueReader = Substitute.For<IArrQueueReader>();
@@ -62,6 +64,7 @@ public class SeekerPreviewControllerTests : IDisposable
             _eventsContext,
             _radarrClient,
             _sonarrClient,
+            _lidarrClient,
             _whisparrV3Client,
             timeProvider);
 
@@ -218,15 +221,39 @@ public class SeekerPreviewControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPreview_UnsupportedInstanceType_ReturnsBadRequest()
+    public async Task GetPreview_Lidarr_ReadsTheLibraryThroughTheLidarrClient()
     {
         ArrInstance lidarr = SeekerTestDataFactory.AddLidarrInstance(_dataContext);
-        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig { ArrInstanceId = lidarr.Id, Enabled = true });
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = lidarr.Id,
+            Enabled = true,
+            CurrentCycleId = Guid.NewGuid(),
+        });
         await _dataContext.SaveChangesAsync();
+        List<SearchableArtist> artists = [new SearchableArtist { Id = 1, ArtistName = "Artist 1", Monitored = true }];
+        List<SearchableAlbum> albums =
+        [
+            new SearchableAlbum { Id = 10, Title = "Album 10", ArtistId = 1, Monitored = true, ReleaseDate = Now.AddDays(-30) },
+        ];
+        _lidarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _lidarrClient
+            .GetRecentlyGrabbedAlbumIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long>());
+        _lidarrClient.StreamAllArtistsAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(artists));
+        _lidarrClient.GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(albums);
+        _lidarrClient.GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        IActionResult result = await _controller.GetPreview(lidarr.Id, CancellationToken.None);
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(lidarr.Id, CancellationToken.None));
 
-        StatusOf(result).ShouldBe(StatusCodes.Status400BadRequest);
+        SeekerPreviewUnitResponse unit = response.NextUp.ShouldHaveSingleItem();
+        unit.Name.ShouldBe("Artist 1 - Album 10");
+        unit.Reason.ShouldBe(SeekerSearchReason.Missing);
+        response.Funnel.LibraryItems.ShouldBe(1);
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
     }
 
     [Fact]
