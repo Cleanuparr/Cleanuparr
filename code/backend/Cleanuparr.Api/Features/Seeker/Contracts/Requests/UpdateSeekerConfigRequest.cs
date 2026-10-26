@@ -17,7 +17,7 @@ public sealed record UpdateSeekerConfigRequest
 
     public int PostReleaseGraceHours { get; init; } = 6;
 
-    public bool QuietHoursEnabled { get; init; }
+    public bool QuietHoursEnabled { get; init; } = false;
 
     public TimeOnly QuietHoursStart { get; init; } = new(23, 0);
 
