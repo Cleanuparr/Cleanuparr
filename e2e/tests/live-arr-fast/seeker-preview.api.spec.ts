@@ -5,6 +5,7 @@ import {
   RADARR,
   RUN_TAG,
   SONARR,
+  WHISPARR,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   listSearchEvents,
@@ -170,5 +171,33 @@ test.describe('Seeker preview and funnel', () => {
     const res = await api.seeker.getPreview('00000000-0000-0000-0000-000000000001');
 
     expect(res.status).toBe(404);
+  });
+});
+
+test.describe('Seeker preview on Whisparr v3', () => {
+  let library: Array<Record<string, unknown>> = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(WHISPARR);
+    await indexerMock.stub(torznabSearchStub(WHISPARR.searchMode, []));
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreLibrary(WHISPARR, library);
+    await resetLiveArrState();
+  });
+
+  test('lists the seeded movie next up as missing with funnel counts', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, WHISPARR);
+
+    const preview = await getPreview(api, instanceId);
+
+    const next = preview.nextUp.find((u) => u.name === WHISPARR.seededTitle);
+    expect(next?.reason).toBe('Missing');
+    expect(preview.funnel.libraryItems).toBe(library.length);
+    expect(preview.funnel.eligibleUnits).toBeGreaterThan(0);
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
   });
 });

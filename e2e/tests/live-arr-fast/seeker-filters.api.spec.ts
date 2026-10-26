@@ -4,6 +4,7 @@ import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
   SONARR,
+  WHISPARR,
   addDecoyDownloads,
   arrangeInstance,
   arrangeQueueCleaner,
@@ -470,5 +471,58 @@ test.describe('Seeker monitored-only filters on Sonarr', () => {
 
     const event = await firstSearchEvent(api, instanceId);
     expect(event?.itemTitle).toBe(`${SONARR.seededTitle} S01`);
+  });
+});
+
+test.describe('Seeker candidate filters on Whisparr v3', () => {
+  let library: Array<Record<string, unknown>> = [];
+
+  async function mutateWhisparrMovie(mutate: (movie: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
+    const movie = await WHISPARR.arr.get<Record<string, unknown>>(`/api/v3/movie/${WHISPARR.itemId}`);
+    await WHISPARR.arr.put(`/api/v3/movie/${WHISPARR.itemId}`, mutate({ ...movie }));
+  }
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(WHISPARR);
+    await indexerMock.stubMany(grabbableRelease(WHISPARR.searchMode, WHISPARR.release, WHISPARR.category).mappings);
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreLibrary(WHISPARR, library);
+    await resetLiveArrState();
+  });
+
+  test('searches the seeded movie when nothing filters it out', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, WHISPARR);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain(WHISPARR.seededTitle);
+  });
+
+  test('skips a movie carrying a skipped tag', async ({ api }) => {
+    const tagId = await WHISPARR.arr.ensureTag(SKIP_TAG);
+    const instanceId = await arrangeInstance(api, WHISPARR, { instance: { skipTags: [SKIP_TAG] } });
+
+    await mutateWhisparrMovie((movie) => ({ ...movie, tags: [tagId] }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('skips an unmonitored movie when monitoredOnly is on', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, WHISPARR, { instance: { monitoredOnly: true } });
+
+    await mutateWhisparrMovie((movie) => ({ ...movie, monitored: false }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches a movie released long ago at the longest grace period', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, WHISPARR, { config: { postReleaseGraceHours: 72 } });
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
   });
 });
