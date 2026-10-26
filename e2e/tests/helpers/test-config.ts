@@ -26,7 +26,7 @@ export const TEST_CONFIG = {
     indexerAdminUrl: 'http://localhost:9500/__admin',
   },
 
-  // The real Sonarr, Radarr and Whisparr v3 containers.
+  // The real Sonarr, Radarr, Whisparr v3 and Lidarr containers.
   // Their api keys come from the committed seed in e2e/arr-seed.
   liveArr: {
     sonarrUrl: 'http://localhost:8989',
@@ -38,6 +38,10 @@ export const TEST_CONFIG = {
     whisparrUrl: 'http://localhost:6970',
     whisparrApiKey: '0000000000000000000000000000e2e6',
     seededWhisparrTitle: 'Package Holiday',
+    lidarrUrl: 'http://localhost:8686',
+    lidarrApiKey: '0000000000000000000000000000e2e7',
+    seededArtistName: 'Jeff Buckley',
+    seededAlbumTitle: 'Grace',
   },
 
   // Real qBittorrent container: the API key seeded into

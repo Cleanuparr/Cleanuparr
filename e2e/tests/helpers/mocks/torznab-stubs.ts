@@ -10,13 +10,14 @@ import type { Mapping } from './wiremock-client';
  * A test adds the release it wants grabbed, plus the torrent that release points at.
  */
 
-/** Torznab search mode. Sonarr sends `tvsearch`, Radarr sends `movie`. */
-export type TorznabSearchMode = 'tvsearch' | 'movie' | 'search';
+/** Torznab search mode. Sonarr sends `tvsearch`, Radarr sends `movie`, Lidarr sends `music`. */
+export type TorznabSearchMode = 'tvsearch' | 'movie' | 'music' | 'search';
 
 /** Torznab category. The seeded arrs are configured for the parent categories. */
 export const TORZNAB_TV_CATEGORY = 5040;
 export const TORZNAB_MOVIE_CATEGORY = 2040;
 export const TORZNAB_XXX_CATEGORY = 6040;
+export const TORZNAB_AUDIO_CATEGORY = 3040;
 
 /**
  * The advertised release size.
@@ -120,6 +121,11 @@ export interface GrabbableRelease {
   mappings: Mapping[];
 }
 
+/** Keeps the link path free of characters the arr would percent-encode, which WireMock matches raw. */
+function torrentFile(title: string): string {
+  return `${title.replace(/[^A-Za-z0-9.-]/g, '.')}.torrent`;
+}
+
 /**
  * Builds a release the arr can grab: a torrent, a search hit, a download link.
  *
@@ -131,7 +137,7 @@ export function grabbableRelease(
   title: string,
   category: number,
 ): GrabbableRelease {
-  const file = `${title}.torrent`;
+  const file = torrentFile(title);
   const torrent = buildSingleFileTorrent(TORRENT_SOURCE_DIR, title, 32_768, 'http://127.0.0.1:6969/announce');
 
   return {
@@ -162,7 +168,7 @@ export function grabbableReleases(
     mappings: [
       torznabSearchStub(
         mode,
-        built.map((entry) => ({ title: entry.title, category, file: `${entry.title}.torrent` })),
+        built.map((entry) => ({ title: entry.title, category, file: torrentFile(entry.title) })),
       ),
       // Index 1 of each release's mappings is its own torrent stub.
       ...built.map((entry) => entry.release.mappings[1]),
