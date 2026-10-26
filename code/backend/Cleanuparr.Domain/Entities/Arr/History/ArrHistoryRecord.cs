@@ -16,6 +16,11 @@ public sealed record ArrHistoryRecord
     public long SeriesId { get; init; }
 
     /// <summary>
+    /// The album this row is about. 0 when the row is not about an album.
+    /// </summary>
+    public long AlbumId { get; init; }
+
+    /// <summary>
     /// The episode this row is about. 0 when the row is not about an episode.
     /// </summary>
     public long EpisodeId { get; init; }
