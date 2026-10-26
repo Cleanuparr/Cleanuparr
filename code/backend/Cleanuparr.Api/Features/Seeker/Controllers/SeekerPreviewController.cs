@@ -64,7 +64,7 @@ public sealed class SeekerPreviewController : ControllerBase
         }
 
         InstanceType instanceType = instanceConfig.ArrInstance.ArrConfig.Type;
-        if (instanceType is not (InstanceType.Sonarr or InstanceType.Radarr))
+        if (!SeekerApps.IsSupported(instanceConfig.ArrInstance))
         {
             return this.ProblemResult(StatusCodes.Status400BadRequest, $"Seeker does not search {instanceType} instances");
         }

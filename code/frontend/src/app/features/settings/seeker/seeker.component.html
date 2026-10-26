@@ -93,6 +93,9 @@
                 <img [src]="getInstanceIcon(instance.instanceType)" [alt]="instance.instanceType" class="instance-row__icon" />
                 <span class="instance-row__name">{{ instance.instanceName }}</span>
                 <app-badge [severity]="getInstanceTypeSeverity(instance.instanceType)" size="sm">{{ instance.instanceType }}</app-badge>
+                @if (instance.instanceType === 'Whisparr') {
+                  <app-new-badge variant="inline" featureId="seeker-whisparr" />
+                }
               </div>
               <app-toggle [checked]="instance.enabled" [disabled]="!instance.arrInstanceEnabled" (checkedChange)="toggleInstance($index)" helpKey="seeker:enabled" />
             </div>

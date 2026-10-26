@@ -20,7 +20,7 @@ describe('instanceTypeHighlight', () => {
   it.each([
     [InstanceType.Radarr, 'info'],
     [InstanceType.Sonarr, 'info'],
-    [InstanceType.Whisparr, 'default'],
+    [InstanceType.Whisparr, 'info'],
   ])('maps %s to %s', (type, expected) => {
     expect(instanceTypeHighlight(type)).toBe(expected);
   });

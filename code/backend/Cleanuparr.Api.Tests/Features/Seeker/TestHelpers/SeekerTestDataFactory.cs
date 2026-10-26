@@ -165,4 +165,25 @@ public static class SeekerTestDataFactory
         context.SaveChanges();
         return instance;
     }
+
+    public static ArrInstance AddWhisparrInstance(DataContext context, float version)
+    {
+        ArrConfig arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Whisparr);
+        ArrInstance instance = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = $"Test Whisparr v{version}",
+            Url = new Uri("http://whisparr:6969"),
+            ApiKey = "test-api-key",
+            Enabled = true,
+            Version = version,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+        return instance;
+    }
 }

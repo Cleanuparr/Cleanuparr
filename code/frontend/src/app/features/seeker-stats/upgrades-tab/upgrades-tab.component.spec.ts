@@ -233,7 +233,7 @@ describe('UpgradesTabComponent', () => {
 
     expect(component.itemTypeSeverity('Sonarr')).toBe('info');
     expect(component.itemTypeSeverity('Radarr')).toBe('info');
-    expect(component.itemTypeSeverity('Whisparr')).toBe('default');
+    expect(component.itemTypeSeverity('Whisparr')).toBe('info');
   });
 
   it('toasts the error message when loading upgrades fails', () => {

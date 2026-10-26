@@ -3,8 +3,10 @@ using Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 using Cleanuparr.Shared.Helpers;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,12 +40,12 @@ public sealed class SeekerConfigController : ControllerBase
             .AsNoTracking()
             .FirstAsync();
 
-        // Get all Sonarr/Radarr instances with their seeker configs
-        var arrInstances = await _dataContext.ArrInstances
-            .AsNoTracking()
-            .Include(a => a.ArrConfig)
-            .Where(a => a.ArrConfig.Type == InstanceType.Sonarr || a.ArrConfig.Type == InstanceType.Radarr)
-            .ToListAsync();
+        List<ArrInstance> arrInstances = (await _dataContext.ArrInstances
+                .AsNoTracking()
+                .Include(a => a.ArrConfig)
+                .ToListAsync())
+            .Where(SeekerApps.IsSupported)
+            .ToList();
 
         var arrInstanceIds = arrInstances.Select(a => a.Id).ToHashSet();
         var seekerInstanceConfigs = await _dataContext.SeekerInstanceConfigs
