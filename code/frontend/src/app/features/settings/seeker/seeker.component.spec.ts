@@ -640,6 +640,27 @@ describe('SeekerComponent', () => {
     expect(saveButton(fixture).disabled).toBe(false);
   });
 
+  it('blocks saving while a visible grace period is out of range', () => {
+    const { fixture, component } = setup();
+
+    component.seekerForm.postReleaseGraceHours().value.set(100);
+    fixture.detectChanges();
+
+    expect(component.hasErrors()).toBe(true);
+    expect(saveButton(fixture).disabled).toBe(true);
+  });
+
+  it('allows saving an out of range grace period once proactive search is off', () => {
+    const { fixture, component } = setup();
+
+    component.seekerForm.postReleaseGraceHours().value.set(100);
+    component.seekerForm.proactiveSearchEnabled().value.set(false);
+    fixture.detectChanges();
+
+    expect(component.hasErrors()).toBe(false);
+    expect(saveButton(fixture).disabled).toBe(false);
+  });
+
   it('sends default quiet hours for cleared times', () => {
     const { fixture, component, updateConfig } = setup();
 

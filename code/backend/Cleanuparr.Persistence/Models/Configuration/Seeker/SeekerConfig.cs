@@ -85,7 +85,7 @@ public sealed record SeekerConfig : IConfig
             throw new CustomValidationException($"Invalid search interval {SearchInterval}");
         }
 
-        if (PostReleaseGraceHours is < 0 or > 72)
+        if (SearchEnabled && ProactiveSearchEnabled && PostReleaseGraceHours is < 0 or > 72)
         {
             throw new CustomValidationException($"{nameof(PostReleaseGraceHours)} must be between 0 and 72");
         }

@@ -77,6 +77,32 @@ public sealed class SeekerConfigTests
         exception.Message.ShouldContain("Invalid search interval");
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(73)]
+    public void Validate_WithGraceHoursOutOfRange_ThrowsValidationException(int graceHours)
+    {
+        SeekerConfig config = new() { ProactiveSearchEnabled = true, PostReleaseGraceHours = graceHours };
+
+        CustomValidationException exception = Should.Throw<CustomValidationException>(() => config.Validate());
+        exception.Message.ShouldContain(nameof(SeekerConfig.PostReleaseGraceHours));
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void Validate_WithGraceHoursOutOfRangeThatNeverApply_DoesNotThrow(bool searchEnabled, bool proactiveSearchEnabled)
+    {
+        SeekerConfig config = new()
+        {
+            SearchEnabled = searchEnabled,
+            ProactiveSearchEnabled = proactiveSearchEnabled,
+            PostReleaseGraceHours = 73
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
     #endregion
 
     #region ToCronExpression

@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
-import { form, min, max, required, validate, FormField } from '@angular/forms/signals';
+import { form, applyWhen, min, max, required, validate, FormField } from '@angular/forms/signals';
 import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -142,8 +142,10 @@ export class SeekerComponent implements HasPendingChanges {
   });
 
   readonly seekerForm = form(this.model, (p) => {
-    min(p.postReleaseGraceHours, 0);
-    max(p.postReleaseGraceHours, 72);
+    applyWhen(p.postReleaseGraceHours, () => this.proactiveSearchVisible(), (grace) => {
+      min(grace, 0);
+      max(grace, 72);
+    });
     required(p.quietHoursStart, { when: () => this.quietHoursVisible(), message: 'Start time is required' });
     required(p.quietHoursEnd, { when: () => this.quietHoursVisible(), message: 'End time is required' });
     validate(p.quietHoursEnd, ({ valueOf }) =>
@@ -152,9 +154,13 @@ export class SeekerComponent implements HasPendingChanges {
         : undefined);
   });
 
-  private quietHoursVisible(): boolean {
+  private proactiveSearchVisible(): boolean {
     const m: SeekerFormModel = this.model();
-    return m.searchEnabled && m.proactiveSearchEnabled && m.quietHoursEnabled;
+    return m.searchEnabled && m.proactiveSearchEnabled;
+  }
+
+  private quietHoursVisible(): boolean {
+    return this.proactiveSearchVisible() && this.model().quietHoursEnabled;
   }
 
   readonly instances = signal<InstanceState[]>([]);
