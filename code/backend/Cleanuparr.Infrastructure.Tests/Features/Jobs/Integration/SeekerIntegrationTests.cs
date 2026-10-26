@@ -53,6 +53,7 @@ public class SeekerIntegrationTests : IDisposable
                 _fixture.EventsContext,
                 Substitute.For<IRadarrClient>(),
                 Substitute.For<ISonarrClient>(),
+                Substitute.For<IWhisparrV3Client>(),
                 _fixture.TimeProvider));
     }
 

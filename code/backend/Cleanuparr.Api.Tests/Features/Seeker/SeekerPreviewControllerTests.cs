@@ -30,6 +30,7 @@ public class SeekerPreviewControllerTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IArrQueueReader _arrQueueReader;
     private readonly SeekerPreviewController _controller;
@@ -40,6 +41,7 @@ public class SeekerPreviewControllerTests : IDisposable
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrQueueReader = Substitute.For<IArrQueueReader>();
         FakeTimeProvider timeProvider = new(Now);
@@ -60,6 +62,7 @@ public class SeekerPreviewControllerTests : IDisposable
             _eventsContext,
             _radarrClient,
             _sonarrClient,
+            _whisparrV3Client,
             timeProvider);
 
         _controller = new SeekerPreviewController(

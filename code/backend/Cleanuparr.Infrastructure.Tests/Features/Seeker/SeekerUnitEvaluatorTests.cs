@@ -24,11 +24,13 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly FakeTimeProvider _timeProvider;
     private readonly SeekerUnitEvaluator _sut;
     private readonly SeekerConfig _config = new() { PostReleaseGraceHours = 6 };
     private readonly ArrInstance _radarr;
     private readonly ArrInstance _sonarr;
+    private readonly ArrInstance _whisparr;
 
     public SeekerUnitEvaluatorTests()
     {
@@ -36,9 +38,11 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _eventsContext = TestDataContextFactory.CreateEvents();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 1, 10, 12, 0, 0, TimeSpan.Zero));
         _radarr = TestDataContextFactory.AddRadarrInstance(_dataContext);
         _sonarr = TestDataContextFactory.AddSonarrInstance(_dataContext);
+        _whisparr = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 3);
 
         _radarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _sonarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
@@ -46,12 +50,16 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _sonarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
         _radarrClient.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
         _sonarrClient.GetCutoffUnmetEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
+        _whisparrV3Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV3Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV3Client.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
 
         _sut = new SeekerUnitEvaluator(
             Substitute.For<ILogger<SeekerUnitEvaluator>>(),
             _eventsContext,
             _radarrClient,
             _sonarrClient,
+            _whisparrV3Client,
             _timeProvider);
     }
 
@@ -80,6 +88,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         bool hasFile = false,
         int qualityProfileId = 1,
         DateTimeOffset? digitalRelease = null,
+        DateTimeOffset? releaseDate = null,
         DateTimeOffset? added = null,
         DateTimeOffset? lastSearchTime = null,
         bool isAvailable = false)
@@ -94,6 +103,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             HasFile = hasFile,
             QualityProfileId = qualityProfileId,
             DigitalRelease = digitalRelease,
+            ReleaseDate = releaseDate,
             Added = added,
             LastSearchTime = lastSearchTime,
             IsAvailable = isAvailable,
@@ -193,6 +203,18 @@ public class SeekerUnitEvaluatorTests : IDisposable
             .Returns(wanted.Where(m => !m.Monitored).ToList());
     }
 
+    private void SetupWhisparr(List<SearchableMovie> library, List<SearchableMovie>? missing = null)
+    {
+        List<SearchableMovie> wanted = missing ?? library.Where(m => !m.HasFile).ToList();
+
+        _whisparrV3Client.StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(library));
+        _whisparrV3Client.GetMissingMoviesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(wanted.Where(m => m.Monitored).ToList());
+        _whisparrV3Client.GetMissingMoviesAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns(wanted.Where(m => !m.Monitored).ToList());
+    }
+
     private void SetupSonarr(List<SearchableSeries> library, List<SearchableEpisode> missing)
     {
         _sonarrClient.StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
@@ -216,6 +238,18 @@ public class SeekerUnitEvaluatorTests : IDisposable
             queue ?? [],
             recentGrabs ?? new SeekerRecentGrabs(),
             history ?? [],
+            CancellationToken.None);
+    }
+
+    private Task<SeekerEvaluation> EvaluateWhisparrAsync(SeekerInstanceConfig? instanceConfig = null)
+    {
+        return _sut.EvaluateAsync(
+            _config,
+            instanceConfig ?? InstanceConfig(_whisparr),
+            _whisparr,
+            [],
+            new SeekerRecentGrabs(),
+            [],
             CancellationToken.None);
     }
 
@@ -1980,6 +2014,186 @@ public class SeekerUnitEvaluatorTests : IDisposable
         // Assert
         grabs.Episodes.ShouldHaveSingleItem().ShouldBe((1L, 2L, 30L));
         grabs.MovieIds.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    #region Whisparr v3
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_UsesTheWhisparrClientAndNeverTheRadarrClient()
+    {
+        // Arrange
+        _whisparrV3Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 7, Label = "skip" }]);
+        _whisparrV3Client.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([Movie(2, hasFile: true)]);
+        SetupWhisparr([Movie(1, tags: [7]), Movie(2, hasFile: true), Movie(3)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync(InstanceConfig(_whisparr, c =>
+        {
+            c.SkipTags = ["skip"];
+            c.UseCutoff = true;
+        }));
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.SkipTag);
+        evaluation.Units.Select(u => u.ItemId).Order().ShouldBe([2L, 3L]);
+        await _whisparrV3Client.Received().GetMissingMoviesAsync(_whisparr, true, Arg.Any<CancellationToken>());
+        await _whisparrV3Client.Received().GetCutoffUnmetMoviesAsync(_whisparr, true, Arg.Any<CancellationToken>());
+        _radarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ReadRecentGrabsAsync_WhisparrV3_ReadsMovieIdsFromTheWhisparrClient()
+    {
+        // Arrange
+        _whisparrV3Client.GetRecentlyGrabbedMovieIdsAsync(_whisparr, Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long> { 4, 9 });
+
+        // Act
+        SeekerRecentGrabs grabs = await _sut.ReadRecentGrabsAsync(
+            InstanceConfig(_whisparr, c => c.RecentGrabWindowHours = 12), _whisparr, CancellationToken.None);
+
+        // Assert
+        grabs.MovieIds.ShouldBe([4L, 9L], ignoreOrder: true);
+        await _radarrClient.DidNotReceiveWithAnyArgs().GetRecentlyGrabbedMovieIdsAsync(default!, default, default);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_BelowCustomFormatCutoff_UsesWhisparrScoreEntries()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1, hasFile: true, qualityProfileId: 4)]);
+        _whisparrV3Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 4, Name = "Open", UpgradeAllowed = true }]);
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _whisparr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Whisparr,
+            CurrentScore = 5,
+            CutoffScore = 10,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync(InstanceConfig(_whisparr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.Reasons.ShouldBe([SeekerSearchReason.CustomFormatScoreBelowCutoff]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_RadarrTypedScoreEntries_AreIgnored()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1, hasFile: true, qualityProfileId: 4)]);
+        _whisparrV3Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 4, Name = "Open", UpgradeAllowed = true }]);
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _whisparr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CurrentScore = 5,
+            CutoffScore = 10,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync(InstanceConfig(_whisparr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        evaluation.Units.ShouldBeEmpty();
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.NothingToSearch);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_StatusNotReleased_ExcludesAsNotReleased()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1, status: "announced")]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.NotReleased);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_ReleaseDateInsideGraceWindow_ExcludesAsInGracePeriod()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1, releaseDate: _timeProvider.GetUtcNow().AddHours(-1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.InGracePeriod);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_ReleaseDatePastGraceWindow_BuildsUnit()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1, releaseDate: _timeProvider.GetUtcNow().AddDays(-30))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync();
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_ArrAvailabilityGateConfigured_IsIgnored()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1, releaseDate: _timeProvider.GetUtcNow().AddDays(-30), isAvailable: false)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync(
+            InstanceConfig(_whisparr, c => c.RadarrReleaseGate = RadarrReleaseGate.ArrAvailability));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV3_WantedEndpointNotFound_FlagsWantedUnsupported()
+    {
+        // Arrange
+        SetupWhisparr([Movie(1), Movie(2)]);
+        _whisparrV3Client.GetMissingMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrAsync();
+
+        // Assert
+        evaluation.WantedUnsupported.ShouldBeTrue();
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_ReleaseDateInsideGraceWindowButDigitalReleasePast_BuildsUnit()
+    {
+        // Arrange
+        SetupRadarr([Movie(
+            1,
+            digitalRelease: _timeProvider.GetUtcNow().AddDays(-30),
+            releaseDate: _timeProvider.GetUtcNow().AddHours(-1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
     }
 
     #endregion

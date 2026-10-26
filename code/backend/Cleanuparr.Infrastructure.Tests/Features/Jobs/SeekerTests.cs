@@ -30,6 +30,7 @@ public class SeekerTests : IDisposable
     private readonly ILogger<SeekerJob> _logger;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IHostEnvironment _hostingEnvironment;
     private readonly IStatusNotifier _statusNotifier;
@@ -43,6 +44,7 @@ public class SeekerTests : IDisposable
         _logger = Substitute.For<ILogger<SeekerJob>>();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         _hostingEnvironment = Substitute.For<IHostEnvironment>();
         _statusNotifier = Substitute.For<IStatusNotifier>();
@@ -121,6 +123,7 @@ public class SeekerTests : IDisposable
                 _fixture.EventsContext,
                 _radarrClient,
                 _sonarrClient,
+                _whisparrV3Client,
                 _fixture.TimeProvider)
         );
     }
@@ -10443,6 +10446,113 @@ public class SeekerTests : IDisposable
                 Arg.Any<Guid?>(),
                 Arg.Any<bool?>(),
                 null);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhisparrV3_ProactiveSearch_SearchesWithAPlainMovieSearchItem()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 3);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = whisparrInstance.Id,
+            ArrInstance = whisparrInstance,
+            Enabled = true,
+            MonitoredOnly = false
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        List<SearchableMovie> movies =
+        [
+            new SearchableMovie { Id = 7, Title = "Movie 7", Status = "released", Monitored = true, HasFile = false, Tags = [] }
+        ];
+        _whisparrV3Client
+            .StreamAllMoviesAsync(whisparrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable<SearchableMovie>(movies));
+        _whisparrV3Client
+            .GetMissingMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(movies);
+        _whisparrV3Client
+            .GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _whisparrV3Client
+            .GetAllTagsAsync(Arg.Any<ArrInstance>())
+            .Returns([]);
+        _whisparrV3Client
+            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        SearchItem? capturedSearchItem = null;
+        mockArrClient
+            .SearchItemAsync(whisparrInstance, Arg.Do<SearchItem>(item => capturedSearchItem = item))
+            .Returns(42L);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Whisparr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.ShouldNotBeOfType<SeriesSearchItem>();
+        capturedSearchItem.Id.ShouldBe(7);
+
+        SeekerHistory history = await _fixture.EventsContext.SeekerHistory
+            .SingleAsync(h => h.ArrInstanceId == whisparrInstance.Id);
+        history.ItemType.ShouldBe(InstanceType.Whisparr);
+        history.ExternalItemId.ShouldBe(7);
+
+        SeekerCommandTracker tracker = await _fixture.EventsContext.SeekerCommandTrackers
+            .SingleAsync(t => t.ArrInstanceId == whisparrInstance.Id);
+        tracker.CommandId.ShouldBe(42L);
+        tracker.ExternalItemId.ShouldBe(7);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhisparrV2_ProactiveSearch_SkipsTheInstance()
+    {
+        // Arrange
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 2);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = whisparrInstance.Id,
+            ArrInstance = whisparrInstance,
+            Enabled = true,
+            MonitoredOnly = false
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Whisparr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.DidNotReceive().SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+        _whisparrV3Client.ReceivedCalls().ShouldBeEmpty();
     }
 
     #endregion
