@@ -3,7 +3,7 @@ using Cleanuparr.Domain.Enums;
 namespace Cleanuparr.Infrastructure.Features.Seeker;
 
 /// <summary>
-/// An episode that needs a search, with the reason it qualified.
+/// An episode, or a Lidarr album, that needs a search, with the reason it qualified.
 /// </summary>
 internal sealed record SonarrWantedEpisode
 {

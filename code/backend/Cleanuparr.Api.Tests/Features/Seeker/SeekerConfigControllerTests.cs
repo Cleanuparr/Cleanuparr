@@ -214,7 +214,7 @@ public class SeekerConfigControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSeekerConfig_OnlyReturnsSonarrAndRadarrInstances()
+    public async Task GetSeekerConfig_ListsSonarrRadarrAndLidarrInstances()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         var sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
@@ -224,10 +224,10 @@ public class SeekerConfigControllerTests : IDisposable
         var okResult = result.ShouldBeOfType<OkObjectResult>();
         var response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
 
-        response.Instances.Count.ShouldBe(2);
+        response.Instances.Count.ShouldBe(3);
         response.Instances.ShouldContain(i => i.ArrInstanceId == radarr.Id);
         response.Instances.ShouldContain(i => i.ArrInstanceId == sonarr.Id);
-        response.Instances.ShouldNotContain(i => i.ArrInstanceId == lidarr.Id);
+        response.Instances.ShouldContain(i => i.ArrInstanceId == lidarr.Id);
     }
 
     #endregion

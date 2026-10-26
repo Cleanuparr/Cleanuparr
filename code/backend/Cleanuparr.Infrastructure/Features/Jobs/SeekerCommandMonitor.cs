@@ -497,7 +497,9 @@ public class SeekerCommandMonitor : BackgroundService
         {
             InstanceType.Radarr => record.MovieId == tracker.ExternalItemId,
             InstanceType.Whisparr when arrInstance.Version is 3 => record.MovieId == tracker.ExternalItemId,
-            InstanceType.Lidarr => record.AlbumId == tracker.ExternalItemId,
+            InstanceType.Lidarr => tracker.EpisodeId > 0
+                ? record.AlbumId == tracker.EpisodeId
+                : record.AlbumId == tracker.ExternalItemId,
             InstanceType.Readarr => record.BookId == tracker.ExternalItemId,
             _ => tracker.EpisodeId > 0
                 ? record.EpisodeId == tracker.EpisodeId
