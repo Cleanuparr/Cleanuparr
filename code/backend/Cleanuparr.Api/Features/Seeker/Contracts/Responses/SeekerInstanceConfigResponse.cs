@@ -36,6 +36,8 @@ public sealed record SeekerInstanceConfigResponse
 
     public SonarrSearchMode SonarrSearchMode { get; init; }
 
+    public RadarrReleaseGate RadarrReleaseGate { get; init; }
+
     public bool RestUnitsEnabled { get; init; }
 
     public int RestMaxDays { get; init; }

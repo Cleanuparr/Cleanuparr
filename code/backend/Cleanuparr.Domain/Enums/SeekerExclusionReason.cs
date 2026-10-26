@@ -62,4 +62,9 @@ public enum SeekerExclusionReason
     /// Already searched in the current cycle
     /// </summary>
     SearchedThisCycle,
+
+    /// <summary>
+    /// Radarr does not count the movie as available yet
+    /// </summary>
+    NotAvailable,
 }
