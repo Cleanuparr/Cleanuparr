@@ -17,5 +17,8 @@
     <category id="5000" name="TV">
       <subcat id="5040" name="TV/HD" />
     </category>
+    <category id="6000" name="XXX">
+      <subcat id="6040" name="XXX/x264" />
+    </category>
   </categories>
 </caps>

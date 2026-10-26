@@ -6,8 +6,8 @@
 # Snapshots /config into e2e/arr-seed, which the e2e run restores.
 # CI therefore needs no network and every run sees the same library.
 #
-# Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.
-# Stops the sonarr and radarr containers.
+# Needs internet: each arr reads its metadata provider.
+# Stops the sonarr, radarr and whisparr containers.
 #
 # Re-run it when the pinned image tags change, or when the library has to change.
 #
@@ -20,8 +20,10 @@ COMPOSE="docker compose -f $HERE/docker-compose.e2e.yml"
 
 SONARR_URL="http://localhost:8989"
 RADARR_URL="http://localhost:7878"
+WHISPARR_URL="http://localhost:6970"
 SONARR_API_KEY="0000000000000000000000000000e2e1"
 RADARR_API_KEY="0000000000000000000000000000e2e2"
+WHISPARR_API_KEY="0000000000000000000000000000e2e6"
 
 # The mock Torznab indexer, and qBittorrent, both on the host network.
 INDEXER_URL="http://127.0.0.1:9500"
@@ -39,6 +41,8 @@ RADARR_TMDB_ID=911430
 # The Wild Robot, added second and left unmonitored.
 # The specs that need two candidates monitor it themselves and restore it after.
 RADARR_SECOND_TMDB_ID=1184918
+# Package Holiday (2004): a plain title, since the seed database is public.
+WHISPARR_TMDB_ID=1253309
 
 log() {
   echo "[seed-arr] $*"
@@ -252,9 +256,25 @@ seed_radarr() {
   wait_for_items "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/movie' 'radarr movies'
 }
 
+seed_whisparr() {
+  log "configuring whisparr"
+  arr_post "$WHISPARR_URL" "$WHISPARR_API_KEY" '/api/v3/rootfolder' '{"path":"/movies"}' > /dev/null
+  add_indexer "$WHISPARR_URL" "$WHISPARR_API_KEY" '[6000]'
+  add_download_client "$WHISPARR_URL" "$WHISPARR_API_KEY" 'movieCategory' 'whisparr'
+
+  log "adding the whisparr movie"
+  local movie
+  movie=$(arr_get "$WHISPARR_URL" "$WHISPARR_API_KEY" "/api/v3/movie/lookup?term=tmdb%3A$WHISPARR_TMDB_ID" \
+    | merge_add_options '/movies' '{"searchForMovie":false}')
+  arr_post "$WHISPARR_URL" "$WHISPARR_API_KEY" '/api/v3/movie' "$movie" > /dev/null
+
+  wait_for_items "$WHISPARR_URL" "$WHISPARR_API_KEY" '/api/v3/movie' 'whisparr movies'
+}
+
 # Keeps the database and config.xml, drops everything the arr rebuilds on start.
+# Whisparr v3 names its database whisparr3.db.
 snapshot() {
-  local arr="$1"
+  local arr="$1" db="${2:-$1}"
   local src="$TEST_DATA/$arr-config"
   local dest="$ARR_SEED/$arr"
 
@@ -265,15 +285,15 @@ snapshot() {
 
   # The arr leaves committed rows in the write-ahead log.
   # The log comes along and is folded into the database before it is dropped.
-  cp "$src/$arr.db" "$dest/$arr.db"
+  cp "$src/$db.db" "$dest/$db.db"
   for suffix in wal shm; do
-    if [[ -f "$src/$arr.db-$suffix" ]]; then
-      cp "$src/$arr.db-$suffix" "$dest/$arr.db-$suffix"
+    if [[ -f "$src/$db.db-$suffix" ]]; then
+      cp "$src/$db.db-$suffix" "$dest/$db.db-$suffix"
     fi
   done
 
-  sqlite3 "$dest/$arr.db" 'PRAGMA journal_mode=DELETE; VACUUM;' > /dev/null
-  rm -f "$dest/$arr.db-wal" "$dest/$arr.db-shm"
+  sqlite3 "$dest/$db.db" 'PRAGMA journal_mode=DELETE; VACUUM;' > /dev/null
+  rm -f "$dest/$db.db-wal" "$dest/$db.db-shm"
 }
 
 main() {
@@ -281,23 +301,30 @@ main() {
 
   write_config_xml "$TEST_DATA/sonarr-config" 8989 "$SONARR_API_KEY" 'Sonarr'
   write_config_xml "$TEST_DATA/radarr-config" 7878 "$RADARR_API_KEY" 'Radarr'
+  write_config_xml "$TEST_DATA/whisparr-config" 6970 "$WHISPARR_API_KEY" 'Whisparr'
 
   # An arr tests the indexer and the download client before it saves them.
   # Both have to answer during seeding.
   log "starting the arrs"
-  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr
+  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr
 
   wait_for_arr "$SONARR_URL" 'sonarr'
   wait_for_arr "$RADARR_URL" 'radarr'
+  wait_for_arr "$WHISPARR_URL" 'whisparr'
 
   seed_sonarr
   seed_radarr
+  seed_whisparr
 
   log "stopping the arrs"
-  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr
+  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr
 
   snapshot sonarr
   snapshot radarr
+  snapshot whisparr whisparr3
+
+  # The seed is public, so it keeps the title and drops the synopsis, posters and cast.
+  sqlite3 "$ARR_SEED/whisparr/whisparr3.db" "UPDATE MovieMetadata SET Overview = '', Images = '[]', Credits = '[]'; VACUUM;"
 
   log "seed written to $ARR_SEED"
 }

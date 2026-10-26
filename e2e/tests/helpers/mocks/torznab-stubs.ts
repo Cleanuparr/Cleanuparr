@@ -16,6 +16,7 @@ export type TorznabSearchMode = 'tvsearch' | 'movie' | 'search';
 /** Torznab category. The seeded arrs are configured for the parent categories. */
 export const TORZNAB_TV_CATEGORY = 5040;
 export const TORZNAB_MOVIE_CATEGORY = 2040;
+export const TORZNAB_XXX_CATEGORY = 6040;
 
 /**
  * The advertised release size.
