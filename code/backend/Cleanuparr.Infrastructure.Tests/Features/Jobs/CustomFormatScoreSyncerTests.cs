@@ -1270,6 +1270,95 @@ public class CustomFormatScoreSyncerTests : IDisposable
         (await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync()).ShouldHaveSingleItem().EpisodeId.ShouldBe(50);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_LidarrSync_FlushesFullArtistChunks()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = await AddLidarrWithSyncAsync();
+        List<SearchableArtist> artists = [];
+        for (int i = 1; i <= ChunkSize + 1; i++)
+        {
+            artists.Add(new SearchableArtist { Id = i, ArtistName = $"Artist {i}", Monitored = true, QualityProfileId = 1 });
+        }
+
+        _lidarrClient
+            .StreamAllArtistsAsync(lidarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(artists));
+        _lidarrClient
+            .GetAlbumsAsync(lidarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(new List<SearchableAlbum> { LidarrAlbum(callInfo.Arg<long>() * 10, trackFileCount: 1, trackCount: 1) }));
+        _lidarrClient
+            .GetTrackFilesAsync(lidarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(new List<ArrTrackFile> { new() { Id = callInfo.Arg<long>() * 100, AlbumId = callInfo.Arg<long>() * 10, CustomFormatScore = 120 } }));
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.CustomFormatScoreEntries.CountAsync()).ShouldBe(ChunkSize + 1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LidarrCompleteAlbumWithoutTrackFile_KeepsEntryAndSkips()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = await AddLidarrWithSyncAsync();
+        DateTimeOffset oldSync = new(1999, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = lidarrInstance.Id,
+            ExternalItemId = 5,
+            EpisodeId = 50,
+            ItemType = InstanceType.Lidarr,
+            Title = "Test Artist - Album 50",
+            FileId = 901,
+            CurrentScore = 120,
+            CutoffScore = 300,
+            QualityProfileName = "Lossless",
+            LastSyncedAt = oldSync
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubLidarrLibrary(
+            lidarrInstance,
+            LidarrArtist(),
+            [LidarrAlbum(50, trackFileCount: 3, trackCount: 3)],
+            []);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        CustomFormatScoreEntry entry = (await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync()).ShouldHaveSingleItem();
+        entry.CurrentScore.ShouldBe(120);
+        entry.LastSyncedAt.ShouldBeGreaterThan(oldSync);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LidarrArtistProfileMissing_UsesUnknownProfile()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = await AddLidarrWithSyncAsync();
+        StubLidarrLibrary(
+            lidarrInstance,
+            new SearchableArtist { Id = 5, ArtistName = "Test Artist", Monitored = true, QualityProfileId = 99 },
+            [LidarrAlbum(50, trackFileCount: 1, trackCount: 1)],
+            [new ArrTrackFile { Id = 901, AlbumId = 50, CustomFormatScore = 120 }]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        CustomFormatScoreEntry entry = (await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync()).ShouldHaveSingleItem();
+        entry.CutoffScore.ShouldBe(0);
+        entry.QualityProfileName.ShouldBe("Unknown");
+    }
+
     #endregion
 
     #region Score Unchanged Tests
