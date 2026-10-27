@@ -839,37 +839,29 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task CleanupStaleEntriesAsync(
         Guid arrInstanceId, InstanceType instanceType, DateTimeOffset syncStartTime)
     {
-        List<long> staleItemIds = await _eventsContext.CustomFormatScoreEntries
-            .Where(e => e.ArrInstanceId == arrInstanceId
-                && e.ItemType == instanceType
-                && e.LastSyncedAt < syncStartTime)
-            .Select(e => e.ExternalItemId)
-            .Distinct()
-            .ToListAsync();
-
-        if (staleItemIds.Count == 0)
-        {
-            return;
-        }
-
-        await _eventsContext.CustomFormatScoreEntries
+        int deletedEntries = await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
             .ExecuteDeleteAsync();
 
-        foreach (long[] chunk in staleItemIds.Chunk(ChunkSize))
+        if (deletedEntries == 0)
         {
-            List<long> chunkList = chunk.ToList();
-            await _eventsContext.CustomFormatScoreHistory
-                .Where(h => h.ArrInstanceId == arrInstanceId
-                    && h.ItemType == instanceType
-                    && chunkList.Contains(h.ExternalItemId))
-                .ExecuteDeleteAsync();
+            return;
         }
 
-        _logger.LogTrace("Cleaned up {Count} stale CF score item(s) for instance {InstanceId}",
-            staleItemIds.Count, arrInstanceId);
+        // Match on EpisodeId too, so a removed album or episode keeps its siblings' history
+        await _eventsContext.CustomFormatScoreHistory
+            .Where(h => h.ArrInstanceId == arrInstanceId
+                && h.ItemType == instanceType
+                && !_eventsContext.CustomFormatScoreEntries.Any(e => e.ArrInstanceId == h.ArrInstanceId
+                    && e.ItemType == h.ItemType
+                    && e.ExternalItemId == h.ExternalItemId
+                    && e.EpisodeId == h.EpisodeId))
+            .ExecuteDeleteAsync();
+
+        _logger.LogTrace("Cleaned up {Count} stale CF score entries for instance {InstanceId}",
+            deletedEntries, arrInstanceId);
     }
 
     /// <summary>
