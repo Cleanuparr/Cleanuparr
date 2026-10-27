@@ -39,6 +39,7 @@ public sealed class SeekerUnitEvaluator
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
 
@@ -48,6 +49,7 @@ public sealed class SeekerUnitEvaluator
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         ILidarrClient lidarrClient,
+        IWhisparrV2Client whisparrV2Client,
         IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider)
     {
@@ -56,6 +58,7 @@ public sealed class SeekerUnitEvaluator
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _lidarrClient = lidarrClient;
+        _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
     }
@@ -93,7 +96,7 @@ public sealed class SeekerUnitEvaluator
 
         return new SeekerRecentGrabs
         {
-            Episodes = await _sonarrClient.GetRecentlyGrabbedEpisodesAsync(arrInstance, since, cancellationToken)
+            Episodes = await SeriesClient(arrInstance).GetRecentlyGrabbedEpisodesAsync(arrInstance, since, cancellationToken)
         };
     }
 
@@ -291,6 +294,9 @@ public sealed class SeekerUnitEvaluator
 
     private IRadarrClient MovieClient(ArrInstance arrInstance) =>
         arrInstance.ArrConfig.Type is InstanceType.Whisparr ? _whisparrV3Client : _radarrClient;
+
+    private ISonarrClient SeriesClient(ArrInstance arrInstance) =>
+        arrInstance.ArrConfig.Type is InstanceType.Whisparr ? _whisparrV2Client : _sonarrClient;
 
     private async Task<SeekerEvaluation> EvaluateMoviesAsync(
         SeekerConfig config,
@@ -502,7 +508,7 @@ public sealed class SeekerUnitEvaluator
         Dictionary<long, DateTimeOffset> lastSearchedByItem,
         CancellationToken cancellationToken)
     {
-        List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
+        List<Tag> tags = await SeriesClient(arrInstance).GetAllTagsAsync(arrInstance);
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
         HashSet<string> includeTagSet = new(instanceConfig.IncludeTags, StringComparer.InvariantCultureIgnoreCase);
@@ -510,7 +516,7 @@ public sealed class SeekerUnitEvaluator
         HashSet<int> upgradesDisabledProfileIds = [];
         if (instanceConfig.UseCustomFormatScore)
         {
-            List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
+            List<ArrQualityProfile> profiles = await SeriesClient(arrInstance).GetQualityProfilesAsync(arrInstance);
             upgradesDisabledProfileIds = profiles.Where(p => !p.UpgradeAllowed).Select(p => p.Id).ToHashSet();
         }
 
@@ -521,7 +527,7 @@ public sealed class SeekerUnitEvaluator
         int releasedCount = 0;
         int monitoredCount = 0;
         Dictionary<long, SearchableSeries> seriesById = new();
-        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
+        await foreach (SearchableSeries series in SeriesClient(arrInstance).StreamAllSeriesAsync(arrInstance, cancellationToken))
         {
             allLibraryIds.Add(series.Id);
 
@@ -577,7 +583,7 @@ public sealed class SeekerUnitEvaluator
                 return true;
             }
 
-            ExcludeEpisode(e.SeriesId, e.Id, $"{series.Title} S{e.SeasonNumber:D2}E{e.EpisodeNumber:D2}",
+            ExcludeEpisode(e.SeriesId, e.Id, SeekerApps.EpisodeName(arrInstance, series.Title, e.SeasonNumber, e.EpisodeNumber, e.AirDateUtc),
                 e.AirDateUtc is null || e.AirDateUtc.Value > now
                     ? SeekerExclusionReason.NotReleased
                     : SeekerExclusionReason.InGracePeriod);
@@ -597,7 +603,7 @@ public sealed class SeekerUnitEvaluator
         };
 
         List<SearchableEpisode> missing = await ReadWantedAsync(
-            monitored => _sonarrClient.GetMissingEpisodesAsync(arrInstance, monitored, cancellationToken),
+            monitored => SeriesClient(arrInstance).GetMissingEpisodesAsync(arrInstance, monitored, cancellationToken),
             instanceConfig.MonitoredOnly);
         wanted.AddRange(missing
             .Where(IsReleasedEpisodeOfCandidate)
@@ -606,7 +612,7 @@ public sealed class SeekerUnitEvaluator
         if (instanceConfig.UseCutoff)
         {
             List<SearchableEpisode> cutoffUnmet = await ReadWantedAsync(
-                monitored => _sonarrClient.GetCutoffUnmetEpisodesAsync(arrInstance, monitored, cancellationToken),
+                monitored => SeriesClient(arrInstance).GetCutoffUnmetEpisodesAsync(arrInstance, monitored, cancellationToken),
                 instanceConfig.MonitoredOnly);
             wanted.AddRange(cutoffUnmet
                 .Where(IsReleasedEpisodeOfCandidate)
@@ -619,7 +625,7 @@ public sealed class SeekerUnitEvaluator
             List<CustomFormatScoreEntry> belowCutoff = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id
-                    && e.ItemType == InstanceType.Sonarr
+                    && e.ItemType == arrInstance.ArrConfig.Type
                     && e.SeasonNumber != null
                     && e.AirDateUtc != null
                     && e.AirDateUtc <= graceCutoff
@@ -726,7 +732,7 @@ public sealed class SeekerUnitEvaluator
                 MonitoredItems = monitoredCount,
                 TagFilteredItems = seriesById.Count,
                 ItemExclusions = exclusions,
-                Units = BuildSonarrUnits(wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds, instanceConfig.SonarrSearchMode)
+                Units = BuildSonarrUnits(arrInstance, wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds, instanceConfig.SonarrSearchMode)
                     .Select(WithBlockedBy)
                     .ToList(),
                 LastSearchedByItem = searched,
@@ -976,6 +982,7 @@ public sealed class SeekerUnitEvaluator
     /// A season partly searched in this cycle continues by episode.
     /// </summary>
     private static List<SeekerSearchUnit> BuildSonarrUnits(
+        ArrInstance arrInstance,
         List<SonarrWantedEpisode> wanted,
         Dictionary<long, SearchableSeries> seriesById,
         HashSet<(long SeriesId, int SeasonNumber)> finishedAnimeSeasons,
@@ -1009,7 +1016,7 @@ public sealed class SeekerUnitEvaluator
                     ItemId = season.Key.SeriesId,
                     SeasonNumber = season.Key.SeasonNumber,
                     EpisodeId = 0,
-                    Name = $"{series.Title} S{season.Key.SeasonNumber:D2}",
+                    Name = SeekerApps.SeasonName(arrInstance, series.Title, season.Key.SeasonNumber),
                     ContentKind = kind,
                     Reasons = season.Select(w => w.Reason).ToList(),
                     Added = series.Added,
@@ -1030,9 +1037,9 @@ public sealed class SeekerUnitEvaluator
                     ItemId = season.Key.SeriesId,
                     SeasonNumber = season.Key.SeasonNumber,
                     EpisodeId = episode.Key,
-                    Name = episodeNumber is not null
-                        ? $"{series.Title} S{season.Key.SeasonNumber:D2}E{episodeNumber:D2}"
-                        : first.Title ?? $"{series.Title} S{season.Key.SeasonNumber:D2}",
+                    Name = SeekerApps.NamesScenesByDate(arrInstance) || episodeNumber is not null
+                        ? SeekerApps.EpisodeName(arrInstance, series.Title, season.Key.SeasonNumber, episodeNumber ?? 0, first.AirDateUtc)
+                        : first.Title ?? SeekerApps.SeasonName(arrInstance, series.Title, season.Key.SeasonNumber),
                     ContentKind = kind,
                     Reasons = episode.Select(w => w.Reason).ToList(),
                     AirDateUtc = first.AirDateUtc,
@@ -1154,7 +1161,7 @@ public sealed class SeekerUnitEvaluator
             List<SearchableEpisode> episodes;
             try
             {
-                episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId, cancellationToken);
+                episodes = await SeriesClient(arrInstance).GetEpisodesAsync(arrInstance, seriesId, cancellationToken);
             }
             catch (OperationCanceledException)
             {

@@ -25,6 +25,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly FakeTimeProvider _timeProvider;
     private readonly SeekerUnitEvaluator _sut;
@@ -41,6 +42,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
+        _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 1, 10, 12, 0, 0, TimeSpan.Zero));
         _radarr = TestDataContextFactory.AddRadarrInstance(_dataContext);
@@ -67,6 +69,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _lidarrClient,
+            _whisparrV2Client,
             _whisparrV3Client,
             _timeProvider);
     }
@@ -2202,6 +2205,170 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Assert
         evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
+    }
+
+    #endregion
+
+    #region Whisparr v2
+
+    private static readonly DateTimeOffset SceneDate = new(2024, 5, 12, 0, 0, 0, TimeSpan.Zero);
+
+    private static SearchableSeries Site(params SeriesSeason[] years)
+    {
+        return Series(1, seasons: [..years]) with { Title = "Site" };
+    }
+
+    private SearchableEpisode Scene(long id, DateTimeOffset? releaseDate = null, bool noReleaseDate = false)
+    {
+        return Episode(id, 1, season: 2024, number: 0, airDate: releaseDate ?? SceneDate, noAirDate: noReleaseDate);
+    }
+
+    private ArrInstance SetupWhisparrV2(List<SearchableSeries> library, List<SearchableEpisode> missing)
+    {
+        ArrInstance instance = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 2);
+        _whisparrV2Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV2Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV2Client.StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(library));
+        _whisparrV2Client.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(missing.Where(e => e.Monitored).ToList());
+        _whisparrV2Client.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns(missing.Where(e => !e.Monitored).ToList());
+        _whisparrV2Client.GetCutoffUnmetEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        return instance;
+    }
+
+    private Task<SeekerEvaluation> EvaluateWhisparrV2Async(ArrInstance instance, Action<SeekerInstanceConfig>? configure = null)
+    {
+        return _sut.EvaluateAsync(
+            _config,
+            InstanceConfig(instance, configure),
+            instance,
+            [],
+            new SeekerRecentGrabs(),
+            [],
+            CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_ReadsThroughTheWhisparrV2ClientAndNeverTheSonarrClient()
+    {
+        // Arrange
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 1))], [Scene(10)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance, c => c.UseCutoff = true);
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem();
+        await _whisparrV2Client.Received().GetMissingEpisodesAsync(instance, true, Arg.Any<CancellationToken>());
+        await _whisparrV2Client.Received().GetCutoffUnmetEpisodesAsync(instance, true, Arg.Any<CancellationToken>());
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_SceneReleasedInsideGraceWindow_ExcludesAsInGracePeriod()
+    {
+        // Arrange
+        _config.PostReleaseGraceHours = 24;
+        DateTimeOffset releaseDate = new(2026, 1, 10, 0, 0, 0, TimeSpan.Zero);
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 1))], [Scene(10, releaseDate)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance);
+
+        // Assert
+        ReasonOf(evaluation, "Site 2026-01-10").ShouldBe(SeekerExclusionReason.InGracePeriod);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_SceneWithoutReleaseDate_ExcludesAsNotReleased()
+    {
+        // Arrange
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 1))], [Scene(10, noReleaseDate: true)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance);
+
+        // Assert
+        ReasonOf(evaluation, "Site 2024").ShouldBe(SeekerExclusionReason.NotReleased);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_AutoAndEverySceneOfThePastYearWanted_BuildsYearUnit()
+    {
+        // Arrange
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 2))], [Scene(10), Scene(11, SceneDate.AddDays(1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance);
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.EpisodeId.ShouldBe(0);
+        unit.SeasonNumber.ShouldBe(2024);
+        unit.Name.ShouldBe("Site 2024");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_AutoAndYearPartlyWanted_BuildsSceneUnitsNamedByDate()
+    {
+        // Arrange
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 5))], [Scene(10), Scene(11, SceneDate.AddDays(1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance);
+
+        // Assert
+        evaluation.Units.Select(u => u.Name).ShouldBe(["Site 2024-05-12", "Site 2024-05-13"], ignoreOrder: true);
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([10, 11], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_EpisodeModeAndEverySceneWanted_BuildsOneUnitPerScene()
+    {
+        // Arrange
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 2))], [Scene(10), Scene(11, SceneDate.AddDays(1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance, c => c.SonarrSearchMode = SonarrSearchMode.Episode);
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([10, 11], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhisparrV2_CustomFormatEntries_ReadsWhisparrRowsOnly()
+    {
+        // Arrange
+        ArrInstance instance = SetupWhisparrV2([Site(Season(2024, 5))], []);
+        await _eventsContext.CustomFormatScoreEntries.AddAsync(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = instance.Id,
+            ExternalItemId = 1,
+            EpisodeId = 20,
+            Title = "Site 2024-05-12",
+            ItemType = InstanceType.Whisparr,
+            SeasonNumber = 2024,
+            AirDateUtc = SceneDate,
+            IsMonitored = true,
+            CurrentScore = 5,
+            CutoffScore = 10,
+        });
+        await _eventsContext.SaveChangesAsync();
+        await AddSonarrCustomFormatEntryAsync(episodeId: 21, currentScore: 0, cutoffScore: 30);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateWhisparrV2Async(instance, c => c.UseCustomFormatScore = true);
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.EpisodeId.ShouldBe(20);
+        unit.Name.ShouldBe("Site 2024-05-12");
+        unit.CustomFormatGap.ShouldBe(5);
     }
 
     #endregion
