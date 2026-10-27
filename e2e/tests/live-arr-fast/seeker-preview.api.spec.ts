@@ -218,7 +218,7 @@ test.describe('Seeker preview on Whisparr v2', () => {
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
     await WHISPARR2.arr.put('/api/v3/episode/monitor', {
-      episodeIds: yearSearch.scenes.map((scene) => scene.id),
+      episodeIds: [...yearSearch.scenes.map((scene) => scene.id), singleScene.monitored.id],
       monitored: true,
     });
     await restoreLibrary(WHISPARR2, library);
@@ -226,6 +226,11 @@ test.describe('Seeker preview on Whisparr v2', () => {
   });
 
   test('lists the seeded site by year and scene dates with funnel counts', async ({ api }) => {
+    // Seeker picks a random year; leave 2019 as the only wanted one
+    await WHISPARR2.arr.put('/api/v3/episode/monitor', {
+      episodeIds: [singleScene.monitored.id],
+      monitored: false,
+    });
     const instanceId = await arrangeInstance(api, WHISPARR2);
 
     const preview = await getPreview(api, instanceId);
