@@ -267,7 +267,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         return await DeserializeStreamAsync<List<Tag>>(response) ?? [];
     }
 
-    public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
+    public virtual async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/episode";
@@ -351,11 +351,11 @@ public class SonarrClient : ArrClient, ISonarrClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<SearchableEpisode>> GetMissingEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+    public virtual async Task<List<SearchableEpisode>> GetMissingEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
         await GetAllWantedAsync<SearchableEpisode>(arrInstance, "missing", monitored, cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<List<SearchableEpisode>> GetCutoffUnmetEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+    public virtual async Task<List<SearchableEpisode>> GetCutoffUnmetEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
         await GetAllWantedAsync<SearchableEpisode>(arrInstance, "cutoff", monitored, cancellationToken);
 
     private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)
