@@ -153,7 +153,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         DateTimeOffset now = _timeProvider.GetUtcNow();
 
         List<(SearchableMovie Movie, long FileId)> withFilesBuffer = new(ChunkSize);
-        List<long> withoutFilesBuffer = new(ChunkSize);
+        List<(long Id, bool Monitored)> withoutFilesBuffer = new(ChunkSize);
 
         int totalMovies = 0;
         int totalWithFiles = 0;
@@ -182,7 +182,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             }
             else
             {
-                withoutFilesBuffer.Add(movie.Id);
+                withoutFilesBuffer.Add((movie.Id, movie.Monitored));
 
                 if (withoutFilesBuffer.Count >= ChunkSize)
                 {
@@ -221,15 +221,21 @@ public sealed class CustomFormatScoreSyncer : IHandler
             instanceType, totalSynced, arrInstance.Name, totalSkipped);
     }
 
-    private async Task FlushMovieTouchChunkAsync(ArrInstance arrInstance, List<long> movieIds, DateTimeOffset now)
+    private async Task FlushMovieTouchChunkAsync(ArrInstance arrInstance, List<(long Id, bool Monitored)> movies, DateTimeOffset now)
     {
         InstanceType instanceType = arrInstance.ArrConfig.Type;
-        List<long> chunkList = movieIds.ToList();
-        await _eventsContext.CustomFormatScoreEntries
-            .Where(e => e.ArrInstanceId == arrInstance.Id
-                && e.ItemType == instanceType
-                && chunkList.Contains(e.ExternalItemId))
-            .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
+        foreach (IGrouping<bool, (long Id, bool Monitored)> group in movies.GroupBy(x => x.Monitored))
+        {
+            bool isMonitored = group.Key;
+            List<long> chunkList = group.Select(x => x.Id).ToList();
+            await _eventsContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == instanceType
+                    && chunkList.Contains(e.ExternalItemId))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.LastSyncedAt, now)
+                    .SetProperty(e => e.IsMonitored, isMonitored));
+        }
     }
 
     private async Task<(int Synced, int Skipped)> FlushMovieWithFilesChunkAsync(
@@ -269,6 +275,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     if (existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? skippedEntry))
                     {
                         skippedEntry.LastSyncedAt = now;
+                        skippedEntry.IsMonitored = movie.Monitored;
                     }
                     _logger.LogTrace("[{InstanceType}] {InstanceName}: skipping movie '{Title}' (fileId={FileId}), no score returned",
                         instanceType, arrInstance.Name, movie.Title, fileId);
@@ -379,7 +386,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         // Collect all episodes with files for this chunk of series
         List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
-        List<(long SeriesId, long EpisodeId)> episodesToTouch = [];
+        List<(long SeriesId, long EpisodeId, bool IsMonitored)> episodesToTouch = [];
 
         foreach (SeriesFetch seriesFetch in fetched)
         {
@@ -399,7 +406,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
                 else
                 {
-                    episodesToTouch.Add((series.Id, episode.Id));
+                    episodesToTouch.Add((series.Id, episode.Id, series.Monitored && episode.Monitored));
                     if (episode.EpisodeFileId > 0)
                     {
                         skipped++;
@@ -454,8 +461,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
 
         // Touch entries for episodes that exist but have no file (e.g., RSS upgrade in progress)
-        foreach (var group in episodesToTouch.GroupBy(x => x.SeriesId))
+        foreach (IGrouping<(long SeriesId, bool IsMonitored), (long SeriesId, long EpisodeId, bool IsMonitored)> group in episodesToTouch.GroupBy(x => (x.SeriesId, x.IsMonitored)))
         {
+            (long seriesId, bool isMonitored) = group.Key;
             List<long> episodeIds = group.Select(x => x.EpisodeId).ToList();
             foreach (long[] epChunk in episodeIds.Chunk(ChunkSize))
             {
@@ -463,9 +471,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
                         && e.ItemType == InstanceType.Sonarr
-                        && e.ExternalItemId == group.Key
+                        && e.ExternalItemId == seriesId
                         && epChunkList.Contains(e.EpisodeId))
-                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(e => e.LastSyncedAt, now)
+                        .SetProperty(e => e.IsMonitored, isMonitored), cancellationToken);
             }
         }
 
@@ -594,7 +604,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             .ToList();
 
         List<(SearchableArtist Artist, SearchableAlbum Album, ArrTrackFile File)> itemsInChunk = [];
-        List<(long ArtistId, long AlbumId)> albumsToTouch = [];
+        List<(long ArtistId, long AlbumId, bool IsMonitored)> albumsToTouch = [];
 
         foreach (ArtistFetch artistFetch in fetched)
         {
@@ -617,7 +627,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
                 else
                 {
-                    albumsToTouch.Add((artist.Id, album.Id));
+                    albumsToTouch.Add((artist.Id, album.Id, artist.Monitored && album.Monitored));
                     if (hasAllTracks)
                     {
                         skipped++;
@@ -672,8 +682,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
 
         // Keeps partial albums out of stale cleanup
-        foreach (IGrouping<long, (long ArtistId, long AlbumId)> group in albumsToTouch.GroupBy(x => x.ArtistId))
+        foreach (IGrouping<(long ArtistId, bool IsMonitored), (long ArtistId, long AlbumId, bool IsMonitored)> group in albumsToTouch.GroupBy(x => (x.ArtistId, x.IsMonitored)))
         {
+            (long artistId, bool isMonitored) = group.Key;
             List<long> albumIds = group.Select(x => x.AlbumId).ToList();
             foreach (long[] albumChunk in albumIds.Chunk(ChunkSize))
             {
@@ -681,9 +692,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
                         && e.ItemType == InstanceType.Lidarr
-                        && e.ExternalItemId == group.Key
+                        && e.ExternalItemId == artistId
                         && albumChunkList.Contains(e.EpisodeId))
-                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(e => e.LastSyncedAt, now)
+                        .SetProperty(e => e.IsMonitored, isMonitored), cancellationToken);
             }
         }
 

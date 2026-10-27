@@ -1186,6 +1186,41 @@ public class CustomFormatScoreSyncerTests : IDisposable
         (await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync()).ShouldHaveSingleItem().EpisodeId.ShouldBe(50);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_LidarrAlbumLosingTracksAndUnmonitored_ClearsIsMonitored()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = await AddLidarrWithSyncAsync();
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = lidarrInstance.Id,
+            ExternalItemId = 5,
+            EpisodeId = 50,
+            ItemType = InstanceType.Lidarr,
+            Title = "Test Artist - Album 50",
+            FileId = 901,
+            CurrentScore = 120,
+            CutoffScore = 300,
+            QualityProfileName = "Lossless",
+            IsMonitored = true,
+            LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubLidarrLibrary(
+            lidarrInstance,
+            LidarrArtist(),
+            [LidarrAlbum(50, trackFileCount: 2, trackCount: 3, monitored: false)],
+            [new ArrTrackFile { Id = 901, AlbumId = 50, CustomFormatScore = 120 }]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync()).ShouldHaveSingleItem().IsMonitored.ShouldBeFalse();
+    }
+
     #endregion
 
     #region Score Unchanged Tests
@@ -1397,6 +1432,63 @@ public class CustomFormatScoreSyncerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_ClearsIsMonitoredWhenMovieWithoutFileIsUnmonitored()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Mario Bros",
+            FileId = 100,
+            CurrentScore = 250,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            IsMonitored = true,
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie
+                {
+                    Id = 10, Title = "Mario Bros", HasFile = false,
+                    MovieFile = null,
+                    QualityProfileId = 1, Status = "released", Monitored = false
+                }
+            ]));
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].IsMonitored.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_PreservesEntryWhenMovieFileScoreNotReturned()
     {
         // Arrange
@@ -1551,6 +1643,68 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_ClearsIsMonitoredWhenEpisodeWithoutFileIsUnmonitored()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            FileId = 500,
+            CurrentScore = 300,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            IsMonitored = true,
+            LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
+            ]));
+
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 0, HasFile = false, Monitored = false }
+            ]);
+
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].IsMonitored.ShouldBeFalse();
     }
 
     [Fact]
