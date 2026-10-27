@@ -28,6 +28,7 @@ RADARR_API_KEY="0000000000000000000000000000e2e2"
 WHISPARR_API_KEY="0000000000000000000000000000e2e6"
 LIDARR_API_KEY="0000000000000000000000000000e2e7"
 WHISPARR2_API_KEY="0000000000000000000000000000e2e8"
+ROOTFOLDER_V3="/api/v3/rootfolder"
 
 # The mock Torznab indexer, and qBittorrent, both on the host network.
 INDEXER_URL="http://127.0.0.1:9500"
@@ -223,7 +224,7 @@ EOF
 
 seed_sonarr() {
   log "configuring sonarr"
-  arr_post "$SONARR_URL" "$SONARR_API_KEY" '/api/v3/rootfolder' '{"path":"/tv"}' > /dev/null
+  arr_post "$SONARR_URL" "$SONARR_API_KEY" "$ROOTFOLDER_V3" '{"path":"/tv"}' > /dev/null
   add_indexer "$SONARR_URL" "$SONARR_API_KEY" '[5000]'
   add_download_client "$SONARR_URL" "$SONARR_API_KEY" 'tvCategory' 'tv-sonarr'
 
@@ -248,7 +249,7 @@ seed_sonarr() {
 
 seed_radarr() {
   log "configuring radarr"
-  arr_post "$RADARR_URL" "$RADARR_API_KEY" '/api/v3/rootfolder' '{"path":"/movies"}' > /dev/null
+  arr_post "$RADARR_URL" "$RADARR_API_KEY" "$ROOTFOLDER_V3" '{"path":"/movies"}' > /dev/null
   add_indexer "$RADARR_URL" "$RADARR_API_KEY" '[2000]'
   add_download_client "$RADARR_URL" "$RADARR_API_KEY" 'movieCategory' 'radarr'
 
@@ -269,7 +270,7 @@ seed_radarr() {
 
 seed_whisparr() {
   log "configuring whisparr"
-  arr_post "$WHISPARR_URL" "$WHISPARR_API_KEY" '/api/v3/rootfolder' '{"path":"/movies"}' > /dev/null
+  arr_post "$WHISPARR_URL" "$WHISPARR_API_KEY" "$ROOTFOLDER_V3" '{"path":"/movies"}' > /dev/null
   add_indexer "$WHISPARR_URL" "$WHISPARR_API_KEY" '[6000]'
   add_download_client "$WHISPARR_URL" "$WHISPARR_API_KEY" 'movieCategory' 'whisparr'
 
@@ -284,7 +285,7 @@ seed_whisparr() {
 
 seed_whisparr2() {
   log "configuring whisparr2"
-  arr_post "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '/api/v3/rootfolder' '{"path":"/scenes"}' > /dev/null
+  arr_post "$WHISPARR2_URL" "$WHISPARR2_API_KEY" "$ROOTFOLDER_V3" '{"path":"/scenes"}' > /dev/null
   add_indexer "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '[6000]'
   add_download_client "$WHISPARR2_URL" "$WHISPARR2_API_KEY" 'tvCategory' 'whisparr2' 'v3' '' ''
 
