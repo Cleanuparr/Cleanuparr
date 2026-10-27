@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
+  RUN_TAG,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   arrangeQueueCleaner,
@@ -21,6 +22,9 @@ import { grabbableRelease } from '../helpers/mocks/torznab-stubs';
 const MINUTES_PER_DAY = 1440;
 const SETTLE_MS = 30_000;
 const MAX_STRIKES = 3;
+
+// Cleanuparr deletes with blocklist=true, so a later spec grabbing RADARR.release would be rejected.
+const RELEASE = `F1.2025.1080p.WEB-DL.DDP5.1.H.264-E2EQ${RUN_TAG}`;
 
 /** HH:mm:00 of the UTC clock shifted by the given minutes, wrapping past midnight. */
 function utcTime(offsetMinutes: number): string {
@@ -44,7 +48,7 @@ function quietWindow(startOffset: number, endOffset: number): Record<string, unk
 test.describe('Seeker quiet hours', () => {
   test.beforeEach(async () => {
     await resetLiveArrState();
-    await indexerMock.stubMany(grabbableRelease(RADARR.searchMode, RADARR.release, RADARR.category).mappings);
+    await indexerMock.stubMany(grabbableRelease(RADARR.searchMode, RELEASE, RADARR.category).mappings);
   });
 
   test.afterEach(async ({ api }) => {
@@ -72,7 +76,7 @@ test.describe('Seeker quiet hours', () => {
   test('still runs replacement search inside the window', async ({ api }) => {
     test.setTimeout(300_000);
 
-    const release = grabbableRelease(RADARR.searchMode, RADARR.release, RADARR.category);
+    const release = grabbableRelease(RADARR.searchMode, RELEASE, RADARR.category);
     await arrangeQueueCleaner(api);
 
     const instanceId = await arrangeInstance(api, RADARR);
