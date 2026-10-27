@@ -226,7 +226,9 @@ public class LidarrClient : ArrClient, ILidarrClient
         using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        return await DeserializeStreamAsync<List<SearchableAlbum>>(response, cancellationToken) ?? [];
+        // An empty list would make the CF syncer delete every album entry of the artist
+        return await DeserializeStreamAsync<List<SearchableAlbum>>(response, cancellationToken)
+            ?? throw new InvalidOperationException($"Lidarr returned null albums for artist {artistId}");
     }
 
     public async Task<List<ArrTrackFile>> GetTrackFilesAsync(ArrInstance arrInstance, long artistId, CancellationToken cancellationToken = default)
