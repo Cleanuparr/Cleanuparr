@@ -157,7 +157,8 @@ async function countStoppedEvents(api: CleanuparrApi, infoHash: string): Promise
 test.describe.serial('Seeding rule stop action', () => {
   let token: string;
   let api: CleanuparrApi;
-  const torrents = new Map<string, { infoHash: string; contentPath: string }>();
+  // A retry re-adds the same infoHash, so event counts start from the earlier attempts' events.
+  const torrents = new Map<string, { infoHash: string; contentPath: string; stoppedBefore: number }>();
   const clientIds: string[] = [];
 
   const active = () => scenarios.filter((s) => torrents.has(s.key));
@@ -208,7 +209,7 @@ test.describe.serial('Seeding rule stop action', () => {
           intervals: [500],
         })
         .toBe(false);
-      torrents.set(s.key, fixture);
+      torrents.set(s.key, { ...fixture, stoppedBefore: await countStoppedEvents(api, fixture.infoHash) });
 
       const createRes = await createDownloadClient(token, {
         enabled: true,
@@ -268,13 +269,14 @@ test.describe.serial('Seeding rule stop action', () => {
     test.setTimeout(180_000);
 
     for (const s of active()) {
+      const { infoHash, stoppedBefore } = torrents.get(s.key)!;
       await expect
-        .poll(() => countStoppedEvents(api, torrents.get(s.key)!.infoHash), {
+        .poll(() => countStoppedEvents(api, infoHash), {
           message: `${s.key}: the first cycle did not record exactly one DownloadStopped event`,
           timeout: 30_000,
           intervals: [1_000],
         })
-        .toBe(1);
+        .toBe(stoppedBefore + 1);
     }
 
     const trig = await triggerJob(token, 'DownloadCleaner');
@@ -284,8 +286,8 @@ test.describe.serial('Seeding rule stop action', () => {
     await sleep(20_000);
 
     for (const s of active()) {
-      const { infoHash } = torrents.get(s.key)!;
-      expect(await countStoppedEvents(api, infoHash), `${s.key}: the torrent was stopped twice`).toBe(1);
+      const { infoHash, stoppedBefore } = torrents.get(s.key)!;
+      expect(await countStoppedEvents(api, infoHash), `${s.key}: the torrent was stopped twice`).toBe(stoppedBefore + 1);
       expect(await s.driver.isStopped(infoHash), `${s.key}: torrent no longer stopped`).toBe(true);
     }
   });
