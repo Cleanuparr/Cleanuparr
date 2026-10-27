@@ -7,7 +7,7 @@
 # CI therefore needs no network and every run sees the same library.
 #
 # Needs internet: each arr reads its metadata provider.
-# Stops the sonarr, radarr, whisparr and lidarr containers.
+# Stops the sonarr, radarr, whisparr, whisparr2 and lidarr containers.
 #
 # Re-run it when the pinned image tags change, or when the library has to change.
 #
@@ -21,11 +21,13 @@ COMPOSE="docker compose -f $HERE/docker-compose.e2e.yml"
 SONARR_URL="http://localhost:8989"
 RADARR_URL="http://localhost:7878"
 WHISPARR_URL="http://localhost:6970"
+WHISPARR2_URL="http://localhost:6971"
 LIDARR_URL="http://localhost:8686"
 SONARR_API_KEY="0000000000000000000000000000e2e1"
 RADARR_API_KEY="0000000000000000000000000000e2e2"
 WHISPARR_API_KEY="0000000000000000000000000000e2e6"
 LIDARR_API_KEY="0000000000000000000000000000e2e7"
+WHISPARR2_API_KEY="0000000000000000000000000000e2e8"
 
 # The mock Torznab indexer, and qBittorrent, both on the host network.
 INDEXER_URL="http://127.0.0.1:9500"
@@ -45,6 +47,8 @@ RADARR_TMDB_ID=911430
 RADARR_SECOND_TMDB_ID=1184918
 # Package Holiday (2004): a plain title, since the seed database is public.
 WHISPARR_TMDB_ID=1253309
+# Tushy: a studio with years of scenes, pruned to a fixed handful after the add.
+WHISPARR2_TVDB_ID=3417
 # Jeff Buckley: one studio album and a plain name.
 LIDARR_MBID=e6e879c0-3d56-4f12-b3c5-3ce459661a8e
 
@@ -182,8 +186,11 @@ EOF
 )" > /dev/null
 }
 
+# Whisparr v2 rejects qBittorrent's 204 login reply, so it is seeded without credentials.
+# qBittorrent trusts the host network, which makes the login unnecessary.
 add_download_client() {
   local url="$1" api_key="$2" category_field="$3" category="$4" api_version="${5:-v3}"
+  local username="${6-admin}" password="${7-adminadmin}"
 
   arr_post "$url" "$api_key" "/api/$api_version/downloadclient?forceSave=true" "$(cat <<EOF
 {
@@ -202,8 +209,8 @@ add_download_client() {
     { "name": "port", "value": $QBIT_PORT },
     { "name": "useSsl", "value": false },
     { "name": "urlBase", "value": "" },
-    { "name": "username", "value": "admin" },
-    { "name": "password", "value": "adminadmin" },
+    { "name": "username", "value": "$username" },
+    { "name": "password", "value": "$password" },
     { "name": "$category_field", "value": "$category" },
     { "name": "initialState", "value": 0 },
     { "name": "sequentialOrder", "value": false },
@@ -275,6 +282,37 @@ seed_whisparr() {
   wait_for_items "$WHISPARR_URL" "$WHISPARR_API_KEY" '/api/v3/movie' 'whisparr movies'
 }
 
+seed_whisparr2() {
+  log "configuring whisparr2"
+  arr_post "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '/api/v3/rootfolder' '{"path":"/scenes"}' > /dev/null
+  add_indexer "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '[6000]'
+  add_download_client "$WHISPARR2_URL" "$WHISPARR2_API_KEY" 'tvCategory' 'whisparr2' 'v3' '' ''
+
+  # The lookup takes a site name, not an id, so the result is picked by tvdbId.
+  log "adding the whisparr2 site"
+  local site
+  site=$(arr_get "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '/api/v3/series/lookup?term=tushy' \
+    | python3 -c '
+import json
+import sys
+
+item = next(x for x in json.load(sys.stdin) if x["tvdbId"] == int(sys.argv[1]))
+item.update({
+    "qualityProfileId": 1,
+    "rootFolderPath": "/scenes",
+    "monitored": True,
+    "seasonFolder": True,
+    "addOptions": {"monitor": "all", "searchForMissingEpisodes": False, "searchForCutoffUnmetEpisodes": False},
+})
+print(json.dumps(item))
+' "$WHISPARR2_TVDB_ID")
+  arr_post "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '/api/v3/series' "$site" > /dev/null
+
+  wait_for_items "$WHISPARR2_URL" "$WHISPARR2_API_KEY" '/api/v3/episode?seriesId=1' 'whisparr2 scenes'
+  # The add returns before the scene list is complete.
+  sleep 30
+}
+
 seed_lidarr() {
   log "configuring lidarr"
   arr_post "$LIDARR_URL" "$LIDARR_API_KEY" '/api/v1/rootfolder' \
@@ -305,7 +343,7 @@ print(json.dumps(item))
 }
 
 # Keeps the database and config.xml, drops everything the arr rebuilds on start.
-# Whisparr v3 names its database whisparr3.db.
+# Whisparr v3 names its database whisparr3.db, v2 whisparr2.db.
 snapshot() {
   local arr="$1" db="${2:-$1}"
   local src="$TEST_DATA/$arr-config"
@@ -335,33 +373,59 @@ main() {
   write_config_xml "$TEST_DATA/sonarr-config" 8989 "$SONARR_API_KEY" 'Sonarr'
   write_config_xml "$TEST_DATA/radarr-config" 7878 "$RADARR_API_KEY" 'Radarr'
   write_config_xml "$TEST_DATA/whisparr-config" 6970 "$WHISPARR_API_KEY" 'Whisparr'
+  write_config_xml "$TEST_DATA/whisparr2-config" 6971 "$WHISPARR2_API_KEY" 'Whisparr2'
   write_config_xml "$TEST_DATA/lidarr-config" 8686 "$LIDARR_API_KEY" 'Lidarr'
 
   # An arr tests the indexer and the download client before it saves them.
   # Both have to answer during seeding.
   log "starting the arrs"
-  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr lidarr
+  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr whisparr2 lidarr
 
   wait_for_arr "$SONARR_URL" 'sonarr'
   wait_for_arr "$RADARR_URL" 'radarr'
   wait_for_arr "$WHISPARR_URL" 'whisparr'
+  wait_for_arr "$WHISPARR2_URL" 'whisparr2'
   wait_for_arr "$LIDARR_URL" 'lidarr'
 
   seed_sonarr
   seed_radarr
   seed_whisparr
+  seed_whisparr2
   seed_lidarr
 
   log "stopping the arrs"
-  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr lidarr
+  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr whisparr2 lidarr
 
   snapshot sonarr
   snapshot radarr
   snapshot whisparr whisparr3
+  snapshot whisparr2
   snapshot lidarr
 
   # The seed is public, so it keeps the title and drops the synopsis, posters and cast.
   sqlite3 "$ARR_SEED/whisparr/whisparr3.db" "UPDATE MovieMetadata SET Overview = '', Images = '[]', Credits = '[]'; VACUUM;"
+
+  # Years 2019 and 2018 are the only ones kept.
+  # 2019 has four monitored missing scenes, 2018 has three scenes with only the first monitored.
+  # The second 2018 scene gets a file, so Auto searches that year by scene.
+  # Titles, synopses and cast are dropped, since the seed is public.
+  # The refresh timestamps sit in the future, or an online run refetches every scene.
+  sqlite3 "$ARR_SEED/whisparr2/whisparr2.db" "
+    DELETE FROM Episodes WHERE Id NOT IN (SELECT Id FROM Episodes WHERE SeasonNumber = 2019 ORDER BY AirDate LIMIT 4)
+      AND Id NOT IN (SELECT Id FROM Episodes WHERE SeasonNumber = 2018 ORDER BY AirDate LIMIT 3);
+    UPDATE Episodes SET Monitored = 1 WHERE SeasonNumber = 2019;
+    UPDATE Episodes SET Monitored = (Id = (SELECT MIN(Id) FROM Episodes WHERE SeasonNumber = 2018)) WHERE SeasonNumber = 2018;
+    UPDATE Episodes SET Title = 'Scene ' || Id, Overview = '', Images = '[]', Actors = '[]';
+    INSERT INTO EpisodeFiles (SeriesId, Quality, Size, DateAdded, SeasonNumber, RelativePath, Languages)
+      SELECT SeriesId, '{\"quality\":3,\"revision\":{\"version\":1,\"real\":0,\"isRepack\":false}}', 1, '2018-01-07 00:00:00Z', 2018, 'Scene ' || Id || '.mkv', '[1]'
+      FROM Episodes WHERE SeasonNumber = 2018 ORDER BY Id LIMIT 1 OFFSET 1;
+    UPDATE Episodes SET EpisodeFileId = (SELECT MAX(Id) FROM EpisodeFiles)
+      WHERE Id = (SELECT Id FROM Episodes WHERE SeasonNumber = 2018 ORDER BY Id LIMIT 1 OFFSET 1);
+    UPDATE Series SET Overview = '', Images = '[]',
+      Seasons = (SELECT json_group_array(json(value)) FROM json_each(Seasons) WHERE json_extract(value, '\$.seasonNumber') IN (2018, 2019));
+    UPDATE Series SET LastInfoSync = '2099-01-01 00:00:00Z';
+    UPDATE ScheduledTasks SET LastExecution = '2099-01-01 00:00:00Z';
+    VACUUM;"
 
   sqlite3 "$ARR_SEED/lidarr/lidarr.db" "UPDATE ArtistMetadata SET Overview = '', Images = '[]', Links = '[]'; UPDATE Albums SET Overview = '', Images = '[]', Links = '[]'; VACUUM;"
 
