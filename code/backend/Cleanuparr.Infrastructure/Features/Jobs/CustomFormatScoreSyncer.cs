@@ -564,7 +564,6 @@ public sealed class CustomFormatScoreSyncer : IHandler
             totalSynced += synced;
             totalSkipped += skipped;
             buffer.Clear();
-            flushedChunks++;
         }
 
         _logger.LogTrace("[Lidarr] {InstanceName}: found {ArtistCount} total artists",
