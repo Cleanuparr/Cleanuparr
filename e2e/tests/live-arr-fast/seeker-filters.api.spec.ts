@@ -6,6 +6,7 @@ import {
   RADARR,
   SONARR,
   WHISPARR,
+  WHISPARR2,
   addDecoyDownloads,
   arrangeInstance,
   arrangeQueueCleaner,
@@ -525,6 +526,58 @@ test.describe('Seeker candidate filters on Whisparr v3', () => {
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+  });
+});
+
+test.describe('Seeker candidate filters on Whisparr v2', () => {
+  let library: Array<Record<string, unknown>> = [];
+  let scenes: Array<{ id: number; monitored: boolean }> = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(WHISPARR2);
+    scenes = await WHISPARR2.arr.get<Array<{ id: number; monitored: boolean }>>(
+      `/api/v3/episode?seriesId=${WHISPARR2.itemId}`,
+    );
+    await indexerMock.stub(torznabSearchStub(WHISPARR2.searchMode, []));
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    for (const monitored of [true, false]) {
+      const episodeIds = scenes.filter((scene) => scene.monitored === monitored).map((scene) => scene.id);
+      if (episodeIds.length > 0) {
+        await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds, monitored });
+      }
+    }
+    await restoreLibrary(WHISPARR2, library);
+    await resetLiveArrState();
+  });
+
+  test('searches the seeded site when nothing filters it out', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, WHISPARR2);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain(WHISPARR2.seededTitle);
+  });
+
+  test('skips a site carrying a skipped tag', async ({ api }) => {
+    const tagId = await WHISPARR2.arr.ensureTag(SKIP_TAG);
+    const instanceId = await arrangeInstance(api, WHISPARR2, { instance: { skipTags: [SKIP_TAG] } });
+
+    const site = await WHISPARR2.arr.get<Record<string, unknown>>(`/api/v3/series/${WHISPARR2.itemId}`);
+    await WHISPARR2.arr.put(`/api/v3/series/${WHISPARR2.itemId}`, { ...site, tags: [tagId] });
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('skips the site while every scene is unmonitored and monitoredOnly is on', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, WHISPARR2, { instance: { monitoredOnly: true } });
+
+    await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds: scenes.map((scene) => scene.id), monitored: false });
+    await expectNoSearch(api, instanceId, SETTLE_MS);
   });
 });
 

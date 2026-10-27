@@ -5,6 +5,7 @@ import {
   RADARR,
   SONARR,
   WHISPARR,
+  WHISPARR2,
   TRANSITION_TIMEOUT,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
@@ -44,8 +45,8 @@ test.describe('Seeker grab on demand', () => {
     await resetLiveArrState();
   });
 
-  for (const target of [SONARR, RADARR, WHISPARR, LIDARR]) {
-    test(`records the real ${target.type} grab on the search event`, async ({ api }) => {
+  for (const target of [SONARR, RADARR, WHISPARR, WHISPARR2, LIDARR]) {
+    test(`records the real ${target.type} v${target.version} grab on the search event`, async ({ api }) => {
       test.setTimeout(TEST_TIMEOUT);
 
       const startedAt = new Date().toISOString();
