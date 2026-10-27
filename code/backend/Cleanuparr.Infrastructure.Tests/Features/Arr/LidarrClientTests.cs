@@ -324,6 +324,19 @@ public class LidarrClientTests
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/tag");
     }
 
+    [Fact]
+    public async Task GetAllTagsAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        List<Tag> tags = await _client.GetAllTagsAsync(_arrInstance);
+
+        // Assert
+        tags.ShouldBeEmpty();
+    }
+
     #endregion
 
     #region StreamAllArtistsAsync / GetQualityProfilesAsync
@@ -397,6 +410,19 @@ public class LidarrClientTests
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v1/qualityprofile");
     }
 
+    [Fact]
+    public async Task GetQualityProfilesAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        List<ArrQualityProfile> profiles = await _client.GetQualityProfilesAsync(_arrInstance);
+
+        // Assert
+        profiles.ShouldBeEmpty();
+    }
+
     #endregion
 
     #region GetAlbumsAsync / GetTrackFilesAsync
@@ -433,6 +459,19 @@ public class LidarrClientTests
     }
 
     [Fact]
+    public async Task GetAlbumsAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        List<SearchableAlbum> albums = await _client.GetAlbumsAsync(_arrInstance, 7);
+
+        // Assert
+        albums.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task GetTrackFilesAsync_BuildsArtistQueryAndDeserializesScores()
     {
         // Arrange
@@ -452,6 +491,19 @@ public class LidarrClientTests
         file.Id.ShouldBe(21);
         file.AlbumId.ShouldBe(11);
         file.CustomFormatScore.ShouldBe(-5);
+    }
+
+    [Fact]
+    public async Task GetTrackFilesAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        List<ArrTrackFile> files = await _client.GetTrackFilesAsync(_arrInstance, 7);
+
+        // Assert
+        files.ShouldBeEmpty();
     }
 
     #endregion
