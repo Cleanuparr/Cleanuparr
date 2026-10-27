@@ -2,6 +2,7 @@ export interface InstanceSearchStat {
   instanceId: string;
   instanceName: string;
   instanceType: string;
+  instanceVersion: number;
   itemsTracked: number;
   totalSearchCount: number;
   lastSearchedAt: string | null;
