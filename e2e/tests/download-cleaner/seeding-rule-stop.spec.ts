@@ -63,6 +63,11 @@ const scenarios: Scenario[] = [
       mkdirShared(dir);
       const fx = buildFolderTorrent(dir, 'stop-rule-qbittorrent', 32_768, ANNOUNCE_HOST);
       await qbit.addSeedingTorrent({ metainfo: fx.metainfo, savePath: CLIENT_DOWNLOADS, category: 'qb-stop', infoHash: fx.infoHash });
+      // Cleanuparr only sees torrents in qBittorrent's completed filter.
+      // A torrent still checking or downloading slips past the not-stopped gate.
+      await expect
+        .poll(() => qbit.getState(fx.infoHash), { message: 'qBittorrent: torrent never started seeding', timeout: 30_000, intervals: [500] })
+        .toMatch(/^(uploading|stalledUP|forcedUP)$/);
       return fx;
     },
   },
