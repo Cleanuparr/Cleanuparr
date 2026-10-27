@@ -121,12 +121,14 @@
                   hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
                   (checkedChange)="patchInstance($index, { useCustomFormatScore: $event })"
                   helpKey="seeker:useCustomFormatScore" />
-                @if (instance.instanceType === 'Sonarr') {
+                @if (searchesEpisodes(instance)) {
                   <app-select label="Search Mode" [options]="sonarrSearchModeOptions" [value]="instance.sonarrSearchMode"
                     (valueChange)="updateInstanceSonarrSearchMode($index, $event)"
                     hint="Auto searches a whole season only when the season has finished airing and every aired monitored episode in it needs a search. Otherwise it searches one episode per run. Season always searches the whole season. Episode always searches one episode per run."
                     helpKey="seeker:sonarrSearchMode"
                     featureId="seeker-sonarr-search-mode" />
+                }
+                @if (instance.instanceType === 'Sonarr') {
                   <app-toggle label="Search for specials" [checked]="true" [disabled]="true"
                     hint="Specials are always searched one episode at a time. Sonarr runs two indexer queries for every special, so searching a whole specials season would query all of them at once."
                     helpKey="seeker:searchSpecials"

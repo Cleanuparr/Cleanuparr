@@ -22,6 +22,7 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     instanceId: 'instance-1',
     instanceName: 'Instance',
     instanceType: 'Sonarr',
+    instanceVersion: 0,
     itemsTracked: 10,
     totalSearchCount: 5,
     lastSearchedAt: '2026-07-30T10:00:00Z',

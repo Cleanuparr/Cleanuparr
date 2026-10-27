@@ -61,6 +61,7 @@ public sealed class SeekerConfigController : ControllerBase
                 ArrInstanceId = instance.Id,
                 InstanceName = instance.Name,
                 InstanceType = instance.ArrConfig.Type,
+                InstanceVersion = instance.Version,
                 Enabled = seekerConfig?.Enabled ?? false,
                 SkipTags = seekerConfig?.SkipTags ?? [],
                 IncludeTags = seekerConfig?.IncludeTags ?? [],

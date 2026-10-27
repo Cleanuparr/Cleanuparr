@@ -50,7 +50,8 @@ public class SeekerConfigControllerTests : IDisposable
         IActionResult result = await _controller.GetSeekerConfig();
         SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
 
-        response.Instances.Select(i => i.ArrInstanceId).ShouldBe([whisparrV2.Id, whisparrV3.Id], ignoreOrder: true);
+        response.Instances.Single(i => i.ArrInstanceId == whisparrV2.Id).InstanceVersion.ShouldBe(2);
+        response.Instances.Single(i => i.ArrInstanceId == whisparrV3.Id).InstanceVersion.ShouldBe(3);
         response.Instances.ShouldAllBe(i => i.InstanceType == InstanceType.Whisparr);
     }
 

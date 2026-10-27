@@ -5,6 +5,7 @@ public sealed record InstanceSearchStat
     public Guid InstanceId { get; init; }
     public string InstanceName { get; init; } = string.Empty;
     public string InstanceType { get; init; } = string.Empty;
+    public float InstanceVersion { get; init; }
     public int ItemsTracked { get; init; }
     public int TotalSearchCount { get; init; }
     public DateTimeOffset? LastSearchedAt { get; init; }
