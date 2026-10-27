@@ -646,7 +646,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 .Where(e => e.ArrInstanceId == arrInstance.Id
                     && e.ItemType == InstanceType.Lidarr
                     && artistIds.Contains(e.ExternalItemId))
-                .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
+                .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId), cancellationToken);
 
             bool autoDetect = _eventsContext.ChangeTracker.AutoDetectChangesEnabled;
             _eventsContext.ChangeTracker.AutoDetectChangesEnabled = false;
