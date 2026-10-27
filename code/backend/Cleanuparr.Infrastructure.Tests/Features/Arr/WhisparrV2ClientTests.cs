@@ -135,7 +135,71 @@ public class WhisparrV2ClientTests
 
     #endregion
 
+    #region Release date
+
+    [Fact]
+    public async Task GetEpisodesAsync_ReleaseDate_BecomesMidnightUtcAirDate()
+    {
+        // Arrange
+        RouteEpisodes("""[{"id":1,"seriesId":10,"seasonNumber":2024,"releaseDate":"2024-05-12"}]""");
+
+        // Act
+        List<SearchableEpisode> episodes = await _client.GetEpisodesAsync(_arrInstance, seriesId: 10);
+
+        // Assert
+        episodes.ShouldHaveSingleItem().AirDateUtc.ShouldBe(new DateTimeOffset(2024, 5, 12, 0, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_ReleaseDate_BecomesMidnightUtcAirDate()
+    {
+        // Arrange
+        RouteEpisodes("""{"page":1,"pageSize":1000,"totalRecords":1,"records":[{"id":1,"seriesId":10,"seasonNumber":2024,"releaseDate":"2024-05-12"}]}""");
+
+        // Act
+        List<SearchableEpisode> episodes = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        episodes.ShouldHaveSingleItem().AirDateUtc.ShouldBe(new DateTimeOffset(2024, 5, 12, 0, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public async Task GetCutoffUnmetEpisodesAsync_ReleaseDate_BecomesMidnightUtcAirDate()
+    {
+        // Arrange
+        RouteEpisodes("""{"page":1,"pageSize":1000,"totalRecords":1,"records":[{"id":1,"seriesId":10,"seasonNumber":2024,"releaseDate":"2024-05-12"}]}""");
+
+        // Act
+        List<SearchableEpisode> episodes = await _client.GetCutoffUnmetEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        episodes.ShouldHaveSingleItem().AirDateUtc.ShouldBe(new DateTimeOffset(2024, 5, 12, 0, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
+    public async Task GetEpisodesAsync_NoReleaseDate_LeavesAirDateNull()
+    {
+        // Arrange
+        RouteEpisodes("""[{"id":1,"seriesId":10,"seasonNumber":2024}]""");
+
+        // Act
+        List<SearchableEpisode> episodes = await _client.GetEpisodesAsync(_arrInstance, seriesId: 10);
+
+        // Assert
+        episodes.ShouldHaveSingleItem().AirDateUtc.ShouldBeNull();
+    }
+
+    #endregion
+
     #region Helpers
+
+    private void RouteEpisodes(string json)
+    {
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+        }));
+    }
 
     private void RouteResponses()
     {
