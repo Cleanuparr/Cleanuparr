@@ -1627,6 +1627,67 @@ public class CustomFormatScoreSyncerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_ClearsIsMonitoredWhenUnmonitoredMovieFileScoreNotReturned()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Mario Bros",
+            FileId = 100,
+            CurrentScore = 250,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            IsMonitored = true,
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _radarrClient
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie
+                {
+                    Id = 10, Title = "Mario Bros", HasFile = true,
+                    MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false },
+                    QualityProfileId = 1, Status = "released", Monitored = false
+                }
+            ]));
+
+        _radarrClient
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
+            .Returns(new Dictionary<long, int>());
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].IsMonitored.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_PreservesEntryWhenMovieFileScoreNotReturned()
     {
         // Arrange
