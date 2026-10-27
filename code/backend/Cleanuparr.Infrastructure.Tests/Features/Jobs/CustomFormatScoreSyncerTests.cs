@@ -1366,6 +1366,55 @@ public class CustomFormatScoreSyncerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_SonarrSync_FlushesFullSeriesChunks()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        List<SearchableSeries> series = [];
+        for (int i = 1; i <= ChunkSize + 1; i++)
+        {
+            series.Add(new SearchableSeries { Id = i, Title = $"Series {i}", Monitored = true, QualityProfileId = 1 });
+        }
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(series));
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(new List<SearchableEpisode>
+            {
+                new() { Id = callInfo.ArgAt<long>(1) * 10, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = callInfo.ArgAt<long>(1) * 100, HasFile = true, Monitored = true }
+            }));
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(new List<ArrEpisodeFile>
+            {
+                new() { Id = callInfo.ArgAt<long>(1) * 100, CustomFormatScore = 120 }
+            }));
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.CustomFormatScoreEntries.CountAsync()).ShouldBe(ChunkSize + 1);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_LidarrCompleteAlbumWithoutTrackFile_KeepsEntryAndSkips()
     {
         // Arrange
