@@ -151,6 +151,19 @@ public class WhisparrV2ClientTests
     }
 
     [Fact]
+    public async Task GetEpisodesAsync_AirDateAndReleaseDate_KeepsAirDate()
+    {
+        // Arrange
+        RouteEpisodes("""[{"id":1,"seriesId":10,"seasonNumber":2024,"airDateUtc":"2024-05-11T20:00:00Z","releaseDate":"2024-05-12"}]""");
+
+        // Act
+        List<SearchableEpisode> episodes = await _client.GetEpisodesAsync(_arrInstance, seriesId: 10);
+
+        // Assert
+        episodes.ShouldHaveSingleItem().AirDateUtc.ShouldBe(new DateTimeOffset(2024, 5, 11, 20, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
     public async Task GetMissingEpisodesAsync_ReleaseDate_BecomesMidnightUtcAirDate()
     {
         // Arrange
