@@ -459,10 +459,20 @@ public class LidarrClientTests
     }
 
     [Fact]
-    public async Task GetAlbumsAsync_NullBody_ReturnsEmpty()
+    public async Task GetAlbumsAsync_NullBody_Throws()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(() => _client.GetAlbumsAsync(_arrInstance, 7));
+    }
+
+    [Fact]
+    public async Task GetAlbumsAsync_EmptyArray_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(RawJsonResponse("[]")));
 
         // Act
         List<SearchableAlbum> albums = await _client.GetAlbumsAsync(_arrInstance, 7);
