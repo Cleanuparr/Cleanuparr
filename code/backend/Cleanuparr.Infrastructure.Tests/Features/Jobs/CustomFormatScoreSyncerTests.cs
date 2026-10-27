@@ -1221,6 +1221,55 @@ public class CustomFormatScoreSyncerTests : IDisposable
         (await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync()).ShouldHaveSingleItem().IsMonitored.ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task ExecuteAsync_LidarrSync_RemovedAlbumKeepsSiblingHistory()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = await AddLidarrWithSyncAsync();
+        foreach (long albumId in new long[] { 50, 999 })
+        {
+            _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+            {
+                ArrInstanceId = lidarrInstance.Id,
+                ExternalItemId = 5,
+                EpisodeId = albumId,
+                ItemType = InstanceType.Lidarr,
+                Title = $"Test Artist - Album {albumId}",
+                FileId = 900 + albumId,
+                CurrentScore = 120,
+                CutoffScore = 300,
+                QualityProfileName = "Lossless",
+                LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
+            _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+            {
+                ArrInstanceId = lidarrInstance.Id,
+                ExternalItemId = 5,
+                EpisodeId = albumId,
+                ItemType = InstanceType.Lidarr,
+                Title = $"Test Artist - Album {albumId}",
+                Score = 120,
+                CutoffScore = 300,
+                RecordedAt = DateTime.UtcNow.AddHours(-1)
+            });
+        }
+        await _fixture.EventsContext.SaveChangesAsync();
+        StubLidarrLibrary(
+            lidarrInstance,
+            LidarrArtist(),
+            [LidarrAlbum(50, trackFileCount: 1, trackCount: 1)],
+            [new ArrTrackFile { Id = 950, AlbumId = 50, CustomFormatScore = 120 }]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync()).ShouldHaveSingleItem().EpisodeId.ShouldBe(50);
+        (await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync()).ShouldHaveSingleItem().EpisodeId.ShouldBe(50);
+    }
+
     #endregion
 
     #region Score Unchanged Tests
@@ -1705,6 +1754,108 @@ public class CustomFormatScoreSyncerTests : IDisposable
         List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.AsNoTracking().ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].IsMonitored.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_RemovedEpisodeKeepsSiblingHistory()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            FileId = 500,
+            CurrentScore = 300,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 101,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E02",
+            FileId = 501,
+            CurrentScore = 300,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+        _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            Score = 300,
+            CutoffScore = 500,
+            RecordedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 101,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E02",
+            Score = 300,
+            CutoffScore = 500,
+            RecordedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
+            ]));
+
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true }
+            ]);
+
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([
+                new ArrEpisodeFile { Id = 500, CustomFormatScore = 300, QualityCutoffNotMet = false }
+            ]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].EpisodeId.ShouldBe(100);
+
+        List<CustomFormatScoreHistory> history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
+        history.ShouldHaveSingleItem();
+        history[0].EpisodeId.ShouldBe(100);
     }
 
     [Fact]
