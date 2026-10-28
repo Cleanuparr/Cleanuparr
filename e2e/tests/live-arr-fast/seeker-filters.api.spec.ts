@@ -1,7 +1,8 @@
-import { test, expect } from '../fixtures/base';
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  LIDARR,
   RADARR,
   SONARR,
   WHISPARR,
@@ -521,6 +522,66 @@ test.describe('Seeker candidate filters on Whisparr v3', () => {
 
   test('searches a movie released long ago at the longest grace period', async ({ api }) => {
     const instanceId = await arrangeInstance(api, WHISPARR, { config: { postReleaseGraceHours: 72 } });
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+  });
+});
+
+test.describe('Seeker candidate filters on Lidarr', () => {
+  let library: Array<Record<string, unknown>> = [];
+  let albums: Array<Record<string, unknown>> = [];
+
+  async function mutateLidarrArtist(mutate: (artist: Record<string, unknown>) => Record<string, unknown>): Promise<void> {
+    const artist = await LIDARR.arr.get<Record<string, unknown>>(`/api/v1/artist/${LIDARR.itemId}`);
+    await LIDARR.arr.put(`/api/v1/artist/${LIDARR.itemId}`, mutate({ ...artist }));
+  }
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(LIDARR);
+    albums = await LIDARR.arr.get<Array<Record<string, unknown>>>(`/api/v1/album?artistId=${LIDARR.itemId}`);
+    await indexerMock.stubMany(grabbableRelease(LIDARR.searchMode, LIDARR.release, LIDARR.category).mappings);
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreLibrary(LIDARR, library);
+    for (const album of albums) {
+      await LIDARR.arr.put(`/api/v1/album/${album.id}`, album);
+    }
+    await resetLiveArrState();
+  });
+
+  test('searches the seeded album when nothing filters it out', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, LIDARR);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain(TEST_CONFIG.liveArr.seededAlbumTitle);
+  });
+
+  test('skips an artist carrying a skipped tag', async ({ api }) => {
+    const tagId = await LIDARR.arr.ensureTag(SKIP_TAG);
+    const instanceId = await arrangeInstance(api, LIDARR, { instance: { skipTags: [SKIP_TAG] } });
+
+    await mutateLidarrArtist((artist) => ({ ...artist, tags: [tagId] }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('skips an unmonitored album when monitoredOnly is on', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, LIDARR, { instance: { monitoredOnly: true } });
+
+    for (const album of albums) {
+      await LIDARR.arr.put(`/api/v1/album/${album.id}`, { ...album, monitored: false });
+    }
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches an album released long ago at the longest grace period', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, LIDARR, { config: { postReleaseGraceHours: 72 } });
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);

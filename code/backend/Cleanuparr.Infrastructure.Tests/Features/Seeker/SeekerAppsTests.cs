@@ -25,9 +25,10 @@ public class SeekerAppsTests
     [InlineData(InstanceType.Radarr, 0, true)]
     [InlineData(InstanceType.Whisparr, 2, false)]
     [InlineData(InstanceType.Whisparr, 3, true)]
-    [InlineData(InstanceType.Lidarr, 0, false)]
+    [InlineData(InstanceType.Lidarr, 0, true)]
+    [InlineData(InstanceType.Lidarr, 2, true)]
     [InlineData(InstanceType.Readarr, 0, false)]
-    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrAndWhisparrV3(InstanceType type, float version, bool expected)
+    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrAndWhisparrV3(InstanceType type, float version, bool expected)
     {
         // Act
         bool supported = SeekerApps.IsSupported(Instance(type, version));

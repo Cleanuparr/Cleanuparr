@@ -924,6 +924,37 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Reports_the_grab_of_a_proactive_lidarr_album_search()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = TestDataContextFactory.AddLidarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(lidarrInstance.Id, externalItemId: 5, episodeId: 77, itemTitle: "Example Artist - Example Album"),
+            new QueueRecord { Id = 1, ArtistId = 5, AlbumId = 77, Title = "Example.Album.FLAC", DownloadId = "AL77", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Album.FLAC"]);
+    }
+
+    [Fact]
+    public async Task Ignores_another_album_of_a_proactive_lidarr_search()
+    {
+        // Arrange
+        ArrInstance lidarrInstance = TestDataContextFactory.AddLidarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(lidarrInstance.Id, externalItemId: 5, episodeId: 77, itemTitle: "Example Artist - Example Album"),
+            new QueueRecord { Id = 1, ArtistId = 5, AlbumId = 78, Title = "Example.Other.FLAC", DownloadId = "AL78", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Reports_the_grab_of_a_readarr_search()
     {
         // Arrange

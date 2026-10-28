@@ -30,6 +30,7 @@ public class SeekerTests : IDisposable
     private readonly ILogger<SeekerJob> _logger;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly ILidarrClient _lidarrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IHostEnvironment _hostingEnvironment;
@@ -44,6 +45,7 @@ public class SeekerTests : IDisposable
         _logger = Substitute.For<ILogger<SeekerJob>>();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _lidarrClient = Substitute.For<ILidarrClient>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         _hostingEnvironment = Substitute.For<IHostEnvironment>();
@@ -123,6 +125,7 @@ public class SeekerTests : IDisposable
                 _fixture.EventsContext,
                 _radarrClient,
                 _sonarrClient,
+                _lidarrClient,
                 _whisparrV3Client,
                 _fixture.TimeProvider)
         );
@@ -10519,6 +10522,126 @@ public class SeekerTests : IDisposable
             .SingleAsync(t => t.ArrInstanceId == whisparrInstance.Id);
         tracker.CommandId.ShouldBe(42L);
         tracker.ExternalItemId.ShouldBe(7);
+    }
+
+    private async Task<(ArrInstance Instance, IArrClient ArrClient)> SetUpLidarrProactiveAsync()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance lidarrInstance = TestDataContextFactory.AddLidarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = lidarrInstance.Id,
+            ArrInstance = lidarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = Guid.NewGuid(),
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        List<SearchableArtist> artists = [new SearchableArtist { Id = 5, ArtistName = "Artist 5", Monitored = true }];
+        List<SearchableAlbum> albums =
+        [
+            new SearchableAlbum { Id = 77, Title = "Album 77", ArtistId = 5, Monitored = true },
+        ];
+        _lidarrClient
+            .StreamAllArtistsAsync(lidarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable<SearchableArtist>(artists));
+        _lidarrClient
+            .GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(albums);
+        _lidarrClient
+            .GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _lidarrClient
+            .GetAllTagsAsync(Arg.Any<ArrInstance>())
+            .Returns([]);
+        _lidarrClient
+            .GetRecentlyGrabbedAlbumIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Lidarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        return (lidarrInstance, mockArrClient);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Lidarr_ProactiveSearch_SearchesTheAlbumAndTracksArtistAndAlbum()
+    {
+        // Arrange
+        (ArrInstance lidarrInstance, IArrClient mockArrClient) = await SetUpLidarrProactiveAsync();
+        SearchItem? capturedSearchItem = null;
+        mockArrClient
+            .SearchItemAsync(lidarrInstance, Arg.Do<SearchItem>(item => capturedSearchItem = item))
+            .Returns(42L);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.ShouldNotBeOfType<SeriesSearchItem>();
+        capturedSearchItem.Id.ShouldBe(77);
+
+        SeekerHistory history = await _fixture.EventsContext.SeekerHistory
+            .SingleAsync(h => h.ArrInstanceId == lidarrInstance.Id);
+        history.ItemType.ShouldBe(InstanceType.Lidarr);
+        history.ExternalItemId.ShouldBe(5);
+        history.SeasonNumber.ShouldBe(0);
+        history.EpisodeId.ShouldBe(77);
+        history.ItemTitle.ShouldBe("Artist 5 - Album 77");
+
+        SeekerCommandTracker tracker = await _fixture.EventsContext.SeekerCommandTrackers
+            .SingleAsync(t => t.ArrInstanceId == lidarrInstance.Id);
+        tracker.CommandId.ShouldBe(42L);
+        tracker.ExternalItemId.ShouldBe(5);
+        tracker.SeasonNumber.ShouldBe(0);
+        tracker.EpisodeId.ShouldBe(77);
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Lidarr_CleansUpHistoryOfArtistsOutsideTheLibrary()
+    {
+        // Arrange
+        (ArrInstance lidarrInstance, IArrClient mockArrClient) = await SetUpLidarrProactiveAsync();
+        Guid cycleId = (await _fixture.DataContext.SeekerInstanceConfigs
+            .SingleAsync(c => c.ArrInstanceId == lidarrInstance.Id)).CurrentCycleId;
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = lidarrInstance.Id,
+            ExternalItemId = 99,
+            ItemType = InstanceType.Lidarr,
+            EpisodeId = 990,
+            CycleId = cycleId,
+            LastSearchedAt = DateTime.UtcNow.AddDays(-5),
+            ItemTitle = "Deleted Artist - Album",
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+        mockArrClient
+            .SearchItemAsync(lidarrInstance, Arg.Any<SearchItem>())
+            .Returns(42L);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.SeekerHistory.AnyAsync(h => h.ExternalItemId == 99)).ShouldBeFalse();
+        (await _fixture.EventsContext.SeekerHistory.AnyAsync(h => h.ExternalItemId == 5)).ShouldBeTrue();
     }
 
     [Fact]
