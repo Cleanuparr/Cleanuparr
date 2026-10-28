@@ -1,0 +1,23 @@
+@if (label()) {
+  <span class="time-label" [id]="controlId">
+    {{ label() }}
+    @if (helpKey()) {
+      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+        <ng-icon name="tablerQuestionMark" size="14" />
+      </button>
+    }
+    @if (featureId()) {
+      <app-new-badge variant="inline" [featureId]="featureId()!" />
+    }
+  </span>
+}
+<div class="time-row" role="group" [attr.aria-labelledby]="label() ? controlId : null">
+  <app-select class="time-part" [options]="hours" [value]="hour()" (valueChange)="setHour($event)" placeholder="HH" [disabled]="disabled()" />
+  <span class="time-separator">:</span>
+  <app-select class="time-part" [options]="minutes" [value]="minute()" (valueChange)="setMinute($event)" placeholder="MM" [disabled]="disabled()" />
+</div>
+@if (error()) {
+  <span class="time-error">{{ error() }}</span>
+} @else if (hint()) {
+  <span class="time-hint">{{ hint() }}</span>
+}
