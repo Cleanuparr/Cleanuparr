@@ -1,0 +1,54 @@
+name: Stack Gate
+
+on:
+  workflow_call:
+    outputs:
+      run:
+        description: 'false when the PR is part of a stack but not its top PR.'
+        value: ${{ jobs.gate.outputs.run }}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      run: ${{ steps.stack.outputs.run }}
+    steps:
+      - name: Check stack position
+        id: stack
+        uses: actions/github-script@v9
+        with:
+          script: |
+            if (context.eventName !== 'pull_request') {
+              core.setOutput('run', 'true');
+              return;
+            }
+
+            try {
+              const result = await github.graphql(`
+                query($owner: String!, $repo: String!, $number: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    pullRequest(number: $number) {
+                      stack { size }
+                      stackEntry { position }
+                    }
+                  }
+                }`, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: context.payload.pull_request.number,
+              });
+
+              const pr = result.repository.pullRequest;
+              if (!pr.stack || !pr.stackEntry || pr.stackEntry.position === pr.stack.size) {
+                core.setOutput('run', 'true');
+                return;
+              }
+
+              core.info(`PR is at position ${pr.stackEntry.position} of ${pr.stack.size}, CI runs on the top PR only.`);
+              core.setOutput('run', 'false');
+            } catch (error) {
+              // Fail open so a lookup error never silently drops CI
+              core.warning(error.message);
+              core.setOutput('run', 'true');
+            }
