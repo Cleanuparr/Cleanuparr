@@ -6,5 +6,7 @@ public sealed record ArrQualityProfile
 
     public string Name { get; init; } = string.Empty;
 
+    public bool UpgradeAllowed { get; init; }
+
     public int CutoffFormatScore { get; init; }
 }
