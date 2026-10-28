@@ -1212,6 +1212,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_search_triggered");
 
+                    b.Property<bool>("OnSeekerCycleCompleted")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("on_seeker_cycle_completed");
+
                     b.Property<bool>("OnSlowStrike")
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_slow_strike");

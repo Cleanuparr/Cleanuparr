@@ -18,6 +18,7 @@ export interface NotificationEventFlags {
   onSearchItemGrabbed: boolean;
   onForceImported: boolean;
   onErroredStrike: boolean;
+  onSeekerCycleCompleted: boolean;
 }
 
 export interface NotificationProviderDto {

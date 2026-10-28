@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -424,6 +425,39 @@ public class EventPublisher : IEventPublisher
         {
             await _notificationPublisher.NotifySearchItemGrabbed(existingEvent.ItemTitle ?? string.Empty, grabbedItems, instanceType, instanceUrl);
         }
+    }
+
+    /// <summary>
+    /// Publishes the cycle completed event and notification once per cycle
+    /// </summary>
+    public async Task PublishSeekerCycleCompleted(SeekerCycle cycle, string instanceName)
+    {
+        if (cycle.NotifiedAt is not null)
+        {
+            return;
+        }
+
+        int upgradesGrabbed = await _context.Events
+            .Where(e => e.CycleId == cycle.Id && e.EventType == EventType.SearchTriggered)
+            .Where(e => e.SearchReason == SeekerSearchReason.QualityCutoffNotMet
+                || e.SearchReason == SeekerSearchReason.CustomFormatScoreBelowCutoff)
+            .Where(e => e.GrabbedItems.Count > 0)
+            .CountAsync();
+
+        TimeSpan duration = (cycle.CompletedAt ?? _timeProvider.GetUtcNow()) - cycle.StartedAt;
+
+        // Set before the event save so a failed notification cannot cause a second send
+        cycle.NotifiedAt = _timeProvider.GetUtcNow();
+
+        await PublishAsync(
+            EventType.SeekerCycleCompleted,
+            $"Cycle completed on {instanceName} after {cycle.SearchedUnits} searches, {cycle.GrabbedUnits} grabbed",
+            EventSeverity.Information,
+            configure: e => e.CycleId = cycle.Id,
+            isDryRun: cycle.IsDryRun);
+
+        await _notificationPublisher.NotifySeekerCycleCompleted(
+            instanceName, duration, cycle.SearchedUnits, cycle.GrabbedUnits, upgradesGrabbed);
     }
 
     /// <summary>

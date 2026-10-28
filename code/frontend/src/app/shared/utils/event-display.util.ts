@@ -17,6 +17,7 @@ export function eventTypeSeverity(eventType: string): BadgeSeverity {
     case EventType.StrikeReset:
     case EventType.DownloadCleaned:
     case EventType.ForceImported:
+    case EventType.SeekerCycleCompleted:
       return 'success';
     case EventType.FailedImportStrike:
     case EventType.QueueItemDeleted:
@@ -77,6 +78,8 @@ export function eventIcon(eventType: string): string {
       return 'tablerTrash';
     case EventType.CategoryChanged:
       return 'tablerTag';
+    case EventType.SeekerCycleCompleted:
+      return 'tablerSearch';
     default:
       return 'tablerCircle';
   }

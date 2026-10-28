@@ -27,6 +27,7 @@ const DISCORD_PROVIDER: NotificationProviderDto = {
     onSearchItemGrabbed: false,
     onForceImported: false,
     onErroredStrike: false,
+    onSeekerCycleCompleted: true,
   },
   configuration: { webhookUrl: 'https://discord.com/api/webhooks/abc' },
 };
@@ -48,6 +49,7 @@ const TELEGRAM_PROVIDER: NotificationProviderDto = {
     onSearchItemGrabbed: false,
     onForceImported: false,
     onErroredStrike: false,
+    onSeekerCycleCompleted: false,
   },
   configuration: { botToken: 'token', chatId: '-100' },
 };
@@ -139,7 +141,7 @@ describe('NotificationsComponent', () => {
     ]);
 
     const rows = root(fixture).querySelectorAll<HTMLElement>('.provider-row__events');
-    expect(texts(rows[0], '.event-tag')).toEqual(['Failed Import', 'Queue Deleted']);
+    expect(texts(rows[0], '.event-tag')).toEqual(['Failed Import', 'Queue Deleted', 'Seeker Cycle Completed']);
     expect(texts(rows[1], '.event-tag')).toEqual(['Slow']);
   });
 

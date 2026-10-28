@@ -68,6 +68,9 @@
           @if (provider.events.onSearchItemGrabbed) {
             <span class="event-tag">Search Item Grabbed</span>
           }
+          @if (provider.events.onSeekerCycleCompleted) {
+            <span class="event-tag">Seeker Cycle Completed</span>
+          }
         </div>
       </div>
     } @empty {

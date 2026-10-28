@@ -378,6 +378,7 @@ NotificationConfig MakeNotificationConfig(string name, NotificationProviderType 
     OnQueueItemDeleted = true,
     OnDownloadCleaned = true,
     OnSearchItemGrabbed = rng.Next(2) == 0,
+    OnSeekerCycleCompleted = rng.Next(2) == 0,
     OnCategoryChanged = rng.Next(2) == 0,
 };
 
