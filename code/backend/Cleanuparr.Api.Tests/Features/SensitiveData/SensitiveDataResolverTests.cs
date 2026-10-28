@@ -326,6 +326,50 @@ public class SensitiveDataResolverTests
 
     #endregion
 
+    #region WebhookConfig
+
+    [Fact]
+    public void WebhookConfig_Url_IsMasked()
+    {
+        WebhookConfig config = new WebhookConfig { Url = "http://homeassistant.local:8123/api/webhook/secret-id" };
+
+        string json = JsonSerializer.Serialize(config, _options);
+        JsonDocument doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("url").GetString().ShouldBe(Placeholder);
+    }
+
+    [Fact]
+    public void WebhookConfig_HeaderValues_AreMasked_AndNamesKept()
+    {
+        WebhookConfig config = new WebhookConfig
+        {
+            Url = "http://homeassistant.local:8123/api/webhook/secret-id",
+            Headers = ["X-Api-Key: secret", "Authorization: Bearer abc:def"]
+        };
+
+        string json = JsonSerializer.Serialize(config, _options);
+        JsonDocument doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("headers").EnumerateArray().Select(h => h.GetString()).ToArray()
+            .ShouldBe([$"X-Api-Key: {Placeholder}", $"Authorization: {Placeholder}"]);
+        json.ShouldNotContain("secret");
+        json.ShouldNotContain("abc:def");
+    }
+
+    [Fact]
+    public void WebhookConfig_NoHeaders_SerializesAnEmptyList()
+    {
+        WebhookConfig config = new WebhookConfig { Url = "http://homeassistant.local:8123/api/webhook/secret-id" };
+
+        string json = JsonSerializer.Serialize(config, _options);
+        JsonDocument doc = JsonDocument.Parse(json);
+
+        doc.RootElement.GetProperty("headers").GetArrayLength().ShouldBe(0);
+    }
+
+    #endregion
+
     #region AppriseConfig
 
     [Fact]

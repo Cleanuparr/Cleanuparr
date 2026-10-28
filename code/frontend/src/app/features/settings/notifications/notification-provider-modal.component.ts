@@ -15,6 +15,7 @@ import {
   NtfyAuthenticationType,
   NtfyPriority,
   PushoverPriority,
+  WebhookMethod,
 } from '@shared/models/enums';
 import { NOTIFICATION_PROVIDER_DESCRIPTORS, NotificationProviderFormModel } from '@shared/utils/notification-provider.descriptors';
 
@@ -47,6 +48,8 @@ interface ProviderConfiguration {
   retry?: number;
   expire?: number;
   applicationToken?: string;
+  method?: WebhookMethod;
+  headers?: string[];
 }
 
 function createDefaultModalModel(): NotificationProviderFormModel {
@@ -60,6 +63,7 @@ function createDefaultModalModel(): NotificationProviderFormModel {
     ntfyServerUrl: 'https://ntfy.sh', ntfyTopics: [], ntfyAuthType: NtfyAuthenticationType.None,
     ntfyUsername: '', ntfyPassword: '', ntfyAccessToken: '', ntfyPriority: NtfyPriority.Default, ntfyTags: [],
     gotifyServerUrl: '', gotifyApplicationToken: '', gotifyPriority: '5',
+    webhookTargetUrl: '', webhookMethod: WebhookMethod.Post, webhookHeaders: [],
     pushoverApiToken: '', pushoverUserKey: '', pushoverDevices: [], pushoverPriority: PushoverPriority.Normal,
     pushoverRetry: 30, pushoverExpire: 3600, pushoverSound: '', pushoverCustomSound: '', pushoverTags: [],
     onFailedImportStrike: false, onStalledStrike: false, onSlowStrike: false, onQueueItemDeleted: false,
@@ -100,6 +104,29 @@ const GOTIFY_PRIORITY_OPTIONS: SelectOption[] = [
   { label: '9', value: '9' },
   { label: '10', value: '10' },
 ];
+
+const WEBHOOK_METHOD_OPTIONS: SelectOption[] = [
+  { label: 'POST', value: WebhookMethod.Post },
+  { label: 'PUT', value: WebhookMethod.Put },
+];
+
+const WEBHOOK_HEADER_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+\s*:/;
+
+const WEBHOOK_SAMPLE_PAYLOAD = JSON.stringify({
+  eventType: 'queueItemDeleted',
+  title: 'Deleting item from queue with reason: Stalled',
+  description: 'Some.Show.S01E02.1080p.WEB-DL',
+  severity: 'important',
+  data: {
+    reason: 'Stalled',
+    removedFromClient: 'True',
+    hash: 'c9e15763f722f23e98a29decdfae341b98d53056',
+    instanceType: 'Sonarr',
+    url: 'http://localhost:8989',
+  },
+  image: null,
+  timestamp: '2026-10-28T12:00:00+00:00',
+}, null, 2);
 
 const PUSHOVER_PRIORITY_OPTIONS: SelectOption[] = [
   { label: 'Lowest', value: PushoverPriority.Lowest },
@@ -204,6 +231,12 @@ export class NotificationProviderModalComponent {
     validate(p.pushoverUserKey, this.requiredError('pushoverUserKey', 'User key is required'));
     validate(p.gotifyServerUrl, this.requiredError('gotifyServerUrl', 'Server URL is required'));
     validate(p.gotifyApplicationToken, this.requiredError('gotifyApplicationToken', 'Application token is required'));
+    validate(p.webhookTargetUrl, this.requiredError('webhookTargetUrl', 'URL is required'));
+
+    validate(p.webhookHeaders, () =>
+      this.modalType() === NotificationProviderType.Webhook
+        && this.modalModel().webhookHeaders.some((h) => !WEBHOOK_HEADER_PATTERN.test(h))
+        ? { kind: 'pattern', message: 'Each header must use the format Name: Value' } : undefined);
 
     // Apprise: CLI mode needs at least one service URL instead of a server URL + config key.
     validate(p.appriseServiceUrls, () =>
@@ -234,6 +267,8 @@ export class NotificationProviderModalComponent {
 
   // Options (exposed for template)
   readonly gotifyPriorityOptions = GOTIFY_PRIORITY_OPTIONS;
+  readonly webhookMethodOptions = WEBHOOK_METHOD_OPTIONS;
+  readonly webhookSamplePayload = WEBHOOK_SAMPLE_PAYLOAD;
   readonly appriseOptions = APPRISE_MODE_OPTIONS;
   readonly ntfyAuthOptions = NTFY_AUTH_OPTIONS;
   readonly ntfyPriorityOptions = NTFY_PRIORITY_OPTIONS;
@@ -344,6 +379,11 @@ export class NotificationProviderModalComponent {
         model.gotifyServerUrl = config.serverUrl ?? '';
         model.gotifyApplicationToken = config.applicationToken ?? '';
         model.gotifyPriority = String(config.priority ?? 5);
+        break;
+      case NotificationProviderType.Webhook:
+        model.webhookTargetUrl = config.url ?? '';
+        model.webhookMethod = config.method ?? WebhookMethod.Post;
+        model.webhookHeaders = config.headers ?? [];
         break;
     }
 

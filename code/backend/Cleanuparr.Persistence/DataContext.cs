@@ -74,6 +74,8 @@ public class DataContext : DbContext
 
     public DbSet<GotifyConfig> GotifyConfigs { get; set; }
 
+    public DbSet<WebhookConfig> WebhookConfigs { get; set; }
+
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
@@ -188,6 +190,11 @@ public class DataContext : DbContext
                 .HasForeignKey<GotifyConfig>(c => c.NotificationConfigId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(p => p.WebhookConfiguration)
+                .WithOne(c => c.NotificationConfig)
+                .HasForeignKey<WebhookConfig>(c => c.NotificationConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasIndex(p => p.Name).IsUnique();
 
         });
@@ -219,6 +226,11 @@ public class DataContext : DbContext
 
         // Configure per-client seeding rule relationships and JSON list converters
         var jsonListConverter = new JsonStringListConverter();
+
+        modelBuilder.Entity<WebhookConfig>(entity =>
+        {
+            entity.Property(w => w.Headers).HasConversion(jsonListConverter);
+        });
 
         modelBuilder.Entity<QBitSeedingRule>(entity =>
         {

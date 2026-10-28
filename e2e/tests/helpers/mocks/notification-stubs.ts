@@ -49,3 +49,10 @@ export function appriseStub(): Mapping {
   };
 }
 
+
+export function webhookStub(): Mapping {
+  return {
+    request: { method: 'ANY', urlPath: '/hook' },
+    response: { status: 200 },
+  };
+}

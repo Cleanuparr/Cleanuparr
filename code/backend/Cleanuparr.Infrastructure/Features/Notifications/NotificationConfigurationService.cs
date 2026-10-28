@@ -90,6 +90,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
                 .Include(p => p.TelegramConfiguration)
                 .Include(p => p.DiscordConfiguration)
                 .Include(p => p.GotifyConfiguration)
+                .Include(p => p.WebhookConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -156,6 +157,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             NotificationProviderType.Telegram => config.TelegramConfiguration,
             NotificationProviderType.Discord => config.DiscordConfiguration,
             NotificationProviderType.Gotify => config.GotifyConfiguration,
+            NotificationProviderType.Webhook => config.WebhookConfiguration,
             _ => throw new ArgumentOutOfRangeException(nameof(config), $"Config type for provider type {config.Type.ToString()} is not registered")
         };
 

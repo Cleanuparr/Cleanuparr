@@ -1,0 +1,282 @@
+---
+sidebar_position: 8
+---
+
+import {
+  ConfigSection,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Webhook
+
+The Webhook provider sends a JSON payload to a URL you choose.
+Use it to feed Home Assistant, n8n, Node-RED, or your own listener.
+
+Cleanuparr sends the same payload shape for every event.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle>Configuration</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure where Cleanuparr sends notifications.
+</p>
+
+<ConfigSection
+  title="URL"
+  id="url"
+>
+
+The address that receives the payload. It must be an absolute `http` or `https` URL.
+
+Examples:
+- `http://homeassistant.local:8123/api/webhook/your-webhook-id`
+- `https://n8n.example.com/webhook/cleanuparr`
+- `http://192.168.1.50:1880/cleanuparr`
+
+Local addresses are allowed.
+
+Cleanuparr hides the URL after you save it, because many services put a secret in it.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Method"
+  id="method"
+>
+
+The HTTP method of the request.
+
+- **POST**: the default
+- **PUT**: for receivers that expect it
+
+</ConfigSection>
+
+<ConfigSection
+  title="Headers"
+  id="headers"
+>
+
+Extra headers to send with every request. Use them for tokens or API keys.
+
+Enter each header as `Name: Value`.
+
+Examples:
+- `Authorization: Bearer your-token`
+- `X-Api-Key: your-key`
+
+Rules:
+- Each header needs a name, a colon, and a value
+- Header names cannot repeat
+- `Content-Type` and `Content-Length` are reserved. Cleanuparr sets `Content-Type` to `application/json` itself
+- Body headers such as `Content-Encoding`, `Content-Language` or `Expires` aren't allowed
+
+Cleanuparr hides every header value after you save. The name stays visible.
+
+To change a value, remove the header and add it again.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Payload"
+  id="payload"
+>
+
+Cleanuparr sends this JSON body for every event:
+
+```json
+{
+  "eventType": "queueItemDeleted",
+  "title": "Deleting item from queue with reason: Stalled",
+  "description": "Some.Show.S01E02.1080p.WEB-DL",
+  "severity": "important",
+  "data": {
+    "reason": "Stalled",
+    "removedFromClient": "True",
+    "hash": "0123456789abcdef0123456789abcdef01234567",
+    "instanceType": "Sonarr",
+    "url": "http://sonarr:8989/"
+  },
+  "image": "https://image.tmdb.org/t/p/original/poster.jpg",
+  "timestamp": "2026-10-28T12:00:00+00:00"
+}
+```
+
+Every payload carries every key.
+`image` is `null` when the event has no picture.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `eventType` | string | The event that fired. See the list below. |
+| `title` | string | Short summary of the event. |
+| `description` | string | The item the event is about. |
+| `severity` | string | `test`, `information`, `warning`, `important` or `error`. |
+| `data` | object | Event details. The keys depend on the event. Every value is a string, including numbers and booleans (`"5"`, `"True"`). |
+| `image` | string or null | URL of a poster or cover. |
+| `timestamp` | string | When Cleanuparr built the notification, in ISO 8601 with a UTC offset. |
+
+**Event types**
+
+| `eventType` | Fires when |
+| --- | --- |
+| `test` | You press **Test** on the provider. |
+| `failedImportStrike` | A download gets a failed import strike. |
+| `stalledStrike` | A download gets a stalled strike. |
+| `slowSpeedStrike` | A download gets a slow speed strike. |
+| `slowTimeStrike` | A download gets a slow time strike. |
+| `erroredStrike` | A download gets an errored strike. |
+| `queueItemDeleted` | A download is removed from an arr queue. |
+| `forceImported` | The Queue Cleaner got the arr to import a blocked download. |
+| `downloadCleaned` | Download Cleaner removes a completed download. |
+| `downloadStopped` | Download Cleaner stops a completed download. |
+| `categoryChanged` | Download Cleaner changes a category or adds a tag. |
+| `searchTriggered` | The Seeker triggers a search. |
+| `searchItemGrabbed` | A search grabs a download. |
+
+**Data keys per event**
+
+`data` keys use camelCase.
+
+Values in the Example column show the format. Keys marked optional appear only in the cases described.
+
+**Test**
+
+`eventType`: `test`. `severity`: `information`. `title`: `Test Notification from Cleanuparr`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `testTime` | `2026-10-28T12:00:00.0000000+00:00` | Time of the test. |
+| `providerType` | `Webhook` | |
+
+**Strikes**
+
+`eventType`: `failedImportStrike`, `stalledStrike`, `slowSpeedStrike`, `slowTimeStrike` or `erroredStrike`.
+`severity`: `warning`.
+`title`: `Strike received with reason: Stalled`.
+`description`: the item title.
+`image`: the item poster, or `null` when the arr has none.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `strikeType` | `Stalled` | `Stalled`, `DownloadingMetadata`, `FailedImport`, `SlowSpeed`, `SlowTime` or `Errored`. A `DownloadingMetadata` strike arrives as `stalledStrike`. |
+| `strikeCount` | `2` | Strikes the item has now. |
+| `hash` | `0123456789abcdef0123456789abcdef01234567` | Lowercase. |
+| `instanceType` | `Sonarr` | `Sonarr`, `Radarr`, `Lidarr`, `Readarr`, `Whisparr`, `Sportarr` or `LazyLibrarian`. |
+| `url` | `http://sonarr:8989/` | The arr instance. |
+| `ruleName` | `Stalled 3 days` | Optional. Present for `Stalled`, `SlowSpeed` and `SlowTime` strikes. It holds the name of the matching queue rule. |
+
+**Queue item deleted**
+
+`eventType`: `queueItemDeleted`. `severity`: `important`.
+`title`: `Deleting item from queue with reason: Stalled`.
+`description`: the item title.
+`image`: the item poster, or `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `reason` | `Stalled` | `None`, `Stalled`, `FailedImport`, `DownloadingMetadata`, `SlowSpeed`, `SlowTime`, `AllFilesSkipped`, `AllFilesSkippedByQBit`, `AllFilesBlocked`, `AtLeastOneFileBlocked`, `DownloadFailed` or `Errored`. |
+| `removedFromClient` | `True` | `True` or `False`. |
+| `hash` | `0123456789abcdef0123456789abcdef01234567` | Lowercase. |
+| `instanceType` | `Sonarr` | Same values as strikes. |
+| `url` | `http://sonarr:8989/` | The arr instance. |
+
+**Force imported**
+
+`eventType`: `forceImported`. `severity`: `important`.
+`title`: `Imported a download the arr had blocked`.
+`description`: the item title.
+`image`: the item poster, or `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `hash` | `0123456789abcdef0123456789abcdef01234567` | Lowercase. |
+| `instanceType` | `Sonarr` | Same values as strikes. |
+| `url` | `http://sonarr:8989/` | The arr instance. |
+
+**Download cleaned**
+
+`eventType`: `downloadCleaned`. `severity`: `important`.
+`title`: `Cleaned item from download client with reason: MaxRatioReached`.
+`description`: the download name.
+`image`: `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `url` | `http://qbittorrent:8080/` | The download client. |
+| `hash` | `0123456789abcdef0123456789abcdef01234567` | Lowercase. |
+| `category` | `tv` | Lowercase. |
+| `ratio` | `2.1` | |
+| `seedingHours` | `72` | Rounded to whole hours. |
+
+The `title` reason is `None`, `MaxRatioReached` or `MaxSeedTimeReached`.
+
+**Download stopped**
+
+`eventType`: `downloadStopped`. `severity`: `important`.
+`title`: `Stopped item in download client with reason: MaxSeedTimeReached`.
+`description`: `<download name> is no longer seeding. It stays in the download client and its files stay on disk.`
+`image`: `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `url` | `http://qbittorrent:8080/` | The download client. |
+| `hash` | `0123456789abcdef0123456789abcdef01234567` | Lowercase. |
+| `category` | `tv` | Lowercase. |
+| `ratio` | `2.1` | |
+| `seedingHours` | `72` | Rounded to whole hours. |
+
+**Category changed**
+
+`eventType`: `categoryChanged`. `severity`: `information`.
+`title`: `Category changed`, or `Tag added` when Cleanuparr adds a tag.
+`description`: the download name.
+`image`: `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `url` | `http://qbittorrent:8080/` | The download client. |
+| `hash` | `0123456789abcdef0123456789abcdef01234567` | Lowercase. |
+| `oldCategory` | `tv` | Optional. Present when the category changed. |
+| `newCategory` | `tv-imported` | Optional. Present when the category changed. |
+| `tag` | `cleanuparr` | Optional. Present instead of the two category keys when Cleanuparr adds a tag. |
+
+**Search triggered**
+
+`eventType`: `searchTriggered`. `severity`: `information`.
+`title`: `Search triggered`.
+`description`: `Search triggered for <item>`.
+`image`: `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `instanceType` | `Sonarr` | Same values as strikes. |
+| `url` | `http://sonarr:8989/` | The arr instance. |
+| `item` | `Some Show S01E02` | |
+| `searchType` | `Proactive` | `Proactive` or `Replacement`. |
+| `searchReason` | `Missing` | `Missing`, `QualityCutoffNotMet`, `CustomFormatScoreBelowCutoff` or `Replacement`. |
+
+**Search item grabbed**
+
+`eventType`: `searchItemGrabbed`. `severity`: `information`.
+`title`: `Download grabbed`.
+`description`: the item title.
+`image`: `null`.
+
+| Key | Example | Notes |
+| --- | --- | --- |
+| `item` | `Some Show S01E02` | |
+| `grabbed` | `Some.Show.S01E02.1080p.WEB-DL, Some.Show.S01E02.720p.HDTV` | Grabbed releases, joined with `, `. |
+| `instanceType` | `Sonarr` | Same values as strikes. |
+| `url` | `http://sonarr:8989/` | The arr instance. |
+
+</ConfigSection>
+
+</div>
+
+</div>

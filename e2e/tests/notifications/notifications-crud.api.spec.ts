@@ -55,6 +55,15 @@ const CASES: ProviderCase[] = [
     type: 'gotify',
     payload: { name: 'gotify-e2e', serverUrl: TEST_CONFIG.mocks.notifyUrl, applicationToken: 'gotify-app-token' },
   },
+  {
+    type: 'webhook',
+    payload: {
+      name: 'webhook-e2e',
+      url: `${TEST_CONFIG.mocks.notifyUrl}/hook`,
+      method: 'Post',
+      headers: ['X-Api-Key: webhook-secret'],
+    },
+  },
 ];
 
 test.describe('Notifications — CRUD', () => {

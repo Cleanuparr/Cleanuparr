@@ -86,6 +86,9 @@
   <div class="provider-grid">
     @for (provider of availableProviders; track provider.type) {
       <button class="provider-card" (click)="onProviderTypeSelected(provider.type)">
+        @if (provider.type === 'Webhook') {
+          <app-new-badge featureId="webhook-notifications" />
+        }
         <span class="provider-card__icon-wrapper">
           <img [src]="themeService.themedIconSrc(provider.iconLightUrl)" alt="" aria-hidden="true" class="provider-card__icon provider-card__icon--light" />
           <img [src]="provider.iconUrl" alt="" aria-hidden="true" class="provider-card__icon provider-card__icon--normal" />

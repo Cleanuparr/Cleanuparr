@@ -226,6 +226,11 @@ export class DocumentationService {
       'applicationToken': 'application-token',
       'priority': 'priority',
     },
+    'notifications/webhook': {
+      'url': 'url',
+      'method': 'method',
+      'headers': 'headers',
+    },
     'seeker': {
       'searchEnabled': 'search-enabled',
       'searchInterval': 'search-interval',

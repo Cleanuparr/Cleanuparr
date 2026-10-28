@@ -164,6 +164,7 @@ describe('NotificationsComponent', () => {
       'ntfy',
       'Pushover',
       'Telegram',
+      'Webhook',
     ]);
 
     const gotifyCard = Array.from(

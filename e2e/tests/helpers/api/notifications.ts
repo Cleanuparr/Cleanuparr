@@ -7,7 +7,8 @@ export type NotificationProviderType =
   | 'telegram'
   | 'discord'
   | 'pushover'
-  | 'gotify';
+  | 'gotify'
+  | 'webhook';
 
 export class NotificationsApi {
   constructor(private readonly client: ApiClient) {}

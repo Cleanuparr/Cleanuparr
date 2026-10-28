@@ -64,6 +64,12 @@ public sealed class SensitiveDataResolver : IJsonTypeInfoResolver
                 return value is string s ? SensitiveDataHelper.MaskAppriseUrls(s) : value;
             },
 
+            SensitiveDataType.HeaderValues => obj =>
+            {
+                object? value = originalGet(obj);
+                return value is IEnumerable<string> headers ? SensitiveDataHelper.MaskHeaderValues(headers) : value;
+            },
+
             _ => originalGet,
         };
     }

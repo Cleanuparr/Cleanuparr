@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
+using Cleanuparr.Infrastructure.Features.Notifications.Webhook;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -23,6 +24,7 @@ public static class NotificationsDI
             .AddScoped<ITelegramProxy, TelegramProxy>()
             .AddScoped<IDiscordProxy, DiscordProxy>()
             .AddScoped<IGotifyProxy, GotifyProxy>()
+            .AddScoped<IWebhookProxy, WebhookProxy>()
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()
             .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
             .AddScoped<NotificationProviderFactory>()
