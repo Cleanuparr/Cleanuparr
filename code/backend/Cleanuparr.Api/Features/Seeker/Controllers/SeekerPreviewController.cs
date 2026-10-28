@@ -117,12 +117,19 @@ public sealed class SeekerPreviewController : ControllerBase
         DateTimeOffset? waitingUntil = null;
 
         // Same rollover as the Seeker job: a cycle with nothing left waits out the minimum cycle time, then starts over.
-        if (!evaluation.Remaining.Any() && cycle is { SearchedUnits: > 0 })
+        if (!evaluation.Remaining.Any() && cycle is not null && (cycle.SearchedUnits > 0 || evaluation.RestingUnits > 0))
         {
             DateTimeOffset minCycleEnd = cycle.StartedAt.AddDays(instanceConfig.MinCycleTimeDays);
             if (_timeProvider.GetUtcNow() < minCycleEnd)
             {
-                waitingUntil = minCycleEnd;
+                // A rest ending first frees its unit for the next run, unless the unit was searched this cycle.
+                DateTimeOffset? earliestRestUntil = evaluation.Units
+                    .Where(u => u.BlockedBy == SeekerExclusionReason.Resting && !u.Searched)
+                    .Select(u => u.Rest?.Until)
+                    .Min();
+                waitingUntil = earliestRestUntil is { } restUntil && restUntil < minCycleEnd
+                    ? restUntil
+                    : minCycleEnd;
             }
             else
             {
@@ -154,7 +161,14 @@ public sealed class SeekerPreviewController : ControllerBase
                 .Select(c => new SeekerPreviewUnitResponse { Name = c.Name, Reason = c.Reason, ContentKind = c.ContentKind })
                 .ToList(),
             Excluded = evaluation.Excluded
-                .Select(e => new SeekerPreviewExclusionResponse { Name = e.Name, Reason = e.Reason })
+                .Select(e => new SeekerPreviewExclusionResponse
+                {
+                    Name = e.Name,
+                    Reason = e.Reason,
+                    ConsecutiveMisses = e.Rest?.ConsecutiveMisses,
+                    RestCyclesLeft = e.Rest?.CyclesLeft,
+                    RestUntil = e.Rest?.Until,
+                })
                 .ToList(),
         });
     }
@@ -172,7 +186,8 @@ public sealed class SeekerPreviewController : ControllerBase
             EligibleUnits = evaluation.Units.Count,
             QueuedUnits = evaluation.QueuedUnits,
             RecentlyGrabbedUnits = evaluation.RecentlyGrabbedUnits,
-            SearchedUnits = evaluation.Units.Count - evaluation.QueuedUnits - evaluation.RecentlyGrabbedUnits - remaining,
+            RestingUnits = evaluation.RestingUnits,
+            SearchedUnits = Math.Max(0, evaluation.Units.Count - evaluation.QueuedUnits - evaluation.RecentlyGrabbedUnits - evaluation.RestingUnits - remaining),
             RemainingUnits = remaining,
             CountedAt = _timeProvider.GetUtcNow(),
         };

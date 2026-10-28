@@ -425,6 +425,7 @@ describe('SearchesTabComponent', () => {
       eligibleUnits: 37,
       queuedUnits: 3,
       recentlyGrabbedUnits: 1,
+      restingUnits: 0,
       searchedUnits: 20,
       remainingUnits: 13,
       countedAt: '2026-07-30T10:00:00Z',

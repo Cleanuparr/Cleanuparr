@@ -161,6 +161,23 @@
                   helpKey="seeker:recentGrabWindowHours"
                   featureId="seeker-recent-grab-window"
                 />
+                <app-toggle label="Rest Items That Find Nothing" [checked]="instance.restUnitsEnabled"
+                  hint="After 3 searches in a row find nothing, skip the item for 1 cycle, doubling with each further miss up to 8 cycles or the max rest days, whichever ends first. A grab clears it."
+                  (checkedChange)="updateInstanceRestUnitsEnabled($index, $event)"
+                  helpKey="seeker:restUnitsEnabled"
+                  featureId="seeker-unit-rest" />
+                @if (instance.restUnitsEnabled) {
+                  <app-number-input
+                    label="Max Rest (Days)"
+                    placeholder="30"
+                    hint="A rest always ends after this many days, even if cycles are slow"
+                    [value]="instance.restMaxDays"
+                    [min]="1"
+                    [max]="365"
+                    (valueChange)="updateInstanceRestMaxDays($index, $event)"
+                    helpKey="seeker:restMaxDays"
+                  />
+                }
                 <app-number-input
                   label="Min Cycle Time (Days)"
                   placeholder="7"

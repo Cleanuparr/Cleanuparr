@@ -72,6 +72,8 @@ public sealed class SeekerConfigController : ControllerBase
                 UseCustomFormatScore = seekerConfig?.UseCustomFormatScore ?? false,
                 RecentGrabWindowHours = seekerConfig?.RecentGrabWindowHours ?? 24,
                 SonarrSearchMode = seekerConfig?.SonarrSearchMode ?? SonarrSearchMode.Auto,
+                RestUnitsEnabled = seekerConfig?.RestUnitsEnabled ?? false,
+                RestMaxDays = seekerConfig?.RestMaxDays ?? 30,
             };
         }).ToList();
 
@@ -138,6 +140,8 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
                     existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
                     existing.SonarrSearchMode = instanceReq.SonarrSearchMode;
+                    existing.RestUnitsEnabled = instanceReq.RestUnitsEnabled;
+                    existing.RestMaxDays = instanceReq.RestMaxDays;
                     existing.Validate();
                 }
                 else
@@ -156,6 +160,8 @@ public sealed class SeekerConfigController : ControllerBase
                         UseCustomFormatScore = instanceReq.UseCustomFormatScore,
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
                         SonarrSearchMode = instanceReq.SonarrSearchMode,
+                        RestUnitsEnabled = instanceReq.RestUnitsEnabled,
+                        RestMaxDays = instanceReq.RestMaxDays,
                     };
                     newInstanceConfig.Validate();
                     await _dataContext.SeekerInstanceConfigs.AddAsync(newInstanceConfig);

@@ -54,6 +54,11 @@ public enum SeekerExclusionReason
     RecentlyGrabbed,
 
     /// <summary>
+    /// Rests after repeated searches in a row grabbed nothing
+    /// </summary>
+    Resting,
+
+    /// <summary>
     /// Already searched in the current cycle
     /// </summary>
     SearchedThisCycle,

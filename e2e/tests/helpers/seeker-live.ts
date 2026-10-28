@@ -383,11 +383,11 @@ async function activeQueueCount(target: SeededArr): Promise<number> {
  *
  * With the jitter patch a run reaches its search within seconds.
  */
-export async function expectNoSearch(api: CleanuparrApi, instanceId: string, waitMs = 20_000): Promise<void> {
+export async function expectNoSearch(api: CleanuparrApi, instanceId: string, waitMs = 20_000, searchesSoFar = 0): Promise<void> {
   await triggerSeeker(api);
   await new Promise((resolve) => setTimeout(resolve, waitMs));
 
-  expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  expect(await listSearchEvents(api, instanceId)).toHaveLength(searchesSoFar);
 }
 
 /** Tracks what arrangeQueueCleaner created, so the teardown can undo it. */

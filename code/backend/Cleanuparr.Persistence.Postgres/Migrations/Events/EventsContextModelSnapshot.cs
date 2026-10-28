@@ -674,6 +674,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("integer")
                         .HasColumnName("remaining_units");
 
+                    b.Property<int>("RestingUnits")
+                        .HasColumnType("integer")
+                        .HasColumnName("resting_units");
+
                     b.Property<int>("SearchedUnits")
                         .HasColumnType("integer")
                         .HasColumnName("searched_units");
@@ -705,6 +709,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("uuid")
                         .HasColumnName("arr_instance_id");
+
+                    b.Property<int>("ConsecutiveMisses")
+                        .HasColumnType("integer")
+                        .HasColumnName("consecutive_misses");
 
                     b.Property<string>("ContentKind")
                         .IsRequired()
@@ -740,6 +748,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("item_type");
+
+                    b.Property<DateTimeOffset?>("LastMissAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_miss_at");
 
                     b.Property<string>("LastOutcome")
                         .HasColumnType("text")

@@ -157,7 +157,7 @@ public class SeekerPreviewControllerTests : IDisposable
         return sonarr;
     }
 
-    private ArrInstance AddRadarr(Guid? currentCycleId = null, int minCycleTimeDays = 7)
+    private ArrInstance AddRadarr(Guid? currentCycleId = null, int minCycleTimeDays = 7, bool restUnitsEnabled = false)
     {
         ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -166,6 +166,7 @@ public class SeekerPreviewControllerTests : IDisposable
             Enabled = true,
             CurrentCycleId = currentCycleId ?? Guid.NewGuid(),
             MinCycleTimeDays = minCycleTimeDays,
+            RestUnitsEnabled = restUnitsEnabled,
         });
         _dataContext.SaveChanges();
         return radarr;
@@ -248,6 +249,53 @@ public class SeekerPreviewControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPreview_RestingMovie_MapsTheRestFieldsAndCountsItInTheFunnel()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, restUnitsEnabled: true);
+        AddCycle(cycleId, radarr.Id, Now.AddDays(-1), searchedUnits: 1);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = Guid.NewGuid(),
+            LastSearchedAt = Now.AddDays(-2),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1), Movie(2));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        SeekerPreviewExclusionResponse excluded = response.Excluded.ShouldHaveSingleItem();
+        excluded.Name.ShouldBe("Movie 1");
+        excluded.Reason.ShouldBe(SeekerExclusionReason.Resting);
+        excluded.ConsecutiveMisses.ShouldBe(4);
+        excluded.RestCyclesLeft.ShouldBe(2);
+        excluded.RestUntil.ShouldBe(Now.AddDays(-2).AddDays(30));
+        response.NextUp.ShouldHaveSingleItem().Name.ShouldBe("Movie 2");
+        response.Funnel.RestingUnits.ShouldBe(1);
+        response.Funnel.SearchedUnits.ShouldBe(0);
+        response.Funnel.RemainingUnits.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetPreview_NonRestingExclusion_LeavesTheRestFieldsNull()
+    {
+        ArrInstance radarr = AddRadarr();
+        SetupMovies(Movie(1), Movie(3, status: "announced"));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        SeekerPreviewExclusionResponse excluded = response.Excluded.ShouldHaveSingleItem();
+        excluded.ConsecutiveMisses.ShouldBeNull();
+        excluded.RestCyclesLeft.ShouldBeNull();
+        excluded.RestUntil.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task GetPreview_QueuedMovie_LeavesItOutOfNextUp()
     {
         ArrInstance radarr = AddRadarr();
@@ -300,6 +348,100 @@ public class SeekerPreviewControllerTests : IDisposable
         response.Excluded.ShouldBeEmpty();
         response.Funnel.RemainingUnits.ShouldBe(2);
         response.Funnel.SearchedUnits.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task GetPreview_UnsearchedCycleWithEveryMovieResting_WaitsForMinCycleTime()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 7, restUnitsEnabled: true);
+        DateTimeOffset startedAt = Now.AddDays(-2);
+        AddCycle(cycleId, radarr.Id, startedAt, searchedUnits: 0);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = Guid.NewGuid(),
+            LastSearchedAt = Now.AddDays(-3),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        response.CycleWaitingUntil.ShouldBe(startedAt.AddDays(7));
+        response.NextUp.ShouldBeEmpty();
+        response.Excluded.ShouldHaveSingleItem().Reason.ShouldBe(SeekerExclusionReason.Resting);
+    }
+
+    [Fact]
+    public async Task GetPreview_RestEndsBeforeMinCycleTime_WaitsForTheRestEnd()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 60, restUnitsEnabled: true);
+        DateTimeOffset startedAt = Now.AddDays(-2);
+        AddCycle(cycleId, radarr.Id, startedAt, searchedUnits: 0);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = Guid.NewGuid(),
+            LastSearchedAt = Now.AddDays(-3),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        DateTimeOffset restUntil = response.Excluded.ShouldHaveSingleItem().RestUntil.ShouldNotBeNull();
+        restUntil.ShouldBeLessThan(startedAt.AddDays(60));
+        response.CycleWaitingUntil.ShouldBe(restUntil);
+    }
+
+    [Fact]
+    public async Task GetPreview_RestStartedThisCycleEndsBeforeMinCycleTime_WaitsForMinCycleTime()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 60, restUnitsEnabled: true);
+        DateTimeOffset startedAt = Now.AddDays(-2);
+        AddCycle(cycleId, radarr.Id, startedAt, searchedUnits: 1);
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CycleId = cycleId,
+            LastSearchedAt = Now.AddDays(-1),
+            ItemTitle = "Movie 1",
+            ConsecutiveMisses = 4,
+        });
+        _eventsContext.SaveChanges();
+        SetupMovies(Movie(1));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        response.Excluded.ShouldHaveSingleItem().RestUntil.ShouldNotBeNull().ShouldBeLessThan(startedAt.AddDays(60));
+        response.CycleWaitingUntil.ShouldBe(startedAt.AddDays(60));
+    }
+
+    [Fact]
+    public async Task GetPreview_UnsearchedCycleWithNothingLeftOrResting_DoesNotWait()
+    {
+        Guid cycleId = Guid.NewGuid();
+        ArrInstance radarr = AddRadarr(cycleId, minCycleTimeDays: 7);
+        AddCycle(cycleId, radarr.Id, Now.AddDays(-2), searchedUnits: 0);
+        SetupMovies(Movie(1, status: "announced"));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        response.CycleWaitingUntil.ShouldBeNull();
+        response.NextUp.ShouldBeEmpty();
     }
 
     [Fact]

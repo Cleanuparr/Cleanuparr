@@ -14,6 +14,7 @@ const FUNNEL: InstanceFunnel = {
   eligibleUnits: 60,
   queuedUnits: 5,
   recentlyGrabbedUnits: 4,
+  restingUnits: 0,
   searchedUnits: 30,
   remainingUnits: 21,
   countedAt: '2026-07-30T10:00:00Z',
@@ -113,6 +114,38 @@ describe('SeekerPreviewDrawerComponent', () => {
     fixture.detectChanges();
 
     expect(getPreview).not.toHaveBeenCalled();
+  });
+
+  it('renders the label and detail line for a resting exclusion', () => {
+    const { fixture, host } = setup(of(preview({
+      excluded: [
+        { name: 'Zeta', reason: SeekerExclusionReason.Resting, consecutiveMisses: 5, restCyclesLeft: 2, restUntil: '2026-08-15T12:00:00Z' },
+        { name: 'Eta', reason: SeekerExclusionReason.Resting, consecutiveMisses: 3, restCyclesLeft: 1 },
+        { name: 'Theta', reason: SeekerExclusionReason.NotMonitored },
+      ],
+    })));
+
+    open(fixture, host);
+
+    expect(texts('.preview__row--excluded app-badge')).toEqual([
+      'Resting after repeated misses',
+      'Resting after repeated misses',
+      'Not monitored',
+    ]);
+    expect(texts('.preview__detail')).toEqual([
+      '5 misses in a row · back after 2 cycles end or on 08/15',
+      '3 misses in a row · back after 1 cycle ends',
+    ]);
+  });
+
+  it('renders no detail line for a resting exclusion without rest fields', () => {
+    const { fixture, host } = setup(of(preview({
+      excluded: [{ name: 'Iota', reason: SeekerExclusionReason.Resting }],
+    })));
+
+    open(fixture, host);
+
+    expect(texts('.preview__detail')).toEqual([]);
   });
 
   it('requests the preview for the instance when opened', () => {
