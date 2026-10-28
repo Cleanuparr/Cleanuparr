@@ -172,6 +172,13 @@
     grid-template-rows: subgrid;
     row-gap: var(--space-1);
     min-width: 0;
+
+    // A block host adds a line box at the card's font size, which pushes
+    // tooltipped labels below plain ones.
+    > app-tooltip {
+      display: flex;
+      align-items: flex-start;
+    }
   }
 
   &__stat-value {
