@@ -30,10 +30,23 @@ permissions:
   contents: read
 
 jobs:
+  stack-gate:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/stack-gate.yml
+    with:
+      # Keep in sync with on.pull_request.paths
+      paths: |
+        code/backend/
+        code/frontend/
+        .github/workflows/test.yml
+
   backend:
+    needs: stack-gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.stack-gate.outputs.run == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
 
     steps:
       - name: Checkout repository
@@ -115,9 +128,10 @@ jobs:
           echo "Test artifacts have been uploaded for detailed analysis." >> $GITHUB_STEP_SUMMARY
 
   frontend:
+    needs: stack-gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.stack-gate.outputs.run == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     defaults:
       run:
         working-directory: code/frontend

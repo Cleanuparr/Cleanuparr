@@ -156,6 +156,9 @@ jobs:
   test:
     needs: validate
     if: needs.validate.outputs.build == 'test'
+    permissions:
+      contents: read
+      pull-requests: read
     concurrency:
       group: pr-test-${{ needs.validate.outputs.pr_number }}
       cancel-in-progress: true
@@ -185,6 +188,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: read
     uses: ./.github/workflows/build-docker.yml
     with:
       ref: ${{ needs.validate.outputs.pr_sha }}

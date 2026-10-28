@@ -154,6 +154,9 @@ jobs:
   test:
     needs: validate
     if: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.runTests == 'true' }}
+    permissions:
+      contents: read
+      pull-requests: read
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
@@ -216,6 +219,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: read
     if: |
       always() &&
       needs.validate.result == 'success' &&

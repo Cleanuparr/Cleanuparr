@@ -1,0 +1,79 @@
+name: Stack Gate
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: 'Newline-separated path prefixes matching the caller''s on.pull_request.paths.'
+        type: string
+        required: true
+    outputs:
+      run:
+        description: 'false when the PR is below the top of a stack whose top PR also triggers this workflow.'
+        value: ${{ jobs.gate.outputs.run }}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      run: ${{ steps.stack.outputs.run }}
+    steps:
+      - name: Check stack position
+        id: stack
+        uses: actions/github-script@v9
+        env:
+          PATHS: ${{ inputs.paths }}
+        with:
+          script: |
+            if (context.eventName !== 'pull_request') {
+              core.setOutput('run', 'true');
+              return;
+            }
+
+            try {
+              const result = await github.graphql(`
+                query($owner: String!, $repo: String!, $number: Int!) {
+                  repository(owner: $owner, name: $repo) {
+                    pullRequest(number: $number) {
+                      stack {
+                        size
+                        entries(first: 50) {
+                          nodes {
+                            position
+                            pullRequest { files(first: 100) { nodes { path } } }
+                          }
+                        }
+                      }
+                      stackEntry { position }
+                    }
+                  }
+                }`, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: context.payload.pull_request.number,
+              });
+
+              const pr = result.repository.pullRequest;
+              if (!pr.stack || !pr.stackEntry || pr.stackEntry.position === pr.stack.size) {
+                core.setOutput('run', 'true');
+                return;
+              }
+
+              const prefixes = process.env.PATHS.split('\n').map(p => p.trim()).filter(Boolean);
+              const files = pr.stack.entries.nodes.find(e => e.position === pr.stack.size)?.pullRequest?.files;
+              // Missing data or no match in the first 100 files fails open
+              const topRuns = files?.nodes.some(f => prefixes.some(p => f.path.startsWith(p))) ?? false;
+              if (!topRuns) {
+                core.info('Top PR does not trigger this workflow, running here.');
+                core.setOutput('run', 'true');
+                return;
+              }
+
+              core.info(`PR is at position ${pr.stackEntry.position} of ${pr.stack.size}, CI runs on the top PR only.`);
+              core.setOutput('run', 'false');
+            } catch (error) {
+              // Fail open so a lookup error never silently drops CI
+              core.warning(error.message);
+              core.setOutput('run', 'true');
+            }
