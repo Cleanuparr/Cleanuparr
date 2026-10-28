@@ -705,12 +705,23 @@ describe('SeekerComponent', () => {
   it('renders the time inputs only when quiet hours are enabled', () => {
     const { fixture, component } = setup();
 
-    expect(fixture.nativeElement.querySelectorAll('input[type="time"]').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('app-time-input').length).toBe(2);
 
     component.seekerForm.quietHoursEnabled().value.set(false);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelectorAll('input[type="time"]').length).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('app-time-input').length).toBe(0);
+  });
+
+  it('shows the quiet until time as hour and minute selects', () => {
+    const { fixture } = setup();
+
+    const until = Array.from(fixture.nativeElement.querySelectorAll('app-time-input')).find((el) =>
+      (el as HTMLElement).textContent!.includes('Quiet Until'),
+    ) as HTMLElement;
+    const shown = Array.from(until.querySelectorAll('.select-trigger__text')).map((el) => el.textContent!.trim());
+
+    expect(shown).toEqual(['07', '30']);
   });
 
   it('marks the form invalid when quiet hours start and end match', () => {

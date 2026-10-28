@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
-  SelectComponent, ChipInputComponent, NumberInputComponent, InputComponent,
+  SelectComponent, ChipInputComponent, NumberInputComponent, TimeInputComponent,
   EmptyStateComponent, LoadingStateComponent, BadgeComponent,
   type SelectOption,
 } from '@ui';
@@ -101,7 +101,7 @@ interface InstanceState {
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent, InputComponent,
+    ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent, TimeInputComponent,
     EmptyStateComponent, LoadingStateComponent, BadgeComponent, DatePipe, FormField,
   ],
   templateUrl: './seeker.component.html',
