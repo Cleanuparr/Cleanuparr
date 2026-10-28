@@ -11,6 +11,7 @@ public sealed record SearchEventResponse
     public string ItemTitle { get; init; } = string.Empty;
     public SeekerSearchType SearchType { get; init; }
     public SeekerSearchReason? SearchReason { get; init; }
+    public SeekerContentKind? ContentKind { get; init; }
     public SearchCommandStatus? SearchStatus { get; init; }
     public DateTimeOffset? CompletedAt { get; init; }
     public List<string> GrabbedItems { get; init; } = [];

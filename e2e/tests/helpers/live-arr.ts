@@ -24,6 +24,7 @@ export interface LiveArrCommand {
   id: number;
   name: string;
   status: string;
+  body?: { seriesId?: number; seasonNumber?: number; episodeIds?: number[] };
 }
 
 export class LiveArr {

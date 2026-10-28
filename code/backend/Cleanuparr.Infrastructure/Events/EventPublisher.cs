@@ -360,7 +360,7 @@ public class EventPublisher : IEventPublisher
     /// Publishes a search triggered event with context data and notifications.
     /// Returns the event ID so the SeekerCommandMonitor can update it on completion.
     /// </summary>
-    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null)
+    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null, SeekerContentKind? contentKind = null)
     {
         bool dryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
 
@@ -381,6 +381,7 @@ public class EventPublisher : IEventPublisher
             ItemTitle = itemTitle,
             SearchType = searchType,
             SearchReason = searchReason,
+            ContentKind = contentKind,
         };
 
         eventEntity.IsDryRun = dryRun;

@@ -56,4 +56,6 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-include-tags' },
   { id: 'seeker-recent-grab-window' },
   { id: 'seeker-last-cycle-duration' },
+  { id: 'seeker-search-specials' },
+  { id: 'seeker-search-anime' },
 ];

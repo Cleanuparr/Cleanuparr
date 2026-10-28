@@ -159,6 +159,11 @@ public class AppEvent
     public SeekerSearchReason? SearchReason { get; set; }
 
     /// <summary>
+    /// What the searched Sonarr unit holds (SearchTriggered events)
+    /// </summary>
+    public SeekerContentKind? ContentKind { get; set; }
+
+    /// <summary>
     /// Titles of items grabbed after search completion, populated by SeekerCommandMonitor (SearchTriggered events)
     /// </summary>
     public List<string> GrabbedItems { get; set; } = [];

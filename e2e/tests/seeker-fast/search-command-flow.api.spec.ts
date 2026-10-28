@@ -10,6 +10,7 @@ import {
   arrCommandTriggerStub,
   arrMoviesStub,
   arrQualityProfilesStub,
+  arrWantedStub,
 } from '../helpers/mocks/arr-stubs';
 
 const COMMAND_ID = 4242;
@@ -58,6 +59,8 @@ async function arrangeSearchableInstance(
   await applyArrDefaults(mocks.arr);
   await mocks.arr.stubMany([
     arrMoviesStub([{ id: 1, title: movieTitle }]),
+    arrWantedStub('missing', [{ id: 1 }]),
+    arrWantedStub('cutoff', []),
     arrQualityProfilesStub(),
     arrCommandTriggerStub(COMMAND_ID),
     ...commandStubs,
@@ -81,8 +84,11 @@ async function arrangeSearchableInstance(
     searchInterval: config.searchInterval,
   };
 
+  // The arr mock stubs no grab history, so a window would skip the search.
   const instances = config.instances.map((i: { arrInstanceId: string }) =>
-    i.arrInstanceId === instance.id ? { ...i, enabled: true, monitoredOnly: true } : i,
+    i.arrInstanceId === instance.id
+      ? { ...i, enabled: true, monitoredOnly: true, recentGrabWindowHours: 0 }
+      : i,
   );
 
   await api.seeker.updateConfig({

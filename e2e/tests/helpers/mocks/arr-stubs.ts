@@ -218,6 +218,17 @@ export function arrMoviesStub(movies: SearchableMovie[]): Mapping {
   };
 }
 
+/** Serves one page of a Radarr wanted list. */
+export function arrWantedStub(kind: 'missing' | 'cutoff', records: Array<{ id: number }>): Mapping {
+  return {
+    request: { method: 'GET', urlPath: `/api/v3/wanted/${kind}` },
+    response: {
+      status: 200,
+      jsonBody: { page: 1, pageSize: records.length, totalRecords: records.length, records },
+    },
+  };
+}
+
 export function arrQualityProfilesStub(): Mapping {
   return {
     request: { method: 'GET', urlPath: '/api/v3/qualityprofile' },

@@ -31,9 +31,9 @@ public interface ISonarrClient : IArrClient
     Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds);
 
     /// <summary>
-    /// Fetches the series/season pairs Sonarr grabbed an episode for since the given time.
+    /// Fetches the episodes Sonarr grabbed since the given time, with their series and season.
     /// </summary>
-    Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
+    Task<HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)>> GetRecentlyGrabbedEpisodesAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches every episode Sonarr lists as missing, filtered by monitored state.

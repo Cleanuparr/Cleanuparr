@@ -102,6 +102,16 @@
                   hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
                   (checkedChange)="patchInstance($index, { useCustomFormatScore: $event })"
                   helpKey="seeker:useCustomFormatScore" />
+                @if (instance.instanceType === 'Sonarr') {
+                  <app-toggle label="Search for specials" [checked]="true" [disabled]="true"
+                    hint="Specials are always searched one episode at a time. Sonarr runs two indexer queries for every special, so searching a whole specials season would query all of them at once."
+                    helpKey="seeker:searchSpecials"
+                    featureId="seeker-search-specials" />
+                  <app-toggle label="Search for anime" [checked]="true" [disabled]="true"
+                    hint="Anime seasons are searched as a whole only after every episode has aired or airs within 24 hours. Until then, episodes are searched one at a time. This is the rule Sonarr uses."
+                    helpKey="seeker:searchAnime"
+                    featureId="seeker-search-anime" />
+                }
                 <app-chip-input
                   label="Include Tags"
                   placeholder="Add tag..."

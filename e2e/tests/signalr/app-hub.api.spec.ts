@@ -160,10 +160,6 @@ test.describe('SignalR — app hub', () => {
     });
     expect(qc.ok, `queue cleaner updateConfig: ${qc.status}`).toBe(true);
 
-    // One strike is enough to remove, so a single job run fills events and strikes.
-    const cfg = await api.arr.updateConfig('sonarr', { failedImportMaxStrikes: 1 });
-    expect(cfg.ok, `arr updateConfig: ${cfg.status}`).toBe(true);
-
     const created = await api.arr.createInstance('sonarr', {
       name: 'sonarr-signalr-wire',
       url: TEST_CONFIG.mocks.arrUrl,
@@ -173,8 +169,16 @@ test.describe('SignalR — app hub', () => {
     });
     expect(created.ok, `createInstance: ${created.status}`).toBe(true);
 
-    const trigger = await api.jobs.trigger('QueueCleaner');
-    expect(trigger.status).toBeLessThan(300);
+    // Removal needs three strikes, one per run.
+    await expect
+      .poll(
+        async () => {
+          await api.jobs.trigger('QueueCleaner');
+          return (await ArrStubs.readDeletes(mocks.arr)).length;
+        },
+        { timeout: 120_000, intervals: [2_000] },
+      )
+      .toBeGreaterThan(0);
 
     const connection = connect();
     await connection.start();

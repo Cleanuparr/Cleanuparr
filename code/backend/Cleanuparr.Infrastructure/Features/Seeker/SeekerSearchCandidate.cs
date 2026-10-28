@@ -19,5 +19,15 @@ internal sealed record SeekerSearchCandidate
     /// </summary>
     public required int SeasonNumber { get; init; }
 
+    /// <summary>
+    /// Episode for a Sonarr episode search; 0 for a season or movie.
+    /// </summary>
+    public long EpisodeId { get; init; }
+
+    /// <summary>
+    /// What the Sonarr unit holds; null for Radarr.
+    /// </summary>
+    public SeekerContentKind? ContentKind { get; init; }
+
     public required SeekerSearchReason Reason { get; init; }
 }

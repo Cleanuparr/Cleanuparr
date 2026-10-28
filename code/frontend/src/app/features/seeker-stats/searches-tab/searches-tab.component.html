@@ -164,6 +164,9 @@
               {{ formatSearchReason(event.searchReason) }}
             </app-badge>
           }
+          @if (event.contentKind) {
+            <app-badge severity="default" size="sm">{{ event.contentKind }}</app-badge>
+          }
           @if (event.searchStatus) {
             <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">
               {{ event.searchStatus }}
@@ -266,6 +269,15 @@
       [value]="draft().searchReason"
       [options]="searchReasonOptions"
       (valueChange)="updateDraft('searchReason', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-group__label">Content kind</span>
+    <app-select
+      [value]="draft().contentKind"
+      [options]="contentKindOptions"
+      (valueChange)="updateDraft('contentKind', $any($event))"
     />
   </div>
 

@@ -141,6 +141,7 @@ public sealed class SearchStatsController : ControllerBase
     /// <param name="searchStatus">When supplied, keeps only events whose <see cref="SearchCommandStatus"/> appears in this list.</param>
     /// <param name="searchType">When supplied, keeps only events matching this <see cref="SeekerSearchType"/>.</param>
     /// <param name="searchReason">When supplied, keeps only events matching this <see cref="SeekerSearchReason"/>.</param>
+    /// <param name="contentKind">When supplied, keeps only events matching this <see cref="SeekerContentKind"/>.</param>
     /// <param name="grabbed">When <c>true</c>, keeps only events that recorded at least one grabbed item; when <c>false</c>, keeps only events with none.</param>
     [HttpGet("events")]
     public async Task<IActionResult> GetEvents(
@@ -154,6 +155,7 @@ public sealed class SearchStatsController : ControllerBase
         [FromQuery] SearchCommandStatus[]? searchStatus = null,
         [FromQuery] SeekerSearchType? searchType = null,
         [FromQuery] SeekerSearchReason? searchReason = null,
+        [FromQuery] SeekerContentKind? contentKind = null,
         [FromQuery] bool? grabbed = null)
     {
         if (page < 1)
@@ -204,6 +206,12 @@ public sealed class SearchStatsController : ControllerBase
         {
             SeekerSearchReason reasonValue = searchReason.Value;
             query = query.Where(e => e.SearchReason == reasonValue);
+        }
+
+        if (contentKind.HasValue)
+        {
+            SeekerContentKind kindValue = contentKind.Value;
+            query = query.Where(e => e.ContentKind == kindValue);
         }
 
         // Filter by grabbed-result presence
@@ -276,6 +284,7 @@ public sealed class SearchStatsController : ControllerBase
             ItemTitle = e.ItemTitle ?? "Unknown",
             SearchType = e.SearchType ?? SeekerSearchType.Proactive,
             SearchReason = e.SearchReason,
+            ContentKind = e.ContentKind,
             SearchStatus = e.SearchStatus,
             CompletedAt = e.CompletedAt,
             GrabbedItems = e.GrabbedItems,
