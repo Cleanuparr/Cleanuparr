@@ -91,6 +91,9 @@
           <img [src]="provider.iconUrl" alt="" aria-hidden="true" class="provider-card__icon provider-card__icon--normal" />
         </span>
         <span class="provider-card__name">{{ provider.name }}</span>
+        @if (provider.type === 'Webhook') {
+          <app-new-badge variant="inline" featureId="webhook-notifications" />
+        }
         <span class="provider-card__description">{{ provider.description }}</span>
       </button>
     }
