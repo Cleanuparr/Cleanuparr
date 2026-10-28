@@ -1747,6 +1747,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("monitored_only");
 
+                    b.Property<string>("RadarrReleaseGate")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("radarr_release_gate");
+
                     b.Property<int>("RecentGrabWindowHours")
                         .HasColumnType("integer")
                         .HasColumnName("recent_grab_window_hours");

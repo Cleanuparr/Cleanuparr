@@ -72,6 +72,7 @@ public sealed class SeekerConfigController : ControllerBase
                 UseCustomFormatScore = seekerConfig?.UseCustomFormatScore ?? false,
                 RecentGrabWindowHours = seekerConfig?.RecentGrabWindowHours ?? 24,
                 SonarrSearchMode = seekerConfig?.SonarrSearchMode ?? SonarrSearchMode.Auto,
+                RadarrReleaseGate = seekerConfig?.RadarrReleaseGate ?? RadarrReleaseGate.ReleaseDate,
                 RestUnitsEnabled = seekerConfig?.RestUnitsEnabled ?? false,
                 RestMaxDays = seekerConfig?.RestMaxDays ?? 30,
             };
@@ -143,6 +144,7 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
                     existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
                     existing.SonarrSearchMode = instanceReq.SonarrSearchMode;
+                    existing.RadarrReleaseGate = instanceReq.RadarrReleaseGate;
                     existing.RestUnitsEnabled = instanceReq.RestUnitsEnabled;
                     existing.RestMaxDays = instanceReq.RestMaxDays;
                     existing.Validate();
@@ -163,6 +165,7 @@ public sealed class SeekerConfigController : ControllerBase
                         UseCustomFormatScore = instanceReq.UseCustomFormatScore,
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
                         SonarrSearchMode = instanceReq.SonarrSearchMode,
+                        RadarrReleaseGate = instanceReq.RadarrReleaseGate,
                         RestUnitsEnabled = instanceReq.RestUnitsEnabled,
                         RestMaxDays = instanceReq.RestMaxDays,
                     };

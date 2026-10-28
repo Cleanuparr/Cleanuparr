@@ -1743,6 +1743,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("monitored_only");
 
+                    b.Property<string>("RadarrReleaseGate")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("radarr_release_gate");
+
                     b.Property<int>("RecentGrabWindowHours")
                         .HasColumnType("INTEGER")
                         .HasColumnName("recent_grab_window_hours");

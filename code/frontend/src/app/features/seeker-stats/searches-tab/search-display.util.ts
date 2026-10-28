@@ -106,6 +106,7 @@ export function funnelStages(funnel: InstanceFunnel, instanceType: string): { na
 export const EXCLUSION_REASON_LABELS: Record<SeekerExclusionReason, string> = {
   [SeekerExclusionReason.NotReleased]: 'Not released',
   [SeekerExclusionReason.InGracePeriod]: 'In grace period',
+  [SeekerExclusionReason.NotAvailable]: 'Not available in Radarr',
   [SeekerExclusionReason.NotMonitored]: 'Not monitored',
   [SeekerExclusionReason.SkipTag]: 'Skip tag',
   [SeekerExclusionReason.MissingIncludeTag]: 'No include tag',

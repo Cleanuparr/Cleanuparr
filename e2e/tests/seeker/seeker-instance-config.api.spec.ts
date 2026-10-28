@@ -48,6 +48,7 @@ test.describe('Seeker — per-instance config', () => {
       expect(instance).toHaveProperty('ignoreStruckDownloads');
       expect(instance).toHaveProperty('minCycleTimeDays');
       expect(instance).toHaveProperty('monitoredOnly');
+      expect(instance).toHaveProperty('radarrReleaseGate');
       expect(instance).toHaveProperty('useCutoff');
       expect(instance).toHaveProperty('useCustomFormatScore');
       expect(instance).toHaveProperty('instanceName');
@@ -56,6 +57,7 @@ test.describe('Seeker — per-instance config', () => {
     }
 
     expect(radarr.monitoredOnly).toBe(true);
+    expect(radarr.radarrReleaseGate).toBe('ReleaseDate');
     expect(radarr.useCutoff).toBe(false);
     expect(radarr.useCustomFormatScore).toBe(false);
     expect(radarr.ignoreStruckDownloads).toBe(false);

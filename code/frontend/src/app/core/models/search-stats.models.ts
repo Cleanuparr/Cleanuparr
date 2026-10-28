@@ -87,6 +87,7 @@ export interface SearchEvent {
 export enum SeekerExclusionReason {
   NotReleased = 'NotReleased',
   InGracePeriod = 'InGracePeriod',
+  NotAvailable = 'NotAvailable',
   NotMonitored = 'NotMonitored',
   SkipTag = 'SkipTag',
   MissingIncludeTag = 'MissingIncludeTag',

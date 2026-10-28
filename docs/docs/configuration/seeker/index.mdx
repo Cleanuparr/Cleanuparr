@@ -72,7 +72,7 @@ To get notified when a cycle completes, turn on [Seeker Cycle Completed](../noti
 
 **Reset cycle** on an instance card closes the current cycle and starts a new one right away, so every eligible item can be searched again. It skips the minimum cycle time once. The button stays disabled until the cycle has searched something. With dry run on, it resets the dry run cycle.
 
-The **Eligibility** row on an instance card counts what passed each filter on the latest run. It starts with the movies or series in the library, then those released and past the grace period, monitored, and past the tag filters. The last stage counts the units that need a search, split into in queue, recently grabbed, searched this cycle, and left. It also shows a resting count. Items resting under [Rest Items That Find Nothing](#instance-rest-items-that-find-nothing) don't hold up cycle completion.
+The **Eligibility** row on an instance card counts what passed each filter on the latest run. It starts with the movies or series in the library, then those released and past the grace period (or available in Radarr, with [Follow Radarr availability](#instance-release-gate)), monitored, and past the tag filters. The last stage counts the units that need a search, split into in queue, recently grabbed, searched this cycle, and left. It also shows a resting count. Items resting under [Rest Items That Find Nothing](#instance-rest-items-that-find-nothing) don't hold up cycle completion.
 
 **Preview** on an instance card reads the instance live and lists the next 10 units the selection strategy would pick, plus every excluded item with the first filter that dropped it. Preview lists resting items as "Resting". You can filter the excluded list by reason or title. Preview searches nothing and saves nothing. With a random or weighted strategy, the next up list is one random draw, so the next run can pick other items. A series with missing episodes in several seasons also gets a random season draw under any strategy, except Custom Format Gap Weighted, which searches the series' missing unit, else its largest gap unit. When the cycle is complete and waits for the minimum cycle time, the preview shows when the next cycle starts.
 
@@ -174,6 +174,8 @@ Disabling round robin will trigger a search for each enabled instance on every r
 The number of hours to wait after content is released before including it as a search candidate. This gives indexers time to process new releases before Seeker attempts to find them.
 
 Set to `0` to disable the grace period and search immediately.
+
+Radarr instances set to [Follow Radarr availability](#instance-release-gate) ignore the grace period.
 
 </ConfigSection>
 
@@ -351,6 +353,19 @@ A season search returns mostly season packs. With default settings, Sonarr skips
 Specials and anime follow their own rules below in every mode.
 
 Default is **Auto**.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Release Gate"
+>
+
+Radarr only. Picks when the Seeker treats a movie as released.
+
+- **Release dates** searches a movie once Radarr marks it released and its digital, physical or cinema date is past the [grace period](#post-release-grace-period).
+- **Follow Radarr availability** searches a movie once Radarr counts it as available. Radarr decides from the movie's minimum availability plus its availability delay, and the grace period does not apply. Movies Radarr doesn't count as available show **Not available in Radarr**.
+
+Default is **Release dates**.
 
 </ConfigSection>
 

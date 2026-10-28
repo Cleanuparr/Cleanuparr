@@ -81,7 +81,8 @@ public class SeekerUnitEvaluatorTests : IDisposable
         int qualityProfileId = 1,
         DateTimeOffset? digitalRelease = null,
         DateTimeOffset? added = null,
-        DateTimeOffset? lastSearchTime = null)
+        DateTimeOffset? lastSearchTime = null,
+        bool isAvailable = false)
     {
         return new SearchableMovie
         {
@@ -95,6 +96,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             DigitalRelease = digitalRelease,
             Added = added,
             LastSearchTime = lastSearchTime,
+            IsAvailable = isAvailable,
         };
     }
 
@@ -297,6 +299,63 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Assert
         ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.InGracePeriod);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_ArrAvailability_InCinemasMovieThatIsAvailable_BuildsUnit()
+    {
+        // Arrange
+        SetupRadarr([Movie(1, status: "inCinemas", isAvailable: true)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            InstanceConfig(_radarr, c => c.RadarrReleaseGate = RadarrReleaseGate.ArrAvailability));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_ArrAvailability_ReleasedMovieThatIsNotAvailable_ExcludesAsNotAvailable()
+    {
+        // Arrange
+        SetupRadarr([Movie(1, digitalRelease: _timeProvider.GetUtcNow().AddDays(-30), isAvailable: false)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            InstanceConfig(_radarr, c => c.RadarrReleaseGate = RadarrReleaseGate.ArrAvailability));
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.NotAvailable);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_ArrAvailability_AvailableMovieInsideGraceWindow_BuildsUnit()
+    {
+        // Arrange
+        SetupRadarr([Movie(1, digitalRelease: _timeProvider.GetUtcNow().AddHours(-1), isAvailable: true)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            InstanceConfig(_radarr, c => c.RadarrReleaseGate = RadarrReleaseGate.ArrAvailability));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_ReleaseDate_InCinemasMovieThatIsAvailable_ExcludesAsNotReleased()
+    {
+        // Arrange
+        SetupRadarr([Movie(1, status: "inCinemas", isAvailable: true)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Movie 1").ShouldBe(SeekerExclusionReason.NotReleased);
+        evaluation.Units.ShouldBeEmpty();
     }
 
     [Fact]
