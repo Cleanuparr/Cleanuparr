@@ -25,4 +25,9 @@ public sealed record SearchableMovie
     public DateTimeOffset? PhysicalRelease { get; init; }
 
     public DateTimeOffset? InCinemas { get; init; }
+
+    /// <summary>
+    /// Set when a search reached an indexer; RSS grabs leave it alone.
+    /// </summary>
+    public DateTimeOffset? LastSearchTime { get; init; }
 }

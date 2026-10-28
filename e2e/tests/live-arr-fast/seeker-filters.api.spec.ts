@@ -418,7 +418,9 @@ test.describe('Seeker monitored-only filters on Sonarr', () => {
       await SONARR.arr.put(`/api/v3/series/${other.id}`, { ...other, tags: [skipTagId] });
     }
 
-    const instanceId = await arrangeInstance(api, SONARR, { instance: { monitoredOnly: false, skipTags: [SKIP_TAG] } });
+    const instanceId = await arrangeInstance(api, SONARR, {
+      instance: { monitoredOnly: false, skipTags: [SKIP_TAG], sonarrSearchMode: 'Season' },
+    });
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);

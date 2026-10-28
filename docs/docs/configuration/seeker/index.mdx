@@ -109,15 +109,17 @@ Missing search is always enabled when proactive search is on. Items with no file
 
 Controls how Seeker selects which item to search next from the pool of eligible candidates. Available strategies:
 
-- **Balanced Weighted** — Prioritizes items that are both newly added and have not been searched recently. A good default for most libraries.
-- **Oldest Search First** — Works through items in order, starting with those that have not been searched for the longest time. Guarantees every item is covered in sequence.
-- **Oldest Search Weighted** — Favors items that have not been searched recently, but still gives other items a chance.
-- **Newest First** — Always picks the most recently added items first. Best for keeping new additions up to date quickly.
-- **Newest Weighted** — Favors recently added items, but still gives older items a chance.
-- **Random** — Every eligible item has an equal chance of being picked with no prioritization.
+- **Balanced Weighted**: Prioritizes items that are both newly added and have not been searched recently. A good default for most libraries.
+- **Oldest Search First**: Picks the items that went longest without a search, never-searched items first.
+- **Oldest Search Weighted**: Favors items that have not been searched recently, but still gives other items a chance.
+- **Newest First**: Always picks the most recently added items first. Best for keeping new additions up to date quickly.
+- **Newest Weighted**: Favors recently added items, but still gives older items a chance.
+- **Random**: Every eligible item has an equal chance of being picked with no prioritization.
 
 <Note>
 Regardless of the strategy, items already searched in the current cycle are excluded from selection. The strategy only determines the order in which unsearched items are considered.
+
+Search times come from Sonarr and Radarr, so manual searches and searches from other tools count. Items with the same search time go in random order.
 </Note>
 
 </ConfigSection>

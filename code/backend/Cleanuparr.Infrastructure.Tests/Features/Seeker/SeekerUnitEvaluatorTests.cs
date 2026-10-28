@@ -80,7 +80,8 @@ public class SeekerUnitEvaluatorTests : IDisposable
         bool hasFile = false,
         int qualityProfileId = 1,
         DateTimeOffset? digitalRelease = null,
-        DateTimeOffset? added = null)
+        DateTimeOffset? added = null,
+        DateTimeOffset? lastSearchTime = null)
     {
         return new SearchableMovie
         {
@@ -93,6 +94,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             QualityProfileId = qualityProfileId,
             DigitalRelease = digitalRelease,
             Added = added,
+            LastSearchTime = lastSearchTime,
         };
     }
 
@@ -133,7 +135,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         };
     }
 
-    private SearchableEpisode Episode(long id, long seriesId, int season = 1, int number = 1, DateTimeOffset? airDate = null, bool noAirDate = false)
+    private SearchableEpisode Episode(long id, long seriesId, int season = 1, int number = 1, DateTimeOffset? airDate = null, bool noAirDate = false, DateTimeOffset? lastSearchTime = null)
     {
         return new SearchableEpisode
         {
@@ -143,6 +145,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             EpisodeNumber = number,
             Monitored = true,
             AirDateUtc = noAirDate ? null : airDate ?? _timeProvider.GetUtcNow().AddDays(-30),
+            LastSearchTime = lastSearchTime,
         };
     }
 
@@ -1042,6 +1045,174 @@ public class SeekerUnitEvaluatorTests : IDisposable
         candidates[1].SeasonNumber.ShouldBe(2);
     }
 
+    [Fact]
+    public async Task SelectNext_OldestSearchFirst_OrdersMoviesByTheArrLastSearchTime()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupRadarr(
+        [
+            Movie(1, lastSearchTime: now.AddDays(-1)),
+            Movie(2),
+            Movie(3, lastSearchTime: now.AddDays(-5)),
+        ]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.OldestSearchFirst, 3);
+
+        // Assert
+        candidates.Select(c => c.ItemId).ShouldBe([2L, 3L, 1L]);
+    }
+
+    [Fact]
+    public async Task SelectNext_OldestSearchFirst_RanksSeriesByTheirLatestEpisodeSearch()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupSonarr([Series(1), Series(2)],
+        [
+            Episode(10, 1, season: 1, lastSearchTime: now.AddDays(-10)),
+            Episode(11, 1, season: 2, lastSearchTime: now.AddDays(-1)),
+            Episode(20, 2, season: 1, lastSearchTime: now.AddDays(-5)),
+        ]);
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Act
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.OldestSearchFirst, 1);
+
+        // Assert
+        candidates.ShouldHaveSingleItem().ItemId.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SelectNext_OldestSearchFirst_CycleSearchNewerThanTheArrTimeWins()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupSonarr([Series(1), Series(2)],
+        [
+            Episode(10, 1, season: 1, lastSearchTime: now.AddDays(-10)),
+            Episode(11, 1, season: 2, lastSearchTime: now.AddDays(-10)),
+            Episode(20, 2, season: 1, lastSearchTime: now.AddDays(-5)),
+        ]);
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            history: [History(_sonarr, 1, now.AddDays(-1), seasonNumber: 1)]);
+
+        // Act
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.OldestSearchFirst, 1);
+
+        // Assert
+        candidates.ShouldHaveSingleItem().ItemId.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task SelectNext_OldestSearchFirst_BreaksTiesAtRandom()
+    {
+        // Arrange
+        SetupRadarr([Movie(1), Movie(2)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+        HashSet<long> picked = [];
+
+        // Act
+        for (int i = 0; i < 64; i++)
+        {
+            picked.Add(SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.OldestSearchFirst, 1).Single().ItemId);
+        }
+
+        // Assert
+        picked.ShouldBe([1L, 2L], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_OldestSearchFirst_NeverSearchedMovies_ReturnsTrue()
+    {
+        // Arrange
+        SetupRadarr([Movie(1), Movie(2)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.OldestSearchFirst, new HashSet<long> { 1 });
+
+        // Assert
+        tied.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_OldestSearchFirst_DistinctSearchTimes_ReturnsFalse()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupRadarr([Movie(1, lastSearchTime: now.AddDays(-1)), Movie(2, lastSearchTime: now.AddDays(-5))]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.OldestSearchFirst, new HashSet<long> { 2 });
+
+        // Assert
+        tied.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_NewestFirst_SameAddedDate_ReturnsTrue()
+    {
+        // Arrange
+        DateTimeOffset added = _timeProvider.GetUtcNow().AddDays(-3);
+        SetupRadarr([Movie(1, added: added), Movie(2, added: added)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.NewestFirst, new HashSet<long> { 1 });
+
+        // Assert
+        tied.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task HasTiedPicks_NewestFirst_DistinctAddedDates_ReturnsFalse()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupRadarr([Movie(1, added: now.AddDays(-3)), Movie(2, added: now.AddDays(-4))]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync();
+
+        // Act
+        bool tied = SeekerUnitEvaluator.HasTiedPicks(evaluation, SelectionStrategy.NewestFirst, new HashSet<long> { 1 });
+
+        // Assert
+        tied.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_CustomFormatOnlyEpisode_TakesTheCachedLastSearchTime()
+    {
+        // Arrange
+        DateTimeOffset lastSearchTime = _timeProvider.GetUtcNow().AddDays(-3);
+        SetupSonarr([Series(1)], []);
+        _sonarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _sonarr.Id,
+            ExternalItemId = 1,
+            EpisodeId = 20,
+            Title = "Series 1 S01E01",
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            AirDateUtc = _timeProvider.GetUtcNow().AddDays(-30),
+            LastSearchTime = lastSearchTime,
+            IsMonitored = true,
+            CurrentScore = 5,
+            CutoffScore = 10,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().LastSearchTime.ShouldBe(lastSearchTime);
+    }
+
     #endregion
 
     #region WithoutCycleHistory
@@ -1085,6 +1256,22 @@ public class SeekerUnitEvaluatorTests : IDisposable
         fresh.Units.ShouldAllBe(u => !u.Searched);
         fresh.Remaining.ShouldHaveSingleItem().SeasonNumber.ShouldBe(1);
         fresh.LastSearchedByItem.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task WithoutCycleHistory_KeepsTheArrLastSearchTime()
+    {
+        // Arrange
+        DateTimeOffset lastSearchTime = _timeProvider.GetUtcNow().AddDays(-4);
+        SetupRadarr([Movie(1, lastSearchTime: lastSearchTime)]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(
+            history: [History(_radarr, 1, _timeProvider.GetUtcNow().AddDays(-1))]);
+
+        // Act
+        SeekerEvaluation fresh = evaluation.WithoutCycleHistory();
+
+        // Assert
+        fresh.Units.ShouldHaveSingleItem().LastSearchTime.ShouldBe(lastSearchTime);
     }
 
     [Fact]
