@@ -177,6 +177,7 @@ public class EventCleanupService : BackgroundService
 
             // Prune events older than the configured retention window
             await PruneEventsAsync(eventsContext, config.HistoryRetentionDays);
+            await PruneSeekerCyclesAsync(eventsContext, config.HistoryRetentionDays);
 
             await CleanupStrikesAsync(eventsContext, config.StrikeInactivityWindowHours);
 
@@ -214,6 +215,21 @@ public class EventCleanupService : BackgroundService
         if (deleted > 0)
         {
             _logger.LogInformation("Pruned {count} events older than {days} days", deleted, retentionDays);
+        }
+    }
+
+    internal async Task PruneSeekerCyclesAsync(EventsContext eventsContext, ushort retentionDays)
+    {
+        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-retentionDays);
+        int deleted = await eventsContext.SeekerCycles
+            .Where(c => c.CompletedAt != null && c.CompletedAt < cutoff)
+            .Where(c => eventsContext.SeekerCycles.Any(o =>
+                o.ArrInstanceId == c.ArrInstanceId && o.IsDryRun == c.IsDryRun && o.CompletedAt != null && o.CompletedAt > c.CompletedAt))
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Pruned {Count} search cycles older than {Days} days", deleted, retentionDays);
         }
     }
 

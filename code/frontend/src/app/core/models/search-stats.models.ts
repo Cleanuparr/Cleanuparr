@@ -10,6 +10,10 @@ export interface InstanceSearchStat {
   cycleItemsSearched: number;
   cycleItemsTotal: number;
   cycleStartedAt: string | null;
+  cycleItemsRemaining: number;
+  cycleCompletedAt: string | null;
+  lastCycleStartedAt: string | null;
+  lastCycleCompletedAt: string | null;
 }
 
 export interface SearchStatsSummary {

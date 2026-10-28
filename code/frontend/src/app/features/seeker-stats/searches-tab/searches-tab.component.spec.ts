@@ -28,6 +28,10 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     cycleItemsSearched: 3,
     cycleItemsTotal: 8,
     cycleStartedAt: '2026-07-29T09:00:00Z',
+    cycleItemsRemaining: 5,
+    cycleCompletedAt: null,
+    lastCycleStartedAt: '2026-07-27T09:00:00Z',
+    lastCycleCompletedAt: '2026-07-28T13:00:00Z',
     ...partial,
   };
 }
@@ -329,6 +333,36 @@ describe('SearchesTabComponent', () => {
     );
   });
 
+  it('shows how many items remain in the cycle progress row', () => {
+    const { fixture } = setup();
+
+    const remaining = Array.from(fixture.nativeElement.querySelectorAll('.instance-card__progress-remaining')).map(
+      (el) => (el as HTMLElement).textContent!.trim(),
+    );
+    expect(remaining).toContain('5 left');
+  });
+
+  it('shows the completed status only for an instance whose cycle has finished', () => {
+    const { fixture } = setup({
+      summary: {
+        ...SUMMARY,
+        perInstanceStats: [SONARR_BETA, instance({ instanceId: 'done', instanceName: 'Done', cycleCompletedAt: '2026-07-31T10:00:00Z' })],
+      },
+    });
+
+    const completeLabels = Array.from(fixture.nativeElement.querySelectorAll('.instance-card__progress-complete'));
+    expect(completeLabels.length).toBe(1);
+    expect((completeLabels[0] as HTMLElement).textContent!.trim()).toBe('Complete, waiting for min cycle time');
+  });
+
+  it('shows the last cycle duration, falling back to an em dash when either timestamp is missing', () => {
+    const { component } = setup();
+
+    expect(component.lastCycleDuration(SONARR_BETA)).toBe('1d 4h');
+    expect(component.lastCycleDuration(instance({ lastCycleStartedAt: null }))).toBe('—');
+    expect(component.lastCycleDuration(instance({ lastCycleCompletedAt: null }))).toBe('—');
+  });
+
   it('derives cycle progress, health warnings and badge severities from the instance stats', () => {
     const { component } = setup();
 
@@ -369,15 +403,19 @@ describe('SearchesTabComponent', () => {
     expect(component.searchReasonSeverity('Whatever')).toBe('default');
   });
 
-  it('formats the cycle duration down to the largest non-zero unit', () => {
+  it('measures a running cycle until now and a completed cycle until its completion', () => {
     const { component } = setup();
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-31T12:00:00Z'));
 
-    expect(component.formatCycleDuration('2026-07-29T09:00:00Z')).toBe('2d 3h');
-    expect(component.formatCycleDuration('2026-07-31T07:00:00Z')).toBe('5h');
-    expect(component.formatCycleDuration('2026-07-31T11:30:00Z')).toBe('30m');
+    expect(component.cycleDuration(instance({ cycleStartedAt: '2026-07-29T09:00:00Z' }))).toBe('2d 3h');
+    expect(component.cycleDuration(instance({ cycleStartedAt: '2026-07-31T11:30:00Z' }))).toBe('30m');
+    expect(component.cycleDuration(instance({
+      cycleStartedAt: '2026-07-29T09:00:00Z',
+      cycleCompletedAt: '2026-07-29T09:20:00Z',
+    }))).toBe('20m');
+    expect(component.cycleDuration(instance({ cycleStartedAt: null }))).toBe('—');
   });
 
   it('toasts the error message when loading search stats fails', () => {

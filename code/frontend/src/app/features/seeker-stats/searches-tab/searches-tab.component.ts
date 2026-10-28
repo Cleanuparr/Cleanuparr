@@ -12,7 +12,7 @@ import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
-import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
+import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
@@ -24,6 +24,7 @@ import { createFilterDrawer } from '@shared/utils/filter-drawer.util';
 import {
   cycleProgress,
   formatCycleDuration,
+  formatDurationBetween,
   formatGrabbedItems,
   formatSearchReason,
   instanceHealthWarning,
@@ -31,6 +32,7 @@ import {
   searchStatusSeverity,
   searchTypeSeverity,
 } from './search-display.util';
+import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -80,6 +82,7 @@ const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] =
     TooltipComponent,
     DrawerComponent,
     StickyAwareDirective,
+    NewBadgeComponent,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',
@@ -313,5 +316,22 @@ export class SearchesTabComponent {
   readonly searchReasonSeverity = searchReasonSeverity;
   readonly cycleProgress = cycleProgress;
   readonly instanceHealthWarning = instanceHealthWarning;
-  readonly formatCycleDuration = formatCycleDuration;
+
+  cycleDuration(inst: InstanceSearchStat): string {
+    const { cycleStartedAt, cycleCompletedAt } = inst;
+    if (!cycleStartedAt) {
+      return '—';
+    }
+    return cycleCompletedAt
+      ? formatDurationBetween(cycleStartedAt, cycleCompletedAt)
+      : formatCycleDuration(cycleStartedAt);
+  }
+
+  lastCycleDuration(inst: InstanceSearchStat): string {
+    const { lastCycleStartedAt, lastCycleCompletedAt } = inst;
+    if (!lastCycleStartedAt || !lastCycleCompletedAt) {
+      return '—';
+    }
+    return formatDurationBetween(lastCycleStartedAt, lastCycleCompletedAt);
+  }
 }

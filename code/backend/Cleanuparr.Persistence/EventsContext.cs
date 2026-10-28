@@ -26,6 +26,8 @@ public class EventsContext : DbContext
 
     public DbSet<SeekerHistory> SeekerHistory { get; set; }
 
+    public DbSet<SeekerCycle> SeekerCycles { get; set; }
+
     public DbSet<SearchQueueItem> SearchQueue { get; set; }
 
     public DbSet<CustomFormatScoreEntry> CustomFormatScoreEntries { get; set; }
@@ -123,7 +125,12 @@ public class EventsContext : DbContext
 
         modelBuilder.Entity<SeekerHistory>(entity =>
         {
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.CycleId }).IsUnique();
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.EpisodeId, s.IsDryRun }).IsUnique();
+        });
+
+        modelBuilder.Entity<SeekerCycle>(entity =>
+        {
+            entity.HasIndex(s => s.ArrInstanceId);
         });
 
         modelBuilder.Entity<SearchQueueItem>(entity =>

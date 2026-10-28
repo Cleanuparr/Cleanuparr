@@ -9,6 +9,7 @@ using Cleanuparr.Api.Features.Arr.Contracts.Responses;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -276,6 +277,36 @@ public class ArrConfigControllerTests : IDisposable
         // Assert
         result.ShouldBeOfType<NoContentResult>();
         (await _dataContext.ArrInstances.CountAsync(i => i.Id == instance.Id)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeleteSonarrInstance_Existing_RemovesSeekerCycles()
+    {
+        // Arrange
+        var sonarr = await _dataContext.ArrConfigs.FirstAsync(c => c.Type == InstanceType.Sonarr);
+        var instance = new ArrInstance
+        {
+            Name = "doomed",
+            Url = new Uri("http://doomed:8989"),
+            ApiKey = "k",
+            ArrConfigId = sonarr.Id,
+            Enabled = true,
+        };
+        _dataContext.ArrInstances.Add(instance);
+        await _dataContext.SaveChangesAsync();
+
+        _eventsContext.SeekerCycles.AddRange(
+            new SeekerCycle { ArrInstanceId = instance.Id },
+            new SeekerCycle { ArrInstanceId = Guid.NewGuid() });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        var result = await _controller.DeleteSonarrInstance(instance.Id);
+
+        // Assert
+        result.ShouldBeOfType<NoContentResult>();
+        (await _eventsContext.SeekerCycles.CountAsync(c => c.ArrInstanceId == instance.Id)).ShouldBe(0);
+        (await _eventsContext.SeekerCycles.CountAsync()).ShouldBe(1);
     }
 
     [Fact]

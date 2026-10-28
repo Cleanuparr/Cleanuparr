@@ -62,9 +62,11 @@ Replacement search is always enabled when Search is on and cannot be disabled. W
 </p>
 
 <Note>
-Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle resets and starts over.
+Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle completes and the next one starts after the minimum cycle time.
 
-For Sonarr, the cycle is tracked at the season level; each season of each series is treated as a separate entry. Sonarr's searches are currently triggered per season, not per episode.
+For Radarr, each movie is one item. For Sonarr, each season of each series is one item, and searches run per season.
+
+The Searches tab shows per instance how many items the current cycle searched, how many are left, how long it has been running and how long the previous cycle took. Items in the download queue are not counted as left. Dry run tracks its own cycles and never moves the live one.
 </Note>
 
 <Note>
