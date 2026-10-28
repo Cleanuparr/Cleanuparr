@@ -250,6 +250,20 @@ Only downloads that have received strikes in the most recent completed `Queue Cl
 </ConfigSection>
 
 <ConfigSection
+  title="Recent Grab Window"
+>
+
+Seeker reads the arr's grab history for this many hours and skips every item grabbed in that window, even when the download already left the queue (imported, failed and removed, grabbed by RSS or another tool).
+
+For Sonarr, a grabbed episode skips its whole season for the window.
+
+Set to `0` to turn this off.
+
+Default is `24`, maximum is `168`.
+
+</ConfigSection>
+
+<ConfigSection
   title="Min Cycle Time (Days)"
 >
 

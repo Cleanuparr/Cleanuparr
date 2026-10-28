@@ -1731,6 +1731,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("monitored_only");
 
+                    b.Property<int>("RecentGrabWindowHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("recent_grab_window_hours");
+
                     b.PrimitiveCollection<List<string>>("SkipTags")
                         .IsRequired()
                         .HasColumnType("text[]")

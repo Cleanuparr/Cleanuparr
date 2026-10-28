@@ -21,6 +21,7 @@ export interface SeekerInstanceConfig {
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
+  recentGrabWindowHours: number;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;
@@ -44,6 +45,7 @@ export interface UpdateSeekerInstanceConfig {
   includeTags: string[];
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
+  recentGrabWindowHours: number;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;

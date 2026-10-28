@@ -18,6 +18,7 @@ const SONARR: SeekerInstanceConfig = {
   arrInstanceEnabled: true,
   activeDownloadLimit: 3,
   ignoreStruckDownloads: false,
+  recentGrabWindowHours: 24,
   minCycleTimeDays: 7,
   monitoredOnly: true,
   useCutoff: false,
@@ -35,6 +36,7 @@ const RADARR: SeekerInstanceConfig = {
   arrInstanceEnabled: true,
   activeDownloadLimit: 5,
   ignoreStruckDownloads: true,
+  recentGrabWindowHours: 48,
   minCycleTimeDays: 14,
   monitoredOnly: false,
   useCutoff: true,
@@ -377,9 +379,11 @@ describe('SeekerComponent', () => {
     const { fixture, component } = setup();
 
     setNumberField(fixture, 'Active Download Limit', '9');
+    setNumberField(fixture, 'Recent Grab Window', '48');
     setNumberField(fixture, 'Min Cycle Time', '21');
 
     expect(component.instances()[0].activeDownloadLimit).toBe(9);
+    expect(component.instances()[0].recentGrabWindowHours).toBe(48);
     expect(component.instances()[0].minCycleTimeDays).toBe(21);
   });
 
@@ -387,9 +391,11 @@ describe('SeekerComponent', () => {
     const { fixture, component } = setup();
 
     setNumberField(fixture, 'Active Download Limit', '');
+    setNumberField(fixture, 'Recent Grab Window', '');
     setNumberField(fixture, 'Min Cycle Time', '');
 
     expect(component.instances()[0].activeDownloadLimit).toBe(3);
+    expect(component.instances()[0].recentGrabWindowHours).toBe(24);
     expect(component.instances()[0].minCycleTimeDays).toBe(7);
   });
 
@@ -487,7 +493,7 @@ describe('SeekerComponent', () => {
     component.seekerForm.searchInterval().value.set(10);
     component.seekerForm.selectionStrategy().value.set(SelectionStrategy.NewestFirst);
     component.seekerForm.postReleaseGraceHours().value.set(24);
-    component.patchInstance(0, { skipTags: ['gamma'], includeTags: ['anime'], ignoreStruckDownloads: true });
+    component.patchInstance(0, { skipTags: ['gamma'], includeTags: ['anime'], ignoreStruckDownloads: true, recentGrabWindowHours: 48 });
     fixture.detectChanges();
 
     expect(component.dirty()).toBe(true);
@@ -510,6 +516,7 @@ describe('SeekerComponent', () => {
           includeTags: ['anime'],
           activeDownloadLimit: 3,
           ignoreStruckDownloads: true,
+          recentGrabWindowHours: 48,
           minCycleTimeDays: 7,
           monitoredOnly: true,
           useCutoff: false,
@@ -522,6 +529,7 @@ describe('SeekerComponent', () => {
           includeTags: [],
           activeDownloadLimit: 5,
           ignoreStruckDownloads: true,
+          recentGrabWindowHours: 48,
           minCycleTimeDays: 14,
           monitoredOnly: false,
           useCutoff: true,

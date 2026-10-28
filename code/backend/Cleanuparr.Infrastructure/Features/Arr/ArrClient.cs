@@ -27,6 +27,11 @@ public abstract class ArrClient : IArrClient
     private const int DownloadFolderImportedEvent = 3;
 
     /// <summary>
+    /// What every arr calls grabbing a release, as its history event id.
+    /// </summary>
+    private const int GrabbedEvent = 1;
+
+    /// <summary>
     /// Page size used when paging through an *arr instance's queue.
     /// </summary>
     protected const int QueuePageSize = 200;
@@ -269,6 +274,38 @@ public abstract class ArrClient : IArrClient
         ArrHistoryResponse? history = await DeserializeStreamAsync<ArrHistoryResponse>(response);
 
         return history?.TotalRecords ?? 0;
+    }
+
+    /// <summary>
+    /// Reads the grabbed releases an arr recorded in its history since a given time.
+    /// </summary>
+    /// <param name="arrInstance">The arr instance to query.</param>
+    /// <param name="since">Only rows at or after this time are returned.</param>
+    /// <param name="extraQuery">Additional query parameters, appended as-is (e.g. "&amp;includeEpisode=true").</param>
+    /// <param name="cancellationToken">Token used to cancel the request.</param>
+    protected async Task<List<ArrHistoryRecord>> GetGrabHistorySinceAsync(ArrInstance arrInstance, DateTimeOffset since, string extraQuery, CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/history/since";
+        string date = Uri.EscapeDataString(since.UtcDateTime.ToString("o"));
+        uriBuilder.Query = $"date={date}&eventType={GrabbedEvent}{extraQuery}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            _logger.LogError("grab history failed | {Uri}", uriBuilder.Uri);
+            throw;
+        }
+
+        return await DeserializeStreamAsync<List<ArrHistoryRecord>>(response, cancellationToken) ?? [];
     }
 
     /// <inheritdoc/>

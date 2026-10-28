@@ -243,6 +243,7 @@ export class DocumentationService {
       'skipTags': 'instance-skip-tags',
       'activeDownloadLimit': 'instance-active-download-limit',
       'ignoreStruckDownloads': 'instance-ignore-struck-downloads',
+      'recentGrabWindowHours': 'instance-recent-grab-window',
       'minCycleTimeDays': 'instance-min-cycle-time-days',
     },
   };

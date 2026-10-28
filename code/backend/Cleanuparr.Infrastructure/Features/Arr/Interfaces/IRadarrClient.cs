@@ -19,4 +19,9 @@ public interface IRadarrClient : IArrClient
     /// Fetches custom format scores for movie files in batches
     /// </summary>
     Task<Dictionary<long, int>> GetMovieFileScoresAsync(ArrInstance arrInstance, List<long> movieFileIds);
+
+    /// <summary>
+    /// Fetches the ids of movies Radarr grabbed since the given time.
+    /// </summary>
+    Task<HashSet<long>> GetRecentlyGrabbedMovieIdsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
 }

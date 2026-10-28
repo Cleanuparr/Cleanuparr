@@ -54,4 +54,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'theme-follow-system' },
   { id: 'errored-downloads' },
   { id: 'seeker-include-tags' },
+  { id: 'seeker-recent-grab-window' },
 ];

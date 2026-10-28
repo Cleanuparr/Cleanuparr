@@ -75,6 +75,7 @@ interface InstanceState {
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
+  recentGrabWindowHours: number;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;
@@ -173,6 +174,7 @@ export class SeekerComponent implements HasPendingChanges {
           arrInstanceEnabled: i.arrInstanceEnabled,
           activeDownloadLimit: i.activeDownloadLimit,
           ignoreStruckDownloads: i.ignoreStruckDownloads,
+          recentGrabWindowHours: i.recentGrabWindowHours,
           minCycleTimeDays: i.minCycleTimeDays,
           monitoredOnly: i.monitoredOnly,
           useCutoff: i.useCutoff,
@@ -219,6 +221,10 @@ export class SeekerComponent implements HasPendingChanges {
     this.patchInstance(index, { minCycleTimeDays: days ?? 7 });
   }
 
+  updateInstanceRecentGrabWindowHours(index: number, hours: number | null): void {
+    this.patchInstance(index, { recentGrabWindowHours: hours ?? 24 });
+  }
+
   getInstanceIcon(instanceType: string): string {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
   }
@@ -241,6 +247,7 @@ export class SeekerComponent implements HasPendingChanges {
         includeTags: i.includeTags,
         activeDownloadLimit: i.activeDownloadLimit,
         ignoreStruckDownloads: i.ignoreStruckDownloads,
+        recentGrabWindowHours: i.recentGrabWindowHours,
         minCycleTimeDays: i.minCycleTimeDays,
         monitoredOnly: i.monitoredOnly,
         useCutoff: i.useCutoff,

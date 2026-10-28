@@ -159,7 +159,15 @@ export async function arrangeInstance(
 
   const instances = config.instances.map((i: { arrInstanceId: string }) =>
     i.arrInstanceId === instance.id
-      ? { ...i, enabled: true, monitoredOnly: true, minCycleTimeDays: 0, ...overrides.instance }
+      ? {
+          ...i,
+          enabled: true,
+          monitoredOnly: true,
+          minCycleTimeDays: 0,
+          // Grabs from earlier specs stay in the arr's history for the whole suite run.
+          recentGrabWindowHours: 0,
+          ...overrides.instance,
+        }
       : i,
   );
 
@@ -192,6 +200,23 @@ export async function arrangeInstance(
   }
 
   return instance.id;
+}
+
+/** Patches one already-arranged instance's settings and asserts the update stuck. */
+export async function updateInstance(
+  api: CleanuparrApi,
+  instanceId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const config = await (await api.seeker.getConfig()).json();
+  const instances = config.instances.map((i: { arrInstanceId: string }) =>
+    i.arrInstanceId === instanceId ? { ...i, ...patch } : i,
+  );
+
+  const updated = await api.seeker.updateConfig({ ...config, instances });
+  if (!updated.ok) {
+    throw new Error(`Seeker config update failed: ${await updated.text()}`);
+  }
 }
 
 /** Removes the instances and restores the settings the specs changed. */

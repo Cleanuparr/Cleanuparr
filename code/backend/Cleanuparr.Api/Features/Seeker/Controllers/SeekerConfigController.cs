@@ -70,6 +70,7 @@ public sealed class SeekerConfigController : ControllerBase
                 MonitoredOnly = seekerConfig?.MonitoredOnly ?? true,
                 UseCutoff = seekerConfig?.UseCutoff ?? false,
                 UseCustomFormatScore = seekerConfig?.UseCustomFormatScore ?? false,
+                RecentGrabWindowHours = seekerConfig?.RecentGrabWindowHours ?? 24,
             };
         }).ToList();
 
@@ -134,10 +135,12 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.MonitoredOnly = instanceReq.MonitoredOnly;
                     existing.UseCutoff = instanceReq.UseCutoff;
                     existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
+                    existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
+                    existing.Validate();
                 }
                 else
                 {
-                    _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+                    SeekerInstanceConfig newInstanceConfig = new()
                     {
                         ArrInstanceId = instanceReq.ArrInstanceId,
                         Enabled = instanceReq.Enabled,
@@ -149,7 +152,10 @@ public sealed class SeekerConfigController : ControllerBase
                         MonitoredOnly = instanceReq.MonitoredOnly,
                         UseCutoff = instanceReq.UseCutoff,
                         UseCustomFormatScore = instanceReq.UseCustomFormatScore,
-                    });
+                        RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
+                    };
+                    newInstanceConfig.Validate();
+                    await _dataContext.SeekerInstanceConfigs.AddAsync(newInstanceConfig);
                 }
             }
 

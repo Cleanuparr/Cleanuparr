@@ -29,4 +29,9 @@ public interface ISonarrClient : IArrClient
     /// Fetches custom format scores for episode files in batches
     /// </summary>
     Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds);
+
+    /// <summary>
+    /// Fetches the series/season pairs Sonarr grabbed an episode for since the given time.
+    /// </summary>
+    Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
 }
