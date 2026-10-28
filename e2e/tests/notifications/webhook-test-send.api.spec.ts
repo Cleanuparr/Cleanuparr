@@ -44,4 +44,32 @@ test.describe('Notifications: Webhook test send', () => {
 
     await mocks.notify.waitForRequest({ method: 'PUT', urlPath: '/hook' });
   });
+
+  test('content header is rejected and nothing is sent', async ({ api, mocks }) => {
+    const res = await api.notifications.test('webhook', {
+      name: 'webhook-test-content-header',
+      url: `${TEST_CONFIG.mocks.notifyUrl}/hook-rejected`,
+      method: 'Post',
+      headers: ['Content-Language: en'],
+    });
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain('cannot be sent as a request header');
+
+    expect(await mocks.notify.findRequests({ urlPath: '/hook-rejected' })).toHaveLength(0);
+  });
+
+  test('header value a typed parser rejects is sent unchanged', async ({ api, mocks }) => {
+    await mocks.notify.stub(NotificationStubs.webhookStub());
+
+    const res = await api.notifications.test('webhook', {
+      name: 'webhook-test-raw-header',
+      url: WEBHOOK_URL,
+      method: 'Post',
+      headers: ['Date: tomorrow'],
+    });
+    expect(res.status).toBe(200);
+
+    const request = await mocks.notify.waitForRequest({ method: 'POST', urlPath: '/hook' });
+    expect(request.headers['Date']).toBe('tomorrow');
+  });
 });
