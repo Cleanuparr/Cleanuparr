@@ -1,11 +1,13 @@
 using System.Net;
 using System.Text.Json.Nodes;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
+using Cleanuparr.Infrastructure.Features.Notifications.Webhook;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
@@ -156,6 +158,33 @@ public class NotificationPayloadSerializationTests
         body["title"]!.GetValue<string>().ShouldBe(SpecialChars);
         body["message"]!.GetValue<string>().ShouldBe("m");
         body["priority"]!.GetValue<int>().ShouldBe(5);
+
+        handler.CapturedRequestBodies[0]!.ShouldContain(SpecialChars);
+    }
+
+    [Fact]
+    public async Task Webhook_IncludesNulls_UsesCamelCaseEnums_PreservesSpecialChars()
+    {
+        (WebhookProxy proxy, FakeHttpMessageHandler handler) = CreateProxy(f =>
+            new WebhookProxy(Substitute.For<ILogger<WebhookProxy>>(), f));
+
+        WebhookPayload payload = new()
+        {
+            EventType = NotificationEventType.SlowSpeedStrike,
+            Title = SpecialChars,
+            Description = "d",
+            Severity = EventSeverity.Information,
+            Image = null
+        };
+
+        await proxy.SendNotification(payload, new WebhookConfig { Url = "https://hooks.example.com/abc" });
+
+        JsonObject body = ParseBody(handler);
+        Keys(body).ShouldBe(["data", "description", "eventType", "image", "severity", "timestamp", "title"]);
+        body["image"].ShouldBeNull();
+        body["eventType"]!.GetValue<string>().ShouldBe("slowSpeedStrike");
+        body["severity"]!.GetValue<string>().ShouldBe("information");
+        body["title"]!.GetValue<string>().ShouldBe(SpecialChars);
 
         handler.CapturedRequestBodies[0]!.ShouldContain(SpecialChars);
     }

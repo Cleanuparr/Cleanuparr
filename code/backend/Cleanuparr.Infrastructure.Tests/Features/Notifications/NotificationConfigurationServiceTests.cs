@@ -422,6 +422,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             NotificationProviderType.Telegram => CreateTelegramConfig(name, isEnabled),
             NotificationProviderType.Discord => CreateDiscordConfig(name, isEnabled),
             NotificationProviderType.Gotify => CreateGotifyConfig(name, isEnabled),
+            NotificationProviderType.Webhook => CreateWebhookConfig(name, isEnabled),
             _ => throw new ArgumentOutOfRangeException(nameof(providerType))
         };
     }
@@ -594,6 +595,28 @@ public class NotificationConfigurationServiceTests : IDisposable
                 Id = Guid.NewGuid(),
                 ServerUrl = "http://localhost:8000",
                 ApplicationToken =  "test_application_token",
+            }
+        };
+    }
+
+    private static NotificationConfig CreateWebhookConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Webhook,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            WebhookConfiguration = new WebhookConfig
+            {
+                Id = Guid.NewGuid(),
+                Url = "http://localhost:8123/api/webhook/test",
             }
         };
     }
