@@ -29,12 +29,14 @@ import {
   formatDurationBetween,
   formatGrabbedItems,
   formatSearchReason,
+  funnelStages,
   instanceHealthWarning,
   searchReasonSeverity,
   searchStatusSeverity,
   searchTypeSeverity,
 } from './search-display.util';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { SeekerPreviewDrawerComponent } from './seeker-preview-drawer/seeker-preview-drawer.component';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -87,6 +89,7 @@ const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] =
     DrawerComponent,
     StickyAwareDirective,
     NewBadgeComponent,
+    SeekerPreviewDrawerComponent,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',
@@ -116,6 +119,8 @@ export class SearchesTabComponent {
 
   readonly selectedInstanceId = signal<string>('');
   readonly resettingIds = signal<ReadonlySet<string>>(new Set());
+  readonly previewInstance = signal<InstanceSearchStat | null>(null);
+  readonly previewOpen = signal(false);
   readonly instanceOptions = computed<SelectOption[]>(() => {
     return [
       { label: 'All Instances', value: '' },
@@ -331,6 +336,11 @@ export class SearchesTabComponent {
     });
   }
 
+  openPreview(inst: InstanceSearchStat): void {
+    this.previewInstance.set(inst);
+    this.previewOpen.set(true);
+  }
+
   async resetCycle(inst: InstanceSearchStat): Promise<void> {
     const confirmed = await this.confirmService.confirm({
       title: 'Reset Cycle',
@@ -364,6 +374,7 @@ export class SearchesTabComponent {
   readonly searchReasonSeverity = searchReasonSeverity;
   readonly cycleProgress = cycleProgress;
   readonly instanceHealthWarning = instanceHealthWarning;
+  readonly funnelStages = funnelStages;
 
   cycleDuration(inst: InstanceSearchStat): string {
     const { cycleStartedAt, cycleCompletedAt } = inst;

@@ -10,6 +10,7 @@
  *     to their label.
  * You can also drop `<app-new-badge featureId="…">` (ribbon) or
  * `<app-new-badge variant="inline" featureId="…">` (pill) anywhere manually.
+ * Use `<app-new-badge variant="dot" featureId="…">` for a small dot in tight spots.
  *
  * No dates are needed. The first time a user loads the app while an id is in this list, that
  * "first seen" moment is recorded per user. A feature is treated as NEW only if it was first
@@ -60,4 +61,6 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-search-anime' },
   { id: 'seeker-reset-cycle' },
   { id: 'seeker-cycle-notification' },
+  { id: 'seeker-eligibility-funnel' },
+  { id: 'seeker-preview' },
 ];

@@ -14,6 +14,20 @@ export interface InstanceSearchStat {
   cycleCompletedAt: string | null;
   lastCycleStartedAt: string | null;
   lastCycleCompletedAt: string | null;
+  funnel: InstanceFunnel | null;
+}
+
+export interface InstanceFunnel {
+  libraryItems: number;
+  releasedItems: number;
+  monitoredItems: number;
+  tagFilteredItems: number;
+  eligibleUnits: number;
+  queuedUnits: number;
+  recentlyGrabbedUnits: number;
+  searchedUnits: number;
+  remainingUnits: number;
+  countedAt: string;
 }
 
 export interface SearchStatsSummary {
@@ -67,4 +81,36 @@ export interface SearchEvent {
   cycleId: string | null;
   isDryRun: boolean;
   contentKind: SeekerContentKind | null;
+}
+
+export enum SeekerExclusionReason {
+  NotReleased = 'NotReleased',
+  InGracePeriod = 'InGracePeriod',
+  NotMonitored = 'NotMonitored',
+  SkipTag = 'SkipTag',
+  MissingIncludeTag = 'MissingIncludeTag',
+  NothingToSearch = 'NothingToSearch',
+  UpgradesDisabled = 'UpgradesDisabled',
+  InQueue = 'InQueue',
+  RecentlyGrabbed = 'RecentlyGrabbed',
+  SearchedThisCycle = 'SearchedThisCycle',
+}
+
+export interface SeekerPreviewUnit {
+  name: string;
+  reason: SeekerSearchReason;
+  contentKind: SeekerContentKind | null;
+}
+
+export interface SeekerPreviewExclusion {
+  name: string;
+  reason: SeekerExclusionReason;
+}
+
+export interface SeekerPreview {
+  funnel: InstanceFunnel;
+  cycleWaitingUntil: string | null;
+  randomPick: boolean;
+  nextUp: SeekerPreviewUnit[];
+  excluded: SeekerPreviewExclusion[];
 }

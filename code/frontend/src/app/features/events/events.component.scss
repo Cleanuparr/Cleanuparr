@@ -82,7 +82,7 @@ app-events-stats-card {
   &__message {
     color: var(--text-secondary);
     padding: 0 var(--space-4) var(--space-2);
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &__copy {
@@ -139,7 +139,7 @@ app-events-stats-card {
   &__detail-value {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &__run-id {

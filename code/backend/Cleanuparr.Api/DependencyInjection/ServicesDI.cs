@@ -71,6 +71,7 @@ public static class ServicesDI
             .AddScoped<IDeadTorrentService, DeadTorrentService>()
             .AddScoped<IOrphanedFilesCleanupService, OrphanedFilesCleanupService>()
             .AddScoped<Seeker>()
+            .AddScoped<SeekerUnitEvaluator>()
             .AddScoped<CustomFormatScoreSyncer>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
             .AddScoped<IFilenameEvaluator, FilenameEvaluator>()

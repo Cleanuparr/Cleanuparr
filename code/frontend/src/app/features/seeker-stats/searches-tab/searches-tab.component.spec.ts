@@ -2,10 +2,11 @@ import { PAGE_SIZE_STORAGE_KEYS } from '@core/services/pagination.service';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
 import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
-import type { InstanceSearchStat, SearchEvent, SearchStatsSummary } from '@core/models/search-stats.models';
+import type { InstanceFunnel, InstanceSearchStat, SearchEvent, SearchStatsSummary } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
@@ -33,6 +34,7 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     cycleCompletedAt: null,
     lastCycleStartedAt: '2026-07-27T09:00:00Z',
     lastCycleCompletedAt: '2026-07-28T13:00:00Z',
+    funnel: null,
     ...partial,
   };
 }
@@ -113,6 +115,7 @@ interface Harness {
   toastError: ReturnType<typeof vi.fn>;
   toastSuccess: ReturnType<typeof vi.fn>;
   resetCycle: ReturnType<typeof vi.fn>;
+  getPreview: ReturnType<typeof vi.fn>;
   summaryCalls: () => number;
   confirm: ConfirmService;
 }
@@ -130,6 +133,7 @@ describe('SearchesTabComponent', () => {
     const toastErrorSpy = vi.fn();
     const toastSuccessSpy = vi.fn();
     const resetCycleSpy = vi.fn(() => of(null));
+    const getPreviewSpy = vi.fn<(instanceId: string) => Observable<null>>(() => of(null));
     let summaryCalls = 0;
 
     TestBed.configureTestingModule({
@@ -152,6 +156,7 @@ describe('SearchesTabComponent', () => {
               return of(EVENTS);
             },
             resetCycle: resetCycleSpy,
+            getPreview: getPreviewSpy,
           },
         },
         {
@@ -176,6 +181,7 @@ describe('SearchesTabComponent', () => {
       toastError: toastErrorSpy,
       toastSuccess: toastSuccessSpy,
       resetCycle: resetCycleSpy,
+      getPreview: getPreviewSpy,
       summaryCalls: () => summaryCalls,
       confirm: TestBed.inject(ConfirmService),
     };
@@ -186,6 +192,36 @@ describe('SearchesTabComponent', () => {
       (row as HTMLElement).textContent!.trim(),
     );
   }
+
+  it('opens the preview drawer and requests the preview for the clicked instance', () => {
+    const { fixture, component, getPreview } = setup();
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('.instance-card__actions button'),
+    ) as HTMLButtonElement[];
+    const previewButton = buttons.find((button) => button.textContent!.includes('Preview'))!;
+    previewButton.click();
+    fixture.detectChanges();
+
+    expect(component.previewOpen()).toBe(true);
+    expect(component.previewInstance()?.instanceId).toBe(component.sortedInstanceStats()[0].instanceId);
+    expect(getPreview).toHaveBeenCalledWith(component.sortedInstanceStats()[0].instanceId);
+  });
+
+  it('closes the preview drawer from its close control', () => {
+    const { fixture, component } = setup();
+    const previewButton = (
+      Array.from(fixture.nativeElement.querySelectorAll('.instance-card__actions button')) as HTMLButtonElement[]
+    ).find((button) => button.textContent!.includes('Preview'))!;
+    previewButton.click();
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    (document.body.querySelector('.drawer__close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(component.previewOpen()).toBe(false);
+  });
 
   it('sorts the instance cards by type then name while leaving the filter options in API order', () => {
     const { component } = setup();
@@ -378,6 +414,37 @@ describe('SearchesTabComponent', () => {
       (el) => (el as HTMLElement).textContent!.trim(),
     );
     expect(remaining).toContain('5 left');
+  });
+
+  it('shows the eligibility funnel only for an instance with counted stages', () => {
+    const funnel: InstanceFunnel = {
+      libraryItems: 412,
+      releasedItems: 380,
+      monitoredItems: 350,
+      tagFilteredItems: 340,
+      eligibleUnits: 37,
+      queuedUnits: 3,
+      recentlyGrabbedUnits: 1,
+      searchedUnits: 20,
+      remainingUnits: 13,
+      countedAt: '2026-07-30T10:00:00Z',
+    };
+    const { fixture } = setup({
+      summary: {
+        ...SUMMARY,
+        perInstanceStats: [SONARR_BETA, instance({ instanceId: 'counted', instanceName: 'Counted', instanceType: 'Radarr', funnel })],
+      },
+    });
+
+    const funnels = fixture.nativeElement.querySelectorAll('.instance-card__funnel');
+    expect(funnels.length).toBe(1);
+    const stages = Array.from((funnels[0] as HTMLElement).querySelectorAll('.instance-card__funnel-stage')).map(
+      (el) => (el as HTMLElement).textContent!.trim(),
+    );
+    expect(stages).toEqual([
+      '412 movies', '380 released', '350 monitored', '340 tag filtered', '37 need search',
+      '3 in queue', '1 grabbed', '20 searched', '13 left',
+    ]);
   });
 
   it('shows the completed status only for an instance whose cycle has finished', () => {

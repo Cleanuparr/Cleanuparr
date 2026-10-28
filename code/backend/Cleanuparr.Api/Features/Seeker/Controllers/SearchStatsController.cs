@@ -111,6 +111,7 @@ public sealed class SearchStatsController : ControllerBase
                 CycleCompletedAt = current?.CompletedAt,
                 LastCycleStartedAt = last?.StartedAt,
                 LastCycleCompletedAt = last?.CompletedAt,
+                Funnel = InstanceFunnelStat.From(current),
             };
         }).ToList();
 

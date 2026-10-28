@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
+import type { SearchStatsSummary, SearchEvent, SeekerPreview } from '@core/models/search-stats.models';
 import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 
@@ -62,6 +62,10 @@ export class SearchStatsApi {
     }
 
     return this.http.get<PaginatedResult<SearchEvent>>('/api/seeker/search-stats/events', { params });
+  }
+
+  getPreview(instanceId: string): Observable<SeekerPreview> {
+    return this.http.get<SeekerPreview>(`/api/seeker/preview/${instanceId}`);
   }
 
   resetCycle(instanceId: string): Observable<void> {
