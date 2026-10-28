@@ -188,6 +188,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: read
     uses: ./.github/workflows/build-docker.yml
     with:
       ref: ${{ needs.validate.outputs.pr_sha }}

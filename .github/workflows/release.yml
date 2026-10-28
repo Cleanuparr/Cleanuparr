@@ -219,6 +219,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: read
     if: |
       always() &&
       needs.validate.result == 'success' &&

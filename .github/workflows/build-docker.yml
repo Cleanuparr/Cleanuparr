@@ -40,10 +40,17 @@ env:
   REGISTRY_IMAGE: ghcr.io/cleanuparr/cleanuparr
 
 jobs:
+  stack-gate:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/stack-gate.yml
+
   # Compute tags, version, and push decision for downstream jobs
   prepare:
+    needs: stack-gate
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: needs.stack-gate.outputs.run == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     outputs:
       tags: ${{ steps.build-info.outputs.tags }}
       version: ${{ steps.build-info.outputs.version }}
