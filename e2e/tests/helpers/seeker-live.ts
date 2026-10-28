@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { rmSync, truncateSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { TEST_CONFIG } from './test-config';
 import { buildSingleFileTorrent } from './torrent-fixtures';
@@ -8,6 +9,7 @@ import type { ArrType } from './api/arr';
 import { LiveArr, indexerMock, liveRadarr, liveSonarr } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
 import { TORZNAB_MOVIE_CATEGORY, TORZNAB_TV_CATEGORY } from './mocks/torznab-stubs';
+import { mkdirShared, writeFileShared } from './shared-volume';
 
 /**
  * Shared arrangement for the specs that drive the Seeker against a real arr.
@@ -478,4 +480,66 @@ export async function triggerSeeker(api: CleanuparrApi): Promise<void> {
     res.ok,
     `Triggering the Seeker failed with ${res.status}. Did you start the stack with 'make up-arr-fast'?`,
   ).toBe(true);
+}
+
+/** The stock HD-1080p profile in both arrs, whose cutoff is Bluray-1080p. */
+export const HD_1080P_PROFILE = 4;
+
+/** Allowed by that profile and below its cutoff, so the import counts as upgradable. */
+const IMPORTED_MOVIE_FILE = 'F1 (2025) WEBDL-1080p.mkv';
+
+/** The arr ignores a file small enough to look like a sample. */
+const FILE_SIZE_BYTES = 300 * 1024 * 1024;
+
+const MOVIES_DIR = resolve(__dirname, '..', '..', 'test-data', 'radarr-movies');
+
+interface Movie {
+  id: number;
+  path: string;
+  hasFile: boolean;
+  qualityProfileId: number;
+  movieFile?: { id: number; qualityCutoffNotMet: boolean };
+}
+
+export type ProfileChanges = { upgradeAllowed: boolean; cutoffFormatScore?: number };
+
+function movieFolder(movie: Movie): string {
+  return join(MOVIES_DIR, movie.path.replace(/^\/movies\/?/, ''));
+}
+
+export function writeFakeVideo(folder: string, name: string): void {
+  mkdirShared(folder);
+  const file = join(folder, name);
+  writeFileShared(file, Buffer.alloc(0));
+  truncateSync(file, FILE_SIZE_BYTES);
+}
+
+/** Gives the seeded movie a real file that sits below the profile cutoff. */
+export async function importLowQualityMovie(profileChanges: ProfileChanges): Promise<Movie> {
+  const movie = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
+  const profile = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`);
+
+  await RADARR.arr.put(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`, { ...profile, ...profileChanges });
+  await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, { ...movie, qualityProfileId: HD_1080P_PROFILE });
+
+  writeFakeVideo(movieFolder(movie), IMPORTED_MOVIE_FILE);
+
+  await RADARR.arr.post('/api/v3/command', { name: 'RescanMovie', movieIds: [RADARR.itemId] });
+
+  await expect
+    .poll(async () => (await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`)).hasFile, { timeout: 90_000 })
+    .toBe(true);
+
+  return RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
+}
+
+/** Runs even when no test imported anything, because a half-done import still leaves a file. */
+export async function dropImportedMovie(): Promise<void> {
+  const movie = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
+
+  if (movie.movieFile) {
+    await RADARR.arr.delete(`/api/v3/moviefile/${movie.movieFile.id}`);
+  }
+
+  rmSync(movieFolder(movie), { recursive: true, force: true });
 }

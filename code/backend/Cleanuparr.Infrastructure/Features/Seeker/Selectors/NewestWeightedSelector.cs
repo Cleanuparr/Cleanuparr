@@ -7,7 +7,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class NewestWeightedSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> candidates, int count)
     {
         if (candidates.Count == 0)
         {

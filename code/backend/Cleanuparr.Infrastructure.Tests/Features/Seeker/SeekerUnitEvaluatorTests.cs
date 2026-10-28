@@ -247,6 +247,24 @@ public class SeekerUnitEvaluatorTests : IDisposable
         };
     }
 
+    private async Task AddSonarrCustomFormatEntryAsync(long episodeId, int currentScore, int cutoffScore)
+    {
+        await _eventsContext.CustomFormatScoreEntries.AddAsync(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _sonarr.Id,
+            ExternalItemId = 1,
+            EpisodeId = episodeId,
+            Title = $"Series 1 episode {episodeId}",
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 1,
+            AirDateUtc = _timeProvider.GetUtcNow().AddDays(-30),
+            IsMonitored = true,
+            CurrentScore = currentScore,
+            CutoffScore = cutoffScore,
+        });
+        await _eventsContext.SaveChangesAsync();
+    }
+
     private static SeekerExclusionReason ReasonOf(SeekerEvaluation evaluation, string name)
     {
         return evaluation.Excluded.Single(e => e.Name == name).Reason;
@@ -419,6 +437,56 @@ public class SeekerUnitEvaluatorTests : IDisposable
         // Assert
         SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
         unit.Reasons.ShouldBe([SeekerSearchReason.CustomFormatScoreBelowCutoff]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_BelowCustomFormatCutoff_SetsTheGapToCutoffMinusScore()
+    {
+        // Arrange
+        SetupRadarr([Movie(1, hasFile: true, qualityProfileId: 4)]);
+        _radarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 4, Name = "Open", UpgradeAllowed = true }]);
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CurrentScore = 5,
+            CutoffScore = 30,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().CustomFormatGap.ShouldBe(25);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Radarr_MissingWithUpgradesDisallowed_KeepsTheGapAtZero()
+    {
+        // Arrange
+        SetupRadarr([Movie(1, qualityProfileId: 4)]);
+        _radarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 4, Name = "Locked", UpgradeAllowed = false }]);
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _radarr.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            CurrentScore = 5,
+            CutoffScore = 30,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.Reasons.ShouldBe([SeekerSearchReason.Missing]);
+        unit.CustomFormatGap.ShouldBe(0);
     }
 
     [Theory]
@@ -1125,6 +1193,64 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task SelectNext_CustomFormatGapWeighted_FavoursTheMissingMovie()
+    {
+        // Arrange
+        SearchableMovie upgradable = Movie(2, hasFile: true);
+        SetupRadarr([Movie(1), upgradable]);
+        _radarrClient.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns([upgradable]);
+        SeekerEvaluation evaluation = await EvaluateRadarrAsync(InstanceConfig(_radarr, c => c.UseCutoff = true));
+
+        // Act
+        int missingPicks = Enumerable.Range(0, 1000)
+            .Count(_ => SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.CustomFormatGapWeighted, 1)[0].ItemId == 1);
+
+        // Assert
+        // The missing movie takes 60% or 80% of the weight, depending on the shuffled recency rank
+        missingPicks.ShouldBeGreaterThan(600);
+    }
+
+    [Fact]
+    public async Task SelectNext_CustomFormatGapWeighted_Sonarr_SearchesTheLargestGapUnit()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], []);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 20, currentScore: 5, cutoffScore: 10);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 21, currentScore: 0, cutoffScore: 30);
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c =>
+        {
+            c.UseCustomFormatScore = true;
+            c.SonarrSearchMode = SonarrSearchMode.Episode;
+        }));
+
+        // Act
+        List<long> picked = Enumerable.Range(0, 50)
+            .Select(_ => SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.CustomFormatGapWeighted, 1)[0].EpisodeId)
+            .ToList();
+
+        // Assert
+        picked.ShouldAllBe(id => id == 21);
+    }
+
+    [Theory]
+    [InlineData(SelectionStrategy.CustomFormatGapWeighted, false, SelectionStrategy.BalancedWeighted)]
+    [InlineData(SelectionStrategy.CustomFormatGapWeighted, true, SelectionStrategy.CustomFormatGapWeighted)]
+    [InlineData(SelectionStrategy.NewestFirst, false, SelectionStrategy.NewestFirst)]
+    public void EffectiveStrategy_FallsBackToBalancedOnlyForTheGapStrategyWithoutCustomFormatScores(
+        SelectionStrategy strategy, bool useCustomFormatScore, SelectionStrategy expected)
+    {
+        // Arrange
+        SeekerInstanceConfig instanceConfig = InstanceConfig(_radarr, c => c.UseCustomFormatScore = useCustomFormatScore);
+
+        // Act
+        SelectionStrategy effective = SeekerUnitEvaluator.EffectiveStrategy(strategy, instanceConfig);
+
+        // Assert
+        effective.ShouldBe(expected);
+    }
+
+    [Fact]
     public async Task HasTiedPicks_OldestSearchFirst_NeverSearchedMovies_ReturnsTrue()
     {
         // Arrange
@@ -1211,6 +1337,69 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Assert
         evaluation.Units.ShouldHaveSingleItem().LastSearchTime.ShouldBe(lastSearchTime);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_SeasonUnit_TakesTheLargestEpisodeGap()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], []);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 20, currentScore: 5, cutoffScore: 10);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 21, currentScore: 0, cutoffScore: 30);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c =>
+        {
+            c.UseCustomFormatScore = true;
+            c.SonarrSearchMode = SonarrSearchMode.Season;
+        }));
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.EpisodeId.ShouldBe(0);
+        unit.CustomFormatGap.ShouldBe(30);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_EpisodeUnits_TakeTheirOwnGap()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], []);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 20, currentScore: 5, cutoffScore: 10);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 21, currentScore: 0, cutoffScore: 30);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c =>
+        {
+            c.UseCustomFormatScore = true;
+            c.SonarrSearchMode = SonarrSearchMode.Episode;
+        }));
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 20).CustomFormatGap.ShouldBe(5);
+        evaluation.Units.Single(u => u.EpisodeId == 21).CustomFormatGap.ShouldBe(30);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_QualityCutoffOnlyEpisode_HasNoGap()
+    {
+        // Arrange
+        SetupSonarr([Series(1)], []);
+        _sonarrClient.GetCutoffUnmetEpisodesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns([Episode(20, 1), Episode(21, 1, number: 2)]);
+        await AddSonarrCustomFormatEntryAsync(episodeId: 20, currentScore: 5, cutoffScore: 10);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c =>
+        {
+            c.UseCutoff = true;
+            c.UseCustomFormatScore = true;
+            c.SonarrSearchMode = SonarrSearchMode.Episode;
+        }));
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 20).CustomFormatGap.ShouldBe(5);
+        evaluation.Units.Single(u => u.EpisodeId == 21).CustomFormatGap.ShouldBe(0);
     }
 
     #endregion

@@ -47,6 +47,11 @@ public sealed record SeekerSearchUnit
     public DateTimeOffset? LastSearchTime { get; init; }
 
     /// <summary>
+    /// Cutoff minus current custom format score; 0 when no file scores below its cutoff.
+    /// </summary>
+    public int CustomFormatGap { get; init; }
+
+    /// <summary>
     /// Whether the current cycle already searched this unit.
     /// </summary>
     public required bool Searched { get; init; }

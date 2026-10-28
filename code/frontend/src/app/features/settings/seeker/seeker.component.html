@@ -43,7 +43,8 @@
       @if (seekerForm.proactiveSearchEnabled().value()) {
         <app-select label="Selection Strategy" [options]="strategyOptions" [formField]="seekerForm.selectionStrategy"
           hint="How items are selected for searching"
-          helpKey="seeker:selectionStrategy" />
+          helpKey="seeker:selectionStrategy"
+          featureId="seeker-cf-gap-strategy" />
         @if (strategyDescription()) {
           <p class="strategy-hint">{{ strategyDescription() }}</p>
         }

@@ -40,4 +40,12 @@ public enum SelectionStrategy
     /// Every eligible item has an equal chance of being selected.
     /// </summary>
     Random,
+
+    /// <summary>
+    /// Weighted random selection combining the custom format gap and search recency.
+    /// Half the weight is how far the item sits below its custom format cutoff, with missing items furthest below.
+    /// The other half is search recency, so items searched long ago still come up.
+    /// Instances that don't use custom format scores fall back to <see cref="BalancedWeighted"/>.
+    /// </summary>
+    CustomFormatGapWeighted,
 }
