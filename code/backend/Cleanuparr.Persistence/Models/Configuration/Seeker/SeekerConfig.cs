@@ -49,6 +49,23 @@ public sealed record SeekerConfig : IConfig
     /// </summary>
     public int PostReleaseGraceHours { get; set; } = 6;
 
+    /// <summary>
+    /// Pauses proactive search during the quiet hours window.
+    /// Replacement searches keep running.
+    /// </summary>
+    public bool QuietHoursEnabled { get; set; }
+
+    /// <summary>
+    /// Local time of day when quiet hours begin (inclusive).
+    /// </summary>
+    public TimeOnly QuietHoursStart { get; set; } = new(23, 0);
+
+    /// <summary>
+    /// Local time of day when quiet hours end (exclusive).
+    /// An end earlier than the start crosses midnight.
+    /// </summary>
+    public TimeOnly QuietHoursEnd { get; set; } = new(7, 0);
+
     public void Validate()
     {
         if (SearchInterval < Constants.MinSearchIntervalMinutes)
@@ -68,10 +85,33 @@ public sealed record SeekerConfig : IConfig
             throw new CustomValidationException($"Invalid search interval {SearchInterval}");
         }
 
-        if (PostReleaseGraceHours is < 0 or > 72)
+        if (SearchEnabled && ProactiveSearchEnabled && PostReleaseGraceHours is < 0 or > 72)
         {
             throw new CustomValidationException($"{nameof(PostReleaseGraceHours)} must be between 0 and 72");
         }
+
+        if (SearchEnabled && ProactiveSearchEnabled && QuietHoursEnabled && QuietHoursStart == QuietHoursEnd)
+        {
+            throw new CustomValidationException($"{nameof(QuietHoursStart)} and {nameof(QuietHoursEnd)} must differ");
+        }
+    }
+
+    /// <summary>
+    /// Whether proactive search must wait at this local time of day.
+    /// </summary>
+    public bool IsQuietTime(TimeOnly time)
+    {
+        if (!QuietHoursEnabled)
+        {
+            return false;
+        }
+
+        if (QuietHoursStart < QuietHoursEnd)
+        {
+            return time >= QuietHoursStart && time < QuietHoursEnd;
+        }
+
+        return time >= QuietHoursStart || time < QuietHoursEnd;
     }
 
     /// <summary>

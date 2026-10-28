@@ -1,0 +1,41 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.time-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.time-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.time-part {
+  width: 96px;
+}
+
+.time-separator {
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.time-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+}
+
+.time-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+:host:focus-within .time-label {
+  color: var(--color-primary);
+  transition: color var(--duration-fast) var(--ease-default);
+}
