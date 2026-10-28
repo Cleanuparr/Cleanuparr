@@ -31,6 +31,7 @@ public class EnumFallbackParityTests
         ["UTorrentSeedingRule.PrivacyType"] = TorrentPrivacyType.Public,
         ["RTorrentSeedingRule.PrivacyType"] = TorrentPrivacyType.Public,
         ["SeekerConfig.SelectionStrategy"] = SelectionStrategy.BalancedWeighted,
+        ["SeekerInstanceConfig.SonarrSearchMode"] = SonarrSearchMode.Auto,
         ["NtfyConfig.AuthenticationType"] = NtfyAuthenticationType.None,
         ["NtfyConfig.Priority"] = NtfyPriority.Default,
         ["PushoverConfig.Priority"] = PushoverPriority.Normal,

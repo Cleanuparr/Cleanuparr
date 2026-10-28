@@ -736,7 +736,8 @@ public class SeekerTests : IDisposable
         {
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
-            Enabled = true
+            Enabled = true,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -809,7 +810,8 @@ public class SeekerTests : IDisposable
         {
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
-            Enabled = true
+            Enabled = true,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -2984,7 +2986,8 @@ public class SeekerTests : IDisposable
     public async Task ExecuteAsync_Sonarr_RecordsFunnelCountsOnTheCurrentCycle()
     {
         // Arrange
-        (ArrInstance sonarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Sonarr);
+        (ArrInstance sonarrInstance, IArrClient arrClient) = await SetupFunnelInstanceAsync(InstanceType.Sonarr,
+            c => c.SonarrSearchMode = SonarrSearchMode.Season);
         _sonarrClient
             .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
             .Returns(_ => ToAsyncEnumerable<SearchableSeries>(
@@ -3308,7 +3311,8 @@ public class SeekerTests : IDisposable
         {
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
-            Enabled = true
+            Enabled = true,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -4053,7 +4057,8 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             UseCutoff = false,
-            UseCustomFormatScore = false
+            UseCustomFormatScore = false,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -4119,7 +4124,8 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             UseCutoff = true,
-            UseCustomFormatScore = false
+            UseCustomFormatScore = false,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -4187,7 +4193,8 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             UseCutoff = false,
-            UseCustomFormatScore = true
+            UseCustomFormatScore = true,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
 
         // CF score entries keyed by EpisodeId for Sonarr
@@ -5031,7 +5038,8 @@ public class SeekerTests : IDisposable
             Enabled = true,
             MonitoredOnly = false,
             UseCutoff = false,
-            UseCustomFormatScore = true
+            UseCustomFormatScore = true,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
 
         _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
@@ -5322,7 +5330,8 @@ public class SeekerTests : IDisposable
             ArrInstance = sonarrInstance,
             Enabled = true,
             MonitoredOnly = false,
-            CurrentCycleId = currentCycleId
+            CurrentCycleId = currentCycleId,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -7119,7 +7128,8 @@ public class SeekerTests : IDisposable
             ArrInstance = sonarrInstance,
             Enabled = true,
             MonitoredOnly = false,
-            CurrentCycleId = currentCycleId
+            CurrentCycleId = currentCycleId,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
 
         _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
@@ -7305,7 +7315,8 @@ public class SeekerTests : IDisposable
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
             Enabled = true,
-            RecentGrabWindowHours = 24
+            RecentGrabWindowHours = 24,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -8768,7 +8779,8 @@ public class SeekerTests : IDisposable
             ArrInstance = sonarrInstance,
             Enabled = true,
             MonitoredOnly = false,
-            CurrentCycleId = currentCycleId
+            CurrentCycleId = currentCycleId,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
 
         _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
@@ -9594,7 +9606,8 @@ public class SeekerTests : IDisposable
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
             Enabled = true,
-            MonitoredOnly = false
+            MonitoredOnly = false,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -9959,7 +9972,8 @@ public class SeekerTests : IDisposable
             ArrInstance = sonarrInstance,
             Enabled = true,
             MonitoredOnly = false,
-            CurrentCycleId = cycleId
+            CurrentCycleId = cycleId,
+            SonarrSearchMode = SonarrSearchMode.Season
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();

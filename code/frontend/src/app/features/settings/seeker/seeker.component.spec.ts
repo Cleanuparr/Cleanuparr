@@ -4,8 +4,8 @@ import { SeekerApi } from '@core/api/seeker.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
-import { SeekerConfig, SeekerInstanceConfig } from '@shared/models/seeker-config.model';
-import { SelectionStrategy } from '@shared/models/enums';
+import { SeekerConfig, SeekerInstanceConfig, UpdateSeekerConfig } from '@shared/models/seeker-config.model';
+import { SelectionStrategy, SonarrSearchMode } from '@shared/models/enums';
 import { SeekerComponent } from './seeker.component';
 
 const SONARR: SeekerInstanceConfig = {
@@ -23,6 +23,7 @@ const SONARR: SeekerInstanceConfig = {
   monitoredOnly: true,
   useCutoff: false,
   useCustomFormatScore: false,
+  sonarrSearchMode: SonarrSearchMode.Auto,
 };
 
 const RADARR: SeekerInstanceConfig = {
@@ -41,6 +42,7 @@ const RADARR: SeekerInstanceConfig = {
   monitoredOnly: false,
   useCutoff: true,
   useCustomFormatScore: true,
+  sonarrSearchMode: SonarrSearchMode.Auto,
 };
 
 const CONFIG: SeekerConfig = {
@@ -124,6 +126,13 @@ describe('SeekerComponent', () => {
 
   function toggleByLabel(fixture: ComponentFixture<SeekerComponent>, label: string): HTMLButtonElement {
     return fixture.nativeElement.querySelector(`[aria-label="${label}"]`) as HTMLButtonElement;
+  }
+
+  function searchModeSelect(fixture: ComponentFixture<SeekerComponent>, row: number): HTMLElement | undefined {
+    const details = fixture.nativeElement.querySelectorAll('.instance-row__details')[row] as HTMLElement;
+    return Array.from(details.querySelectorAll('app-select')).find(
+      (el) => el.textContent!.includes('Search Mode'),
+    ) as HTMLElement | undefined;
   }
 
   function text(fixture: ComponentFixture<SeekerComponent>): string {
@@ -397,6 +406,49 @@ describe('SeekerComponent', () => {
     expect(radarrDetails.textContent).not.toContain('Search for anime');
   });
 
+  it('shows the search mode select for Sonarr only', () => {
+    const { fixture } = setup();
+
+    expect(searchModeSelect(fixture, 0)).toBeDefined();
+
+    const radarrToggle = fixture.nativeElement.querySelectorAll('.instance-row__header [role="switch"]')[1] as HTMLButtonElement;
+    radarrToggle.click();
+    fixture.detectChanges();
+
+    expect(searchModeSelect(fixture, 1)).toBeUndefined();
+  });
+
+  it('shows the loaded search mode as selected', () => {
+    const { fixture } = setup({
+      config: { ...CONFIG, instances: [{ ...SONARR, sonarrSearchMode: SonarrSearchMode.Season }, RADARR] },
+    });
+
+    const trigger = searchModeSelect(fixture, 0)!.querySelector('.select-trigger') as HTMLButtonElement;
+    expect(trigger.textContent!.trim()).toBe('Season');
+  });
+
+  it('sends the picked search mode on save', () => {
+    const { fixture, component, updateConfig } = setup();
+
+    const select = searchModeSelect(fixture, 0)!;
+    (select.querySelector('.select-trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const option = Array.from(select.querySelectorAll('.select-option')).find(
+      (el) => el.textContent!.trim() === 'Episode',
+    ) as HTMLButtonElement;
+    option.click();
+    fixture.detectChanges();
+
+    expect(component.dirty()).toBe(true);
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    const sent = updateConfig.mock.calls[0][0] as UpdateSeekerConfig;
+    expect(sent.instances[0].sonarrSearchMode).toBe(SonarrSearchMode.Episode);
+    expect(sent.instances[1].sonarrSearchMode).toBe(SonarrSearchMode.Auto);
+  });
+
   it('patches the instance limits typed into the numeric inputs', () => {
     const { fixture, component } = setup();
 
@@ -543,6 +595,7 @@ describe('SeekerComponent', () => {
           monitoredOnly: true,
           useCutoff: false,
           useCustomFormatScore: false,
+          sonarrSearchMode: SonarrSearchMode.Auto,
         },
         {
           arrInstanceId: RADARR.arrInstanceId,
@@ -556,6 +609,7 @@ describe('SeekerComponent', () => {
           monitoredOnly: false,
           useCutoff: true,
           useCustomFormatScore: true,
+          sonarrSearchMode: SonarrSearchMode.Auto,
         },
       ],
     });

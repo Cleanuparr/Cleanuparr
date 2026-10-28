@@ -347,6 +347,57 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public async Task StreamAllSeriesAsync_ReadsSeasonStatistics()
+    {
+        // Arrange
+        const string body = """
+            [
+              {
+                "id": 1,
+                "title": "Show",
+                "seasons": [
+                  {
+                    "seasonNumber": 1,
+                    "monitored": true,
+                    "statistics": { "episodeCount": 10, "episodeFileCount": 8, "totalEpisodeCount": 10 }
+                  },
+                  {
+                    "seasonNumber": 2,
+                    "monitored": false,
+                    "statistics": { "nextAiring": "2026-11-01T20:00:00Z", "episodeCount": 3, "episodeFileCount": 1, "totalEpisodeCount": 12 }
+                  }
+                ]
+              }
+            ]
+            """;
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        }));
+
+        // Act
+        List<SearchableSeries> result = [];
+        await foreach (SearchableSeries series in _client.StreamAllSeriesAsync(_arrInstance))
+        {
+            result.Add(series);
+        }
+
+        // Assert
+        List<SeriesSeason> seasons = result.ShouldHaveSingleItem().Seasons;
+        seasons.Count.ShouldBe(2);
+        seasons[0].SeasonNumber.ShouldBe(1);
+        seasons[0].Monitored.ShouldBeTrue();
+        seasons[0].Statistics!.EpisodeCount.ShouldBe(10);
+        seasons[0].Statistics!.EpisodeFileCount.ShouldBe(8);
+        seasons[0].Statistics!.TotalEpisodeCount.ShouldBe(10);
+        seasons[0].Statistics!.NextAiring.ShouldBeNull();
+        seasons[1].SeasonNumber.ShouldBe(2);
+        seasons[1].Monitored.ShouldBeFalse();
+        seasons[1].Statistics!.EpisodeCount.ShouldBe(3);
+        seasons[1].Statistics!.NextAiring.ShouldBe(new DateTimeOffset(2026, 11, 1, 20, 0, 0, TimeSpan.Zero));
+    }
+
+    [Fact]
     public async Task StreamAllSeriesAsync_NullBody_ReturnsEmpty()
     {
         // Arrange

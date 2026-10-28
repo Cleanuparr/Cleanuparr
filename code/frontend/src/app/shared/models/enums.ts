@@ -121,6 +121,12 @@ export enum SelectionStrategy {
   Random = 'Random',
 }
 
+export enum SonarrSearchMode {
+  Auto = 'Auto',
+  Season = 'Season',
+  Episode = 'Episode',
+}
+
 export enum SearchCommandStatus {
   Pending = 'Pending',
   Started = 'Started',
