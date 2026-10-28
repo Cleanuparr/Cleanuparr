@@ -1,0 +1,40 @@
+name: Stack Rerun
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  rerun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    steps:
+      # Closing the top PR makes the PR below the new top, but no event re-triggers its skipped runs
+      - name: Re-run CI on the PR below
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const base = context.payload.pull_request.base.ref;
+            const { data: prs } = await github.rest.pulls.list({
+              owner, repo, state: 'open', head: `${owner}:${base}`,
+            });
+            for (const pr of prs) {
+              for (const workflow_id of ['test.yml', 'build-docker.yml']) {
+                const { data } = await github.rest.actions.listWorkflowRuns({
+                  owner, repo, workflow_id, event: 'pull_request', head_sha: pr.head.sha, per_page: 1,
+                });
+                const run = data.workflow_runs[0];
+                if (run?.status === 'completed') {
+                  await github.rest.actions.reRunWorkflow({ owner, repo, run_id: run.id });
+                }
+              }
+            }
