@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.Extensions.Hosting;
@@ -47,7 +48,8 @@ public class SeekerIntegrationTests : IDisposable
             _fixture.DryRunInterceptor,
             environment,
             _fixture.TimeProvider,
-            _fixture.StatusNotifier);
+            _fixture.StatusNotifier,
+            new SeekerCycleLock());
     }
 
     [Fact]

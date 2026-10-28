@@ -4,6 +4,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
@@ -32,6 +33,7 @@ public class SeekerTests : IDisposable
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IHostEnvironment _hostingEnvironment;
     private readonly IStatusNotifier _statusNotifier;
+    private readonly SeekerCycleLock _cycleLock = new();
 
     public SeekerTests(JobHandlerFixture fixture)
     {
@@ -114,7 +116,8 @@ public class SeekerTests : IDisposable
             _dryRunInterceptor,
             _hostingEnvironment,
             _fixture.TimeProvider,
-            _statusNotifier
+            _statusNotifier,
+            _cycleLock
         );
     }
 
@@ -1928,6 +1931,260 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Radarr_AfterCycleReset_SearchesAgainWithinMinCycleTime()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        Guid resetCycleId = Guid.NewGuid();
+        Guid newCycleId = Guid.NewGuid();
+        DateTimeOffset now = _fixture.TimeProvider.GetUtcNow();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = newCycleId,
+            MinCycleTimeDays = 7
+        });
+
+        // The state SeekerCycleController.ResetCycle leaves behind: both movies searched a day ago in the reset cycle.
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = resetCycleId,
+            ArrInstanceId = radarrInstance.Id,
+            StartedAt = now.AddDays(-2),
+            CompletedAt = now.AddMinutes(-1),
+            CompletionReason = SeekerCycleCompletionReason.Reset,
+            EligibleAtStart = 2,
+            EligibleNow = 2,
+            SearchedUnits = 2,
+        });
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = newCycleId,
+            ArrInstanceId = radarrInstance.Id,
+            StartedAt = now.AddMinutes(-1),
+            EligibleAtStart = 2,
+            EligibleNow = 2,
+            RemainingUnits = 2,
+        });
+        foreach (int movieId in new[] { 1, 2 })
+        {
+            _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+            {
+                ArrInstanceId = radarrInstance.Id,
+                ExternalItemId = movieId,
+                ItemType = InstanceType.Radarr,
+                CycleId = resetCycleId,
+                LastSearchedAt = now.AddDays(-1),
+                ItemTitle = $"Movie {movieId}"
+            });
+        }
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        List<SearchableMovie> movies =
+        [
+            new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
+            new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] }
+        ];
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>(movies));
+        StubRadarrWanted(radarrInstance, movies);
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+
+        SeekerInstanceConfig instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
+        instanceConfig.CurrentCycleId.ShouldBe(newCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_HoldsCycleLockWhileProcessingInstance()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = Guid.NewGuid(),
+            MinCycleTimeDays = 0
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        bool lockFreeDuringRun = true;
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                lockFreeDuringRun = _cycleLock.TryEnter(radarrInstance.Id);
+                return ToAsyncEnumerable<SearchableMovie>([]);
+            });
+
+        await CreateSut().ExecuteAsync();
+
+        lockFreeDuringRun.ShouldBeFalse();
+        _cycleLock.TryEnter(radarrInstance.Id).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_CycleResetWhileWaitingForLock_KeepsResetCycle()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        Guid runCycleId = Guid.NewGuid();
+        Guid resetCycleId = Guid.NewGuid();
+        DateTimeOffset now = _fixture.TimeProvider.GetUtcNow();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = runCycleId,
+            MinCycleTimeDays = 0
+        });
+
+        // Every movie is already searched, so a run on this cycle would complete it.
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = runCycleId,
+            ArrInstanceId = radarrInstance.Id,
+            StartedAt = now.AddDays(-2),
+            EligibleAtStart = 2,
+            EligibleNow = 2,
+            SearchedUnits = 2,
+        });
+        foreach (int movieId in new[] { 1, 2 })
+        {
+            _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+            {
+                ArrInstanceId = radarrInstance.Id,
+                ExternalItemId = movieId,
+                ItemType = InstanceType.Radarr,
+                CycleId = runCycleId,
+                LastSearchedAt = now.AddDays(-1),
+                ItemTitle = $"Movie {movieId}"
+            });
+        }
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        List<SearchableMovie> movies =
+        [
+            new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
+            new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] }
+        ];
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(movies));
+        StubRadarrWanted(radarrInstance, movies);
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        TaskCompletionSource jobStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(_ =>
+        {
+            jobStarted.TrySetResult();
+            return false;
+        });
+
+        _cycleLock.TryEnter(radarrInstance.Id).ShouldBeTrue();
+        Task jobTask = CreateSut().ExecuteAsync();
+
+        // Nothing observable marks the job as parked on the lock, so give it time to load its configs.
+        await jobStarted.Task;
+        await Task.Delay(250);
+        jobTask.IsCompleted.ShouldBeFalse();
+
+        await _fixture.EventsContext.SeekerCycles
+            .Where(c => c.Id == runCycleId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(c => c.CompletedAt, now)
+                .SetProperty(c => c.CompletionReason, SeekerCycleCompletionReason.Reset));
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = resetCycleId,
+            ArrInstanceId = radarrInstance.Id,
+            StartedAt = now,
+            EligibleAtStart = 2,
+            EligibleNow = 2,
+            RemainingUnits = 2,
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+        await _fixture.DataContext.SeekerInstanceConfigs
+            .Where(s => s.ArrInstanceId == radarrInstance.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.CurrentCycleId, resetCycleId));
+
+        _cycleLock.Release(radarrInstance.Id);
+        await jobTask;
+
+        SeekerCycle runCycle = await _fixture.EventsContext.SeekerCycles
+            .AsNoTracking()
+            .FirstAsync(c => c.Id == runCycleId);
+        runCycle.CompletionReason.ShouldBe(SeekerCycleCompletionReason.Reset);
+
+        SeekerInstanceConfig instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .AsNoTracking()
+            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
+        instanceConfig.CurrentCycleId.ShouldBe(resetCycleId);
+
+        SeekerCycle resetCycle = await _fixture.EventsContext.SeekerCycles
+            .AsNoTracking()
+            .FirstAsync(c => c.Id == resetCycleId);
+        resetCycle.CompletedAt.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_CycleComplete_NoCycleHistory_StartsNewCycle()
     {
         // Arrange — cycle complete but no history (cycleStartedAt is null), should not block
@@ -2071,6 +2328,101 @@ public class SeekerTests : IDisposable
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
         instanceConfig.CurrentCycleId.ShouldBe(currentCycleId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_AfterCycleReset_SearchesAgainWithinMinCycleTime()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        Guid resetCycleId = Guid.NewGuid();
+        Guid newCycleId = Guid.NewGuid();
+        DateTimeOffset now = _fixture.TimeProvider.GetUtcNow();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = newCycleId,
+            MinCycleTimeDays = 7
+        });
+
+        // The state SeekerCycleController.ResetCycle leaves behind: both seasons searched a day ago in the reset cycle.
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = resetCycleId,
+            ArrInstanceId = sonarrInstance.Id,
+            StartedAt = now.AddDays(-2),
+            CompletedAt = now.AddMinutes(-1),
+            CompletionReason = SeekerCycleCompletionReason.Reset,
+            EligibleAtStart = 2,
+            EligibleNow = 2,
+            SearchedUnits = 2,
+        });
+        _fixture.EventsContext.SeekerCycles.Add(new SeekerCycle
+        {
+            Id = newCycleId,
+            ArrInstanceId = sonarrInstance.Id,
+            StartedAt = now.AddMinutes(-1),
+            EligibleAtStart = 2,
+            EligibleNow = 2,
+            RemainingUnits = 2,
+        });
+        foreach (int seasonNumber in new[] { 1, 2 })
+        {
+            _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+            {
+                ArrInstanceId = sonarrInstance.Id,
+                ExternalItemId = 10,
+                ItemType = InstanceType.Sonarr,
+                SeasonNumber = seasonNumber,
+                CycleId = resetCycleId,
+                LastSearchedAt = now.AddDays(-1),
+                ItemTitle = "Test Series"
+            });
+        }
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
+            ]));
+
+        DateTime pastDate = now.UtcDateTime.AddDays(-30);
+        StubSonarrWanted(sonarrInstance,
+        [
+            new SearchableEpisode { Id = 101, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 2, Monitored = true, HasFile = false, AirDateUtc = pastDate },
+            new SearchableEpisode { Id = 102, SeriesId = 10, SeasonNumber = 2, EpisodeNumber = 2, Monitored = true, HasFile = false, AirDateUtc = pastDate }
+        ]);
+
+        mockArrClient
+            .SearchItemAsync(sonarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        await CreateSut().ExecuteAsync();
+
+        await mockArrClient.Received(1)
+            .SearchItemAsync(sonarrInstance, Arg.Any<SearchItem>());
+
+        SeekerInstanceConfig instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
+        instanceConfig.CurrentCycleId.ShouldBe(newCycleId);
     }
 
     [Fact]

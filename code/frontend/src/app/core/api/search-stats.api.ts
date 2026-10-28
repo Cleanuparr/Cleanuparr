@@ -63,4 +63,8 @@ export class SearchStatsApi {
 
     return this.http.get<PaginatedResult<SearchEvent>>('/api/seeker/search-stats/events', { params });
   }
+
+  resetCycle(instanceId: string): Observable<void> {
+    return this.http.post<void>(`/api/seeker/cycles/${instanceId}/reset`, null);
+  }
 }

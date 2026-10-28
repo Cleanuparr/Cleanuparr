@@ -1,19 +1,8 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
-import type { MockServers } from '../helpers/mocks/wiremock-client';
-import { MANUAL_SEARCH_INTERVAL_MINUTES, triggerSeeker } from '../helpers/seeker-live';
-import {
-  applyArrDefaults,
-  arrCommandCompletedStub,
-  arrCommandListStub,
-  arrCommandNotFoundStub,
-  arrCommandTriggerStub,
-  arrMoviesStub,
-  arrQualityProfilesStub,
-  arrWantedStub,
-} from '../helpers/mocks/arr-stubs';
-
-const COMMAND_ID = 4242;
+import { triggerSeeker } from '../helpers/seeker-live';
+import { COMMAND_ID, arrangeSearchableInstance, teardownSearchableInstances } from '../helpers/seeker-fast';
+import { arrCommandCompletedStub, arrCommandListStub, arrCommandNotFoundStub } from '../helpers/mocks/arr-stubs';
 
 /**
  * These specs run against a patched image, so each triggers its own Seeker run.
@@ -22,9 +11,6 @@ const COMMAND_ID = 4242;
  * See e2e/patches and `make up-core-fast`.
  */
 const TRANSITION_TIMEOUT = 30_000;
-
-const createdInstanceIds: string[] = [];
-let savedSearchSettings: Record<string, unknown> | undefined;
 
 interface SearchEvent {
   id: string;
@@ -49,59 +35,6 @@ async function findSearchEvent(
   return events.find((event) => event.itemTitle === title);
 }
 
-/** Creates a Radarr instance with one searchable movie, so one Seeker run sends one command. */
-async function arrangeSearchableInstance(
-  api: CleanuparrApi,
-  mocks: MockServers,
-  movieTitle: string,
-  commandStubs: Parameters<MockServers['arr']['stubMany']>[0],
-): Promise<string> {
-  await applyArrDefaults(mocks.arr);
-  await mocks.arr.stubMany([
-    arrMoviesStub([{ id: 1, title: movieTitle }]),
-    arrWantedStub('missing', [{ id: 1 }]),
-    arrWantedStub('cutoff', []),
-    arrQualityProfilesStub(),
-    arrCommandTriggerStub(COMMAND_ID),
-    ...commandStubs,
-  ]);
-
-  const instance = await (
-    await api.arr.createInstance('radarr', {
-      name: 'E2E Radarr search flow',
-      url: TEST_CONFIG.mocks.arrUrl,
-      apiKey: 'e2e-test-key-radarr',
-      version: 5,
-    })
-  ).json();
-
-  createdInstanceIds.push(instance.id);
-
-  const config = await (await api.seeker.getConfig()).json();
-  savedSearchSettings ??= {
-    searchEnabled: config.searchEnabled,
-    proactiveSearchEnabled: config.proactiveSearchEnabled,
-    searchInterval: config.searchInterval,
-  };
-
-  // The arr mock stubs no grab history, so a window would skip the search.
-  const instances = config.instances.map((i: { arrInstanceId: string }) =>
-    i.arrInstanceId === instance.id
-      ? { ...i, enabled: true, monitoredOnly: true, recentGrabWindowHours: 0 }
-      : i,
-  );
-
-  await api.seeker.updateConfig({
-    ...config,
-    instances,
-    searchEnabled: true,
-    proactiveSearchEnabled: true,
-    searchInterval: MANUAL_SEARCH_INTERVAL_MINUTES,
-  });
-
-  return instance.id;
-}
-
 /** Waits for the status, then gives the event back so that the test can assert on it. */
 async function waitForSearchStatus(
   api: CleanuparrApi,
@@ -121,14 +54,7 @@ async function waitForSearchStatus(
 test.describe('Seeker: search command status flow', () => {
   // The app keeps its data between the tests, thus each test must remove what it made.
   test.afterEach(async ({ api }) => {
-    for (const id of createdInstanceIds.splice(0)) {
-      await api.arr.deleteInstance('radarr', id);
-    }
-
-    if (savedSearchSettings) {
-      const config = await (await api.seeker.getConfig()).json();
-      await api.seeker.updateConfig({ ...config, ...savedSearchSettings });
-    }
+    await teardownSearchableInstances(api);
   });
 
   test('reaches completed when the arr reports the command completed', async ({ api, mocks }) => {

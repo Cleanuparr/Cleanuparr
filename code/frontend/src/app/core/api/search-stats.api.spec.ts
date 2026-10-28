@@ -48,4 +48,15 @@ describe('SearchStatsApi', () => {
 
     expect(sentParams(get).has('contentKind')).toBe(false);
   });
+
+  it('posts the cycle reset for the instance', () => {
+    const post = vi.fn(() => of(null));
+    TestBed.configureTestingModule({
+      providers: [{ provide: HttpClient, useValue: { post } }],
+    });
+
+    TestBed.inject(SearchStatsApi).resetCycle('instance-1');
+
+    expect(post).toHaveBeenCalledWith('/api/seeker/cycles/instance-1/reset', null);
+  });
 });
