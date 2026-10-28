@@ -231,7 +231,7 @@ public sealed class Seeker : IHandler
             .ToListAsync();
 
         instanceConfigs = instanceConfigs
-            .Where(s => s.ArrInstance.ArrConfig.Type is InstanceType.Sonarr or InstanceType.Radarr)
+            .Where(s => SeekerApps.IsSupported(s.ArrInstance))
             .ToList();
 
         if (instanceConfigs.Count == 0)
@@ -496,7 +496,7 @@ public sealed class Seeker : IHandler
 
             SearchItem searchItem = instanceType switch
             {
-                InstanceType.Radarr => new SearchItem { Id = candidate.ItemId },
+                _ when SeekerApps.SearchesMovies(arrInstance) => new SearchItem { Id = candidate.ItemId },
                 _ when candidate.EpisodeId > 0 => new SeriesSearchItem
                 {
                     Id = candidate.EpisodeId,

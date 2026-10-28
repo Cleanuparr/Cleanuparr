@@ -6,9 +6,9 @@ import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
 import { buildDownloadClientPayload } from './api/download-client';
 import type { ArrType } from './api/arr';
-import { LiveArr, indexerMock, liveRadarr, liveSonarr } from './live-arr';
+import { LiveArr, indexerMock, liveRadarr, liveSonarr, liveWhisparr } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
-import { TORZNAB_MOVIE_CATEGORY, TORZNAB_TV_CATEGORY } from './mocks/torznab-stubs';
+import { TORZNAB_MOVIE_CATEGORY, TORZNAB_TV_CATEGORY, TORZNAB_XXX_CATEGORY } from './mocks/torznab-stubs';
 import { mkdirShared, writeFileShared } from './shared-volume';
 
 /**
@@ -95,6 +95,21 @@ export const RADARR: SeededArr = {
   itemPath: 'movie',
   seededTitle: TEST_CONFIG.liveArr.seededMovieTitle,
   downloadCategory: 'radarr',
+};
+
+export const WHISPARR: SeededArr = {
+  type: 'whisparr',
+  arr: liveWhisparr,
+  url: TEST_CONFIG.liveArr.whisparrUrl,
+  apiKey: TEST_CONFIG.liveArr.whisparrApiKey,
+  version: 3,
+  searchMode: 'movie',
+  category: TORZNAB_XXX_CATEGORY,
+  release: `Package.Holiday.2004.1080p.WEB-DL.x264-E2E${RUN_TAG}`,
+  itemId: 1,
+  itemPath: 'movie',
+  seededTitle: TEST_CONFIG.liveArr.seededWhisparrTitle,
+  downloadCategory: 'whisparr',
 };
 
 export const qbittorrent = new QBittorrentDriver();
@@ -289,15 +304,15 @@ export async function waitForArrQueue(arr: LiveArr, downloadId: string, timeoutM
 }
 
 /**
- * Empties both arr queues and the download client.
+ * Empties every arr queue and the download client.
  *
  * The Seeker skips an item that is already downloading.
  * The client is purged first, or the arr re-adds the torrent on its next refresh.
  */
 export async function resetDownloads(): Promise<void> {
   await qbittorrent.clearAllTorrents();
-  await Promise.all([liveSonarr.clearQueue(), liveRadarr.clearQueue()]);
-  await Promise.all([waitForEmptyQueue(liveSonarr), waitForEmptyQueue(liveRadarr)]);
+  await Promise.all([liveSonarr.clearQueue(), liveRadarr.clearQueue(), liveWhisparr.clearQueue()]);
+  await Promise.all([waitForEmptyQueue(liveSonarr), waitForEmptyQueue(liveRadarr), waitForEmptyQueue(liveWhisparr)]);
 }
 
 async function waitForEmptyQueue(arr: LiveArr, timeoutMs = 120_000): Promise<void> {

@@ -87,7 +87,7 @@ export function funnelStages(funnel: InstanceFunnel, instanceType: string): { na
   const resting: FunnelStage[] = funnel.restingUnits > 0 ? [{ label: 'resting', value: funnel.restingUnits }] : [];
   return {
     narrowing: [
-      { label: instanceType === 'Radarr' ? 'movies' : 'series', value: funnel.libraryItems },
+      { label: instanceType === 'Sonarr' ? 'series' : 'movies', value: funnel.libraryItems },
       { label: 'released', value: funnel.releasedItems },
       { label: 'monitored', value: funnel.monitoredItems },
       { label: 'tag filtered', value: funnel.tagFilteredItems },

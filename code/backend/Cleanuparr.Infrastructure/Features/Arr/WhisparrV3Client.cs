@@ -1,20 +1,11 @@
-using System.Text;
-using Cleanuparr.Domain.Entities.Arr;
-using Cleanuparr.Domain.Entities.Arr.ManualImport;
-using Cleanuparr.Domain.Entities.Arr.Queue;
-using Cleanuparr.Domain.Entities.Radarr;
-using Cleanuparr.Domain.Entities.Whisparr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Interceptors;
-using Cleanuparr.Persistence.Models.Configuration.Arr;
-using System.Text.Json;
-using Cleanuparr.Infrastructure.Json;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public class WhisparrV3Client : ArrClient, IWhisparrV3Client
+public class WhisparrV3Client : RadarrClient, IWhisparrV3Client
 {
     public WhisparrV3Client(
         ILogger<WhisparrV3Client> logger,
@@ -24,142 +15,4 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
     {
     }
-    
-    protected override string ApiVersion => "v3";
-
-    protected override string GetSystemStatusUrlPath()
-    {
-        return $"/api/{ApiVersion}/system/status";
-    }
-    
-    protected override string GetQueueUrlPath()
-    {
-        return $"/api/{ApiVersion}/queue";
-    }
-
-    protected override string GetQueueUrlQuery(int page)
-    {
-        return $"page={page}&pageSize={QueuePageSize}&includeUnknownMovieItems=true&includeMovie=true";
-    }
-
-    protected override string GetQueueDeleteUrlPath(long recordId)
-    {
-        return $"/api/{ApiVersion}/queue/{recordId}";
-    }
-
-    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
-    {
-        if (items?.Count is null or 0)
-        {
-            return [];
-        }
-
-        List<long> ids = items.Select(item => item.Id).ToList();
-        
-        UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";
-        
-        WhisparrV3Command command = new()
-        {
-            Name = "MoviesSearch",
-            MovieIds = ids,
-        };
-        
-        using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(command, CleanuparrJsonOptions.Outbound),
-            Encoding.UTF8,
-            "application/json"
-        );
-        SetApiKey(request, arrInstance.ApiKey);
-
-        string? logContext = await ComputeCommandLogContextAsync(arrInstance, command);
-
-        try
-        {
-            using HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
-
-            long? commandId = null;
-
-            if (response is not null)
-            {
-                commandId = await ReadCommandIdAsync(response);
-            }
-
-            _logger.LogInformation("{Log}", GetSearchLog(arrInstance.Url, command, true, logContext));
-
-            return commandId.HasValue ? [commandId.Value] : [];
-        }
-        catch
-        {
-            _logger.LogError("{Log}", GetSearchLog(arrInstance.Url, command, false, logContext));
-            throw;
-        }
-    }
-
-    public override bool HasContentId(QueueRecord record) => record.MovieId is not 0;
-
-    /// <inheritdoc/>
-    public override bool SupportsForceImport => true;
-
-    /// <inheritdoc/>
-    public override ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) =>
-        candidate.ResolvedMovieId is { } movieId && movieId == record.MovieId
-            ? ManualImportFile.FromMovieCandidate(candidate, movieId)
-            : null;
-
-    private static string GetSearchLog(Uri instanceUrl, WhisparrV3Command command, bool success, string? logContext)
-    {
-        string status = success ? "triggered" : "failed";
-        string message = logContext ?? $"movie ids: {string.Join(',', command.MovieIds)}";
-
-        return $"movie search {status} | {instanceUrl} | {message}";
-    }
-
-    private async Task<string?> ComputeCommandLogContextAsync(ArrInstance arrInstance, WhisparrV3Command command)
-    {
-        try
-        {
-            StringBuilder log = new();
-
-            foreach (long movieId in command.MovieIds)
-            {
-                Movie? movie = await GetMovie(arrInstance, movieId);
-
-                if (movie is null)
-                {
-                    return null;
-                }
-
-                log.Append($"[{movie.Title}]");
-            }
-
-            return log.ToString();
-        }
-        catch (Exception exception)
-        {
-            _logger.LogDebug(exception, "failed to compute log context");
-        }
-
-        return null;
-    }
-
-    private async Task<Movie?> GetMovie(ArrInstance arrInstance, long movieId)
-    {
-        UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/movie/{movieId}";
-
-        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
-        SetApiKey(request, arrInstance.ApiKey);
-
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-
-        return await DeserializeStreamAsync<Movie>(response);
-    }
-    
-    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
-    {
-        throw new NotImplementedException();
-    }
-} 
+}

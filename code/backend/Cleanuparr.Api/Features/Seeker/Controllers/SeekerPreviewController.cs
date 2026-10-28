@@ -64,7 +64,7 @@ public sealed class SeekerPreviewController : ControllerBase
         }
 
         InstanceType instanceType = instanceConfig.ArrInstance.ArrConfig.Type;
-        if (instanceType is not (InstanceType.Sonarr or InstanceType.Radarr))
+        if (!SeekerApps.IsSupported(instanceConfig.ArrInstance))
         {
             return this.ProblemResult(StatusCodes.Status400BadRequest, $"Seeker does not search {instanceType} instances");
         }
@@ -111,7 +111,8 @@ public sealed class SeekerPreviewController : ControllerBase
 
         if (evaluation.WantedUnsupported)
         {
-            return this.ProblemResult(StatusCodes.Status502BadGateway, "Seeker needs Radarr v5.6 or newer");
+            string minimumVersion = instanceType is InstanceType.Radarr ? "Radarr v5.6" : "Whisparr v3.1";
+            return this.ProblemResult(StatusCodes.Status502BadGateway, $"Seeker needs {minimumVersion} or newer");
         }
 
         DateTimeOffset? waitingUntil = null;

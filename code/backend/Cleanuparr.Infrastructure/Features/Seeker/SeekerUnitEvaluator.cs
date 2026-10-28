@@ -38,6 +38,7 @@ public sealed class SeekerUnitEvaluator
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
 
     public SeekerUnitEvaluator(
@@ -45,12 +46,14 @@ public sealed class SeekerUnitEvaluator
         EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
+        IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider)
     {
         _logger = logger;
         _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
+        _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
     }
 
@@ -69,11 +72,11 @@ public sealed class SeekerUnitEvaluator
 
         DateTimeOffset since = _timeProvider.GetUtcNow().AddHours(-instanceConfig.RecentGrabWindowHours);
 
-        if (arrInstance.ArrConfig.Type == InstanceType.Radarr)
+        if (SeekerApps.SearchesMovies(arrInstance))
         {
             return new SeekerRecentGrabs
             {
-                MovieIds = await _radarrClient.GetRecentlyGrabbedMovieIdsAsync(arrInstance, since, cancellationToken)
+                MovieIds = await MovieClient(arrInstance).GetRecentlyGrabbedMovieIdsAsync(arrInstance, since, cancellationToken)
             };
         }
 
@@ -106,9 +109,9 @@ public sealed class SeekerUnitEvaluator
         Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests =
             await ReadRestsAsync(instanceConfig, arrInstance, cancellationToken);
 
-        if (arrInstance.ArrConfig.Type == InstanceType.Radarr)
+        if (SeekerApps.SearchesMovies(arrInstance))
         {
-            return await EvaluateRadarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
+            return await EvaluateMoviesAsync(config, instanceConfig, arrInstance, activeQueueRecords,
                 recentGrabs.MovieIds, rests, lastSearchedByItem, cancellationToken);
         }
 
@@ -269,7 +272,10 @@ public sealed class SeekerUnitEvaluator
             .ToArray();
     }
 
-    private async Task<SeekerEvaluation> EvaluateRadarrAsync(
+    private IRadarrClient MovieClient(ArrInstance arrInstance) =>
+        arrInstance.ArrConfig.Type is InstanceType.Whisparr ? _whisparrV3Client : _radarrClient;
+
+    private async Task<SeekerEvaluation> EvaluateMoviesAsync(
         SeekerConfig config,
         SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
@@ -279,7 +285,9 @@ public sealed class SeekerUnitEvaluator
         Dictionary<long, DateTimeOffset> lastSearchedByItem,
         CancellationToken cancellationToken)
     {
-        List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
+        IRadarrClient movieClient = MovieClient(arrInstance);
+        InstanceType instanceType = arrInstance.ArrConfig.Type;
+        List<Tag> tags = await movieClient.GetAllTagsAsync(arrInstance);
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
         HashSet<string> includeTagSet = new(instanceConfig.IncludeTags, StringComparer.InvariantCultureIgnoreCase);
@@ -291,25 +299,28 @@ public sealed class SeekerUnitEvaluator
         {
             cfScores = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
-                .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == InstanceType.Radarr)
+                .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == instanceType)
                 .ToDictionaryAsync(e => e.ExternalItemId, cancellationToken);
 
-            List<ArrQualityProfile> profiles = await _radarrClient.GetQualityProfilesAsync(arrInstance);
+            List<ArrQualityProfile> profiles = await movieClient.GetQualityProfilesAsync(arrInstance);
             upgradesDisabledProfileIds = profiles.Where(p => !p.UpgradeAllowed).Select(p => p.Id).ToHashSet();
         }
 
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
+        RadarrReleaseGate releaseGate = instanceType is InstanceType.Radarr
+            ? instanceConfig.RadarrReleaseGate
+            : RadarrReleaseGate.ReleaseDate;
 
         List<long> allLibraryIds = new();
         List<SeekerExclusion> exclusions = [];
         int releasedCount = 0;
         int monitoredCount = 0;
         List<SearchableMovie> released = new();
-        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
+        await foreach (SearchableMovie movie in movieClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
         {
             allLibraryIds.Add(movie.Id);
 
-            SeekerExclusionReason? releaseExclusion = GetReleaseExclusion(movie, instanceConfig.RadarrReleaseGate, graceCutoff);
+            SeekerExclusionReason? releaseExclusion = GetReleaseExclusion(movie, releaseGate, graceCutoff);
             if (releaseExclusion is not null)
             {
                 exclusions.Add(new SeekerExclusion(movie.Title, releaseExclusion.Value));
@@ -341,21 +352,22 @@ public sealed class SeekerUnitEvaluator
         try
         {
             List<SearchableMovie> missing = await ReadWantedAsync(
-                monitored => _radarrClient.GetMissingMoviesAsync(arrInstance, monitored, cancellationToken),
+                monitored => movieClient.GetMissingMoviesAsync(arrInstance, monitored, cancellationToken),
                 instanceConfig.MonitoredOnly);
             missingIds = missing.Select(m => m.Id).ToHashSet();
 
             if (instanceConfig.UseCutoff)
             {
                 List<SearchableMovie> cutoffUnmet = await ReadWantedAsync(
-                    monitored => _radarrClient.GetCutoffUnmetMoviesAsync(arrInstance, monitored, cancellationToken),
+                    monitored => movieClient.GetCutoffUnmetMoviesAsync(arrInstance, monitored, cancellationToken),
                     instanceConfig.MonitoredOnly);
                 cutoffUnmetIds = cutoffUnmet.Select(m => m.Id).ToHashSet();
             }
         }
         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.NotFound)
         {
-            _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, it needs Radarr v5.6 or newer", arrInstance.Name);
+            string minimumVersion = instanceType is InstanceType.Radarr ? "Radarr v5.6" : "Whisparr v3.1";
+            _logger.LogWarning(ex, "Skipping proactive search for {InstanceName}, it needs {MinimumVersion} or newer", arrInstance.Name, minimumVersion);
 
             SeekerEvaluation Unsupported() => new()
             {
@@ -937,7 +949,7 @@ public sealed class SeekerUnitEvaluator
     /// </summary>
     private static bool IsMoviePastGracePeriod(SearchableMovie movie, DateTimeOffset graceCutoff)
     {
-        DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
+        DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas ?? movie.ReleaseDate;
         return releaseDate is null || releaseDate.Value <= graceCutoff;
     }
 

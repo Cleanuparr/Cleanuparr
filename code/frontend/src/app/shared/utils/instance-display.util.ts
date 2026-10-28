@@ -17,6 +17,7 @@ export function instanceTypeHighlight(type: string): BadgeSeverity {
   switch (type) {
     case InstanceType.Radarr:
     case InstanceType.Sonarr:
+    case InstanceType.Whisparr:
       return 'info';
     default:
       return 'default';

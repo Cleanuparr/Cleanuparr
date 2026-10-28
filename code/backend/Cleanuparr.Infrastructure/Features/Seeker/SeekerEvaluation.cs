@@ -10,7 +10,7 @@ public sealed record SeekerEvaluation
     public required List<long> AllLibraryIds { get; init; }
 
     /// <summary>
-    /// Radarr older than v5.6 has no wanted endpoints, so nothing got evaluated.
+    /// Radarr older than v5.6 and Whisparr v3 older than v3.1 have no wanted endpoints, so nothing got evaluated.
     /// </summary>
     public bool WantedUnsupported { get; init; }
 

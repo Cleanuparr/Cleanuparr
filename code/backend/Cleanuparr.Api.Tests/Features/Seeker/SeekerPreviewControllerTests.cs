@@ -30,6 +30,7 @@ public class SeekerPreviewControllerTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IArrQueueReader _arrQueueReader;
     private readonly SeekerPreviewController _controller;
@@ -40,6 +41,7 @@ public class SeekerPreviewControllerTests : IDisposable
         _eventsContext = SeekerTestDataFactory.CreateEventsContext();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrQueueReader = Substitute.For<IArrQueueReader>();
         FakeTimeProvider timeProvider = new(Now);
@@ -60,6 +62,7 @@ public class SeekerPreviewControllerTests : IDisposable
             _eventsContext,
             _radarrClient,
             _sonarrClient,
+            _whisparrV3Client,
             timeProvider);
 
         _controller = new SeekerPreviewController(
@@ -224,6 +227,50 @@ public class SeekerPreviewControllerTests : IDisposable
         IActionResult result = await _controller.GetPreview(lidarr.Id, CancellationToken.None);
 
         StatusOf(result).ShouldBe(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task GetPreview_WhisparrV2_ReturnsBadRequest()
+    {
+        ArrInstance whisparr = SeekerTestDataFactory.AddWhisparrInstance(_dataContext, version: 2);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig { ArrInstanceId = whisparr.Id, Enabled = true });
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetPreview(whisparr.Id, CancellationToken.None);
+
+        StatusOf(result).ShouldBe(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task GetPreview_WhisparrV3_ReadsTheLibraryThroughTheWhisparrClient()
+    {
+        ArrInstance whisparr = SeekerTestDataFactory.AddWhisparrInstance(_dataContext, version: 3);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = whisparr.Id,
+            Enabled = true,
+            CurrentCycleId = Guid.NewGuid(),
+        });
+        await _dataContext.SaveChangesAsync();
+        List<SearchableMovie> library = [Movie(1)];
+        _whisparrV3Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV3Client
+            .GetRecentlyGrabbedMovieIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long>());
+        _whisparrV3Client.StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(library));
+        _whisparrV3Client.GetMissingMoviesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(library);
+        _whisparrV3Client.GetMissingMoviesAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(whisparr.Id, CancellationToken.None));
+
+        SeekerPreviewUnitResponse unit = response.NextUp.ShouldHaveSingleItem();
+        unit.Name.ShouldBe("Movie 1");
+        unit.Reason.ShouldBe(SeekerSearchReason.Missing);
+        response.Funnel.LibraryItems.ShouldBe(1);
+        _radarrClient.DidNotReceiveWithAnyArgs().StreamAllMoviesAsync(default!, default);
     }
 
     [Fact]
