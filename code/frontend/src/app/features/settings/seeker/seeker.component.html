@@ -103,6 +103,15 @@
                   (checkedChange)="patchInstance($index, { useCustomFormatScore: $event })"
                   helpKey="seeker:useCustomFormatScore" />
                 <app-chip-input
+                  label="Include Tags"
+                  placeholder="Add tag..."
+                  hint="Only search items with at least one of these arr tags. Leave empty to search all items. Skip tags take precedence"
+                  [value]="instance.includeTags"
+                  (valueChange)="patchInstance($index, { includeTags: $event })"
+                  helpKey="seeker:includeTags"
+                  featureId="seeker-include-tags"
+                />
+                <app-chip-input
                   label="Skip Tags"
                   placeholder="Add tag..."
                   hint="Arr tags to exclude from search"

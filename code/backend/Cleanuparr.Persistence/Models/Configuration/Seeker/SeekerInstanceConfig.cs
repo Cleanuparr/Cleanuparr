@@ -35,6 +35,12 @@ public sealed record SeekerInstanceConfig
     public List<string> SkipTags { get; set; } = [];
 
     /// <summary>
+    /// Arr tag labels that limit search to items carrying at least one of them. Empty means no limit.
+    /// Skip tags take precedence.
+    /// </summary>
+    public List<string> IncludeTags { get; set; } = [];
+
+    /// <summary>
     /// Timestamp of when this instance was last processed (for round-robin scheduling)
     /// </summary>
     public DateTimeOffset? LastProcessedAt { get; set; }

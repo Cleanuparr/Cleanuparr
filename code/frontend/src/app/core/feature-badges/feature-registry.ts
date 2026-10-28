@@ -53,4 +53,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'qbit-api-key' },
   { id: 'theme-follow-system' },
   { id: 'errored-downloads' },
+  { id: 'seeker-include-tags' },
 ];

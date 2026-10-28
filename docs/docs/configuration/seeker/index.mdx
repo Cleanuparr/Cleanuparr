@@ -183,10 +183,26 @@ Enables this instance for proactive search. When disabled, the instance will not
 </ConfigSection>
 
 <ConfigSection
+  title="Include Tags"
+>
+
+Arr tags that limit proactive search. When this list has tags, only a movie or series carrying at least one of them gets searched. Leave it empty to search every item.
+
+Skip Tags take precedence: an item carrying both an include tag and a skip tag is skipped.
+
+**Examples:**
+```
+anime
+4k
+```
+
+</ConfigSection>
+
+<ConfigSection
   title="Skip Tags"
 >
 
-Arr tags to exclude from search. Any movie or series in the corresponding *arr application that has one of these tags assigned will be skipped entirely during proactive search.
+Arr tags to exclude from search. Any movie or series in the corresponding *arr application that has one of these tags assigned will be skipped entirely during proactive search, even when it also carries an include tag.
 
 **Examples:**
 ```

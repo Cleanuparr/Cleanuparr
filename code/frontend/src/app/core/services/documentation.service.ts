@@ -239,6 +239,7 @@ export class DocumentationService {
       'postReleaseGraceHours': 'post-release-grace-period',
       'missingSearchEnabled': 'enable-missing-search',
       'enabled': 'instance-enabled',
+      'includeTags': 'instance-include-tags',
       'skipTags': 'instance-skip-tags',
       'activeDownloadLimit': 'instance-active-download-limit',
       'ignoreStruckDownloads': 'instance-ignore-struck-downloads',

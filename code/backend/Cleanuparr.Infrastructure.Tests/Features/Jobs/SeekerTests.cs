@@ -981,6 +981,123 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Radarr_IncludeTags_SearchesOnlyTaggedMoviesAndSkipTagsWin()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            IncludeTags = ["wanted", "keep"],
+            SkipTags = ["no-search"]
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Untagged", Status = "released", Monitored = true, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Wanted", Status = "released", Monitored = true, Tags = [1] },
+                new SearchableMovie { Id = 3, Title = "Keep in other case", Status = "released", Monitored = true, Tags = [2] },
+                new SearchableMovie { Id = 4, Title = "Wanted but skipped", Status = "released", Monitored = true, Tags = [1, 3] },
+                new SearchableMovie { Id = 5, Title = "Unknown tag id", Status = "released", Monitored = true, Tags = [99] }
+            ]));
+
+        _radarrClient
+            .GetAllTagsAsync(radarrInstance)
+            .Returns([
+                new Tag { Id = 1, Label = "wanted" },
+                new Tag { Id = 2, Label = "KEEP" },
+                new Tag { Id = 3, Label = "no-search" }
+            ]);
+
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        for (int i = 0; i < 6; i++)
+        {
+            await sut.ExecuteAsync();
+        }
+
+        List<long> searchedIds = await _fixture.EventsContext.SeekerHistory
+            .Where(h => h.ArrInstanceId == radarrInstance.Id)
+            .Select(h => h.ExternalItemId)
+            .ToListAsync();
+
+        searchedIds.Order().ShouldBe([2L, 3L]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_IncludeTags_SearchesNothingWhenNoMovieCarriesTheTag()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            IncludeTags = ["not-in-arr"]
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 1, Title = "Tagged", Status = "released", Monitored = true, Tags = [1] },
+                new SearchableMovie { Id = 2, Title = "Untagged", Status = "released", Monitored = true, Tags = [] }
+            ]));
+
+        _radarrClient
+            .GetAllTagsAsync(radarrInstance)
+            .Returns([new Tag { Id = 1, Label = "movies" }]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        await sut.ExecuteAsync();
+
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_SkipTags_TagIdBoundaryIsRespected()
     {
         // Arrange — skip tag id 1 must NOT accidentally match tag id 11 or 110 via substring.
@@ -3632,6 +3749,68 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — skipped series should not have episodes fetched
+        await _sonarrClient.Received(1)
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10);
+        await _sonarrClient.DidNotReceive()
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 20);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_IncludeTags_ExcludesSeriesWithoutIncludedTag()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            IncludeTags = ["anime"]
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Included Series", Status = "continuing", Monitored = true, Tags = [1], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } },
+                new SearchableSeries { Id = 20, Title = "Untagged Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
+            ]));
+
+        _sonarrClient
+            .GetAllTagsAsync(sonarrInstance)
+            .Returns([new Tag { Id = 1, Label = "anime" }]);
+
+        DateTime pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10)
+            .Returns([
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = false }
+            ]);
+
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        await sut.ExecuteAsync();
+
         await _sonarrClient.Received(1)
             .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10);
         await _sonarrClient.DidNotReceive()

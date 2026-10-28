@@ -61,6 +61,7 @@ public sealed class SeekerConfigController : ControllerBase
                 InstanceType = instance.ArrConfig.Type,
                 Enabled = seekerConfig?.Enabled ?? false,
                 SkipTags = seekerConfig?.SkipTags ?? [],
+                IncludeTags = seekerConfig?.IncludeTags ?? [],
                 LastProcessedAt = seekerConfig?.LastProcessedAt,
                 ArrInstanceEnabled = instance.Enabled,
                 ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 3,
@@ -126,6 +127,7 @@ public sealed class SeekerConfigController : ControllerBase
                 {
                     existing.Enabled = instanceReq.Enabled;
                     existing.SkipTags = instanceReq.SkipTags;
+                    existing.IncludeTags = instanceReq.IncludeTags;
                     existing.ActiveDownloadLimit = instanceReq.ActiveDownloadLimit;
                     existing.IgnoreStruckDownloads = instanceReq.IgnoreStruckDownloads;
                     existing.MinCycleTimeDays = instanceReq.MinCycleTimeDays;
@@ -140,6 +142,7 @@ public sealed class SeekerConfigController : ControllerBase
                         ArrInstanceId = instanceReq.ArrInstanceId,
                         Enabled = instanceReq.Enabled,
                         SkipTags = instanceReq.SkipTags,
+                        IncludeTags = instanceReq.IncludeTags,
                         ActiveDownloadLimit = instanceReq.ActiveDownloadLimit,
                         IgnoreStruckDownloads = instanceReq.IgnoreStruckDownloads,
                         MinCycleTimeDays = instanceReq.MinCycleTimeDays,
