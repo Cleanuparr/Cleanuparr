@@ -165,10 +165,12 @@
     border-top: 1px solid var(--divider);
   }
 
+  // Subgrid rows line the labels up even when a value wraps.
   &__stat {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: var(--space-1);
     min-width: 0;
   }
 
