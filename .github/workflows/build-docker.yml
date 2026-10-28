@@ -45,6 +45,10 @@ jobs:
       contents: read
       pull-requests: read
     uses: ./.github/workflows/stack-gate.yml
+    with:
+      # Keep in sync with on.pull_request.paths
+      paths: |
+        code/
 
   # Compute tags, version, and push decision for downstream jobs
   prepare:
