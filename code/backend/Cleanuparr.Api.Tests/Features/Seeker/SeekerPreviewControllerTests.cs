@@ -31,6 +31,7 @@ public class SeekerPreviewControllerTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IArrQueueReader _arrQueueReader;
@@ -43,6 +44,7 @@ public class SeekerPreviewControllerTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
+        _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrQueueReader = Substitute.For<IArrQueueReader>();
@@ -65,6 +67,7 @@ public class SeekerPreviewControllerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _lidarrClient,
+            _whisparrV2Client,
             _whisparrV3Client,
             timeProvider);
 
@@ -257,15 +260,38 @@ public class SeekerPreviewControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPreview_WhisparrV2_ReturnsBadRequest()
+    public async Task GetPreview_WhisparrV2_ReadsTheLibraryThroughTheWhisparrV2Client()
     {
         ArrInstance whisparr = SeekerTestDataFactory.AddWhisparrInstance(_dataContext, version: 2);
-        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig { ArrInstanceId = whisparr.Id, Enabled = true });
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = whisparr.Id,
+            Enabled = true,
+            CurrentCycleId = Guid.NewGuid(),
+        });
         await _dataContext.SaveChangesAsync();
+        SearchableEpisode scene = Episode(701, 70, 2024, 0) with { AirDateUtc = new DateTimeOffset(2024, 5, 12, 0, 0, 0, TimeSpan.Zero) };
+        _whisparrV2Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV2Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _whisparrV2Client
+            .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)>());
+        _whisparrV2Client.StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 70, Title = "Site", Status = "continuing", Monitored = true, Tags = [] }
+            ]));
+        _whisparrV2Client.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns([scene]);
+        _whisparrV2Client.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns([]);
 
-        IActionResult result = await _controller.GetPreview(whisparr.Id, CancellationToken.None);
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(whisparr.Id, CancellationToken.None));
 
-        StatusOf(result).ShouldBe(StatusCodes.Status400BadRequest);
+        SeekerPreviewUnitResponse unit = response.NextUp.ShouldHaveSingleItem();
+        unit.Name.ShouldBe("Site 2024-05-12");
+        unit.Reason.ShouldBe(SeekerSearchReason.Missing);
+        response.Funnel.LibraryItems.ShouldBe(1);
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
     }
 
     [Fact]

@@ -79,10 +79,12 @@ export interface FunnelStage {
   value: number;
 }
 
-function libraryLabel(instanceType: string): string {
+function libraryLabel(instanceType: string, instanceVersion: number): string {
   switch (instanceType) {
     case 'Sonarr':
       return 'series';
+    case 'Whisparr':
+      return instanceVersion === 2 ? 'sites' : 'movies';
     case 'Lidarr':
       return 'artists';
     default:
@@ -94,11 +96,11 @@ function libraryLabel(instanceType: string): string {
  * Splits the funnel into the stages that narrow the library down to units needing a search,
  * and the split of those units by state.
  */
-export function funnelStages(funnel: InstanceFunnel, instanceType: string): { narrowing: FunnelStage[]; split: FunnelStage[] } {
+export function funnelStages(funnel: InstanceFunnel, instanceType: string, instanceVersion: number): { narrowing: FunnelStage[]; split: FunnelStage[] } {
   const resting: FunnelStage[] = funnel.restingUnits > 0 ? [{ label: 'resting', value: funnel.restingUnits }] : [];
   return {
     narrowing: [
-      { label: libraryLabel(instanceType), value: funnel.libraryItems },
+      { label: libraryLabel(instanceType, instanceVersion), value: funnel.libraryItems },
       { label: 'released', value: funnel.releasedItems },
       { label: 'monitored', value: funnel.monitoredItems },
       { label: 'tag filtered', value: funnel.tagFilteredItems },

@@ -57,7 +57,7 @@ export class SeekerPreviewDrawerComponent {
     if (!preview || !instance) {
       return null;
     }
-    const { narrowing, split } = funnelStages(preview.funnel, instance.instanceType);
+    const { narrowing, split } = funnelStages(preview.funnel, instance.instanceType, instance.instanceVersion);
     return [...narrowing, ...split];
   });
 

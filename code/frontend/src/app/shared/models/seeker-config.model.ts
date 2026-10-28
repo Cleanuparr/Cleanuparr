@@ -17,6 +17,7 @@ export interface SeekerInstanceConfig {
   arrInstanceId: string;
   instanceName: string;
   instanceType: string;
+  instanceVersion: number;
   enabled: boolean;
   skipTags: string[];
   includeTags: string[];

@@ -84,6 +84,7 @@ interface InstanceState {
   arrInstanceId: string;
   instanceName: string;
   instanceType: string;
+  instanceVersion: number;
   enabled: boolean;
   skipTags: string[];
   includeTags: string[];
@@ -212,6 +213,7 @@ export class SeekerComponent implements HasPendingChanges {
           arrInstanceId: i.arrInstanceId,
           instanceName: i.instanceName,
           instanceType: i.instanceType,
+          instanceVersion: i.instanceVersion,
           enabled: i.enabled,
           skipTags: [...i.skipTags],
           includeTags: [...i.includeTags],
@@ -284,6 +286,10 @@ export class SeekerComponent implements HasPendingChanges {
 
   updateInstanceSonarrSearchMode(index: number, mode: unknown): void {
     this.patchInstance(index, { sonarrSearchMode: mode as SonarrSearchMode });
+  }
+
+  searchesEpisodes(instance: InstanceState): boolean {
+    return instance.instanceType === 'Sonarr' || (instance.instanceType === 'Whisparr' && instance.instanceVersion === 2);
   }
 
   updateInstanceRadarrReleaseGate(index: number, gate: unknown): void {

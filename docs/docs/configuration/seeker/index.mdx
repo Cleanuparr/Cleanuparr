@@ -15,7 +15,7 @@ import {
 
 # Seeker
 
-The Seeker automates searching for missing items and quality upgrades across your Radarr, Sonarr, Lidarr and Whisparr v3 libraries. It runs on a configurable schedule and works through your library one item at a time to avoid overwhelming your indexers.
+The Seeker automates searching for missing items and quality upgrades across your Radarr, Sonarr, Lidarr and Whisparr (v2 and v3) libraries. It runs on a configurable schedule and works through your library one item at a time to avoid overwhelming your indexers.
 
 <ElementNavigator />
 
@@ -64,7 +64,7 @@ Replacement search is always enabled when Search is on and cannot be disabled. W
 <Note>
 Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle completes and the next one starts after the minimum cycle time.
 
-For Radarr, each movie is one item. For Whisparr v3, each movie or scene is one item. For Lidarr, each album is one item. Seeker draws an artist first, then one of its albums. For Sonarr, a cycle holds season units and episode units. [Search Mode](#instance-search-mode) picks the unit for regular and daily seasons. Specials and airing anime seasons go one episode at a time. Cycle progress counts the searches still needed.
+For Radarr, each movie is one item. For Whisparr v3, each movie or scene is one item. For Lidarr, each album is one item. Seeker draws an artist first, then one of its albums. For Sonarr, a cycle holds season units and episode units. [Search Mode](#instance-search-mode) picks the unit for regular and daily seasons. Specials and airing anime seasons go one episode at a time. Whisparr v2 treats sites as series and scenes as episodes, so its cycle holds year units like `Site 2024` and scene units like `Site 2024-05-12`. Cycle progress counts the searches still needed.
 
 The Searches tab shows per instance how many items the current cycle searched, how many are left, how long it has been running and how long the previous cycle took. Items in the download queue are not counted as left. Dry run tracks its own cycles and never moves the live one.
 
@@ -148,7 +148,7 @@ When enabled, items that already have a file but have not yet met the quality pr
 When enabled, items whose current custom format score is below the quality profile's cutoff format score will be included as upgrade candidates. Seeker uses cached score data that is kept up to date by the Custom Format Score Syncer, which runs automatically when this setting is enabled.
 
 <Note>
-Custom format scores are tracked at the episode level for Sonarr. If a series has episodes with scores below the cutoff, the corresponding season will be searched. After an update to Cleanuparr, these episodes count again once the syncer has run.
+Custom format scores are tracked at the episode level for Sonarr and per scene for Whisparr v2. If a series has episodes with scores below the cutoff, the corresponding season will be searched. After an update to Cleanuparr, these episodes count again once the syncer has run.
 
 For Lidarr, an album's score is the score of its first track file, the one with the lowest id. This is how Lidarr compares an album. An album with a track missing a file has no score entry.
 </Note>
@@ -181,6 +181,8 @@ Radarr instances set to [Follow Radarr availability](#instance-release-gate) ign
 
 Whisparr v3 counts the grace period from each movie or scene's release date.
 
+Whisparr v2 counts the grace period from midnight UTC on each scene's release date. A scene without a release date counts as not released.
+
 Lidarr counts the grace period from each album's release date. An album without a release date counts as released.
 
 </ConfigSection>
@@ -210,7 +212,7 @@ Seeker resumes proactive search at its first scheduled run after the window ends
 <SectionTitle>Instance Configuration</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  Per-instance settings allow you to control which Radarr, Sonarr, Lidarr and Whisparr v3 instances participate in proactive search and how they behave.
+  Per-instance settings allow you to control which Radarr, Sonarr, Lidarr and Whisparr (v2 and v3) instances participate in proactive search and how they behave.
 </p>
 
 <Important>
@@ -348,7 +350,7 @@ The minimum number of days that a complete search cycle must span before a new c
   title="Search Mode"
 >
 
-Sonarr only. Picks how the Seeker searches a regular or daily season.
+Sonarr and Whisparr v2. Picks how the Seeker searches a regular or daily season. For Whisparr v2, a season is a year.
 
 - **Auto** searches a whole season only when the season has finished airing and every aired monitored episode in it needs a search. Otherwise it searches one episode per run.
 - **Season** always searches the whole season.

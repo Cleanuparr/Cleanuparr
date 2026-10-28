@@ -908,6 +908,23 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Reports_the_grab_of_a_whisparr_v2_scene_search()
+    {
+        // Arrange
+        ArrInstance whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 2);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(whisparrInstance.Id, externalItemId: 70, episodeId: 701, seasonNumber: 2024, itemTitle: "Site 2024-05-12"),
+            new QueueRecord { Id = 1, SeriesId = 70, EpisodeId = 701, SeasonNumber = 2024, Title = "Site.24.05.12.Scene.1080p", DownloadId = "EP701", Protocol = "torrent", Status = "downloading" },
+            new QueueRecord { Id = 2, SeriesId = 70, EpisodeId = 702, SeasonNumber = 2024, Title = "Site.24.05.13.Scene.1080p", DownloadId = "EP702", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Site.24.05.12.Scene.1080p"]);
+    }
+
+    [Fact]
     public async Task Reports_the_grab_of_a_lidarr_search()
     {
         // Arrange

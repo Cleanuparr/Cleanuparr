@@ -30,6 +30,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IStatusNotifier _statusNotifier;
 
@@ -42,6 +43,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
+        _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _statusNotifier = Substitute.For<IStatusNotifier>();
 
@@ -61,6 +63,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _lidarrClient,
+            _whisparrV2Client,
             _whisparrV3Client,
             _fixture.TimeProvider,
             _statusNotifier,
@@ -226,6 +229,67 @@ public class CustomFormatScoreSyncerTests : IDisposable
         entries[1].ExternalItemId.ShouldBe(998);
         entries[1].ItemType.ShouldBe(InstanceType.Radarr);
         _radarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhisparrV2_SyncsEpisodeScoresAsWhisparrEntries()
+    {
+        // Arrange
+        ArrInstance whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 2);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = whisparrInstance.Id,
+            ArrInstance = whisparrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        _fixture.EventsContext.CustomFormatScoreEntries.AddRange(
+            StaleEntry(whisparrInstance.Id, 999, InstanceType.Whisparr),
+            StaleEntry(whisparrInstance.Id, 998, InstanceType.Sonarr));
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        DateTimeOffset releaseDate = new(2024, 5, 12, 0, 0, 0, TimeSpan.Zero);
+        _whisparrV2Client
+            .GetQualityProfilesAsync(whisparrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+        _whisparrV2Client
+            .StreamAllSeriesAsync(whisparrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Site", QualityProfileId = 1, Monitored = true }
+            ]));
+        _whisparrV2Client
+            .GetEpisodesAsync(whisparrInstance, 10, Arg.Any<CancellationToken>())
+            .Returns([
+                new SearchableEpisode { Id = 100, SeasonNumber = 2024, EpisodeFileId = 500, HasFile = true, Monitored = true, AirDateUtc = releaseDate }
+            ]);
+        _whisparrV2Client
+            .GetEpisodeFilesAsync(whisparrInstance, 10, Arg.Any<CancellationToken>())
+            .Returns([
+                new ArrEpisodeFile { Id = 500, CustomFormatScore = 300, QualityCutoffNotMet = false }
+            ]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries
+            .OrderBy(e => e.ExternalItemId)
+            .ToListAsync();
+        entries.Count.ShouldBe(2);
+        entries[0].ExternalItemId.ShouldBe(10);
+        entries[0].EpisodeId.ShouldBe(100);
+        entries[0].ItemType.ShouldBe(InstanceType.Whisparr);
+        entries[0].Title.ShouldBe("Site 2024-05-12");
+        entries[0].SeasonNumber.ShouldBe(2024);
+        entries[0].AirDateUtc.ShouldBe(releaseDate);
+        entries[0].CurrentScore.ShouldBe(300);
+        entries[1].ExternalItemId.ShouldBe(998);
+        entries[1].ItemType.ShouldBe(InstanceType.Sonarr);
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
     }
 
     private static CustomFormatScoreEntry StaleEntry(Guid arrInstanceId, long externalItemId, InstanceType itemType) => new()
@@ -879,6 +943,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 _lidarrClient,
+                _whisparrV2Client,
                 _whisparrV3Client,
                 new FakeTimeProvider(),
                 _statusNotifier,
@@ -1290,6 +1355,55 @@ public class CustomFormatScoreSyncerTests : IDisposable
         _lidarrClient
             .GetTrackFilesAsync(lidarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(callInfo => Task.FromResult(new List<ArrTrackFile> { new() { Id = callInfo.Arg<long>() * 100, AlbumId = callInfo.Arg<long>() * 10, CustomFormatScore = 120 } }));
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.CustomFormatScoreEntries.CountAsync()).ShouldBe(ChunkSize + 1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SonarrSync_FlushesFullSeriesChunks()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        List<SearchableSeries> series = [];
+        for (int i = 1; i <= ChunkSize + 1; i++)
+        {
+            series.Add(new SearchableSeries { Id = i, Title = $"Series {i}", Monitored = true, QualityProfileId = 1 });
+        }
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(series));
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(new List<SearchableEpisode>
+            {
+                new() { Id = callInfo.ArgAt<long>(1) * 10, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = callInfo.ArgAt<long>(1) * 100, HasFile = true, Monitored = true }
+            }));
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(new List<ArrEpisodeFile>
+            {
+                new() { Id = callInfo.ArgAt<long>(1) * 100, CustomFormatScore = 120 }
+            }));
 
         CustomFormatScoreSyncer sut = CreateSut();
 
@@ -2224,6 +2338,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 _lidarrClient,
+                _whisparrV2Client,
                 _whisparrV3Client,
                 new FakeTimeProvider(),
                 _statusNotifier,

@@ -1,10 +1,11 @@
-import { test, expect } from '../fixtures/base';
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import {
   LIDARR,
   RADARR,
   SONARR,
   WHISPARR,
+  WHISPARR2,
   TRANSITION_TIMEOUT,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
@@ -34,6 +35,8 @@ const LIST_FALLBACK = 'Failed to list commands on';
 
 const TEST_TIMEOUT = TRIGGERED_SEARCH_TIMEOUT + TRANSITION_TIMEOUT + 120_000;
 
+const yearSceneIds = TEST_CONFIG.whisparr2Seed.yearSearch.scenes.map((scene) => scene.id);
+
 test.describe('Seeker grab on demand', () => {
   test.beforeEach(async () => {
     await resetLiveArrState();
@@ -41,16 +44,22 @@ test.describe('Seeker grab on demand', () => {
 
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
+    await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds: yearSceneIds, monitored: true });
     await resetLiveArrState();
   });
 
-  for (const target of [SONARR, RADARR, WHISPARR, LIDARR]) {
-    test(`records the real ${target.type} grab on the search event`, async ({ api }) => {
+  for (const target of [SONARR, RADARR, WHISPARR, WHISPARR2, LIDARR]) {
+    test(`records the real ${target.type} v${target.version} grab on the search event`, async ({ api }) => {
       test.setTimeout(TEST_TIMEOUT);
 
       const startedAt = new Date().toISOString();
       const release = grabbableRelease(target.searchMode, target.release, target.category);
       await indexerMock.stubMany(release.mappings);
+
+      if (target === WHISPARR2) {
+        // Seeker picks a random year; the release only matches 2018
+        await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds: yearSceneIds, monitored: false });
+      }
 
       const instanceId = await arrangeInstance(api, target);
       await triggerSeeker(api);

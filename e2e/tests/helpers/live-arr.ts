@@ -2,7 +2,7 @@ import { TEST_CONFIG } from './test-config';
 import { WireMockClient } from './mocks/wiremock-client';
 
 /**
- * Direct access to the real Sonarr, Radarr, Whisparr v3 and Lidarr containers.
+ * Direct access to the real Sonarr, Radarr, Whisparr v3, Whisparr v2 and Lidarr containers.
  *
  * The specs drive Cleanuparr through its own API, like every other spec.
  * This is the other side of the contract: what the arr itself ended up with.
@@ -148,6 +148,12 @@ export const liveWhisparr = new LiveArr(
   TEST_CONFIG.liveArr.whisparrUrl,
   TEST_CONFIG.liveArr.whisparrApiKey,
   'includeUnknownMovieItems=true&includeMovie=true',
+);
+
+export const liveWhisparr2 = new LiveArr(
+  TEST_CONFIG.liveArr.whisparr2Url,
+  TEST_CONFIG.liveArr.whisparr2ApiKey,
+  'includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true',
 );
 
 export const liveLidarr = new LiveArr(
