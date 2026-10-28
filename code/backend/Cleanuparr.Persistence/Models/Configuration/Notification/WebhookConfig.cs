@@ -72,6 +72,7 @@ public sealed partial record WebhookConfig : IConfig
         }
 
         HashSet<string> seenNames = new(StringComparer.OrdinalIgnoreCase);
+        using HttpRequestMessage probe = new();
 
         foreach (string header in Headers)
         {
@@ -88,6 +89,11 @@ public sealed partial record WebhookConfig : IConfig
             if (ReservedHeaderNames.Contains(name, StringComparer.OrdinalIgnoreCase))
             {
                 throw new CustomValidationException($"Webhook header '{name}' is set by Cleanuparr and cannot be overridden");
+            }
+
+            if (!probe.Headers.TryAddWithoutValidation(name, value))
+            {
+                throw new CustomValidationException($"Webhook header '{name}' cannot be sent as a request header");
             }
 
             if (value.Any(char.IsControl))

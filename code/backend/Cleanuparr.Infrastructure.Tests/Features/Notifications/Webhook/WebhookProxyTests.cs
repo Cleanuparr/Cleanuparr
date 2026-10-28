@@ -85,6 +85,25 @@ public class WebhookProxyTests
     }
 
     [Fact]
+    public async Task SendNotification_SendsHeaderValueTypedParserRejects()
+    {
+        await _proxy.SendNotification(CreatePayload(), CreateConfig(headers: ["Date: tomorrow"]));
+
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests[0];
+        request.Headers.NonValidated["Date"].ToString().ShouldBe("tomorrow");
+    }
+
+    [Fact]
+    public async Task SendNotification_WithContentHeader_ThrowsWebhookException()
+    {
+        WebhookException exception = await Should.ThrowAsync<WebhookException>(() =>
+            _proxy.SendNotification(CreatePayload(), CreateConfig(headers: ["Content-Language: en"])));
+
+        exception.Message.ShouldContain("Content-Language");
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task SendNotification_SendsJsonBodyWithEveryKey()
     {
         await _proxy.SendNotification(CreatePayload(), CreateConfig());

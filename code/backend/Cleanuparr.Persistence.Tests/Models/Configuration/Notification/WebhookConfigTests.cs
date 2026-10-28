@@ -103,6 +103,18 @@ public sealed class WebhookConfigTests
         exception.Message.ShouldContain("set by Cleanuparr");
     }
 
+    [Theory]
+    [InlineData("Content-Language: en")]
+    [InlineData("Expires: 0")]
+    [InlineData("content-encoding: gzip")]
+    public void Validate_WithContentHeader_ThrowsValidationException(string header)
+    {
+        CustomValidationException exception = Should.Throw<CustomValidationException>(() =>
+            CreateConfig(headers: header).Validate());
+
+        exception.Message.ShouldContain("cannot be sent as a request header");
+    }
+
     #endregion
 
     #region TrySplitHeader Tests

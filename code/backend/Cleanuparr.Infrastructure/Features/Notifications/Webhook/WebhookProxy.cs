@@ -36,9 +36,10 @@ public sealed class WebhookProxy : IWebhookProxy
 
         foreach (string header in config.Headers)
         {
-            if (WebhookConfig.TrySplitHeader(header, out string name, out string value))
+            if (WebhookConfig.TrySplitHeader(header, out string name, out string value)
+                && !request.Headers.TryAddWithoutValidation(name, value))
             {
-                request.Headers.Add(name, value);
+                throw new WebhookException($"Webhook header '{name}' cannot be sent as a request header");
             }
         }
 
