@@ -34,4 +34,14 @@ public interface ISonarrClient : IArrClient
     /// Fetches the series/season pairs Sonarr grabbed an episode for since the given time.
     /// </summary>
     Task<HashSet<(long SeriesId, long SeasonNumber)>> GetRecentlyGrabbedSeasonsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches every episode Sonarr lists as missing, filtered by monitored state.
+    /// </summary>
+    Task<List<SearchableEpisode>> GetMissingEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches every episode Sonarr lists as a cutoff-unmet upgrade, filtered by monitored state.
+    /// </summary>
+    Task<List<SearchableEpisode>> GetCutoffUnmetEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default);
 }

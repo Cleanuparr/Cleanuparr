@@ -350,6 +350,14 @@ public class SonarrClient : ArrClient, ISonarrClient
             .ToHashSet();
     }
 
+    /// <inheritdoc/>
+    public async Task<List<SearchableEpisode>> GetMissingEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+        await GetAllWantedAsync<SearchableEpisode>(arrInstance, "missing", monitored, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<List<SearchableEpisode>> GetCutoffUnmetEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+        await GetAllWantedAsync<SearchableEpisode>(arrInstance, "cutoff", monitored, cancellationToken);
+
     private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);

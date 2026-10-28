@@ -296,6 +296,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("AirDateUtc")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("air_date_utc");
+
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("TEXT")
                         .HasColumnName("arr_instance_id");
@@ -342,6 +346,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("quality_profile_name");
+
+                    b.Property<int?>("SeasonNumber")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("season_number");
 
                     b.Property<string>("Title")
                         .IsRequired()

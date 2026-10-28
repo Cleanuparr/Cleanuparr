@@ -234,6 +234,14 @@ public class RadarrClient : ArrClient, IRadarrClient
             .ToHashSet();
     }
 
+    /// <inheritdoc/>
+    public async Task<List<SearchableMovie>> GetMissingMoviesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+        await GetAllWantedAsync<SearchableMovie>(arrInstance, "missing", monitored, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<List<SearchableMovie>> GetCutoffUnmetMoviesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+        await GetAllWantedAsync<SearchableMovie>(arrInstance, "cutoff", monitored, cancellationToken);
+
     private async Task<Movie?> GetMovie(ArrInstance arrInstance, long movieId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);

@@ -24,4 +24,14 @@ public interface IRadarrClient : IArrClient
     /// Fetches the ids of movies Radarr grabbed since the given time.
     /// </summary>
     Task<HashSet<long>> GetRecentlyGrabbedMovieIdsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches every movie Radarr lists as missing, filtered by monitored state.
+    /// </summary>
+    Task<List<SearchableMovie>> GetMissingMoviesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches every movie Radarr lists as a cutoff-unmet upgrade, filtered by monitored state.
+    /// </summary>
+    Task<List<SearchableMovie>> GetCutoffUnmetMoviesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default);
 }

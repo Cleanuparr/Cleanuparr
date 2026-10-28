@@ -23,8 +23,6 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private const int FetchConcurrency = 5;
     private static readonly TimeSpan HistoryRetention = TimeSpan.FromDays(120);
 
-    private sealed record SeriesFetch(SearchableSeries Series, List<SearchableEpisode> Episodes, List<ArrEpisodeFile> EpisodeFiles, bool Failed);
-
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly DataContext _dataContext;
     private readonly EventsContext _eventsContext;
@@ -266,7 +264,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string profileName = profile?.Name ?? "Unknown";
 
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now, seasonNumber: null, airDateUtc: null);
 
                 synced++;
             }
@@ -419,7 +417,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
 
                     existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now);
+                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now, episode.SeasonNumber, episode.AirDateUtc);
 
                     synced++;
                 }
@@ -514,7 +512,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
         int cutoffScore,
         string profileName,
         bool isMonitored,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        int? seasonNumber,
+        DateTimeOffset? airDateUtc)
     {
         if (existing is not null)
         {
@@ -545,6 +545,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
             existing.Title = title;
             existing.IsMonitored = isMonitored;
             existing.LastSyncedAt = now;
+            existing.SeasonNumber = seasonNumber;
+            existing.AirDateUtc = airDateUtc;
         }
         else
         {
@@ -561,6 +563,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 QualityProfileName = profileName,
                 IsMonitored = isMonitored,
                 LastSyncedAt = now,
+                SeasonNumber = seasonNumber,
+                AirDateUtc = airDateUtc,
             });
 
             // Record initial score in history
