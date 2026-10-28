@@ -4,6 +4,7 @@ import {
   NtfyAuthenticationType,
   NtfyPriority,
   PushoverPriority,
+  WebhookMethod,
 } from './enums';
 
 export interface NotificationEventFlags {
@@ -99,6 +100,12 @@ export interface CreateGotifyProviderRequest extends CreateProviderRequestBase {
   priority: number;
 }
 
+export interface CreateWebhookProviderRequest extends CreateProviderRequestBase {
+  url: string;
+  method: WebhookMethod;
+  headers: string[];
+}
+
 // Test request types (minimal, no event flags needed)
 
 export interface TestNotifiarrRequest {
@@ -159,6 +166,13 @@ export interface TestGotifyRequest {
   serverUrl: string;
   applicationToken: string;
   priority: number;
+  providerId?: string;
+}
+
+export interface TestWebhookRequest {
+  url: string;
+  method: WebhookMethod;
+  headers: string[];
   providerId?: string;
 }
 

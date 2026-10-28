@@ -5,6 +5,7 @@ import {
   NtfyAuthenticationType,
   NtfyPriority,
   PushoverPriority,
+  WebhookMethod,
 } from '@shared/models/enums';
 
 function baseModel(overrides: Partial<NotificationProviderFormModel> = {}): NotificationProviderFormModel {
@@ -36,6 +37,9 @@ function baseModel(overrides: Partial<NotificationProviderFormModel> = {}): Noti
     gotifyServerUrl: '',
     gotifyApplicationToken: '',
     gotifyPriority: '5',
+    webhookTargetUrl: '',
+    webhookMethod: WebhookMethod.Post,
+    webhookHeaders: [],
     pushoverApiToken: '',
     pushoverUserKey: '',
     pushoverDevices: [],
@@ -645,6 +649,49 @@ describe('NOTIFICATION_PROVIDER_DESCRIPTORS', () => {
 
     it('requires serverUrl and applicationToken', () => {
       expect(descriptor.requiredFields(baseModel())).toEqual(['gotifyServerUrl', 'gotifyApplicationToken']);
+    });
+  });
+
+  describe('Webhook', () => {
+    const descriptor = NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Webhook];
+
+    it('uses the webhook url segment', () => {
+      expect(descriptor.urlSegment).toBe('webhook');
+    });
+
+    it('builds a request', () => {
+      const model = baseModel({
+        webhookTargetUrl: 'https://example.com/hook',
+        webhookMethod: WebhookMethod.Put,
+        webhookHeaders: ['X-Api-Key: secret'],
+      });
+
+      expect(descriptor.buildRequest(model)).toEqual({
+        name: 'my provider',
+        url: 'https://example.com/hook',
+        method: WebhookMethod.Put,
+        headers: ['X-Api-Key: secret'],
+        isEnabled: true,
+        ...eventFlags,
+      });
+    });
+
+    it('builds a test request', () => {
+      const model = baseModel({
+        webhookTargetUrl: 'https://example.com/hook',
+        webhookHeaders: ['X-Api-Key: secret'],
+      });
+
+      expect(descriptor.buildTestRequest(model, 'p1')).toEqual({
+        url: 'https://example.com/hook',
+        method: WebhookMethod.Post,
+        headers: ['X-Api-Key: secret'],
+        providerId: 'p1',
+      });
+    });
+
+    it('requires only the url', () => {
+      expect(descriptor.requiredFields(baseModel())).toEqual(['webhookTargetUrl']);
     });
   });
 });

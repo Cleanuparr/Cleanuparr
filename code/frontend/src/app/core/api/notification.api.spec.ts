@@ -40,6 +40,7 @@ describe('NotificationApi', () => {
       [NotificationProviderType.Ntfy, 'ntfy'],
       [NotificationProviderType.Pushover, 'pushover'],
       [NotificationProviderType.Gotify, 'gotify'],
+      [NotificationProviderType.Webhook, 'webhook'],
     ])('creates %s provider via POST to /api/configuration/notification_providers/%s', (type, segment) => {
       const { api, post } = setup();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +65,7 @@ describe('NotificationApi', () => {
       [NotificationProviderType.Ntfy, 'ntfy'],
       [NotificationProviderType.Pushover, 'pushover'],
       [NotificationProviderType.Gotify, 'gotify'],
+      [NotificationProviderType.Webhook, 'webhook'],
     ])('updates %s provider via PUT to /api/configuration/notification_providers/%s/id-1', (type, segment) => {
       const { api, put } = setup();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,6 +90,7 @@ describe('NotificationApi', () => {
       [NotificationProviderType.Ntfy, 'ntfy'],
       [NotificationProviderType.Pushover, 'pushover'],
       [NotificationProviderType.Gotify, 'gotify'],
+      [NotificationProviderType.Webhook, 'webhook'],
     ])('tests %s provider via POST to /api/configuration/notification_providers/%s/test', (type, segment) => {
       const { api, post } = setup();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
