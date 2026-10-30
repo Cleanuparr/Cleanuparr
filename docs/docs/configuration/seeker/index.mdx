@@ -262,7 +262,9 @@ manual-only
   title="Active Download Limit"
 >
 
-When the number of items with bytes remaining to download (`SizeLeft > 0`) in the arr queue reaches this limit, the proactive search cycle is skipped for that instance. This prevents Seeker from triggering new searches while the download client is already busy.
+When the downloads in the arr queue reach this limit, Seeker skips the proactive search for that instance. This keeps Seeker from triggering new searches while the download client is busy.
+
+The count includes every download the client still works on, including torrents still fetching metadata and torrents queued in the client. Finished downloads waiting for import do not count.
 
 Only items that a download client has are counted. Items that are still queued inside the *arr application, such as releases held by a delay profile, are not counted.
 
