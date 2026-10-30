@@ -63,41 +63,12 @@ export class QBittorrentDriver implements TorrentClientDriver {
   }
 
   async addTorrent({ metainfo, savePath }: { metainfo: Buffer; savePath: string; name: string; infoHash: string }): Promise<void> {
-    const form = new FormData();
-    form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
-    form.append('savepath', savePath);
-    form.append('stopped', 'true');
-    form.append('paused', 'true');
-    form.append('skip_checking', 'true');
-    form.append('autoTMM', 'false');
-    const res = await fetch(`${this.directHost}/api/v2/torrents/add`, {
-      method: 'POST',
-      headers: this.cookie ? { Cookie: this.cookie } : undefined,
-      body: form,
-    });
-    if (!res.ok) {
-      throw new Error(`qBittorrent add failed: ${res.status} ${await res.text()}`);
-    }
+    await this.postAdd(this.torrentForm(metainfo), { savePath, started: false, skipChecking: true }, 'add');
   }
 
   /** Adds a categorised torrent that seeds at once, with the hash check skipped. */
   async addSeedingTorrent({ metainfo, savePath, category }: { metainfo: Buffer; savePath: string; category: string; infoHash: string }): Promise<void> {
-    const form = new FormData();
-    form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
-    form.append('savepath', savePath);
-    form.append('stopped', 'false');
-    form.append('paused', 'false');
-    form.append('skip_checking', 'true');
-    form.append('autoTMM', 'false');
-    form.append('category', category);
-    const res = await fetch(`${this.directHost}/api/v2/torrents/add`, {
-      method: 'POST',
-      headers: this.cookie ? { Cookie: this.cookie } : undefined,
-      body: form,
-    });
-    if (!res.ok) {
-      throw new Error(`qBittorrent add (seeding) failed: ${res.status} ${await res.text()}`);
-    }
+    await this.postAdd(this.torrentForm(metainfo), { savePath, category, started: true, skipChecking: true }, 'add (seeding)');
   }
 
   /**
@@ -108,21 +79,42 @@ export class QBittorrentDriver implements TorrentClientDriver {
    * Skipping it marks the torrent complete, and then nothing is left to download.
    */
   async addStalledTorrent({ metainfo, savePath, category }: { metainfo: Buffer; savePath: string; category: string }): Promise<void> {
+    await this.postAdd(this.torrentForm(metainfo), { savePath, category, started: true, skipChecking: false }, 'add (stalled)');
+  }
+
+  /** Adds a magnet unstopped, so qBittorrent keeps fetching its metadata. */
+  async addMagnet({ magnetUri, savePath, category }: { magnetUri: string; savePath: string; category: string }): Promise<void> {
+    const form = new FormData();
+    form.append('urls', magnetUri);
+    await this.postAdd(form, { savePath, category, started: true, skipChecking: false }, 'add (magnet)');
+  }
+
+  private torrentForm(metainfo: Buffer): FormData {
     const form = new FormData();
     form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
+    return form;
+  }
+
+  private async postAdd(
+    form: FormData,
+    { savePath, category, started, skipChecking }: { savePath: string; category?: string; started: boolean; skipChecking: boolean },
+    label: string,
+  ): Promise<void> {
     form.append('savepath', savePath);
-    form.append('stopped', 'false');
-    form.append('paused', 'false');
-    form.append('skip_checking', 'false');
+    form.append('stopped', String(!started));
+    form.append('paused', String(!started));
+    form.append('skip_checking', String(skipChecking));
     form.append('autoTMM', 'false');
-    form.append('category', category);
+    if (category) {
+      form.append('category', category);
+    }
     const res = await fetch(`${this.directHost}/api/v2/torrents/add`, {
       method: 'POST',
       headers: this.cookie ? { Cookie: this.cookie } : undefined,
       body: form,
     });
     if (!res.ok) {
-      throw new Error(`qBittorrent add (stalled) failed: ${res.status} ${await res.text()}`);
+      throw new Error(`qBittorrent ${label} failed: ${res.status} ${await res.text()}`);
     }
   }
 
