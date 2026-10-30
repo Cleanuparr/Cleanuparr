@@ -8,6 +8,7 @@ import {
   WHISPARR,
   WHISPARR2,
   addDecoyDownloads,
+  addMetadataDecoys,
   arrangeInstance,
   arrangeQueueCleaner,
   createStallRule,
@@ -248,6 +249,15 @@ test.describe('Seeker candidate filters', () => {
 
     const instanceId = await arrangeInstance(api, RADARR, { instance: { activeDownloadLimit: 1 } });
     await addDecoyDownloads(RADARR, 2);
+
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('skips the run while metadata downloads fill the limit', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { activeDownloadLimit: 1 } });
+    await addMetadataDecoys(RADARR, 2);
 
     await expectNoSearch(api, instanceId, SETTLE_MS);
   });

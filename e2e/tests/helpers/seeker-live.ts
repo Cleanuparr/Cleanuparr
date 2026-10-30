@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { rmSync, truncateSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect } from '@playwright/test';
@@ -417,6 +418,26 @@ export async function addDecoyDownloads(target: SeededArr, count: number): Promi
       return activeQueueCount(target);
     }, { timeout: 90_000 })
     .toBeGreaterThanOrEqual(count);
+}
+
+/** Queues magnets that never get metadata, so the arr reports them downloading with sizeleft 0. */
+export async function addMetadataDecoys(target: SeededArr, count: number): Promise<void> {
+  for (let i = 0; i < count; i++) {
+    const hash = randomBytes(20).toString('hex');
+    const magnetUri = `magnet:?xt=urn:btih:${hash}&dn=E2E.Metadata.${RUN_TAG}.${i}&tr=http://127.0.0.1:6969/announce`;
+
+    await qbittorrent.addMagnet({ magnetUri, savePath: '/downloads', category: target.downloadCategory });
+  }
+
+  await expect
+    .poll(async () => {
+      await target.arr.refreshMonitoredDownloads();
+      const records = await target.arr.queue();
+      return records.filter(
+        (record) => record.downloadId && record.sizeleft === 0 && record.trackedDownloadState === 'downloading',
+      ).length;
+    }, { timeout: 90_000 })
+    .toBe(count);
 }
 
 /** Records with bytes left, across every page of the queue. */

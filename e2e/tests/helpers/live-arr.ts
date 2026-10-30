@@ -13,7 +13,8 @@ export interface LiveArrQueueRecord {
   title: string;
   downloadId: string;
   status: string;
-  /** Bytes still to download. Cleanuparr counts a record as active only above zero. */
+  trackedDownloadState?: string;
+  /** Bytes still to download. */
   sizeleft: number;
   seriesId?: number;
   seasonNumber?: number;

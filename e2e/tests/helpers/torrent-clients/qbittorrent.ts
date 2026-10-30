@@ -126,6 +126,26 @@ export class QBittorrentDriver implements TorrentClientDriver {
     }
   }
 
+  /** Adds a magnet unstopped, so qBittorrent keeps fetching its metadata. */
+  async addMagnet({ magnetUri, savePath, category }: { magnetUri: string; savePath: string; category: string }): Promise<void> {
+    const form = new FormData();
+    form.append('urls', magnetUri);
+    form.append('savepath', savePath);
+    form.append('stopped', 'false');
+    form.append('paused', 'false');
+    form.append('skip_checking', 'false');
+    form.append('autoTMM', 'false');
+    form.append('category', category);
+    const res = await fetch(`${this.directHost}/api/v2/torrents/add`, {
+      method: 'POST',
+      headers: this.cookie ? { Cookie: this.cookie } : undefined,
+      body: form,
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent add (magnet) failed: ${res.status} ${await res.text()}`);
+    }
+  }
+
   /** The torrent's raw qBittorrent state string, or undefined when it is gone. */
   async getState(infoHash: string): Promise<string | undefined> {
     const res = await fetch(`${this.directHost}/api/v2/torrents/info?hashes=${infoHash.toLowerCase()}`, {
