@@ -1,6 +1,6 @@
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--divider);
+  box-shadow: inset 0 -1px 0 var(--divider);
   gap: var(--space-1);
   overflow-x: auto;
 
@@ -19,7 +19,6 @@
     white-space: nowrap;
     transition: color var(--duration-fast) var(--ease-default),
                 border-color var(--duration-fast) var(--ease-default);
-    margin-bottom: -1px;
 
     &:hover:not(:disabled) {
       color: var(--text-primary);
