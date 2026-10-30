@@ -327,7 +327,8 @@ public sealed class Seeker : IHandler
         if (instanceConfig.ActiveDownloadLimit > 0)
         {
             List<string> downloadIds = queueRecords
-                .Where(r => r.SizeLeft > 0 && !string.IsNullOrEmpty(r.DownloadId))
+                .Where(r => !string.IsNullOrEmpty(r.DownloadId)
+                            && (r.SizeLeft > 0 || r.TrackedDownloadState.Equals("downloading", StringComparison.InvariantCultureIgnoreCase)))
                 .Select(r => r.DownloadId.ToLowerInvariant())
                 .Distinct()
                 .ToList();
