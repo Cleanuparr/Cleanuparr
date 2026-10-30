@@ -92,11 +92,5 @@ public interface IArrClient
     /// <returns>Task that completes when the connection test is done</returns>
     Task HealthCheckAsync(ArrInstance arrInstance);
 
-    /// <summary>
-    /// Returns the number of items actively downloading (SizeLeft > 0) across all queue pages.
-    /// Items that are completed, import-blocked, or otherwise finished are not counted.
-    /// </summary>
-    Task<int> GetActiveDownloadCountAsync(ArrInstance arrInstance);
-
     Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance);
 }
