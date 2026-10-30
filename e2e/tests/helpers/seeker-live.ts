@@ -422,12 +422,14 @@ export async function addDecoyDownloads(target: SeededArr, count: number): Promi
 
 /** Queues magnets that never get metadata, so the arr reports them downloading with sizeleft 0. */
 export async function addMetadataDecoys(target: SeededArr, count: number): Promise<void> {
-  for (let i = 0; i < count; i++) {
-    const hash = randomBytes(20).toString('hex');
-    const magnetUri = `magnet:?xt=urn:btih:${hash}&dn=E2E.Metadata.${RUN_TAG}.${i}&tr=http://127.0.0.1:6969/announce`;
+  await Promise.all(
+    Array.from({ length: count }, (_, i) => {
+      const hash = randomBytes(20).toString('hex');
+      const magnetUri = `magnet:?xt=urn:btih:${hash}&dn=E2E.Metadata.${RUN_TAG}.${i}&tr=http://127.0.0.1:6969/announce`;
 
-    await qbittorrent.addMagnet({ magnetUri, savePath: '/downloads', category: target.downloadCategory });
-  }
+      return qbittorrent.addMagnet({ magnetUri, savePath: '/downloads', category: target.downloadCategory });
+    }),
+  );
 
   await expect
     .poll(async () => {
