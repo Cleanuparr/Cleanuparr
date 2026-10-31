@@ -13,6 +13,7 @@ public class ArrClientFactoryTests
     private readonly IRadarrClient _radarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IReadarrClient _readarrClient;
+    private readonly IChaptarrClient _chaptarrClient;
     private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
@@ -24,6 +25,7 @@ public class ArrClientFactoryTests
         _radarrClient = Substitute.For<IRadarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
         _readarrClient = Substitute.For<IReadarrClient>();
+        _chaptarrClient = Substitute.For<IChaptarrClient>();
         _sportarrClient = Substitute.For<ISportarrClient>();
         _whisparrClient = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
@@ -33,6 +35,7 @@ public class ArrClientFactoryTests
             _radarrClient,
             _lidarrClient,
             _readarrClient,
+            _chaptarrClient,
             _sportarrClient,
             _whisparrClient,
             _whisparrV3Client
@@ -79,6 +82,16 @@ public class ArrClientFactoryTests
 
         // Assert
         result.ShouldBeSameAs(_readarrClient);
+    }
+
+    [Fact]
+    public void GetClient_Chaptarr_ReturnsChaptarrClient()
+    {
+        // Act
+        IArrClient result = _factory.GetClient(InstanceType.Chaptarr, 0);
+
+        // Assert
+        result.ShouldBeSameAs(_chaptarrClient);
     }
 
     [Fact]

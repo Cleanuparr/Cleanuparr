@@ -45,6 +45,7 @@ public class InstanceHealthCheckerTests
     [InlineData(InstanceType.Readarr)]
     [InlineData(InstanceType.Whisparr)]
     [InlineData(InstanceType.Sportarr)]
+    [InlineData(InstanceType.Chaptarr)]
     public async Task CheckAsync_Arr_UsesTheVersionedClient(InstanceType type)
     {
         // Arrange

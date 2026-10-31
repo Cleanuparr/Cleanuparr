@@ -82,6 +82,9 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(InstanceType.Readarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Readarr, cancellationToken));
+            ContextProvider.Set(nameof(InstanceType.Chaptarr), await _dataContext.ArrConfigs.AsNoTracking()
+                .Include(x => x.Instances)
+                .FirstAsync(x => x.Type == InstanceType.Chaptarr, cancellationToken));
             ContextProvider.Set(nameof(InstanceType.Whisparr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Whisparr, cancellationToken));
@@ -251,7 +254,7 @@ public abstract class GenericHandler : IHandler
             {
                 Id = record.AlbumId
             },
-            InstanceType.Readarr => new SearchItem
+            InstanceType.Readarr or InstanceType.Chaptarr => new SearchItem
             {
                 Id = record.BookId
             },

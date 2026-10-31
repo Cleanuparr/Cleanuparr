@@ -9,6 +9,7 @@ public sealed class ArrClientFactory : IArrClientFactory
     private readonly IRadarrClient _radarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IReadarrClient _readarrClient;
+    private readonly IChaptarrClient _chaptarrClient;
     private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
@@ -18,6 +19,7 @@ public sealed class ArrClientFactory : IArrClientFactory
         IRadarrClient radarrClient,
         ILidarrClient lidarrClient,
         IReadarrClient readarrClient,
+        IChaptarrClient chaptarrClient,
         ISportarrClient sportarrClient,
         IWhisparrV2Client whisparrV2Client,
         IWhisparrV3Client whisparrV3Client
@@ -27,6 +29,7 @@ public sealed class ArrClientFactory : IArrClientFactory
         _radarrClient = radarrClient;
         _lidarrClient = lidarrClient;
         _readarrClient = readarrClient;
+        _chaptarrClient = chaptarrClient;
         _sportarrClient = sportarrClient;
         _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
@@ -40,6 +43,7 @@ public sealed class ArrClientFactory : IArrClientFactory
             InstanceType.Radarr => _radarrClient,
             InstanceType.Lidarr => _lidarrClient,
             InstanceType.Readarr => _readarrClient,
+            InstanceType.Chaptarr => _chaptarrClient,
             InstanceType.Whisparr when instanceVersion is 2 => _whisparrV2Client,
             InstanceType.Whisparr when instanceVersion is 3 => _whisparrV3Client,
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")

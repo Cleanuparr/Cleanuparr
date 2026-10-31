@@ -67,7 +67,8 @@ public static class SeekerTestDataFactory
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Lidarr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Readarr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Whisparr, Instances = [], FailedImportMaxStrikes = 3 },
-            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Sportarr, Instances = [], FailedImportMaxStrikes = 3 }
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Sportarr, Instances = [], FailedImportMaxStrikes = 3 },
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Chaptarr, Instances = [], FailedImportMaxStrikes = 3 }
         );
 
         context.QueueCleanerConfigs.Add(new QueueCleanerConfig
@@ -87,7 +88,8 @@ public static class SeekerTestDataFactory
             Lidarr = new BlocklistSettings { Enabled = false },
             Readarr = new BlocklistSettings { Enabled = false },
             Whisparr = new BlocklistSettings { Enabled = false },
-            Sportarr = new BlocklistSettings { Enabled = false }
+            Sportarr = new BlocklistSettings { Enabled = false },
+            Chaptarr = new BlocklistSettings { Enabled = false }
         });
 
         context.DownloadCleanerConfigs.Add(new DownloadCleanerConfig
