@@ -1034,7 +1034,7 @@ public sealed class SeekerUnitEvaluator
             SeekerExclusionReason? ebookExclusion = GetTagExclusion(author.EbookTags, tagsById, skipTagSet, includeTagSet);
             if (audiobookExclusion is not null && ebookExclusion is not null)
             {
-                exclusions.Add(new SeekerExclusion(author.AuthorName, audiobookExclusion.Value));
+                exclusions.Add(new SeekerExclusion(author.AuthorName, Strongest(audiobookExclusion, ebookExclusion)!.Value));
                 continue;
             }
 
@@ -1071,12 +1071,15 @@ public sealed class SeekerUnitEvaluator
                 return false;
             }
 
-            // An unknown side is kept only when neither side is excluded
+            // An unknown side drops out only on a skip tag
             SeekerExclusionReason? tagExclusion = b.MediaType switch
             {
                 ChaptarrMediaType.Audiobook => audiobookExclusions[b.AuthorId],
                 ChaptarrMediaType.Ebook => ebookExclusions[b.AuthorId],
-                _ => audiobookExclusions[b.AuthorId] ?? ebookExclusions[b.AuthorId],
+                _ => audiobookExclusions[b.AuthorId] is SeekerExclusionReason.SkipTag
+                    || ebookExclusions[b.AuthorId] is SeekerExclusionReason.SkipTag
+                        ? SeekerExclusionReason.SkipTag
+                        : null,
             };
             if (tagExclusion is not null)
             {
@@ -1447,6 +1450,16 @@ public sealed class SeekerUnitEvaluator
         }
 
         return IsMoviePastGracePeriod(movie, graceCutoff) ? null : SeekerExclusionReason.InGracePeriod;
+    }
+
+    /// <summary>
+    /// Returns the stronger of two tag exclusions. A skip tag wins.
+    /// </summary>
+    private static SeekerExclusionReason? Strongest(SeekerExclusionReason? a, SeekerExclusionReason? b)
+    {
+        return a is SeekerExclusionReason.SkipTag || b is SeekerExclusionReason.SkipTag
+            ? SeekerExclusionReason.SkipTag
+            : a ?? b;
     }
 
     /// <summary>
