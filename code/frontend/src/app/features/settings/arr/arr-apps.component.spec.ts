@@ -147,8 +147,8 @@ describe('ArrAppsComponent', () => {
     const chaptarrCard = cards.find((el) => el.textContent!.includes('Chaptarr'))!;
     const otherCards = cards.filter((el) => el !== chaptarrCard);
 
-    expect(chaptarrCard.querySelector('app-new-badge .new-pill')).not.toBeNull();
-    otherCards.forEach((card) => expect(card.querySelector('.new-pill')).toBeNull());
+    expect(chaptarrCard.querySelector('app-new-badge .new-ribbon')).not.toBeNull();
+    otherCards.forEach((card) => expect(card.querySelector('.new-ribbon')).toBeNull());
   });
 
   it('shows the experimental badge on the lazylibrarian selection card only', () => {
