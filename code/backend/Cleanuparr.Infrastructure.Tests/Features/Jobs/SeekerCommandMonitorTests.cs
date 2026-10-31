@@ -628,6 +628,8 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>())
             .Returns([new ArrCommandStatus(7, ArrCommandState.Started, null)]);
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), 42)
+            .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
         _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
             .Returns(new QueueListResponse());
 
@@ -640,6 +642,35 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         // Assert
         publishedStatus.ShouldBe(SearchCommandStatus.Completed);
+    }
+
+    [Fact]
+    public async Task Keeps_a_command_that_is_missing_from_the_command_list_but_still_queued()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid(), commandId: 42);
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetCommandsAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrCommandStatus(7, ArrCommandState.Started, null)]);
+        _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), 42)
+            .Returns(new ArrCommandStatus(42, ArrCommandState.Queued, null));
+
+        Task secondPoll = CaptureNthPoll(2);
+        CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        await AdvanceUntilAsync(secondPoll);
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+
+        SeekerCommandTracker tracker = _eventsContext.SeekerCommandTrackers.AsNoTracking().Single();
+        tracker.Status.ShouldNotBe(SearchCommandStatus.Completed);
     }
 
     [Fact]

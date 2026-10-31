@@ -198,7 +198,7 @@ public class SeekerCommandMonitor : BackgroundService
                 continue;
             }
 
-            MarkForgottenCommandAsCompleted(tracker, arrInstance);
+            await PollSingleCommandAsync(arrClient, arrInstance, tracker, eventPublisher);
         }
     }
 
