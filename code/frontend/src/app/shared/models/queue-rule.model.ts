@@ -1,4 +1,4 @@
-import { TorrentPrivacyType } from './enums';
+import { QueueRuleContentType, TorrentPrivacyType } from './enums';
 
 export interface QueueRule {
   id?: string;
@@ -6,6 +6,7 @@ export interface QueueRule {
   enabled: boolean;
   maxStrikes: number;
   privacyType: TorrentPrivacyType;
+  contentType: QueueRuleContentType;
   minCompletionPercentage: number;
   maxCompletionPercentage: number;
   deletePrivateTorrentsFromClient: boolean;
@@ -30,6 +31,7 @@ export interface CreateStallRuleDto {
   enabled: boolean;
   maxStrikes: number;
   privacyType: TorrentPrivacyType;
+  contentType: QueueRuleContentType;
   minCompletionPercentage: number;
   maxCompletionPercentage: number;
   resetStrikesOnProgress: boolean;
@@ -43,6 +45,7 @@ export interface CreateSlowRuleDto {
   enabled: boolean;
   maxStrikes: number;
   privacyType: TorrentPrivacyType;
+  contentType: QueueRuleContentType;
   minCompletionPercentage: number;
   maxCompletionPercentage: number;
   resetStrikesOnProgress: boolean;

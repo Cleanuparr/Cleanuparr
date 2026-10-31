@@ -132,6 +132,7 @@ public class QueueCleanerResponseContractTests : IDisposable
     private static readonly string[] StallRuleKeys =
     [
         "changeCategory",
+        "contentType",
         "deletePrivateTorrentsFromClient",
         "enabled",
         "id",
@@ -147,6 +148,7 @@ public class QueueCleanerResponseContractTests : IDisposable
     private static readonly string[] SlowRuleKeys =
     [
         "changeCategory",
+        "contentType",
         "deletePrivateTorrentsFromClient",
         "enabled",
         "id",

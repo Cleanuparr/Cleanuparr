@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public class WhisparrV3Client : ArrClient, IWhisparrV3Client
+public class WhisparrV3Client : ArrClient, IWhisparrV3Client, IUpgradeDetectionCapable
 {
     public WhisparrV3Client(
         ILogger<WhisparrV3Client> logger,
@@ -24,7 +24,11 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
     {
     }
-    
+
+    /// <inheritdoc/>
+    public bool IsUpgrade(IReadOnlyList<QueueRecord> records) =>
+        records.Count > 0 && records.All(record => record.Movie?.MovieFileId > 0);
+
     protected override string ApiVersion => "v3";
 
     protected override string GetSystemStatusUrlPath()

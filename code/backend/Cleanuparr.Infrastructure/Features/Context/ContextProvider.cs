@@ -79,5 +79,6 @@ public static class ContextProvider
         public const string DownloadClientName = "downloadClientName";
         public const string ArrInstanceId = "arrInstanceId";
         public const string ArrInstanceUrl = "arrInstanceUrl";
+        public const string IsUpgrade = "isUpgrade";
     }
 }

@@ -156,10 +156,10 @@
           <ng-icon name="tablerAlertTriangle" size="16" class="coverage-warning__icon" />
           <div class="coverage-warning__content">
             <strong class="coverage-warning__title">Coverage Gaps Detected</strong>
-            <p class="coverage-warning__desc">Your stall rules don't cover all completion percentage ranges for all privacy types. Torrents in uncovered ranges won't be processed by stall rules.</p>
+            <p class="coverage-warning__desc">Your stall rules don't cover all completion percentage ranges for all privacy and content types. Torrents in uncovered ranges won't be processed by stall rules.</p>
             <div class="coverage-warning__gaps">
               @for (gap of stallCoverage().gaps; track $index) {
-                <div class="coverage-warning__gap"><strong>{{ gap.privacyType }} torrents:</strong> {{ gap.from }}% - {{ gap.to }}% completion not covered</div>
+                <div class="coverage-warning__gap"><strong>{{ gap.privacyType }} / {{ gap.contentType }} torrents:</strong> {{ gap.from }}% - {{ gap.to }}% completion not covered</div>
               }
             </div>
           </div>
@@ -189,6 +189,7 @@
           <div class="rule-card__badges">
             <app-badge [severity]="rule.enabled ? 'success' : 'default'">{{ rule.enabled ? 'Enabled' : 'Disabled' }}</app-badge>
             <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+            <app-badge severity="info">{{ rule.contentType }}</app-badge>
             <app-badge>{{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</app-badge>
           </div>
           <div class="rule-card__details">
@@ -215,10 +216,10 @@
           <ng-icon name="tablerAlertTriangle" size="16" class="coverage-warning__icon" />
           <div class="coverage-warning__content">
             <strong class="coverage-warning__title">Coverage Gaps Detected</strong>
-            <p class="coverage-warning__desc">Your slow rules don't cover all completion percentage ranges for all privacy types. Torrents in uncovered ranges won't be processed by slow rules.</p>
+            <p class="coverage-warning__desc">Your slow rules don't cover all completion percentage ranges for all privacy and content types. Torrents in uncovered ranges won't be processed by slow rules.</p>
             <div class="coverage-warning__gaps">
               @for (gap of slowCoverage().gaps; track $index) {
-                <div class="coverage-warning__gap"><strong>{{ gap.privacyType }} torrents:</strong> {{ gap.from }}% - {{ gap.to }}% completion not covered</div>
+                <div class="coverage-warning__gap"><strong>{{ gap.privacyType }} / {{ gap.contentType }} torrents:</strong> {{ gap.from }}% - {{ gap.to }}% completion not covered</div>
               }
             </div>
           </div>
@@ -248,6 +249,7 @@
           <div class="rule-card__badges">
             <app-badge [severity]="rule.enabled ? 'success' : 'default'">{{ rule.enabled ? 'Enabled' : 'Disabled' }}</app-badge>
             <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+            <app-badge severity="info">{{ rule.contentType }}</app-badge>
             <app-badge>{{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</app-badge>
             @if (rule.minSpeed) {
               <app-badge severity="warning">{{ rule.minSpeed }}</app-badge>

@@ -9,7 +9,7 @@ import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { SlowRule, CreateSlowRuleDto } from '@shared/models/queue-rule.model';
-import { TorrentPrivacyType } from '@shared/models/enums';
+import { QueueRuleContentType, TorrentPrivacyType } from '@shared/models/enums';
 
 interface SlowRuleFormModel {
   name: string;
@@ -18,6 +18,7 @@ interface SlowRuleFormModel {
   minSpeed: string;
   maxTimeHours: number | null;
   privacyType: TorrentPrivacyType;
+  contentType: QueueRuleContentType;
   minCompletion: number | null;
   maxCompletion: number | null;
   ignoreAboveSize: string;
@@ -31,6 +32,12 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Public', value: TorrentPrivacyType.Public },
   { label: 'Private', value: TorrentPrivacyType.Private },
   { label: 'Both', value: TorrentPrivacyType.Both },
+];
+
+const CONTENT_TYPE_OPTIONS: SelectOption[] = [
+  { label: 'All', value: QueueRuleContentType.All },
+  { label: 'New', value: QueueRuleContentType.New },
+  { label: 'Upgrade', value: QueueRuleContentType.Upgrade },
 ];
 
 @Component({
@@ -53,6 +60,7 @@ export class SlowRuleModalComponent {
   readonly saved = output<void>();
 
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
+  readonly contentTypeOptions = CONTENT_TYPE_OPTIONS;
   readonly speedUnits: SizeUnit[] = [
     { label: 'KB/s', value: 'KB' },
     { label: 'MB/s', value: 'MB' },
@@ -71,7 +79,8 @@ export class SlowRuleModalComponent {
 
   private readonly defaults: SlowRuleFormModel = {
     name: '', enabled: true, maxStrikes: 3, minSpeed: '', maxTimeHours: 0,
-    privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100,
+    privacyType: TorrentPrivacyType.Both, contentType: QueueRuleContentType.All,
+    minCompletion: 0, maxCompletion: 100,
     ignoreAboveSize: '', resetOnProgress: false, ignoreWhileAltSpeedActive: true,
     deletePrivate: false, changeCategory: false,
   };
@@ -112,6 +121,7 @@ export class SlowRuleModalComponent {
           minSpeed: r.minSpeed,
           maxTimeHours: r.maxTimeHours,
           privacyType: r.privacyType,
+          contentType: r.contentType,
           minCompletion: r.minCompletionPercentage,
           maxCompletion: r.maxCompletionPercentage,
           ignoreAboveSize: r.ignoreAboveSize ?? '',
@@ -147,6 +157,7 @@ export class SlowRuleModalComponent {
       enabled: m.enabled,
       maxStrikes: m.maxStrikes ?? 3,
       privacyType: m.privacyType,
+      contentType: m.contentType,
       minCompletionPercentage: m.minCompletion ?? 0,
       maxCompletionPercentage: m.maxCompletion ?? 100,
       resetStrikesOnProgress: m.resetOnProgress,

@@ -21,6 +21,10 @@ import { torznabSearchStub } from '../helpers/mocks/torznab-stubs';
  *
  * The seed leaves the second movie unmonitored, so every other spec sees one
  * candidate. These tests monitor it and the teardown puts the library back.
+ *
+ * The seed also gives a third movie a file, for the #381 upgrade-detection specs.
+ * Its profile never allows upgrades, so the Seeker never selects it.
+ * monitorEveryMovie() leaves it out of the candidate pool.
  */
 
 const SETTLE_MS = 20_000;
@@ -32,7 +36,9 @@ interface Candidate {
 }
 
 async function monitorEveryMovie(): Promise<Candidate[]> {
-  const movies = await RADARR.arr.get<Array<Record<string, unknown>>>('/api/v3/movie');
+  const movies = (await RADARR.arr.get<Array<Record<string, unknown>>>('/api/v3/movie')).filter(
+    (movie) => !movie.hasFile,
+  );
 
   for (const movie of movies) {
     if (!movie.monitored) {

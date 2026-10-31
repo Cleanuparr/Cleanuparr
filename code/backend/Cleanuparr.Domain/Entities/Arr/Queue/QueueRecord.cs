@@ -27,6 +27,11 @@ public sealed record QueueRecord
     /// </summary>
     public QueueSeries? Series { get; init; }
 
+    /// <summary>
+    /// The data about the episode.
+    /// </summary>
+    public QueueEpisode? Episode { get; init; }
+
     // Radarr and Whisparr v3
     /// <summary>
     /// The ID of the movie.

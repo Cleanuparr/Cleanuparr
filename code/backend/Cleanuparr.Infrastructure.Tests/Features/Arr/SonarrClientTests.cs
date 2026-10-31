@@ -128,6 +128,45 @@ public class SonarrClientTests
 
     #endregion
 
+    #region IsUpgrade
+
+    [Fact]
+    public void IsUpgrade_SingleRecordWithFile_ReturnsTrue()
+    {
+        var record = new QueueRecord { Episode = new QueueEpisode { HasFile = true } };
+        _client.IsUpgrade([record]).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsUpgrade_SingleRecordWithoutFile_ReturnsFalse()
+    {
+        var record = new QueueRecord { Episode = new QueueEpisode { HasFile = false } };
+        _client.IsUpgrade([record]).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsUpgrade_SeasonPackWithOneMissingEpisode_ReturnsFalse()
+    {
+        var withFile = new QueueRecord { Episode = new QueueEpisode { HasFile = true } };
+        var withoutFile = new QueueRecord { Episode = new QueueEpisode { HasFile = false } };
+        _client.IsUpgrade([withFile, withoutFile]).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsUpgrade_RecordMissingEpisode_ReturnsFalse()
+    {
+        var record = new QueueRecord { Episode = null };
+        _client.IsUpgrade([record]).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsUpgrade_NoRecords_ReturnsFalse()
+    {
+        _client.IsUpgrade([]).ShouldBeFalse();
+    }
+
+    #endregion
+
     #region SearchItemsAsync
 
     [Fact]

@@ -14,6 +14,8 @@ public abstract record QueueRuleResponse
 
     public TorrentPrivacyType PrivacyType { get; init; }
 
+    public QueueRuleContentType ContentType { get; init; }
+
     public ushort MinCompletionPercentage { get; init; }
 
     public ushort MaxCompletionPercentage { get; init; }

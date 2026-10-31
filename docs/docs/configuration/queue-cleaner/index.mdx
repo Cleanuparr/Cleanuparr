@@ -484,6 +484,23 @@ Determines which torrents this rule applies to:
 </ConfigSection>
 
 <ConfigSection
+  title="Applies To"
+>
+
+Determines which downloads this rule applies to:
+- **New**: The item has no file in the *arr.
+- **Upgrade**: Every episode or movie in the download has a file in the *arr.
+- **All**: Rule applies to both new downloads and upgrades.
+
+<Important>
+Sonarr, Radarr, Whisparr v2 and Whisparr v3 detect upgrades.
+Lidarr, Readarr, Sportarr and LazyLibrarian cannot tell new downloads from upgrades.
+Their items match **All** rules and nothing else.
+</Important>
+
+</ConfigSection>
+
+<ConfigSection
   title="Completion Percentage Range"
 >
 
@@ -607,6 +624,23 @@ Determines which torrents this rule applies to:
 - **Public Torrents Only**: Rule only applies to public torrents
 - **Private Torrents Only**: Rule only applies to private torrents
 - **Public and Private Torrents**: Rule applies to all torrents
+
+</ConfigSection>
+
+<ConfigSection
+  title="Applies To"
+>
+
+Determines which downloads this rule applies to:
+- **New**: The item has no file in the *arr.
+- **Upgrade**: Every episode or movie in the download has a file in the *arr.
+- **All**: Rule applies to both new downloads and upgrades.
+
+<Important>
+Sonarr, Radarr, Whisparr v2 and Whisparr v3 detect upgrades.
+Lidarr, Readarr, Sportarr and LazyLibrarian cannot tell new downloads from upgrades.
+Their items match **All** rules and nothing else.
+</Important>
 
 </ConfigSection>
 
