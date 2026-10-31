@@ -85,13 +85,9 @@ public class ChaptarrClientTests
         authors[0].Id.ShouldBe(7);
         authors[0].AuthorName.ShouldBe("Author");
         authors[0].Monitored.ShouldBeTrue();
-        authors[0].AudiobookMonitored.ShouldBe(true);
-        authors[0].EbookMonitored.ShouldBe(false);
         authors[0].AudiobookTags.ShouldBe([1L, 2L]);
         authors[0].EbookTags.ShouldBe([3L]);
         authors[0].Added.ShouldBe(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero));
-        authors[1].AudiobookMonitored.ShouldBeNull();
-        authors[1].EbookMonitored.ShouldBeNull();
         authors[1].AudiobookTags.ShouldBeEmpty();
         authors[1].EbookTags.ShouldBeEmpty();
         authors[1].Added.ShouldBeNull();
