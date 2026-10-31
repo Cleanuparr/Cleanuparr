@@ -87,6 +87,8 @@ function libraryLabel(instanceType: string, instanceVersion: number): string {
       return instanceVersion === 2 ? 'sites' : 'movies';
     case 'Lidarr':
       return 'artists';
+    case 'Chaptarr':
+      return 'authors';
     default:
       return 'movies';
   }

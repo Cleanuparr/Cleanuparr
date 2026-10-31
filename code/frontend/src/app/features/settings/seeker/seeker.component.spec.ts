@@ -569,6 +569,24 @@ describe('SeekerComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
   });
 
+  it('marks a Chaptarr row as new and hides the custom format score toggle', () => {
+    const chaptarr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Chaptarr', instanceType: 'Chaptarr', enabled: true, useCustomFormatScore: false };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [chaptarr] } });
+
+    const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
+    expect(badge.getAttribute('featureId')).toBe('seeker-chaptarr');
+    expect(releaseGateSelect(fixture, 0)).toBeUndefined();
+    expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
+    expect(fixture.nativeElement.textContent).not.toContain('Use Custom Format Score');
+  });
+
+  it('shows the custom format score toggle for a Radarr row', () => {
+    const radarr: SeekerInstanceConfig = { ...RADARR, enabled: true };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [radarr] } });
+
+    expect(fixture.nativeElement.textContent).toContain('Use Custom Format Score');
+  });
+
   it('sends the picked release gate for the Radarr row only', () => {
     const { fixture, updateConfig } = setup();
 

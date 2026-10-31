@@ -99,6 +99,9 @@
                 @if (instance.instanceType === 'Lidarr') {
                   <app-new-badge variant="inline" featureId="seeker-lidarr" />
                 }
+                @if (instance.instanceType === 'Chaptarr') {
+                  <app-new-badge variant="inline" featureId="seeker-chaptarr" />
+                }
               </div>
               <app-toggle [checked]="instance.enabled" [disabled]="!instance.arrInstanceEnabled" (checkedChange)="toggleInstance($index)" helpKey="seeker:enabled" />
             </div>
@@ -117,10 +120,12 @@
                   hint="Skip items that have already met their quality cutoff"
                   (checkedChange)="patchInstance($index, { useCutoff: $event })"
                   helpKey="seeker:useCutoff" />
-                <app-toggle label="Use Custom Format Score" [checked]="instance.useCustomFormatScore"
-                  hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
-                  (checkedChange)="patchInstance($index, { useCustomFormatScore: $event })"
-                  helpKey="seeker:useCustomFormatScore" />
+                @if (readsCustomFormatScores(instance)) {
+                  <app-toggle label="Use Custom Format Score" [checked]="instance.useCustomFormatScore"
+                    hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
+                    (checkedChange)="patchInstance($index, { useCustomFormatScore: $event })"
+                    helpKey="seeker:useCustomFormatScore" />
+                }
                 @if (searchesEpisodes(instance)) {
                   <app-select label="Search Mode" [options]="sonarrSearchModeOptions" [value]="instance.sonarrSearchMode"
                     (valueChange)="updateInstanceSonarrSearchMode($index, $event)"
