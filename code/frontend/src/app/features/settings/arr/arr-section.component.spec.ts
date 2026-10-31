@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { ArrApi } from '@core/api/arr.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
+import { FeatureBadgeService } from '@core/feature-badges/feature-badge.service';
 import { ThemeService } from '@core/services/theme.service';
 import { ArrConfig, ArrInstance } from '@shared/models/arr-config.model';
 import type { ArrType } from '@shared/models/enums';
@@ -90,6 +91,7 @@ describe('ArrSectionComponent', () => {
         { provide: ArrApi, useValue: api },
         { provide: ToastService, useValue: toast },
         { provide: ThemeService, useValue: theme },
+        { provide: FeatureBadgeService, useValue: { isNew: () => true } },
       ],
     });
 
@@ -161,6 +163,18 @@ describe('ArrSectionComponent', () => {
 
     expect(fixture.nativeElement.querySelector('.section-header__title app-badge')).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Experimental');
+  });
+
+  it('shows the NEW ribbon for an arr type with a feature id', () => {
+    const { fixture } = setup('chaptarr', { ...CONFIG, instances: [] });
+
+    expect(fixture.nativeElement.querySelector('.new-ribbon')).not.toBeNull();
+  });
+
+  it('hides the NEW ribbon for an arr type without a feature id', () => {
+    const { fixture } = setup('sonarr');
+
+    expect(fixture.nativeElement.querySelector('.new-ribbon')).toBeNull();
   });
 
   it('hides the experimental badge for a non-experimental arr type', () => {

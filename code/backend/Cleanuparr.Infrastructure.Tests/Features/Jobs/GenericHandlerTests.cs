@@ -128,6 +128,19 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     }
 
     [Fact]
+    public void GetRecordSearchItem_Chaptarr_ReturnsBookIdSearchItem()
+    {
+        // Arrange
+        QueueRecord record = NewRecord(bookId: 42);
+
+        // Act
+        SearchItem item = _handler.PublicGetRecordSearchItem(InstanceType.Chaptarr, 1f, record);
+
+        // Assert
+        item.Id.ShouldBe(42);
+    }
+
+    [Fact]
     public void GetRecordSearchItem_WhisparrV2SingleEpisode_ReturnsSeriesSearchItem()
     {
         // Arrange

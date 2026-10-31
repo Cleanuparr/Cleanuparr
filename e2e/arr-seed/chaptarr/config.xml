@@ -1,0 +1,29 @@
+<Config>
+  <BindAddress>*</BindAddress>
+  <Port>8789</Port>
+  <EnableSsl>False</EnableSsl>
+  <LaunchBrowser>False</LaunchBrowser>
+  <ApiKey>0000000000000000000000000000e2e9</ApiKey>
+  <AuthenticationMethod>External</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <Branch>main</Branch>
+  <LogLevel>info</LogLevel>
+  <UrlBase></UrlBase>
+  <InstanceName>Chaptarr</InstanceName>
+  <UpdateMechanism>BuiltIn</UpdateMechanism>
+  <SslPort>6868</SslPort>
+  <AuthCookieStamp>2c0d186674764da581e92bd73dc6243f</AuthCookieStamp>
+  <OidcAuthority></OidcAuthority>
+  <OidcClientId></OidcClientId>
+  <OidcClientSecret></OidcClientSecret>
+  <OidcScopes>openid profile email</OidcScopes>
+  <OidcAllowedEmails></OidcAllowedEmails>
+  <OidcAllowedEmailDomains></OidcAllowedEmailDomains>
+  <OidcRequireEmailVerified>True</OidcRequireEmailVerified>
+  <OidcAllowAnyVerifiedUser>False</OidcAllowAnyVerifiedUser>
+  <PlexAuthUserId></PlexAuthUserId>
+  <PlexAuthUsername></PlexAuthUsername>
+  <SslCertPath></SslCertPath>
+  <SslCertPassword></SslCertPassword>
+  <InstallationId>1cf7042c-c5c3-4d91-837f-13f224b072bd</InstallationId>
+</Config>

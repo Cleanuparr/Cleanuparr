@@ -2,13 +2,14 @@ import type { ArrType } from '@shared/models/enums';
 import type { ArrAppMeta } from './arr-app-meta.model';
 
 export const ARR_TYPES: ArrType[] = [
-  'sonarr',
-  'radarr',
-  'lidarr',
-  'readarr',
-  'whisparr',
-  'sportarr',
+  'chaptarr',
   'lazylibrarian',
+  'lidarr',
+  'radarr',
+  'readarr',
+  'sonarr',
+  'sportarr',
+  'whisparr',
 ];
 
 export const ARR_APP_META: Record<ArrType, ArrAppMeta> = {
@@ -39,6 +40,14 @@ export const ARR_APP_META: Record<ArrType, ArrAppMeta> = {
     defaultPort: 8787,
     experimental: false,
     iconSrc: 'icons/ext/readarr-light.svg',
+  },
+  chaptarr: {
+    displayName: 'Chaptarr',
+    versionOptions: [{ label: 'v0.9', value: 0.9 }],
+    defaultPort: 8789,
+    experimental: false,
+    iconSrc: 'icons/ext/chaptarr-light.svg',
+    featureId: 'chaptarr',
   },
   whisparr: {
     displayName: 'Whisparr',

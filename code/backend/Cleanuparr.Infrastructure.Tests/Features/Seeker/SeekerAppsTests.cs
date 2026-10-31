@@ -27,14 +27,30 @@ public class SeekerAppsTests
     [InlineData(InstanceType.Whisparr, 3, true)]
     [InlineData(InstanceType.Lidarr, 0, true)]
     [InlineData(InstanceType.Lidarr, 2, true)]
+    [InlineData(InstanceType.Chaptarr, 0, true)]
     [InlineData(InstanceType.Readarr, 0, false)]
-    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrAndWhisparr(InstanceType type, float version, bool expected)
+    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrChaptarrAndWhisparr(InstanceType type, float version, bool expected)
     {
         // Act
         bool supported = SeekerApps.IsSupported(Instance(type, version));
 
         // Assert
         supported.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(InstanceType.Sonarr, true)]
+    [InlineData(InstanceType.Radarr, true)]
+    [InlineData(InstanceType.Lidarr, true)]
+    [InlineData(InstanceType.Whisparr, true)]
+    [InlineData(InstanceType.Chaptarr, false)]
+    public void ReadsCustomFormatScores_ReturnsFalseOnlyForChaptarr(InstanceType type, bool expected)
+    {
+        // Act
+        bool reads = SeekerApps.ReadsCustomFormatScores(Instance(type, 3));
+
+        // Assert
+        reads.ShouldBe(expected);
     }
 
     [Theory]

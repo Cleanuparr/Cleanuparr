@@ -54,6 +54,9 @@
               @if (ARR_APP_META[type].experimental) {
                 <app-badge severity="warning" size="sm">Experimental</app-badge>
               }
+              @if (ARR_APP_META[type].featureId; as featureId) {
+                <app-new-badge [featureId]="featureId" />
+              }
             </button>
           }
         </div>

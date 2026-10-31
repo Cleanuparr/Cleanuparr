@@ -439,7 +439,7 @@ public class NotificationPublisher : INotificationPublisher
             InstanceType.Sonarr => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Radarr => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Lidarr => record.Album?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
-            InstanceType.Readarr => record.Book?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
+            InstanceType.Readarr or InstanceType.Chaptarr => record.Book?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
             InstanceType.Whisparr when version is 2 => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Whisparr when version is 3 => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl ?? record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "screenshot")?.RemoteUrl,
             InstanceType.Sportarr => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,

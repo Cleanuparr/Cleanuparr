@@ -55,6 +55,7 @@ public static class ServicesDI
             .AddScoped<IRadarrClient, RadarrClient>()
             .AddScoped<ILidarrClient, LidarrClient>()
             .AddScoped<IReadarrClient, ReadarrClient>()
+            .AddScoped<IChaptarrClient, ChaptarrClient>()
             .AddScoped<IWhisparrV2Client, WhisparrV2Client>()
             .AddScoped<IWhisparrV3Client, WhisparrV3Client>()
             .AddScoped<ILazyLibrarianService, LazyLibrarianService>()

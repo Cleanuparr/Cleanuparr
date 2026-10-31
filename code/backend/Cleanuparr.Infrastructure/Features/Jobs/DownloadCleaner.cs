@@ -147,6 +147,7 @@ public sealed class DownloadCleaner : GenericHandler
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), true);
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sportarr)), true);
             await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian)), true);
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Chaptarr)), true);
 
             foreach (KeyValuePair<ISeedingCleanupCapable, List<ITorrentItemWrapper>> pair in downloadServiceToDownloadsMap)
             {

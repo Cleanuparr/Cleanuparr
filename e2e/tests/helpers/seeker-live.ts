@@ -7,10 +7,11 @@ import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
 import { buildDownloadClientPayload } from './api/download-client';
 import type { ArrType } from './api/arr';
-import { LiveArr, indexerMock, liveLidarr, liveRadarr, liveSonarr, liveWhisparr, liveWhisparr2 } from './live-arr';
+import { LiveArr, indexerMock, liveChaptarr, liveLidarr, liveRadarr, liveSonarr, liveWhisparr, liveWhisparr2 } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
 import {
   TORZNAB_AUDIO_CATEGORY,
+  TORZNAB_EBOOK_CATEGORY,
   TORZNAB_MOVIE_CATEGORY,
   TORZNAB_TV_CATEGORY,
   TORZNAB_XXX_CATEGORY,
@@ -60,13 +61,13 @@ export interface SeededArr {
   url: string;
   apiKey: string;
   version: number;
-  searchMode: 'tvsearch' | 'movie' | 'music' | 'search';
+  searchMode: 'tvsearch' | 'movie' | 'music' | 'book' | 'search';
   category: number;
   release: string;
   /** Id of the seeded library item, which is always 1 in a freshly restored seed. */
   itemId: number;
   /** The arr endpoint holding that item. */
-  itemPath: 'series' | 'movie' | 'artist';
+  itemPath: 'series' | 'movie' | 'artist' | 'author';
   /** Title the seed gave that item. */
   seededTitle: string;
   /** Download client category the arr grabs into, set by the seed. */
@@ -147,6 +148,21 @@ export const LIDARR: SeededArr = {
   itemPath: 'artist',
   seededTitle: TEST_CONFIG.liveArr.seededArtistName,
   downloadCategory: 'lidarr',
+};
+
+export const CHAPTARR: SeededArr = {
+  type: 'chaptarr',
+  arr: liveChaptarr,
+  url: TEST_CONFIG.liveArr.chaptarrUrl,
+  apiKey: TEST_CONFIG.liveArr.chaptarrApiKey,
+  version: 0.9,
+  searchMode: 'book',
+  category: TORZNAB_EBOOK_CATEGORY,
+  release: `${TEST_CONFIG.liveArr.seededAuthorName} - ${TEST_CONFIG.liveArr.seededBookTitle} (2015) [EPUB]-E2E${RUN_TAG}`,
+  itemId: 1,
+  itemPath: 'author',
+  seededTitle: TEST_CONFIG.liveArr.seededAuthorName,
+  downloadCategory: 'chaptarr',
 };
 
 export const qbittorrent = new QBittorrentDriver();
@@ -354,6 +370,7 @@ export async function resetDownloads(): Promise<void> {
     liveWhisparr.clearQueue(),
     liveWhisparr2.clearQueue(),
     liveLidarr.clearQueue(),
+    liveChaptarr.clearQueue(),
   ]);
   await Promise.all([
     waitForEmptyQueue(liveSonarr),
@@ -361,6 +378,7 @@ export async function resetDownloads(): Promise<void> {
     waitForEmptyQueue(liveWhisparr),
     waitForEmptyQueue(liveWhisparr2),
     waitForEmptyQueue(liveLidarr),
+    waitForEmptyQueue(liveChaptarr),
   ]);
 }
 

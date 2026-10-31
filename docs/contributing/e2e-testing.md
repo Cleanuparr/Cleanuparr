@@ -47,6 +47,8 @@ Regenerate the seed with `make seed-arr`. That is the only step needing internet
 
 The seed holds one Sonarr series with its first season monitored, and two Radarr movies. The second movie is left unmonitored on purpose, so a spec that wants a single candidate gets one. The specs that need two monitor it themselves and put it back.
 
+Chaptarr holds one author with eight titles. Only Finding Fortune stays monitored, as two rows, one audiobook and one ebook.
+
 ### The two live folders
 
 `tests/live-arr` runs against the shipped image. It waits for the real cron schedule, which is the only place that path is exercised.
