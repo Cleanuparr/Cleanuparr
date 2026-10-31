@@ -3221,6 +3221,23 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task EvaluateAsync_Chaptarr_BothSidesMissingInclude_RecordsMissingIncludeTag()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 1, Label = "keep" }]);
+        SetupChaptarr(
+            [Author(1)],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.IncludeTags = ["keep"]));
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.MissingIncludeTag);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task EvaluateAsync_Chaptarr_UnknownSideWithIncludeTagOnOneSide_IsKept()
     {
         // Arrange

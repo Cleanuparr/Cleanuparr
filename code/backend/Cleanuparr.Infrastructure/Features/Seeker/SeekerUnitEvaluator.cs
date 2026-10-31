@@ -1034,7 +1034,7 @@ public sealed class SeekerUnitEvaluator
             SeekerExclusionReason? ebookExclusion = GetTagExclusion(author.EbookTags, tagsById, skipTagSet, includeTagSet);
             if (audiobookExclusion is not null && ebookExclusion is not null)
             {
-                exclusions.Add(new SeekerExclusion(author.AuthorName, Strongest(audiobookExclusion, ebookExclusion)!.Value));
+                exclusions.Add(new SeekerExclusion(author.AuthorName, Strongest(audiobookExclusion.Value, ebookExclusion.Value)));
                 continue;
             }
 
@@ -1455,11 +1455,11 @@ public sealed class SeekerUnitEvaluator
     /// <summary>
     /// Returns the stronger of two tag exclusions. A skip tag wins.
     /// </summary>
-    private static SeekerExclusionReason? Strongest(SeekerExclusionReason? a, SeekerExclusionReason? b)
+    private static SeekerExclusionReason Strongest(SeekerExclusionReason a, SeekerExclusionReason b)
     {
         return a is SeekerExclusionReason.SkipTag || b is SeekerExclusionReason.SkipTag
             ? SeekerExclusionReason.SkipTag
-            : a ?? b;
+            : a;
     }
 
     /// <summary>
