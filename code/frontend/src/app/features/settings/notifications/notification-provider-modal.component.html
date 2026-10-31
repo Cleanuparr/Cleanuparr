@@ -183,6 +183,25 @@
         helpKey="notifications/gotify:priority" />
     }
 
+    <!-- Webhook Fields -->
+    @if (modalType() === 'Webhook') {
+      <app-input label="URL" placeholder="https://example.com/hook" type="password" [revealable]="false" [formField]="modalForm.webhookTargetUrl"
+        hint="The endpoint that receives the JSON payload. Must be an http or https URL."
+        [error]="modalForm.webhookTargetUrl().errors()[0]?.message"
+        helpKey="notifications/webhook:url" />
+      <app-select label="Method" [options]="webhookMethodOptions" [formField]="modalForm.webhookMethod"
+        hint="The HTTP method used to send the payload."
+        helpKey="notifications/webhook:method" />
+      <app-chip-input label="Headers" placeholder="X-Api-Key: secret" [formField]="modalForm.webhookHeaders"
+        hint="Name: Value. Values are hidden after saving; remove and re-add a header to change it."
+        [error]="modalForm.webhookHeaders().errors()[0]?.message"
+        helpKey="notifications/webhook:headers" />
+      <div class="sample-payload">
+        <h4 class="sample-payload__title">Sample payload</h4>
+        <pre class="sample-payload__code">{{ webhookSamplePayload }}</pre>
+      </div>
+    }
+
     <div class="event-flags">
       <h4 class="event-flags__title">Events</h4>
       <div class="event-flags__grid">

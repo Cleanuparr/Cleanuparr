@@ -16,4 +16,10 @@ public enum SensitiveDataType
     /// Use for Apprise service URL strings that contain multiple notification service URLs.
     /// </summary>
     AppriseUrl,
+
+    /// <summary>
+    /// Header value mask: keeps each header name and hides its value ("X-Api-Key: ••••••••").
+    /// Use for a list of "Name: Value" header strings.
+    /// </summary>
+    HeaderValues,
 }

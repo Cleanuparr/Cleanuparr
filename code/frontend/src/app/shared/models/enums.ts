@@ -37,6 +37,7 @@ export enum NotificationProviderType {
   Telegram = 'Telegram',
   Discord = 'Discord',
   Gotify = 'Gotify',
+  Webhook = 'Webhook',
 }
 
 export enum AppriseMode {
@@ -79,6 +80,11 @@ export enum TorrentPrivacyType {
   Public = 'Public',
   Private = 'Private',
   Both = 'Both',
+}
+
+export enum WebhookMethod {
+  Post = 'Post',
+  Put = 'Put',
 }
 
 export enum NtfyAuthenticationType {

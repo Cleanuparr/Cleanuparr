@@ -59,6 +59,8 @@ public sealed record NotificationConfig
 
     public GotifyConfig? GotifyConfiguration { get; init; }
 
+    public WebhookConfig? WebhookConfiguration { get; init; }
+
     [NotMapped]
     public bool IsConfigured => Type switch
     {
@@ -69,6 +71,7 @@ public sealed record NotificationConfig
         NotificationProviderType.Telegram => TelegramConfiguration?.IsValid() == true,
         NotificationProviderType.Discord => DiscordConfiguration?.IsValid() == true,
         NotificationProviderType.Gotify => GotifyConfiguration?.IsValid() == true,
+        NotificationProviderType.Webhook => WebhookConfiguration?.IsValid() == true,
         _ => throw new ArgumentOutOfRangeException(nameof(Type), $"Invalid notification provider type {Type}")
     };
     

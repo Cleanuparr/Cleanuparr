@@ -40,6 +40,22 @@ public static partial class SensitiveDataHelper
         });
     }
 
+    /// <summary>
+    /// Masks the value of each "Name: Value" header and keeps the name.
+    /// Input:  "X-Api-Key: secret"
+    /// Output: "X-Api-Key: ••••••••"
+    /// </summary>
+    public static List<string> MaskHeaderValues(IEnumerable<string> headers)
+    {
+        return headers
+            .Select(header =>
+            {
+                int separator = header.IndexOf(':');
+                return separator < 0 ? Placeholder : $"{header[..separator].TrimEnd()}: {Placeholder}";
+            })
+            .ToList();
+    }
+
     [GeneratedRegex(@"([a-zA-Z][a-zA-Z0-9+.\-]*)://\S+")]
     private static partial Regex AppriseUrlPattern();
 }

@@ -3,7 +3,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ModalComponent, EmptyStateComponent,
-  BadgeComponent, LoadingStateComponent,
+  BadgeComponent, LoadingStateComponent, NewBadgeComponent,
 } from '@ui';
 import { NotificationApi } from '@core/api/notification.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
@@ -21,7 +21,7 @@ import { NotificationProviderModalComponent } from './notification-provider-moda
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, ModalComponent,
-    EmptyStateComponent, BadgeComponent, LoadingStateComponent,
+    EmptyStateComponent, BadgeComponent, LoadingStateComponent, NewBadgeComponent,
     NotificationProviderModalComponent,
   ],
   templateUrl: './notifications.component.html',
@@ -62,6 +62,7 @@ export class NotificationsComponent implements HasPendingChanges {
     { type: NotificationProviderType.Ntfy, name: 'ntfy', iconUrl: 'icons/ext/ntfy.svg', iconLightUrl: 'icons/ext/ntfy-light.svg', description: 'ntfy.sh' },
     { type: NotificationProviderType.Pushover, name: 'Pushover', iconUrl: 'icons/ext/pushover.svg', iconLightUrl: 'icons/ext/pushover-light.svg', description: 'pushover.net' },
     { type: NotificationProviderType.Telegram, name: 'Telegram', iconUrl: 'icons/ext/telegram.svg', iconLightUrl: 'icons/ext/telegram-light.svg', description: 'core.telegram.org/bots' },
+    { type: NotificationProviderType.Webhook, name: 'Webhook', iconUrl: 'icons/ext/webhook.svg', iconLightUrl: 'icons/ext/webhook-light.svg', description: 'Generic JSON webhook' },
   ];
 
   constructor() {

@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
+using Cleanuparr.Infrastructure.Features.Notifications.Webhook;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
@@ -26,6 +27,7 @@ public class NotificationProviderFactoryTests
     private readonly ITelegramProxy _telegramProxy;
     private readonly IDiscordProxy _discordProxy;
     private readonly IGotifyProxy _gotifyProxy;
+    private readonly IWebhookProxy _webhookProxy;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
@@ -39,6 +41,7 @@ public class NotificationProviderFactoryTests
         _telegramProxy = Substitute.For<ITelegramProxy>();
         _discordProxy = Substitute.For<IDiscordProxy>();
         _gotifyProxy = Substitute.For<IGotifyProxy>();
+        _webhookProxy = Substitute.For<IWebhookProxy>();
 
         var services = new ServiceCollection();
         services.AddSingleton(_appriseProxy);
@@ -49,6 +52,7 @@ public class NotificationProviderFactoryTests
         services.AddSingleton(_telegramProxy);
         services.AddSingleton(_discordProxy);
         services.AddSingleton(_gotifyProxy);
+        services.AddSingleton(_webhookProxy);
         services.AddSingleton(TimeProvider.System);
 
         _serviceProvider = services.BuildServiceProvider();
@@ -257,6 +261,29 @@ public class NotificationProviderFactoryTests
         provider.ShouldBeOfType<GotifyProvider>();
         provider.Name.ShouldBe("TestGotify");
         provider.Type.ShouldBe(NotificationProviderType.Gotify);
+    }
+
+    [Fact]
+    public void CreateProvider_WebhookType_CreatesWebhookProvider()
+    {
+        NotificationProviderDto config = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestWebhook",
+            Type = NotificationProviderType.Webhook,
+            IsEnabled = true,
+            Configuration = new WebhookConfig
+            {
+                Id = Guid.NewGuid(),
+                Url = "http://localhost:8123/api/webhook/test",
+            }
+        };
+
+        INotificationProvider provider = _factory.CreateProvider(config);
+
+        provider.ShouldBeOfType<WebhookProvider>();
+        provider.Name.ShouldBe("TestWebhook");
+        provider.Type.ShouldBe(NotificationProviderType.Webhook);
     }
 
     [Fact]

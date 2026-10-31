@@ -9,6 +9,7 @@ public enum NotificationProviderType
     Telegram,
     Discord,
     Gotify,
+    Webhook,
 
     /// <summary>
     /// Text this build does not know.

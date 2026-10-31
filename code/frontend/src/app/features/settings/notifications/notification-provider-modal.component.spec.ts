@@ -10,6 +10,7 @@ import {
   NtfyAuthenticationType,
   NtfyPriority,
   PushoverPriority,
+  WebhookMethod,
 } from '@shared/models/enums';
 import { NOTIFICATION_PROVIDER_DESCRIPTORS } from '@shared/utils/notification-provider.descriptors';
 import { NotificationProviderModalComponent } from './notification-provider-modal.component';
@@ -82,6 +83,19 @@ const GOTIFY_PROVIDER: NotificationProviderDto = {
   },
 };
 
+const WEBHOOK_PROVIDER: NotificationProviderDto = {
+  id: 'webhook-1',
+  name: 'My webhook',
+  type: NotificationProviderType.Webhook,
+  isEnabled: true,
+  events: DEFAULT_EVENTS,
+  configuration: {
+    url: 'https://example.com/hook',
+    method: WebhookMethod.Put,
+    headers: ['X-Api-Key: ********'],
+  },
+};
+
 const NOTIFIARR_PROVIDER: NotificationProviderDto = {
   id: 'notifiarr-1',
   name: 'My notifiarr',
@@ -146,6 +160,7 @@ const TEST_MESSAGES: Record<string, string> = {
   discord: 'Discord test sent',
   telegram: 'Telegram test sent',
   gotify: 'Gotify test sent',
+  webhook: 'Webhook test sent',
 };
 
 function createApi(cliStatus: Observable<AppriseCliStatus> = of({ available: true, version: '1.9.0' })) {
@@ -242,6 +257,8 @@ describe('NotificationProviderModalComponent', () => {
       ntfyAuthType: NtfyAuthenticationType.None,
       ntfyPriority: NtfyPriority.Default,
       gotifyPriority: '5',
+      webhookMethod: WebhookMethod.Post,
+      webhookHeaders: [],
       pushoverPriority: PushoverPriority.Normal,
       pushoverRetry: 30,
       pushoverExpire: 3600,
@@ -375,6 +392,7 @@ describe('NotificationProviderModalComponent', () => {
       type: NotificationProviderType.Gotify,
       labels: ['Server URL', 'Application Token', 'Priority'],
     },
+    { type: NotificationProviderType.Webhook, labels: ['URL', 'Method', 'Headers'] },
   ];
 
   it.each(FIELD_SETS)('renders only the $type field set', ({ type, labels }) => {
@@ -422,6 +440,11 @@ describe('NotificationProviderModalComponent', () => {
       type: NotificationProviderType.Gotify,
       errors: ['Server URL is required', 'Application token is required'],
       fill: (c) => c.modalModel.update((m) => ({ ...m, gotifyServerUrl: 'http://gotify', gotifyApplicationToken: 'token' })),
+    },
+    {
+      type: NotificationProviderType.Webhook,
+      errors: ['URL is required'],
+      fill: (c) => c.modalModel.update((m) => ({ ...m, webhookTargetUrl: 'https://example.com/hook' })),
     },
   ];
 
@@ -609,6 +632,59 @@ describe('NotificationProviderModalComponent', () => {
     component.saveProvider();
 
     expect(api.update).toHaveBeenLastCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Gotify], 'gotify-1', expect.objectContaining({ priority: 5 }));
+  });
+
+  it('hydrates a Webhook provider and sends its method and headers unchanged', () => {
+    const { fixture, component, api } = setup({ editingProvider: WEBHOOK_PROVIDER });
+
+    expect(component.modalModel()).toMatchObject({
+      webhookTargetUrl: 'https://example.com/hook',
+      webhookMethod: WebhookMethod.Put,
+      webhookHeaders: ['X-Api-Key: ********'],
+    });
+    expect(component.hasPendingChanges()).toBe(false);
+
+    component.saveProvider();
+    fixture.detectChanges();
+
+    expect(api.update).toHaveBeenCalledWith(NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Webhook], 'webhook-1', {
+      name: 'My webhook',
+      url: 'https://example.com/hook',
+      method: WebhookMethod.Put,
+      headers: ['X-Api-Key: ********'],
+      isEnabled: true,
+      ...DEFAULT_EVENTS,
+    });
+  });
+
+  it('rejects Webhook headers that are not in Name: Value format', () => {
+    const { fixture, component } = setup({ editingProvider: WEBHOOK_PROVIDER });
+
+    component.modalModel.update((m) => ({ ...m, webhookHeaders: ['no-separator'] }));
+    fixture.detectChanges();
+
+    expect(errorMessages(fixture)).toEqual(['Each header must use the format Name: Value']);
+    expect(component.modalForm().invalid()).toBe(true);
+
+    component.modalModel.update((m) => ({ ...m, webhookHeaders: [': value'] }));
+    fixture.detectChanges();
+    expect(component.modalForm().invalid()).toBe(true);
+
+    component.modalModel.update((m) => ({ ...m, webhookHeaders: ['X-Token: abc', 'Authorization: Bearer x:y'] }));
+    fixture.detectChanges();
+    expect(errorMessages(fixture)).toEqual([]);
+    expect(component.modalForm().invalid()).toBe(false);
+  });
+
+  it('shows the sample payload only for Webhook', () => {
+    const { fixture, component } = setup({ initialType: NotificationProviderType.Webhook });
+
+    const code = fixture.nativeElement.querySelector('.sample-payload__code') as HTMLElement;
+    expect(JSON.parse(code.textContent!)).toHaveProperty('eventType');
+
+    component.modalType.set(NotificationProviderType.Discord);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.sample-payload__code')).toBeNull();
   });
 
   it('sends a test notification with the current values and toasts the server message', () => {

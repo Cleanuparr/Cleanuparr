@@ -75,4 +75,22 @@ test.describe('Notifications UI', () => {
     await appToken.locator('input').fill('AzToken123');
     await expect(save).toBeEnabled();
   });
+
+  test('Webhook modal shows URL/method/headers fields and gates Save on URL', async ({ page }) => {
+    await loginAndGotoSettings(page, 'notifications');
+    const modal = await openProvider(page, 'Webhook');
+
+    const url = modal.locator('app-input').filter({ hasText: 'URL' });
+    await expect(url).toBeVisible();
+    await expect(modal.locator('app-select').filter({ hasText: 'Method' })).toBeVisible();
+    await expect(modal.locator('app-chip-input').filter({ hasText: 'Headers' })).toBeVisible();
+
+    const save = modal.getByRole('button', { name: 'Save' });
+    await expect(save).toBeDisabled();
+
+    await modal.locator('app-input').first().locator('input').fill('My Webhook'); // Name
+    await expect(save).toBeDisabled();
+    await url.locator('input').fill('https://example.com/hook');
+    await expect(save).toBeEnabled();
+  });
 });

@@ -22,7 +22,7 @@ Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in 
 - Missing and upgrade search
 - Orphaned download cleanup with cross-seed support
 - Authentication (OIDC, 2FA)
-- Notification providers (Apprise, Discord, Gotify, Notifiarr, Ntfy, Pushover, Telegram)
+- Notification providers (Apprise, Discord, Gotify, Notifiarr, Ntfy, Pushover, Telegram, Webhook)
 
 ## Architecture & Tech Stack
 

@@ -75,4 +75,14 @@ public class SensitiveDataHelperTests
     {
         SensitiveDataHelper.MaskAppriseUrls(input).ShouldBe(input);
     }
+
+    [Theory]
+    [InlineData("X-Api-Key: secret", "X-Api-Key: ••••••••")]
+    [InlineData("Authorization:Bearer abc:def", "Authorization: ••••••••")]
+    [InlineData("X-Empty:", "X-Empty: ••••••••")]
+    [InlineData("no-colon-here", "••••••••")]
+    public void MaskHeaderValues_KeepsNameAndHidesValue(string input, string expected)
+    {
+        SensitiveDataHelper.MaskHeaderValues([input]).ShouldBe([expected]);
+    }
 }

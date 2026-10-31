@@ -7,6 +7,7 @@ import {
   CreateNtfyProviderRequest,
   CreatePushoverProviderRequest,
   CreateGotifyProviderRequest,
+  CreateWebhookProviderRequest,
   TestDiscordRequest,
   TestTelegramRequest,
   TestNotifiarrRequest,
@@ -14,6 +15,7 @@ import {
   TestNtfyRequest,
   TestPushoverRequest,
   TestGotifyRequest,
+  TestWebhookRequest,
 } from '@shared/models/notification-provider.model';
 import {
   NotificationProviderType,
@@ -21,6 +23,7 @@ import {
   NtfyAuthenticationType,
   NtfyPriority,
   PushoverPriority,
+  WebhookMethod,
 } from '@shared/models/enums';
 
 /** Flat form model covering every provider's fields, mirroring the notification provider modal's model. */
@@ -58,6 +61,10 @@ export interface NotificationProviderFormModel extends NotificationEventFlags {
   gotifyServerUrl: string;
   gotifyApplicationToken: string;
   gotifyPriority: string;
+  // Webhook
+  webhookTargetUrl: string;
+  webhookMethod: WebhookMethod;
+  webhookHeaders: string[];
   // Pushover
   pushoverApiToken: string;
   pushoverUserKey: string;
@@ -111,6 +118,7 @@ export const NOTIFICATION_PROVIDER_DESCRIPTORS: {
   [NotificationProviderType.Ntfy]: NotificationProviderDescriptor<CreateNtfyProviderRequest, TestNtfyRequest>;
   [NotificationProviderType.Pushover]: NotificationProviderDescriptor<CreatePushoverProviderRequest, TestPushoverRequest>;
   [NotificationProviderType.Gotify]: NotificationProviderDescriptor<CreateGotifyProviderRequest, TestGotifyRequest>;
+  [NotificationProviderType.Webhook]: NotificationProviderDescriptor<CreateWebhookProviderRequest, TestWebhookRequest>;
 } = {
   [NotificationProviderType.Discord]: {
     urlSegment: 'discord',
@@ -276,5 +284,23 @@ export const NOTIFICATION_PROVIDER_DESCRIPTORS: {
       providerId,
     }),
     requiredFields: () => ['gotifyServerUrl', 'gotifyApplicationToken'],
+  },
+  [NotificationProviderType.Webhook]: {
+    urlSegment: 'webhook',
+    buildRequest: (m) => ({
+      name: m.name,
+      url: m.webhookTargetUrl,
+      method: m.webhookMethod,
+      headers: m.webhookHeaders,
+      isEnabled: m.enabled,
+      ...eventFlags(m),
+    }),
+    buildTestRequest: (m, providerId) => ({
+      url: m.webhookTargetUrl,
+      method: m.webhookMethod,
+      headers: m.webhookHeaders,
+      providerId,
+    }),
+    requiredFields: () => ['webhookTargetUrl'],
   },
 };

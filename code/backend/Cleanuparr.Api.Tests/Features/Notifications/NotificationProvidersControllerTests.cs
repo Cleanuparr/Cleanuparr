@@ -1054,6 +1054,171 @@ public class NotificationProvidersControllerTests : IDisposable
 
     #endregion
 
+    #region Webhook
+
+    private async Task<Guid> CreateWebhook(string url = "http://homeassistant.local:8123/api/webhook/abc", List<string>? headers = null)
+    {
+        return Created(await _controller.CreateProvider(NotificationProviderType.Webhook, ToJson(new CreateWebhookProviderRequest
+        {
+            Name = "Webhook",
+            Url = url,
+            Method = WebhookMethod.Put,
+            Headers = headers ?? ["X-Api-Key: secret", "Authorization: Bearer token"],
+        }))).Id;
+    }
+
+    private async Task<WebhookConfig> StoredWebhook(Guid id)
+    {
+        return (await _dataContext.NotificationConfigs
+            .AsNoTracking()
+            .Include(p => p.WebhookConfiguration)
+            .FirstAsync(p => p.Id == id)).WebhookConfiguration!;
+    }
+
+    [Fact]
+    public async Task CreateWebhookProvider_PersistsUrlMethodAndHeaders()
+    {
+        Guid id = await CreateWebhook();
+
+        WebhookConfig stored = await StoredWebhook(id);
+
+        stored.Url.ShouldBe("http://homeassistant.local:8123/api/webhook/abc");
+        stored.Method.ShouldBe(WebhookMethod.Put);
+        stored.Headers.ShouldBe(["X-Api-Key: secret", "Authorization: Bearer token"]);
+    }
+
+    [Fact]
+    public async Task CreateWebhookProvider_WithPlaceholderUrl_ReturnsTheFieldSpecificMessage()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Webhook, ToJson(new CreateWebhookProviderRequest
+        {
+            Name = "Webhook",
+            Url = "••••••••",
+        }));
+
+        Problem(result).Detail.ShouldBe("Webhook URL cannot be a placeholder value");
+    }
+
+    [Fact]
+    public async Task CreateWebhookProvider_WithPlaceholderHeaderValue_ReturnsBadRequest()
+    {
+        IActionResult result = await _controller.CreateProvider(NotificationProviderType.Webhook, ToJson(new CreateWebhookProviderRequest
+        {
+            Name = "Webhook",
+            Url = "http://homeassistant.local:8123/api/webhook/abc",
+            Headers = ["X-Api-Key: ••••••••"],
+        }));
+
+        Problem(result).Status.ShouldBe(400);
+        Problem(result).Detail.ShouldBe("Webhook header values cannot be placeholder values");
+    }
+
+    [Fact]
+    public async Task UpdateWebhookProvider_WithMaskedUrl_KeepsTheStoredUrl()
+    {
+        Guid id = await CreateWebhook();
+
+        await _controller.UpdateProvider(NotificationProviderType.Webhook, id, ToJson(new UpdateWebhookProviderRequest
+        {
+            Name = "Webhook",
+            Url = "••••••••",
+            Method = WebhookMethod.Post,
+            Headers = ["X-Api-Key: ••••••••", "Authorization: ••••••••"],
+        }));
+
+        WebhookConfig stored = await StoredWebhook(id);
+
+        stored.Url.ShouldBe("http://homeassistant.local:8123/api/webhook/abc");
+        stored.Method.ShouldBe(WebhookMethod.Post);
+    }
+
+    [Fact]
+    public async Task UpdateWebhookProvider_WithMaskedHeaders_MergesStoredValuesByName()
+    {
+        Guid id = await CreateWebhook();
+
+        await _controller.UpdateProvider(NotificationProviderType.Webhook, id, ToJson(new UpdateWebhookProviderRequest
+        {
+            Name = "Webhook",
+            Url = "••••••••",
+            Headers = ["authorization: ••••••••", "X-New: fresh", "X-Api-Key: ••••••••"],
+        }));
+
+        WebhookConfig stored = await StoredWebhook(id);
+
+        stored.Headers.ShouldBe(["Authorization: Bearer token", "X-New: fresh", "X-Api-Key: secret"]);
+    }
+
+    [Fact]
+    public async Task UpdateWebhookProvider_WithMaskedHeaderOfUnknownName_ThrowsValidationError()
+    {
+        Guid id = await CreateWebhook();
+
+        CustomValidationException exception = await Should.ThrowAsync<CustomValidationException>(() =>
+            _controller.UpdateProvider(NotificationProviderType.Webhook, id, ToJson(new UpdateWebhookProviderRequest
+            {
+                Name = "Webhook",
+                Url = "••••••••",
+                Headers = ["X-Missing: ••••••••"],
+            })));
+
+        exception.Message.ShouldContain("X-Missing");
+    }
+
+    [Fact]
+    public async Task TestWebhookProvider_WithMaskedHeaderAndNoProviderId_ReturnsBadRequest()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Webhook, ToJson(new TestWebhookProviderRequest
+        {
+            Url = "http://homeassistant.local:8123/api/webhook/abc",
+            Headers = ["X-Api-Key: ••••••••"],
+        }));
+
+        Problem(result).Status.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task TestWebhookProvider_WithMaskedValuesAndProviderId_UsesTheStoredValues()
+    {
+        Guid id = await CreateWebhook();
+
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Webhook, ToJson(new TestWebhookProviderRequest
+        {
+            Url = "••••••••",
+            Headers = ["X-Api-Key: ••••••••"],
+            ProviderId = id,
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+        _providerFactory.Received().CreateProvider(Arg.Is<NotificationProviderDto>(dto =>
+            ((WebhookConfig)dto.Configuration).Url == "http://homeassistant.local:8123/api/webhook/abc" &&
+            ((WebhookConfig)dto.Configuration).Headers.SequenceEqual(new[] { "X-Api-Key: secret" })));
+    }
+
+    [Fact]
+    public async Task TestWebhookProvider_WithRealValues_SendsSuccessfully()
+    {
+        IActionResult result = await _controller.TestProvider(NotificationProviderType.Webhook, ToJson(new TestWebhookProviderRequest
+        {
+            Url = "http://homeassistant.local:8123/api/webhook/abc",
+            Headers = ["X-Api-Key: secret"],
+        }));
+
+        result.ShouldBeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task DeleteWebhookProvider_RemovesTheConfigRow()
+    {
+        Guid id = await CreateWebhook();
+
+        await _controller.DeleteNotificationProvider(id);
+
+        (await _dataContext.WebhookConfigs.CountAsync()).ShouldBe(0);
+    }
+
+    #endregion
+
     [Fact]
     public async Task GetNotificationProviders_ReturnsTheDownloadStoppedEvent()
     {

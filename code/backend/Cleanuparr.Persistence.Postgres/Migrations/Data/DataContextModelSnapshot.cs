@@ -1409,6 +1409,43 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.ToTable("telegram_configs", "data");
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.WebhookConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Headers")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("headers");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("method");
+
+                    b.Property<Guid>("NotificationConfigId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("notification_config_id");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("url");
+
+                    b.HasKey("Id")
+                        .HasName("pk_webhook_configs");
+
+                    b.HasIndex("NotificationConfigId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_webhook_configs_notification_config_id");
+
+                    b.ToTable("webhook_configs", "data");
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1977,6 +2014,18 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.WebhookConfig", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
+                        .WithOne("WebhookConfiguration")
+                        .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.WebhookConfig", "NotificationConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_webhook_configs_notification_configs_notification_config_id");
+
+                    b.Navigation("NotificationConfig");
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", "QueueCleanerConfig")
@@ -2045,6 +2094,8 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Navigation("PushoverConfiguration");
 
                     b.Navigation("TelegramConfiguration");
+
+                    b.Navigation("WebhookConfiguration");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>

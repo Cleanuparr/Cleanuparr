@@ -1,5 +1,6 @@
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
@@ -22,6 +23,7 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
             NotificationProviderType.Telegram => TelegramDescriptor,
             NotificationProviderType.Discord => DiscordDescriptor,
             NotificationProviderType.Gotify => GotifyDescriptor,
+            NotificationProviderType.Webhook => WebhookDescriptor,
             _ => throw new NotSupportedException($"Provider type {type} is not supported")
         };
 
@@ -467,4 +469,85 @@ public sealed class NotificationProviderDescriptorRegistry : INotificationProvid
             }
         ]
     };
+
+    private static readonly NotificationProviderDescriptor WebhookDescriptor = new()
+    {
+        Type = NotificationProviderType.Webhook,
+        ConfigType = typeof(WebhookConfig),
+        CreateRequestType = typeof(CreateWebhookProviderRequest),
+        UpdateRequestType = typeof(UpdateWebhookProviderRequest),
+        TestRequestType = typeof(TestWebhookProviderRequest),
+        BuildConfig = request =>
+        {
+            CreateWebhookProviderRequest typedRequest = (CreateWebhookProviderRequest)request;
+            return new WebhookConfig
+            {
+                Url = typedRequest.Url,
+                Method = typedRequest.Method,
+                Headers = typedRequest.Headers
+            };
+        },
+        BuildUpdateConfig = (request, existing) =>
+        {
+            UpdateWebhookProviderRequest typedRequest = (UpdateWebhookProviderRequest)request;
+            WebhookConfig? existingConfig = (WebhookConfig?)existing;
+            WebhookConfig config = new()
+            {
+                Url = typedRequest.Url.IsPlaceholder() ? existingConfig!.Url : typedRequest.Url,
+                Method = typedRequest.Method,
+                Headers = MergeMaskedHeaders(typedRequest.Headers, existingConfig)
+            };
+            if (existingConfig != null)
+            {
+                config = config with { Id = existingConfig.Id };
+            }
+            return config;
+        },
+        BuildTestConfig = (request, existing) =>
+        {
+            TestWebhookProviderRequest typedRequest = (TestWebhookProviderRequest)request;
+            WebhookConfig? existingConfig = (WebhookConfig?)existing;
+            return new WebhookConfig
+            {
+                Url = typedRequest.Url.IsPlaceholder() ? existingConfig!.Url : typedRequest.Url,
+                Method = typedRequest.Method,
+                Headers = MergeMaskedHeaders(typedRequest.Headers, existingConfig)
+            };
+        },
+        GetConfig = provider => provider.WebhookConfiguration,
+        WithConfig = (provider, config) => provider with { WebhookConfiguration = (WebhookConfig)config },
+        SensitiveFields =
+        [
+            new NotificationProviderSensitiveField
+            {
+                Name = nameof(WebhookConfig.Url),
+                PlaceholderErrorMessage = "Webhook URL cannot be a placeholder value"
+            },
+            new NotificationProviderSensitiveField
+            {
+                Name = nameof(WebhookConfig.Headers),
+                PlaceholderErrorMessage = "Webhook header values cannot be placeholder values"
+            }
+        ]
+    };
+
+    /// <summary>
+    /// Replaces each masked header with the stored header of the same name.
+    /// </summary>
+    private static List<string> MergeMaskedHeaders(List<string> incoming, WebhookConfig? existing)
+    {
+        return incoming.Select(header =>
+        {
+            if (!header.IsPlaceholder() || !WebhookConfig.TrySplitHeader(header, out string name, out _))
+            {
+                return header;
+            }
+
+            string? stored = existing?.Headers.FirstOrDefault(candidate =>
+                WebhookConfig.TrySplitHeader(candidate, out string storedName, out _) &&
+                string.Equals(storedName, name, StringComparison.OrdinalIgnoreCase));
+
+            return stored ?? throw new CustomValidationException($"Webhook header '{name}' has no stored value to keep");
+        }).ToList();
+    }
 }

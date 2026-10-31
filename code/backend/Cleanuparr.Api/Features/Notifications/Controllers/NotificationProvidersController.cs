@@ -128,7 +128,7 @@ public sealed class NotificationProvidersController : ControllerBase
             }
 
             NotificationProviderSensitiveField? placeholderField = descriptor.SensitiveFields
-                .FirstOrDefault(field => GetFieldValue(request, field.Name).IsPlaceholder());
+                .FirstOrDefault(field => IsFieldPlaceholder(request, field.Name));
             if (placeholderField is not null)
             {
                 return this.ProblemResult(StatusCodes.Status400BadRequest, placeholderField.PlaceholderErrorMessage);
@@ -295,7 +295,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
         try
         {
-            bool needsExisting = descriptor.SensitiveFields.Any(field => GetFieldValue(request, field.Name).IsPlaceholder());
+            bool needsExisting = descriptor.SensitiveFields.Any(field => IsFieldPlaceholder(request, field.Name));
 
             IConfig? existingConfig = null;
             if (needsExisting)
@@ -441,8 +441,13 @@ public sealed class NotificationProvidersController : ControllerBase
         return provider is null ? null : _descriptorRegistry.GetDescriptor(type).GetConfig(provider);
     }
 
-    private static string? GetFieldValue(object request, string propertyName) =>
-        (string?)request.GetType().GetProperty(propertyName)!.GetValue(request);
+    private static bool IsFieldPlaceholder(object request, string propertyName) =>
+        request.GetType().GetProperty(propertyName)!.GetValue(request) switch
+        {
+            string value => value.IsPlaceholder(),
+            IEnumerable<string> values => values.Any(value => value.IsPlaceholder()),
+            _ => false
+        };
 
     private static IQueryable<NotificationConfig> IncludeAllConfigurations(IQueryable<NotificationConfig> query) =>
         query
@@ -452,5 +457,6 @@ public sealed class NotificationProvidersController : ControllerBase
             .Include(p => p.PushoverConfiguration)
             .Include(p => p.TelegramConfiguration)
             .Include(p => p.DiscordConfiguration)
-            .Include(p => p.GotifyConfiguration);
+            .Include(p => p.GotifyConfiguration)
+            .Include(p => p.WebhookConfiguration);
 }

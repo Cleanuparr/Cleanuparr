@@ -71,4 +71,9 @@
 
 .provider-grid { @include selection-grid; }
 
-.provider-card { @include selection-card; }
+.provider-card {
+  @include selection-card;
+  // Anchors and clips the NEW ribbon to the card corner.
+  position: relative;
+  overflow: hidden;
+}
