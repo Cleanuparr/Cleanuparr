@@ -39,6 +39,7 @@ public sealed class SeekerUnitEvaluator
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IChaptarrClient _chaptarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
@@ -49,6 +50,7 @@ public sealed class SeekerUnitEvaluator
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         ILidarrClient lidarrClient,
+        IChaptarrClient chaptarrClient,
         IWhisparrV2Client whisparrV2Client,
         IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider)
@@ -58,6 +60,7 @@ public sealed class SeekerUnitEvaluator
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _lidarrClient = lidarrClient;
+        _chaptarrClient = chaptarrClient;
         _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
@@ -91,6 +94,14 @@ public sealed class SeekerUnitEvaluator
             return new SeekerRecentGrabs
             {
                 AlbumIds = await _lidarrClient.GetRecentlyGrabbedAlbumIdsAsync(arrInstance, since, cancellationToken)
+            };
+        }
+
+        if (arrInstance.ArrConfig.Type is InstanceType.Chaptarr)
+        {
+            return new SeekerRecentGrabs
+            {
+                BookIds = await _chaptarrClient.GetRecentlyGrabbedBookIdsAsync(arrInstance, since, cancellationToken)
             };
         }
 
@@ -133,6 +144,12 @@ public sealed class SeekerUnitEvaluator
         {
             return await EvaluateLidarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
                 recentGrabs.AlbumIds, rests, currentCycleHistory, lastSearchedByItem, cancellationToken);
+        }
+
+        if (arrInstance.ArrConfig.Type is InstanceType.Chaptarr)
+        {
+            return await EvaluateChaptarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
+                recentGrabs.BookIds, rests, currentCycleHistory, lastSearchedByItem, cancellationToken);
         }
 
         return await EvaluateSonarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
@@ -964,6 +981,209 @@ public sealed class SeekerUnitEvaluator
                 ReleasedItems = releasedCount,
                 MonitoredItems = monitoredCount,
                 TagFilteredItems = artistsById.Count,
+                ItemExclusions = exclusions,
+                Units = units,
+                LastSearchedByItem = searched,
+                // Keeps this run's rests, so a rest that ends with the rollover ends one run late
+                WithoutCycleHistory = () => Build([], new Dictionary<long, DateTimeOffset>()),
+            };
+        }
+
+        return Build(currentCycleHistory, lastSearchedByItem);
+    }
+
+    private async Task<SeekerEvaluation> EvaluateChaptarrAsync(
+        SeekerConfig config,
+        SeekerInstanceConfig instanceConfig,
+        ArrInstance arrInstance,
+        List<QueueRecord> activeQueueRecords,
+        HashSet<long> recentlyGrabbedBookIds,
+        Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests,
+        List<SeekerHistory> currentCycleHistory,
+        Dictionary<long, DateTimeOffset> lastSearchedByItem,
+        CancellationToken cancellationToken)
+    {
+        List<Tag> tags = await _chaptarrClient.GetAllTagsAsync(arrInstance);
+        Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
+        HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
+        HashSet<string> includeTagSet = new(instanceConfig.IncludeTags, StringComparer.InvariantCultureIgnoreCase);
+
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
+
+        List<long> allLibraryIds = new();
+        List<SeekerExclusion> exclusions = [];
+        int releasedCount = 0;
+        int monitoredCount = 0;
+        Dictionary<long, SearchableAuthor> authorsById = new();
+        Dictionary<long, SeekerExclusionReason?> audiobookExclusions = new();
+        Dictionary<long, SeekerExclusionReason?> ebookExclusions = new();
+        await foreach (SearchableAuthor author in _chaptarrClient.StreamAllAuthorsAsync(arrInstance, cancellationToken))
+        {
+            allLibraryIds.Add(author.Id);
+            releasedCount++;
+
+            if (instanceConfig.MonitoredOnly && !author.Monitored)
+            {
+                exclusions.Add(new SeekerExclusion(author.AuthorName, SeekerExclusionReason.NotMonitored));
+                continue;
+            }
+
+            monitoredCount++;
+
+            SeekerExclusionReason? audiobookExclusion = GetTagExclusion(author.AudiobookTags, tagsById, skipTagSet, includeTagSet);
+            SeekerExclusionReason? ebookExclusion = GetTagExclusion(author.EbookTags, tagsById, skipTagSet, includeTagSet);
+            if (audiobookExclusion is not null && ebookExclusion is not null)
+            {
+                exclusions.Add(new SeekerExclusion(author.AuthorName, audiobookExclusion.Value));
+                continue;
+            }
+
+            authorsById[author.Id] = author;
+            audiobookExclusions[author.Id] = audiobookExclusion;
+            ebookExclusions[author.Id] = ebookExclusion;
+        }
+
+        List<SonarrWantedEpisode> wanted = [];
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        HashSet<long> excludedBookIds = [];
+        HashSet<long> authorsWithExcludedBooks = [];
+
+        void ExcludeBook(long authorId, long bookId, string name, SeekerExclusionReason reason)
+        {
+            authorsWithExcludedBooks.Add(authorId);
+            if (excludedBookIds.Add(bookId))
+            {
+                exclusions.Add(new SeekerExclusion(name, reason));
+            }
+        }
+
+        string BookName(SearchableBook b) => b.MediaType switch
+        {
+            ChaptarrMediaType.Audiobook => $"{authorsById[b.AuthorId].AuthorName} - {b.Title} (Audiobook)",
+            ChaptarrMediaType.Ebook => $"{authorsById[b.AuthorId].AuthorName} - {b.Title} (Ebook)",
+            _ => $"{authorsById[b.AuthorId].AuthorName} - {b.Title}",
+        };
+
+        bool IsReleasedBookOfCandidate(SearchableBook b)
+        {
+            if (!authorsById.ContainsKey(b.AuthorId))
+            {
+                return false;
+            }
+
+            // An unknown side is kept only when neither side is excluded
+            SeekerExclusionReason? tagExclusion = b.MediaType switch
+            {
+                ChaptarrMediaType.Audiobook => audiobookExclusions[b.AuthorId],
+                ChaptarrMediaType.Ebook => ebookExclusions[b.AuthorId],
+                _ => audiobookExclusions[b.AuthorId] ?? ebookExclusions[b.AuthorId],
+            };
+            if (tagExclusion is not null)
+            {
+                ExcludeBook(b.AuthorId, b.Id, BookName(b), tagExclusion.Value);
+                return false;
+            }
+
+            if (b.ReleaseDate is null || b.ReleaseDate.Value <= graceCutoff)
+            {
+                return true;
+            }
+
+            ExcludeBook(b.AuthorId, b.Id, BookName(b),
+                b.ReleaseDate.Value > now
+                    ? SeekerExclusionReason.NotReleased
+                    : SeekerExclusionReason.InGracePeriod);
+            return false;
+        }
+
+        SonarrWantedEpisode ToWanted(SearchableBook b, SeekerSearchReason reason) => new()
+        {
+            SeriesId = b.AuthorId,
+            SeasonNumber = 0,
+            EpisodeId = b.Id,
+            Title = BookName(b),
+            AirDateUtc = b.ReleaseDate,
+            LastSearchTime = null,
+            Monitored = b.Monitored,
+            Reason = reason,
+        };
+
+        List<SearchableBook> missing = await ReadWantedAsync(
+            monitored => _chaptarrClient.GetMissingBooksAsync(arrInstance, monitored, cancellationToken),
+            instanceConfig.MonitoredOnly);
+        wanted.AddRange(missing
+            .Where(IsReleasedBookOfCandidate)
+            .Select(b => ToWanted(b, SeekerSearchReason.Missing)));
+
+        if (instanceConfig.UseCutoff)
+        {
+            List<SearchableBook> cutoffUnmet = await ReadWantedAsync(
+                monitored => _chaptarrClient.GetCutoffUnmetBooksAsync(arrInstance, monitored, cancellationToken),
+                instanceConfig.MonitoredOnly);
+            wanted.AddRange(cutoffUnmet
+                .Where(IsReleasedBookOfCandidate)
+                .Select(b => ToWanted(b, SeekerSearchReason.QualityCutoffNotMet)));
+        }
+
+        HashSet<long> wantedAuthorIds = wanted.Select(w => w.SeriesId).ToHashSet();
+        exclusions.AddRange(authorsById.Values
+            .Where(a => !wantedAuthorIds.Contains(a.Id) && !authorsWithExcludedBooks.Contains(a.Id))
+            .Select(a => new SeekerExclusion(a.AuthorName, SeekerExclusionReason.NothingToSearch)));
+
+        HashSet<long> queuedBookIds = activeQueueRecords
+            .Where(r => r.BookId > 0)
+            .Select(r => r.BookId)
+            .ToHashSet();
+
+        SeekerEvaluation Build(List<SeekerHistory> history, Dictionary<long, DateTimeOffset> searched)
+        {
+            HashSet<long> searchedBookIds = history
+                .Where(h => h.EpisodeId > 0)
+                .Select(h => h.EpisodeId)
+                .ToHashSet();
+
+            List<SeekerSearchUnit> units = [];
+            foreach (IGrouping<long, SonarrWantedEpisode> book in wanted.GroupBy(w => w.EpisodeId))
+            {
+                SonarrWantedEpisode first = book.First();
+                SeekerExclusionReason? blockedBy = null;
+                SeekerUnitRest? rest = null;
+                if (queuedBookIds.Contains(book.Key))
+                {
+                    blockedBy = SeekerExclusionReason.InQueue;
+                }
+                else if (recentlyGrabbedBookIds.Contains(book.Key))
+                {
+                    blockedBy = SeekerExclusionReason.RecentlyGrabbed;
+                }
+                else if (rests.TryGetValue((first.SeriesId, 0, book.Key), out rest))
+                {
+                    blockedBy = SeekerExclusionReason.Resting;
+                }
+
+                units.Add(new SeekerSearchUnit
+                {
+                    ItemId = first.SeriesId,
+                    SeasonNumber = 0,
+                    EpisodeId = book.Key,
+                    Name = first.Title!,
+                    Reasons = book.Select(w => w.Reason).ToList(),
+                    AirDateUtc = first.AirDateUtc,
+                    Added = authorsById[first.SeriesId].Added,
+                    LastSearchTime = null,
+                    CustomFormatGap = 0,
+                    Searched = searchedBookIds.Contains(book.Key),
+                    BlockedBy = blockedBy,
+                    Rest = rest,
+                });
+            }
+
+            return new SeekerEvaluation
+            {
+                AllLibraryIds = allLibraryIds,
+                ReleasedItems = releasedCount,
+                MonitoredItems = monitoredCount,
+                TagFilteredItems = authorsById.Count,
                 ItemExclusions = exclusions,
                 Units = units,
                 LastSearchedByItem = searched,

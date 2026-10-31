@@ -168,6 +168,26 @@ public static class SeekerTestDataFactory
         return instance;
     }
 
+    public static ArrInstance AddChaptarrInstance(DataContext context, bool enabled = true)
+    {
+        ArrConfig arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Chaptarr);
+        ArrInstance instance = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Chaptarr",
+            Url = new Uri("http://chaptarr:8789"),
+            ApiKey = "test-api-key",
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+        return instance;
+    }
+
     public static ArrInstance AddWhisparrInstance(DataContext context, float version)
     {
         ArrConfig arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Whisparr);

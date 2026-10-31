@@ -31,6 +31,7 @@ public class SeekerPreviewControllerTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IChaptarrClient _chaptarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IArrClientFactory _arrClientFactory;
@@ -44,6 +45,7 @@ public class SeekerPreviewControllerTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
+        _chaptarrClient = Substitute.For<IChaptarrClient>();
         _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
@@ -67,6 +69,7 @@ public class SeekerPreviewControllerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _lidarrClient,
+            _chaptarrClient,
             _whisparrV2Client,
             _whisparrV3Client,
             timeProvider);
@@ -254,6 +257,50 @@ public class SeekerPreviewControllerTests : IDisposable
 
         SeekerPreviewUnitResponse unit = response.NextUp.ShouldHaveSingleItem();
         unit.Name.ShouldBe("Artist 1 - Album 10");
+        unit.Reason.ShouldBe(SeekerSearchReason.Missing);
+        response.Funnel.LibraryItems.ShouldBe(1);
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetPreview_Chaptarr_ReadsTheLibraryThroughTheChaptarrClient()
+    {
+        ArrInstance chaptarr = SeekerTestDataFactory.AddChaptarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = chaptarr.Id,
+            Enabled = true,
+            CurrentCycleId = Guid.NewGuid(),
+        });
+        await _dataContext.SaveChangesAsync();
+        List<SearchableAuthor> authors = [new SearchableAuthor { Id = 1, AuthorName = "Author 1", Monitored = true }];
+        List<SearchableBook> books =
+        [
+            new SearchableBook
+            {
+                Id = 10,
+                Title = "Book 10",
+                AuthorId = 1,
+                Monitored = true,
+                MediaType = ChaptarrMediaType.Ebook,
+                ReleaseDate = Now.AddDays(-30),
+            },
+        ];
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _chaptarrClient
+            .GetRecentlyGrabbedBookIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long>());
+        _chaptarrClient.StreamAllAuthorsAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(authors));
+        _chaptarrClient.GetMissingBooksAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(books);
+        _chaptarrClient.GetCutoffUnmetBooksAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(chaptarr.Id, CancellationToken.None));
+
+        SeekerPreviewUnitResponse unit = response.NextUp.ShouldHaveSingleItem();
+        unit.Name.ShouldBe("Author 1 - Book 10 (Ebook)");
         unit.Reason.ShouldBe(SeekerSearchReason.Missing);
         response.Funnel.LibraryItems.ShouldBe(1);
         _sonarrClient.ReceivedCalls().ShouldBeEmpty();

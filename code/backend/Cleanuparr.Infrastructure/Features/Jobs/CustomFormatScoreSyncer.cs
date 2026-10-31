@@ -89,7 +89,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             .ToListAsync(cancellationToken: cancellationToken);
 
         instanceConfigs = instanceConfigs
-            .Where(s => SeekerApps.IsSupported(s.ArrInstance))
+            .Where(s => SeekerApps.IsSupported(s.ArrInstance) && SeekerApps.ReadsCustomFormatScores(s.ArrInstance))
             .ToList();
 
         _logger.LogDebug("CF score sync found {Count} enabled instance(s): {Instances}",
