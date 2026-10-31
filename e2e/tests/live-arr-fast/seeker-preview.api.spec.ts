@@ -7,13 +7,16 @@ import {
   RADARR,
   RUN_TAG,
   SONARR,
+  SPORTARR,
   WHISPARR,
   WHISPARR2,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   listSearchEvents,
+  isolateSportarrGrabbableEvent,
   resetLiveArrState,
   restoreLibrary,
+  restoreSportarrEvents,
   snapshotLibrary,
   teardownInstances,
   triggerSeeker,
@@ -310,5 +313,43 @@ test.describe('Seeker preview on Chaptarr', () => {
     expect(preview.funnel.libraryItems).toBe(library.length);
     expect(preview.funnel.eligibleUnits).toBe(2);
     expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  });
+});
+
+test.describe('Seeker preview on Sportarr', () => {
+  let library: Array<Record<string, unknown>> = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(SPORTARR);
+    await indexerMock.stub(torznabSearchStub(SPORTARR.searchMode, []));
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreSportarrEvents();
+    await resetLiveArrState();
+  });
+
+  test('lists the monitored missing event next up with league funnel counts', async ({ api }) => {
+    await isolateSportarrGrabbableEvent();
+    const instanceId = await arrangeInstance(api, SPORTARR);
+
+    const preview = await getPreview(api, instanceId);
+
+    const next = preview.nextUp.find((u) => u.name === `${SPORTARR.seededTitle} - UFC Fight Night 232 Allen vs Craig`);
+    expect(next?.reason).toBe('Missing');
+    expect(preview.funnel.libraryItems).toBe(library.length);
+    expect(preview.funnel.eligibleUnits).toBe(1);
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  });
+
+  test('excludes a postponed event', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, SPORTARR);
+
+    const preview = await getPreview(api, instanceId);
+
+    expect(exclusionOf(preview, 'UFC 151 Jones vs Henderson')).toBe('PostponedOrCancelled');
+    expect(preview.nextUp.map((u) => u.name)).not.toContain(`${SPORTARR.seededTitle} - UFC 151 Jones vs Henderson`);
   });
 });

@@ -26,7 +26,7 @@ export const TEST_CONFIG = {
     indexerAdminUrl: 'http://localhost:9500/__admin',
   },
 
-  // The real Sonarr, Radarr, Whisparr v3, Whisparr v2, Lidarr and Chaptarr containers.
+  // The real Sonarr, Radarr, Whisparr v3, Whisparr v2, Lidarr, Chaptarr and Sportarr containers.
   // Their api keys come from the committed seed in e2e/arr-seed.
   liveArr: {
     sonarrUrl: 'http://localhost:8989',
@@ -49,6 +49,9 @@ export const TEST_CONFIG = {
     chaptarrApiKey: '0000000000000000000000000000e2e9',
     seededAuthorName: 'Delia Ray',
     seededBookTitle: 'Finding Fortune',
+    sportarrUrl: 'http://localhost:1867',
+    sportarrApiKey: '0000000000000000000000000000e2ea',
+    seededLeagueName: 'UFC',
   },
 
   // The Whisparr v2 seed keeps two years of one site.

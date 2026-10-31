@@ -5,13 +5,16 @@ import {
   LIDARR,
   RADARR,
   SONARR,
+  SPORTARR,
   WHISPARR,
   WHISPARR2,
   TRANSITION_TIMEOUT,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   firstSearchEvent,
+  isolateSportarrGrabbableEvent,
   resetLiveArrState,
+  restoreSportarrEvents,
   teardownInstances,
   triggerSeeker,
   waitForArrQueue,
@@ -53,11 +56,12 @@ test.describe('Seeker grab on demand', () => {
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
     await setChaptarrAudiobookTags([]);
+    await restoreSportarrEvents();
     await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds: yearSceneIds, monitored: true });
     await resetLiveArrState();
   });
 
-  for (const target of [SONARR, RADARR, WHISPARR, WHISPARR2, LIDARR, CHAPTARR]) {
+  for (const target of [SONARR, RADARR, WHISPARR, WHISPARR2, LIDARR, CHAPTARR, SPORTARR]) {
     test(`records the real ${target.type} v${target.version} grab on the search event`, async ({ api }) => {
       test.setTimeout(TEST_TIMEOUT);
 
@@ -74,6 +78,11 @@ test.describe('Seeker grab on demand', () => {
         // The release is an EPUB, so only the ebook row can grab it
         const tagId = await CHAPTARR.arr.ensureTag(AUDIOBOOK_SKIP_TAG);
         await setChaptarrAudiobookTags([tagId]);
+      }
+
+      if (target === SPORTARR) {
+        // The release only matches one event
+        await isolateSportarrGrabbableEvent();
       }
 
       const instanceId = await arrangeInstance(
