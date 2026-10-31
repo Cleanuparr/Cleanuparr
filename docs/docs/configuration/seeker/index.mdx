@@ -15,7 +15,7 @@ import {
 
 # Seeker
 
-The Seeker automates searching for missing items and quality upgrades across your Radarr, Sonarr, Lidarr, Chaptarr and Whisparr (v2 and v3) libraries. It runs on a configurable schedule and works through your library one item at a time to avoid overwhelming your indexers.
+The Seeker automates searching for missing items and quality upgrades across your Radarr, Sonarr, Lidarr, Chaptarr, Sportarr and Whisparr (v2 and v3) libraries. It runs on a configurable schedule and works through your library one item at a time to avoid overwhelming your indexers.
 
 <ElementNavigator />
 
@@ -64,7 +64,7 @@ Replacement search is always enabled when Search is on and cannot be disabled. W
 <Note>
 Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle completes and the next one starts after the minimum cycle time.
 
-For Radarr, each movie is one item. For Whisparr v3, each movie or scene is one item. For Lidarr, each album is one item. Seeker draws an artist first, then one of its albums. For Chaptarr, each audiobook or ebook is one item. Seeker draws an author first, then one of its books, earliest release date first. For Sonarr, a cycle holds season units and episode units. [Search Mode](#instance-search-mode) picks the unit for regular and daily seasons. Specials and airing anime seasons go one episode at a time. Whisparr v2 treats sites as series and scenes as episodes, so its cycle holds year units like `Site 2024` and scene units like `Site 2024-05-12`. Cycle progress counts the searches still needed.
+For Radarr, each movie is one item. For Whisparr v3, each movie or scene is one item. For Lidarr, each album is one item. Seeker draws an artist first, then one of its albums. For Chaptarr, each audiobook or ebook is one item. Seeker draws an author first, then one of its books, earliest release date first. For Sportarr, each event is one item, whatever its league or season. For Sonarr, a cycle holds season units and episode units. [Search Mode](#instance-search-mode) picks the unit for regular and daily seasons. Specials and airing anime seasons go one episode at a time. Whisparr v2 treats sites as series and scenes as episodes, so its cycle holds year units like `Site 2024` and scene units like `Site 2024-05-12`. Cycle progress counts the searches still needed.
 
 The Searches tab shows per instance how many items the current cycle searched, how many are left, how long it has been running and how long the previous cycle took. Items in the download queue are not counted as left. Dry run tracks its own cycles and never moves the live one.
 
@@ -80,7 +80,11 @@ Each Sonarr search event records a content kind: `Standard` (a regular season or
 </Note>
 
 <Note>
-Seeker reads the Missing and Cutoff Unmet lists of each *arr instance. Proactive search on Radarr needs Radarr v5.6 or newer, the first version with those lists. Whisparr v3 needs v3.1 or newer. Lidarr albums come from the same two lists. Chaptarr books do too.
+Seeker reads the Missing and Cutoff Unmet lists of each *arr instance. Proactive search on Radarr needs Radarr v5.6 or newer, the first version with those lists. Whisparr v3 needs v3.1 or newer. Lidarr albums come from the same two lists. Chaptarr books do too. Sportarr events do as well, except that the Missing list comes from Sportarr's own API so Seeker can tell postponed and cancelled events apart.
+</Note>
+
+<Note>
+Seeker skips postponed and cancelled Sportarr events. Sportarr also runs its own backlog search every 6 hours for leagues that have it enabled, so turn one of the two off to avoid searching twice.
 </Note>
 
 <Note>
@@ -129,7 +133,7 @@ Search times come from the *arr instance, so manual searches and searches from o
   title="Monitored Only"
 >
 
-When enabled, only items that are marked as monitored in the *arr instance will be included as search candidates. Unmonitored movies, series, and episodes are skipped entirely. For Lidarr, an album counts as monitored only when its artist is monitored too. For Chaptarr, a book counts as monitored only when its audiobook or ebook side and the same side of its author are monitored.
+When enabled, only items that are marked as monitored in the *arr instance will be included as search candidates. Unmonitored movies, series, and episodes are skipped entirely. For Lidarr, an album counts as monitored only when its artist is monitored too. For Chaptarr, a book counts as monitored only when its audiobook or ebook side and the same side of its author are monitored. Sportarr follows the event's own monitored flag, so the league's flag does not matter and the toggle does not appear.
 
 </ConfigSection>
 
@@ -152,7 +156,7 @@ Custom format scores are tracked at the episode level for Sonarr and per scene f
 
 For Lidarr, an album's score is the score of its first track file, the one with the lowest id. This is how Lidarr compares an album. An album with a track missing a file has no score entry.
 
-This setting does not apply to Chaptarr: its books carry no custom format score. Chaptarr still scores the releases a search finds.
+This setting does not apply to Chaptarr: its books carry no custom format score. Chaptarr still scores the releases a search finds. The same goes for Sportarr.
 </Note>
 
 </ConfigSection>
@@ -214,7 +218,7 @@ Seeker resumes proactive search at its first scheduled run after the window ends
 <SectionTitle>Instance Configuration</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  Per-instance settings allow you to control which Radarr, Sonarr, Lidarr, Chaptarr and Whisparr (v2 and v3) instances participate in proactive search and how they behave.
+  Per-instance settings allow you to control which Radarr, Sonarr, Lidarr, Chaptarr, Sportarr and Whisparr (v2 and v3) instances participate in proactive search and how they behave.
 </p>
 
 <Important>
@@ -322,7 +326,7 @@ After 3 searches in a row grab nothing, Seeker skips the item for 1 cycle. Each 
 
 Only a grab from a Seeker search clears the count and the rest. Failed or timed-out searches don't count as misses.
 
-A Chaptarr search with no result tries every query tier on every indexer, so a book that keeps missing rests.
+A Chaptarr search with no result tries every query tier on every indexer, so a book that keeps missing rests. A Sportarr event search does the same with every query variant, which makes it heavier on your indexers than a Sonarr search.
 
 Seeker counts misses even while this setting is off, so turning it on uses real history.
 
