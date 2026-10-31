@@ -6,6 +6,7 @@ export const ARR_TYPES: ArrType[] = [
   'radarr',
   'lidarr',
   'readarr',
+  'chaptarr',
   'whisparr',
   'sportarr',
   'lazylibrarian',
@@ -39,6 +40,14 @@ export const ARR_APP_META: Record<ArrType, ArrAppMeta> = {
     defaultPort: 8787,
     experimental: false,
     iconSrc: 'icons/ext/readarr-light.svg',
+  },
+  chaptarr: {
+    displayName: 'Chaptarr',
+    versionOptions: [{ label: 'v0.9', value: 0.9 }],
+    defaultPort: 8789,
+    experimental: false,
+    iconSrc: 'icons/ext/chaptarr-light.svg',
+    featureId: 'chaptarr',
   },
   whisparr: {
     displayName: 'Whisparr',

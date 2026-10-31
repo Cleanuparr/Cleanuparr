@@ -7,7 +7,7 @@ import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
-  SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent, LoadingStateComponent,
+  SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent, LoadingStateComponent, NewBadgeComponent,
 } from '@ui';
 import { ArrApi } from '@core/api/arr.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
@@ -36,7 +36,7 @@ interface ArrInstanceFormModel {
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent,
     SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent, LoadingStateComponent,
-    FormField, ArrSectionComponent,
+    NewBadgeComponent, FormField, ArrSectionComponent,
   ],
   templateUrl: './arr-apps.component.html',
   styleUrl: './arr-apps.component.scss',

@@ -161,12 +161,13 @@ export enum InstanceType {
   Radarr = 'Radarr',
   Lidarr = 'Lidarr',
   Readarr = 'Readarr',
+  Chaptarr = 'Chaptarr',
   Whisparr = 'Whisparr',
   Sportarr = 'Sportarr',
   LazyLibrarian = 'LazyLibrarian',
 }
 
-export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
+export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'chaptarr' | 'whisparr' | 'sportarr' | 'lazylibrarian';
 
 export enum SeedingRuleAction {
   Delete = 'Delete',

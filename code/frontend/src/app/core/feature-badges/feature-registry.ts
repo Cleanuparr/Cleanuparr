@@ -45,6 +45,8 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'ignore-alt-speed' },
   { id: 'sportarr-blocklist' },
   { id: 'lazylibrarian-blocklist' },
+  { id: 'chaptarr' },
+  { id: 'chaptarr-blocklist' },
   { id: 'http-user-agent' },
   { id: 'seeker-ignore-struck-downloads' },
   { id: 'seeding-rule-action' },
