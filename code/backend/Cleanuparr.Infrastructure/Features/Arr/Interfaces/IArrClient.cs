@@ -92,5 +92,10 @@ public interface IArrClient
     /// <returns>Task that completes when the connection test is done</returns>
     Task HealthCheckAsync(ArrInstance arrInstance);
 
+    /// <summary>
+    /// Gets all tags defined on an Arr instance
+    /// </summary>
+    /// <param name="arrInstance">The instance to read tags from</param>
+    /// <returns>The instance's tags</returns>
     Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance);
 }
