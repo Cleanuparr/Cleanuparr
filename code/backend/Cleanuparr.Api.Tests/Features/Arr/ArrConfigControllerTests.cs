@@ -107,6 +107,29 @@ public class ArrConfigControllerTests : IDisposable
     }
 
     [Theory]
+    [InlineData(InstanceType.Sonarr)]
+    [InlineData(InstanceType.Radarr)]
+    [InlineData(InstanceType.Lidarr)]
+    [InlineData(InstanceType.Readarr)]
+    [InlineData(InstanceType.Whisparr)]
+    [InlineData(InstanceType.Sportarr)]
+    [InlineData(InstanceType.LazyLibrarian)]
+    [InlineData(InstanceType.Chaptarr)]
+    public async Task UpdateConfig_AllTypes_PersistsFailedImportMaxStrikes(InstanceType type)
+    {
+        // Arrange
+        UpdateArrConfigRequest request = new() { FailedImportMaxStrikes = 7 };
+
+        // Act
+        IActionResult result = await DispatchUpdateConfig(type, request);
+
+        // Assert
+        result.ShouldBeOfType<OkObjectResult>();
+        ArrConfig saved = await _dataContext.ArrConfigs.AsNoTracking().FirstAsync(c => c.Type == type);
+        saved.FailedImportMaxStrikes.ShouldBe((short)7);
+    }
+
+    [Theory]
     [InlineData(-1)]
     [InlineData(0)]
     [InlineData(3)]
@@ -507,6 +530,19 @@ public class ArrConfigControllerTests : IDisposable
     }
 
     #endregion
+
+    private Task<IActionResult> DispatchUpdateConfig(InstanceType type, UpdateArrConfigRequest request) => type switch
+    {
+        InstanceType.Sonarr => _controller.UpdateSonarrConfig(request),
+        InstanceType.Radarr => _controller.UpdateRadarrConfig(request),
+        InstanceType.Lidarr => _controller.UpdateLidarrConfig(request),
+        InstanceType.Readarr => _controller.UpdateReadarrConfig(request),
+        InstanceType.Whisparr => _controller.UpdateWhisparrConfig(request),
+        InstanceType.Sportarr => _controller.UpdateSportarrConfig(request),
+        InstanceType.LazyLibrarian => _controller.UpdateLazyLibrarianConfig(request),
+        InstanceType.Chaptarr => _controller.UpdateChaptarrConfig(request),
+        _ => throw new ArgumentOutOfRangeException(nameof(type)),
+    };
 
     private Task<IActionResult> DispatchCreate(InstanceType type, ArrInstanceRequest request) => type switch
     {
