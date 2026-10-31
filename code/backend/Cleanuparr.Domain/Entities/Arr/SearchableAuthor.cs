@@ -21,18 +21,6 @@ public sealed record SearchableAuthor
     public bool Monitored { get; init; }
 
     /// <summary>
-    /// Whether Chaptarr monitors the author's audiobooks.
-    /// Null when Chaptarr omits it.
-    /// </summary>
-    public bool? AudiobookMonitored { get; init; }
-
-    /// <summary>
-    /// Whether Chaptarr monitors the author's ebooks.
-    /// Null when Chaptarr omits it.
-    /// </summary>
-    public bool? EbookMonitored { get; init; }
-
-    /// <summary>
     /// Tag ids on the author's audiobooks.
     /// Resolve them to labels through Chaptarr's /tag endpoint.
     /// </summary>
