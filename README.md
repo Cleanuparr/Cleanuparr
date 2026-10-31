@@ -15,7 +15,7 @@ _/kliː.nʌp.ər/ — like "cleanuper", someone who does the cleanup. Not "Clean
 
 </div>
 
-Cleanuparr is an advanced download manager for the Servarr ecosystem. It works with Sonarr, Radarr, Lidarr, Readarr, and Whisparr alongside download clients like qBittorrent, Transmission, and Deluge. Beyond cleaning up stalled, blocked, and malicious downloads, it searches for missing content and quality upgrades, manages seeding, and removes orphaned files.
+Cleanuparr is an advanced download manager for the Servarr ecosystem. It works with Sonarr, Radarr, Lidarr, Readarr, Chaptarr, and Whisparr alongside download clients like qBittorrent, Transmission, and Deluge. Beyond cleaning up stalled, blocked, and malicious downloads, it searches for missing content and quality upgrades, manages seeding, and removes orphaned files.
 
 <div align="center">
   <img src="./docs/static/img/screenshots/dashboard.webp" alt="Cleanuparr dashboard">
@@ -33,7 +33,7 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 > - Remove and block downloads blocked by qBittorrent or by Cleanuparr's **Malware Blocker**.
 > - Remove and block known malware based on patterns found by the community.
 > - Automatically trigger a search for downloads removed from the arrs.
-> - Proactively search for **missing** items across your Radarr and Sonarr libraries.
+> - Proactively search for **missing** items across your Radarr, Sonarr, Lidarr, Whisparr and Chaptarr libraries.
 > - Search for **quality upgrades** for items that haven't met their quality profile's cutoff (a.k.a. **Cutoff Unmet**).
 > - Search for **custom format score upgrades** with automatic score tracking.
 > - Clean up downloads that have been **seeding** for a certain amount of time.
@@ -56,6 +56,7 @@ https://cleanuparr.github.io/Cleanuparr/docs/screenshots
 - **Radarr**
 - **Lidarr**
 - **Readarr**
+- **Chaptarr**
 - **Whisparr v2**
 - **Whisparr v3**
 - **Sportarr**
