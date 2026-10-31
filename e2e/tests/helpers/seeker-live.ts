@@ -158,7 +158,7 @@ export const CHAPTARR: SeededArr = {
   version: 0.9,
   searchMode: 'book',
   category: TORZNAB_EBOOK_CATEGORY,
-  release: `${TEST_CONFIG.liveArr.seededAuthorName} - ${TEST_CONFIG.liveArr.seededBookTitle} (2008) [EPUB]-E2E${RUN_TAG}`,
+  release: `${TEST_CONFIG.liveArr.seededAuthorName} - ${TEST_CONFIG.liveArr.seededBookTitle} (2015) [EPUB]-E2E${RUN_TAG}`,
   itemId: 1,
   itemPath: 'author',
   seededTitle: TEST_CONFIG.liveArr.seededAuthorName,
