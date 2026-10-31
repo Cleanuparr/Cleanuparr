@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Cleanuparr.Domain.Entities.Arr;
@@ -19,6 +20,11 @@ public class SportarrClient : SonarrClient, ISportarrClient
     /// </summary>
     private const int TaskPageSize = 500;
 
+    /// <summary>
+    /// Largest page size Sportarr's history accepts; anything above falls back to 20.
+    /// </summary>
+    private const int HistoryPageSize = 500;
+
     public SportarrClient(
         ILogger<SportarrClient> logger,
         IHttpClientFactory httpClientFactory,
@@ -27,6 +33,9 @@ public class SportarrClient : SonarrClient, ISportarrClient
     ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
     {
     }
+
+    /// <inheritdoc/>
+    public override bool SupportsForceImport => false;
 
     /// <inheritdoc/>
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
@@ -67,6 +76,10 @@ public class SportarrClient : SonarrClient, ISportarrClient
                     if (queued?.TaskId is { } taskId)
                     {
                         taskIds.Add(taskId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("events search returned no task id | {Url} | event id: {EventId}", arrInstance.Url, item.Id);
                     }
                 }
 
@@ -116,6 +129,128 @@ public class SportarrClient : SonarrClient, ISportarrClient
 
         return tasks?.Select(ToCommandStatus).ToList() ?? [];
     }
+
+    /// <inheritdoc/>
+    public override async Task<List<SearchableEpisode>> GetMissingEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default)
+    {
+        // The native list holds monitored events only
+        if (!monitored)
+        {
+            return [];
+        }
+
+        List<SportarrEvent> events = await GetAllPagesAsync<SportarrMissingResponse, SportarrEvent>(
+            page =>
+            {
+                UriBuilder uriBuilder = new(arrInstance.Url);
+                uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/wanted/missing";
+                uriBuilder.Query = $"page={page}&pageSize={WantedPageSize}";
+                return uriBuilder.Uri;
+            },
+            arrInstance.ApiKey,
+            response => response.Events,
+            response => response.TotalRecords,
+            "missing",
+            cancellationToken
+        );
+
+        return events.Select(ToSearchableEpisode).ToList();
+    }
+
+    /// <inheritdoc/>
+    public override async Task<List<SearchableEpisode>> GetCutoffUnmetEpisodesAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default)
+    {
+        // The cutoff list ignores the monitored filter and holds monitored events only
+        if (!monitored)
+        {
+            return [];
+        }
+
+        return await base.GetCutoffUnmetEpisodesAsync(arrInstance, monitored, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public override async Task<HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)>> GetRecentlyGrabbedEpisodesAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default)
+    {
+        HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> grabbed = [];
+
+        // History has no since filter, so read newest first and stop at the first older row
+        for (int page = 1; ; page++)
+        {
+            UriBuilder uriBuilder = new(arrInstance.Url);
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/history";
+            uriBuilder.Query = $"page={page}&pageSize={HistoryPageSize}&sortDirection=descending";
+
+            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+            SetApiKey(request, arrInstance.ApiKey);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            try
+            {
+                response.EnsureSuccessStatusCode();
+            }
+            catch
+            {
+                _logger.LogError("grab history failed | {Uri}", uriBuilder.Uri);
+                throw;
+            }
+
+            SportarrHistoryResponse? history = await DeserializeStreamAsync<SportarrHistoryResponse>(response, cancellationToken);
+
+            if (history is null || history.Records.Count is 0)
+            {
+                break;
+            }
+
+            foreach (SportarrHistoryRecord record in history.Records)
+            {
+                if (DateTimeOffset.TryParse(record.Date, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) && date < since)
+                {
+                    return grabbed;
+                }
+
+                if (record.EpisodeId > 0 && record.EventType.Equals("grabbed", StringComparison.OrdinalIgnoreCase))
+                {
+                    grabbed.Add((0, 0, record.EpisodeId));
+                }
+            }
+
+            if (history.Records.Count < HistoryPageSize)
+            {
+                break;
+            }
+        }
+
+        return grabbed;
+    }
+
+    private static SearchableEpisode ToSearchableEpisode(SportarrEvent sportarrEvent)
+    {
+        DateTimeOffset? eventDate = DateTimeOffset.TryParse(sportarrEvent.EventDate, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset parsed)
+            ? parsed
+            : null;
+
+        return new SearchableEpisode
+        {
+            Id = sportarrEvent.Id,
+            SeriesId = sportarrEvent.LeagueId,
+            SeasonNumber = sportarrEvent.SeasonNumber ?? eventDate?.UtcDateTime.Year ?? 0,
+            EpisodeNumber = sportarrEvent.EpisodeNumber ?? 0,
+            Title = sportarrEvent.Title,
+            AirDateUtc = eventDate,
+            Monitored = sportarrEvent.Monitored,
+            HasFile = sportarrEvent.HasFile,
+            Unsearchable = IsUnsearchableStatus(sportarrEvent.Status),
+        };
+    }
+
+    // Matches Sportarr's own automatic search, which also accepts the US spelling
+    private static bool IsUnsearchableStatus(string? status) =>
+        status is not null
+        && (status.Equals("Postponed", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase)
+            || status.Equals("Canceled", StringComparison.OrdinalIgnoreCase));
 
     private static ArrCommandStatus ToCommandStatus(SportarrTask task)
     {

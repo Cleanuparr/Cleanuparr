@@ -340,7 +340,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     }
 
     /// <inheritdoc/>
-    public async Task<HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)>> GetRecentlyGrabbedEpisodesAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default)
+    public virtual async Task<HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)>> GetRecentlyGrabbedEpisodesAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default)
     {
         List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, "&includeEpisode=true", cancellationToken);
 

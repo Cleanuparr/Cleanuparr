@@ -67,6 +67,12 @@ public class SportarrClientTests
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/system/status");
     }
 
+    [Fact]
+    public void SupportsForceImport_IsFalse()
+    {
+        _client.SupportsForceImport.ShouldBeFalse();
+    }
+
     #region SearchItemsAsync
 
     [Fact]
@@ -202,6 +208,261 @@ public class SportarrClientTests
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.RequestUri!.AbsolutePath.ShouldBe("/api/task");
         request.RequestUri.Query.ShouldBe("?pageSize=500");
+    }
+
+    #endregion
+
+    #region GetMissingEpisodesAsync
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_MapsNativeEventsToEpisodes()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            events = new object[]
+            {
+                new { id = 7, title = "UFC 300", leagueId = 2, seasonNumber = 2024, episodeNumber = 4, eventDate = "2024-04-14T02:00:00", monitored = true, hasFile = false, status = "Finished" },
+                new { id = 8, title = "UFC 301", leagueId = 2, eventDate = "2025-05-04T02:00:00", monitored = true, hasFile = false, status = "Postponed" },
+                new { id = 9, title = "UFC 302", leagueId = 2, eventDate = "2025-06-01T02:00:00", monitored = true, hasFile = false, status = "cancelled" },
+            },
+            page = 1,
+            pageSize = 1000,
+            totalRecords = 3,
+        })));
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result.Count.ShouldBe(3);
+        SearchableEpisode first = result[0];
+        first.Id.ShouldBe(7);
+        first.SeriesId.ShouldBe(2);
+        first.SeasonNumber.ShouldBe(2024);
+        first.EpisodeNumber.ShouldBe(4);
+        first.Title.ShouldBe("UFC 300");
+        first.AirDateUtc.ShouldBe(new DateTimeOffset(2024, 4, 14, 2, 0, 0, TimeSpan.Zero));
+        first.Monitored.ShouldBeTrue();
+        first.HasFile.ShouldBeFalse();
+        first.Unsearchable.ShouldBeFalse();
+        result[1].SeasonNumber.ShouldBe(2025);
+        result[1].EpisodeNumber.ShouldBe(0);
+        result[1].Unsearchable.ShouldBeTrue();
+        result[2].Unsearchable.ShouldBeTrue();
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/wanted/missing");
+        request.RequestUri.Query.ShouldBe("?page=1&pageSize=1000");
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_EventDateWithOffset_KeepsSameInstant()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            events = new object[]
+            {
+                new { id = 7, leagueId = 2, eventDate = "2024-04-14T04:00:00+02:00", monitored = true, hasFile = false },
+            },
+            page = 1,
+            pageSize = 1000,
+            totalRecords = 1,
+        })));
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result[0].AirDateUtc.ShouldBe(new DateTimeOffset(2024, 4, 14, 2, 0, 0, TimeSpan.Zero));
+        result[0].SeasonNumber.ShouldBe(2024);
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_EventDateWithoutOffset_IsReadAsUtc()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            events = new object[]
+            {
+                new { id = 7, leagueId = 2, eventDate = "2024-04-14T02:00:00", monitored = true, hasFile = false },
+            },
+            page = 1,
+            pageSize = 1000,
+            totalRecords = 1,
+        })));
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result[0].AirDateUtc.ShouldBe(new DateTimeOffset(2024, 4, 14, 2, 0, 0, TimeSpan.Zero));
+        result[0].AirDateUtc!.Value.Offset.ShouldBe(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_NullEventDate_LeavesAirDateNull()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            events = new object[]
+            {
+                new { id = 7, leagueId = 2, eventDate = (string?)null, monitored = true, hasFile = false },
+            },
+            page = 1,
+            pageSize = 1000,
+            totalRecords = 1,
+        })));
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result[0].AirDateUtc.ShouldBeNull();
+        result[0].SeasonNumber.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_PagesUntilTotalReached()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((req, _) =>
+        {
+            bool firstPage = req.RequestUri!.Query.StartsWith("?page=1");
+            object[] events = firstPage
+                ? [new { id = 1, leagueId = 2, eventDate = "2024-01-01T00:00:00", monitored = true }]
+                : [new { id = 2, leagueId = 2, eventDate = "2024-01-02T00:00:00", monitored = true }];
+            return Task.FromResult(JsonResponse(new { events, totalRecords = 2 }));
+        });
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result.Select(x => x.Id).ShouldBe(new long[] { 1, 2 });
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_TotalRecordsGrowsEveryPage_StopsAtFirstPageTotal()
+    {
+        // Arrange
+        int calls = 0;
+        _httpMessageHandler.SetupResponse((_, _) =>
+        {
+            calls++;
+            object[] events = [new { id = calls, leagueId = 2, eventDate = "2024-01-01T00:00:00", monitored = true }];
+            return Task.FromResult(JsonResponse(new { events, totalRecords = calls + 1 }));
+        });
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result.Count.ShouldBe(2);
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_Unmonitored_ReturnsEmptyWithoutRequest()
+    {
+        // Act
+        List<SearchableEpisode> result = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: false);
+
+        // Assert
+        result.ShouldBeEmpty();
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    #region GetCutoffUnmetEpisodesAsync
+
+    [Fact]
+    public async Task GetCutoffUnmetEpisodesAsync_Unmonitored_ReturnsEmptyWithoutRequest()
+    {
+        // Act
+        List<SearchableEpisode> result = await _client.GetCutoffUnmetEpisodesAsync(_arrInstance, monitored: false);
+
+        // Assert
+        result.ShouldBeEmpty();
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetCutoffUnmetEpisodesAsync_Monitored_ReadsV3CutoffList()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            totalRecords = 1,
+            records = new object[] { new { id = 4, seriesId = 2, seasonNumber = 2024, episodeNumber = 1, monitored = true, hasFile = true } },
+        })));
+
+        // Act
+        List<SearchableEpisode> result = await _client.GetCutoffUnmetEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        result.Select(x => x.Id).ShouldBe(new long[] { 4 });
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/wanted/cutoff");
+    }
+
+    #endregion
+
+    #region GetRecentlyGrabbedEpisodesAsync
+
+    [Fact]
+    public async Task GetRecentlyGrabbedEpisodesAsync_KeepsGrabsSinceCutoffAndStopsAtFirstOlderRow()
+    {
+        // Arrange
+        DateTimeOffset since = new(2026, 10, 30, 12, 0, 0, TimeSpan.Zero);
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new
+        {
+            records = new object[]
+            {
+                new { episodeId = 1, eventType = "grabbed", date = "2026-10-31T10:00:00" },
+                new { episodeId = 2, eventType = "downloadFolderImported", date = "2026-10-31T09:00:00" },
+                new { episodeId = 3, eventType = "grabbed", date = "2026-10-30T13:00:00.0000000Z" },
+                new { episodeId = 4, eventType = "grabbed", date = "2026-10-30T11:00:00" },
+                new { episodeId = 5, eventType = "grabbed", date = "2026-10-30T10:00:00" },
+            },
+        })));
+
+        // Act
+        HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> result =
+            await _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, since);
+
+        // Assert
+        result.ShouldBe(new HashSet<(long, long, long)> { (0, 0, 1), (0, 0, 3) });
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/history");
+        request.RequestUri.Query.ShouldBe("?page=1&pageSize=500&sortDirection=descending");
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedEpisodesAsync_FullPageOfRecentRows_ReadsNextPage()
+    {
+        // Arrange
+        DateTimeOffset since = new(2026, 10, 30, 0, 0, 0, TimeSpan.Zero);
+        _httpMessageHandler.SetupResponse((req, _) =>
+        {
+            object[] records = req.RequestUri!.Query.StartsWith("?page=1")
+                ? Enumerable.Range(1, 500).Select(i => (object)new { episodeId = i, eventType = "grabbed", date = "2026-10-31T10:00:00" }).ToArray()
+                : [new { episodeId = 900, eventType = "grabbed", date = "2026-10-30T10:00:00" }];
+            return Task.FromResult(JsonResponse(new { records }));
+        });
+
+        // Act
+        HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> result =
+            await _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, since);
+
+        // Assert
+        result.Count.ShouldBe(501);
+        result.ShouldContain((0, 0, 900));
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
     }
 
     #endregion
