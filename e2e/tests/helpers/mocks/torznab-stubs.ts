@@ -10,14 +10,16 @@ import type { Mapping } from './wiremock-client';
  * A test adds the release it wants grabbed, plus the torrent that release points at.
  */
 
-/** Torznab search mode. Sonarr sends `tvsearch`, Radarr sends `movie`, Lidarr sends `music`. */
-export type TorznabSearchMode = 'tvsearch' | 'movie' | 'music' | 'search';
+/** Torznab search mode. Sonarr sends `tvsearch`, Radarr sends `movie`, Lidarr sends `music`, Chaptarr sends `book`. */
+export type TorznabSearchMode = 'tvsearch' | 'movie' | 'music' | 'book' | 'search';
 
 /** Torznab category. The seeded arrs are configured for the parent categories. */
 export const TORZNAB_TV_CATEGORY = 5040;
 export const TORZNAB_MOVIE_CATEGORY = 2040;
 export const TORZNAB_XXX_CATEGORY = 6040;
 export const TORZNAB_AUDIO_CATEGORY = 3040;
+export const TORZNAB_AUDIOBOOK_CATEGORY = 3030;
+export const TORZNAB_EBOOK_CATEGORY = 7020;
 
 /**
  * The advertised release size.
