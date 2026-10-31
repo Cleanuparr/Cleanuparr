@@ -37,7 +37,7 @@ public class NotificationPublisherTests
             _notificationQueue.Writer);
     }
 
-    private void SetupContext(InstanceType instanceType = InstanceType.Sonarr)
+    private void SetupContext(InstanceType instanceType = InstanceType.Sonarr, QueueBook? book = null)
     {
         var record = new QueueRecord
         {
@@ -45,7 +45,8 @@ public class NotificationPublisherTests
             Title = "Test Show",
             DownloadId = "ABCD1234",
             Status = "Downloading",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            Book = book
         };
 
         ContextProvider.Set(nameof(QueueRecord), record);
@@ -105,6 +106,26 @@ public class NotificationPublisherTests
         NotificationMessage m = _notificationQueue.ShouldHaveSingle();
         m.EventType.ShouldBe(NotificationEventType.FailedImportStrike);
         m.Context.Data["Strike count"].ShouldBe("2");
+    }
+
+    [Theory]
+    [InlineData(InstanceType.Readarr)]
+    [InlineData(InstanceType.Chaptarr)]
+    public async Task NotifyStrike_WithBookCover_SetsContextImage(InstanceType instanceType)
+    {
+        // Arrange
+        QueueBook book = new()
+        {
+            Images = [new ReadarrImage { CoverType = "cover", Url = new Uri("http://cover") }]
+        };
+        SetupContext(instanceType, book);
+
+        // Act
+        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
+
+        // Assert
+        NotificationMessage m = _notificationQueue.ShouldHaveSingle();
+        m.Context.Image.ShouldBe(new Uri("http://cover"));
     }
 
     [Theory]
