@@ -5,6 +5,7 @@ import { ArrApi } from '@core/api/arr.api';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ThemeService } from '@core/services/theme.service';
 import { ToastService } from '@core/services/toast.service';
+import { FeatureBadgeService } from '@core/feature-badges/feature-badge.service';
 import { ArrConfig, ArrInstance } from '@shared/models/arr-config.model';
 import { ArrAppsComponent } from './arr-apps.component';
 
@@ -43,11 +44,11 @@ const EMPTY_CONFIG: ArrConfig = {
 };
 
 function createApi(configs: ArrConfig[] = [
-  SONARR_CONFIG, RADARR_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG,
+  SONARR_CONFIG, RADARR_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG,
 ]) {
   return {
     getConfig: vi.fn((type: string) => {
-      const index = ['sonarr', 'radarr', 'lidarr', 'readarr', 'whisparr', 'sportarr', 'lazylibrarian'].indexOf(type);
+      const index = ['sonarr', 'radarr', 'lidarr', 'readarr', 'chaptarr', 'whisparr', 'sportarr', 'lazylibrarian'].indexOf(type);
       return of(configs[index] ?? EMPTY_CONFIG);
     }),
     updateConfig: vi.fn(() => of(undefined)),
@@ -80,6 +81,7 @@ describe('ArrAppsComponent', () => {
       providers: [
         { provide: ArrApi, useValue: api },
         { provide: ToastService, useValue: toast },
+        { provide: FeatureBadgeService, useValue: { isNew: (id: string) => id === 'chaptarr' } },
         { provide: ThemeService, useValue: { themedIconSrc: (src: string) => src } },
         {
           provide: ActivatedRoute,
@@ -103,11 +105,11 @@ describe('ArrAppsComponent', () => {
   it('loads all arr types and separates configured from unconfigured', () => {
     const { component, api } = setup();
 
-    expect(api.getConfig).toHaveBeenCalledTimes(7);
+    expect(api.getConfig).toHaveBeenCalledTimes(8);
     expect(component.configured()).toHaveLength(2);
-    expect(component.unconfigured()).toHaveLength(5);
+    expect(component.unconfigured()).toHaveLength(6);
     expect(component.configured().map(e => e.type)).toEqual(['sonarr', 'radarr']);
-    expect(component.unconfigured()).toEqual(['lidarr', 'readarr', 'whisparr', 'sportarr', 'lazylibrarian']);
+    expect(component.unconfigured()).toEqual(['lidarr', 'readarr', 'chaptarr', 'whisparr', 'sportarr', 'lazylibrarian']);
   });
 
   it('renders configured apps as arr-section components', () => {
@@ -124,18 +126,29 @@ describe('ArrAppsComponent', () => {
     expect(addCard.textContent).toContain('Add another app');
 
     const cards = fixture.nativeElement.querySelectorAll('.selection-card');
-    expect(cards.length).toBe(5);
+    expect(cards.length).toBe(6);
   });
 
   it('treats a config missing the instances field as unconfigured', () => {
     const configWithoutInstances = { failedImportMaxStrikes: -1 } as ArrConfig;
     const api = createApi([
-      configWithoutInstances, RADARR_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG,
+      configWithoutInstances, RADARR_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG,
     ]);
     const { component } = setup(api);
 
     expect(component.configured().map((e) => e.type)).toEqual(['radarr']);
     expect(component.unconfigured()).toContain('sonarr');
+  });
+
+  it('shows the NEW badge on the chaptarr selection card only', () => {
+    const { fixture } = setup();
+
+    const cards = Array.from(fixture.nativeElement.querySelectorAll('.selection-card')) as HTMLElement[];
+    const chaptarrCard = cards.find((el) => el.textContent!.includes('Chaptarr'))!;
+    const otherCards = cards.filter((el) => el !== chaptarrCard);
+
+    expect(chaptarrCard.querySelector('app-new-badge .new-pill')).not.toBeNull();
+    otherCards.forEach((card) => expect(card.querySelector('.new-pill')).toBeNull());
   });
 
   it('shows the experimental badge on the lazylibrarian selection card only', () => {
@@ -224,7 +237,7 @@ describe('ArrAppsComponent', () => {
 
   it('hides the "Add another app" card when every app is configured', () => {
     const api = createApi([
-      SONARR_CONFIG, RADARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG,
+      SONARR_CONFIG, RADARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG, SONARR_CONFIG,
     ]);
     const { fixture } = setup(api);
 
@@ -233,7 +246,7 @@ describe('ArrAppsComponent', () => {
 
   it('shows empty state when no apps are configured', () => {
     const api = createApi([
-      EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG,
+      EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG, EMPTY_CONFIG,
     ]);
     const { fixture: f } = setup(api);
 

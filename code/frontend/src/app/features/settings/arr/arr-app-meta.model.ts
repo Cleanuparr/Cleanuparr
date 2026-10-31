@@ -6,4 +6,5 @@ export interface ArrAppMeta {
   defaultPort: number;
   experimental: boolean;
   iconSrc: string;
+  featureId?: string;
 }
