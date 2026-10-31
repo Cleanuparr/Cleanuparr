@@ -2,6 +2,7 @@ import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  CHAPTARR,
   LIDARR,
   RADARR,
   SONARR,
@@ -654,6 +655,80 @@ test.describe('Seeker candidate filters on Lidarr', () => {
 
   test('searches an album released long ago at the longest grace period', async ({ api }) => {
     const instanceId = await arrangeInstance(api, LIDARR, { config: { postReleaseGraceHours: 72 } });
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+  });
+});
+
+test.describe('Seeker candidate filters on Chaptarr', () => {
+  const AUDIOBOOK_ROW_ID = 2;
+  const EBOOK_ROW_ID = 10;
+
+  let library: Array<Record<string, unknown>> = [];
+
+  async function setSideTags(audiobookTags: number[], ebookTags: number[]): Promise<void> {
+    const author = await CHAPTARR.arr.get<Record<string, unknown>>(`/api/v1/author/${CHAPTARR.itemId}`);
+    await CHAPTARR.arr.put(`/api/v1/author/${CHAPTARR.itemId}`, { ...author, audiobookTags, ebookTags });
+  }
+
+  async function setRowsMonitored(monitored: boolean): Promise<void> {
+    await CHAPTARR.arr.put('/api/v1/book/monitor', { bookIds: [AUDIOBOOK_ROW_ID, EBOOK_ROW_ID], monitored });
+  }
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(CHAPTARR);
+    await indexerMock.stubMany(grabbableRelease(CHAPTARR.searchMode, CHAPTARR.release, CHAPTARR.category).mappings);
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreLibrary(CHAPTARR, library);
+    await setRowsMonitored(true);
+    await resetLiveArrState();
+  });
+
+  test('searches the seeded book when nothing filters it out', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, CHAPTARR);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain(TEST_CONFIG.liveArr.seededBookTitle);
+  });
+
+  test('searches only the ebook row when the audiobook side carries a skipped tag', async ({ api }) => {
+    const tagId = await CHAPTARR.arr.ensureTag(SKIP_TAG);
+    const instanceId = await arrangeInstance(api, CHAPTARR, { instance: { skipTags: [SKIP_TAG] } });
+
+    await setSideTags([tagId], []);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toMatch(/\(Ebook\)$/);
+  });
+
+  test('skips the book when both sides carry a skipped tag', async ({ api }) => {
+    const tagId = await CHAPTARR.arr.ensureTag(SKIP_TAG);
+    const instanceId = await arrangeInstance(api, CHAPTARR, { instance: { skipTags: [SKIP_TAG] } });
+
+    await setSideTags([tagId], [tagId]);
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('skips unmonitored rows when monitoredOnly is on', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, CHAPTARR, { instance: { monitoredOnly: true } });
+
+    await setRowsMonitored(false);
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches a book released long ago at the longest grace period', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, CHAPTARR, { config: { postReleaseGraceHours: 72 } });
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
