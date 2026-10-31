@@ -21,6 +21,7 @@ public class ChaptarrClient : ReadarrClient, IChaptarrClient
     {
     }
 
+    /// <inheritdoc/>
     public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
@@ -34,6 +35,7 @@ public class ChaptarrClient : ReadarrClient, IChaptarrClient
         return await DeserializeStreamAsync<List<Tag>>(response) ?? [];
     }
 
+    /// <inheritdoc/>
     public async IAsyncEnumerable<SearchableAuthor> StreamAllAuthorsAsync(
         ArrInstance arrInstance,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)

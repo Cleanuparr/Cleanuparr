@@ -593,5 +593,6 @@ public abstract class ArrClient : IArrClient
         return true;
     }
 
+    /// <inheritdoc/>
     public abstract Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance);
 }
