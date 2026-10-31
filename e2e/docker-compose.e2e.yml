@@ -311,6 +311,25 @@ services:
       retries: 12
       start_period: 30s
 
+  # Chaptarr is a Readarr fork. The seed database is only valid for this version.
+  chaptarr:
+    image: chaptarr/chaptarr:0.9.965
+    network_mode: host
+    environment:
+      PUID: "${E2E_PUID:-1000}"
+      PGID: "${E2E_PGID:-1000}"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/chaptarr-config:/config
+      - ./test-data/chaptarr-books:/books
+      - ./test-data/downloads/qbittorrent:/downloads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8789/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
   # Real LazyLibrarian, restored from e2e/lazylibrarian-seed by setup-test-data.sh.
   # LazyLibrarian publishes no versions, so the tag names the upstream commit.
   # The seed database is only valid for the commit that wrote it.
