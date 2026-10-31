@@ -1611,6 +1611,62 @@ public class QueueCleanerTests : IDisposable
         r.DeleteReason.ShouldBe(DeleteReason.Stalled);
     }
 
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_ForSportarrPack_AddsOneSearchItemPerOtherEvent()
+    {
+        // Arrange
+        TestDataContextFactory.AddSportarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sportarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        QueueRecord[] records = new[] { 100, 101, 0 }.Select((episodeId, index) => new QueueRecord
+        {
+            Id = index + 1,
+            DownloadId = "sportarr-pack-download-id",
+            Title = $"Sportarr Card Pack {index}",
+            Protocol = "torrent",
+            SeriesId = 10,
+            EpisodeId = episodeId,
+        }).ToArray();
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns(records.ToList());
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        ArrRemovalTarget target = _fixture.RemovalQueue.ShouldHaveSingle().ArrTarget();
+        target.SearchItem.Id.ShouldBe(100);
+        target.AdditionalSearchItems.Select(item => item.Id).ShouldBe([101]);
+    }
+
     #endregion
 
     #region ChangeCategory Tests

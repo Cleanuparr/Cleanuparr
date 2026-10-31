@@ -471,7 +471,7 @@ public abstract class ArrClient : IArrClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance)
+    public virtual async Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";

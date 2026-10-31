@@ -327,6 +327,28 @@ public class QueueItemRemoverTests : IDisposable
     }
 
     [Fact]
+    public async Task RemoveQueueItemAsync_WithAdditionalSearchItems_AddsOneSearchQueueItemPerSearchItem()
+    {
+        // Arrange
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+        ArrRemovalTarget target = request.ArrTarget() with
+        {
+            AdditionalSearchItems = [new SeriesSearchItem { Id = 456, SeriesId = 9, SearchType = SeriesSearchType.Episode }],
+        };
+        request = request with { Target = target };
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        List<SearchQueueItem> queueItems = await _eventsContext.SearchQueue.ToListAsync();
+        queueItems.Select(x => x.ItemId).ShouldBe([123L, 456L], ignoreOrder: true);
+        SearchQueueItem additional = queueItems.Single(x => x.ItemId == 456);
+        additional.SeriesId.ShouldBe(9);
+        additional.SearchType.ShouldBe(SeriesSearchType.Episode.ToString());
+    }
+
+    [Fact]
     public async Task RemoveQueueItemAsync_Success_AddsSearchQueueItem()
     {
         // Arrange

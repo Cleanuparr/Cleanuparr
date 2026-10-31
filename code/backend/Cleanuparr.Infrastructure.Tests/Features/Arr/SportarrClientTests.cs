@@ -67,103 +67,150 @@ public class SportarrClientTests
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/system/status");
     }
 
-    #region GetSearchCommands
+    #region SearchItemsAsync
 
     [Fact]
-    public async Task SearchItemsAsync_SeasonThenEpisode_StillSearchesEpisode()
+    public async Task SearchItemsAsync_Episode_PostsEventIdToNativeSearchQueue()
     {
         // Arrange
-        RouteResponses(commandIdForPost: 11);
-        var items = new HashSet<SearchItem>
-        {
-            new SeriesSearchItem { Id = 3, SeriesId = 10, SearchType = SeriesSearchType.Season },
-            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
-        };
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new { id = "guid", taskId = 77 })));
+        HashSet<SearchItem> items = [new SeriesSearchItem { Id = 5, SeriesId = 10, SearchType = SeriesSearchType.Episode }];
 
         // Act
-        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+        List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
 
         // Assert
-        ids.ShouldBe(new long[] { 11, 11 });
-        var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
-        posts.Count.ShouldBe(2);
-        var bodies = posts.Select(p => _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(p)]).ToList();
-        bodies.ShouldContain(b => b != null && b.Contains("\"name\":\"SeasonSearch\"", StringComparison.OrdinalIgnoreCase));
-        bodies.ShouldContain(b => b != null && b.Contains("\"name\":\"EpisodeSearch\"", StringComparison.OrdinalIgnoreCase));
+        ids.ShouldBe(new long[] { 77 });
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.Method.ShouldBe(HttpMethod.Post);
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/search/queue");
+        _httpMessageHandler.CapturedRequestBodies[0].ShouldBe("{\"eventId\":5}");
     }
 
     [Fact]
-    public async Task SearchItemsAsync_SeriesThenEpisode_StillSearchesEpisode()
+    public async Task SearchItemsAsync_MultipleEpisodes_QueuesOneSearchPerEvent()
     {
         // Arrange
-        RouteResponses(commandIdForPost: 22);
-        var items = new HashSet<SearchItem>
-        {
-            new SeriesSearchItem { Id = 10, SeriesId = 10, SearchType = SeriesSearchType.Series },
+        int next = 100;
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new { taskId = next++ })));
+        HashSet<SearchItem> items =
+        [
+            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
             new SeriesSearchItem { Id = 2, SeriesId = 10, SearchType = SeriesSearchType.Episode },
-        };
+        ];
 
         // Act
-        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+        List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
 
         // Assert
-        ids.ShouldBe(new long[] { 22, 22 });
-        var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
-        posts.Count.ShouldBe(2);
-        var bodies = posts.Select(p => _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(p)]).ToList();
-        bodies.ShouldContain(b => b != null && b.Contains("\"name\":\"SeriesSearch\"", StringComparison.OrdinalIgnoreCase));
-        bodies.ShouldContain(b => b != null && b.Contains("\"name\":\"EpisodeSearch\"", StringComparison.OrdinalIgnoreCase));
+        ids.ShouldBe(new long[] { 100, 101 });
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
     }
 
     [Fact]
-    public async Task SearchItemsAsync_MultipleEpisodesAcrossOtherTypes_BundlesIntoSingleEpisodeCommand()
+    public async Task SearchItemsAsync_ResponseWithoutTaskId_ReturnsNoIds()
     {
         // Arrange
-        RouteResponses(commandIdForPost: 33);
-        var items = new HashSet<SearchItem>
-        {
-            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
-            new SeriesSearchItem { Id = 4, SeriesId = 10, SearchType = SeriesSearchType.Season },
-            new SeriesSearchItem { Id = 2, SeriesId = 10, SearchType = SeriesSearchType.Episode },
-        };
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new { id = "guid" })));
+        HashSet<SearchItem> items = [new SeriesSearchItem { Id = 5, SeriesId = 10, SearchType = SeriesSearchType.Episode }];
 
         // Act
-        await _client.SearchItemsAsync(_arrInstance, items);
+        List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
 
         // Assert
-        var posts = _httpMessageHandler.CapturedRequests.Where(r => r.Method == HttpMethod.Post).ToList();
-        posts.Count.ShouldBe(2);
-        var episodeBody = posts
-            .Select(p => _httpMessageHandler.CapturedRequestBodies[_httpMessageHandler.CapturedRequests.IndexOf(p)])
-            .Single(b => b != null && b.Contains("\"name\":\"EpisodeSearch\"", StringComparison.OrdinalIgnoreCase));
-        episodeBody!.ShouldContain("\"episodeIds\":[1,2]", Case.Insensitive);
+        ids.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_SeasonItem_Throws()
+    {
+        // Arrange
+        HashSet<SearchItem> items = [new SeriesSearchItem { Id = 3, SeriesId = 10, SearchType = SeriesSearchType.Season }];
+
+        // Act & Assert
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(() => _client.SearchItemsAsync(_arrInstance, items));
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    #endregion
+
+    #region GetCommandStatusAsync
+
+    [Theory]
+    [InlineData("Queued", null, ArrCommandState.Queued)]
+    [InlineData("Running", null, ArrCommandState.Started)]
+    [InlineData("Completed", null, ArrCommandState.Completed)]
+    [InlineData("Failed", null, ArrCommandState.Completed)]
+    [InlineData("Failed", "indexer down", ArrCommandState.Failed)]
+    [InlineData("Cancelled", null, ArrCommandState.Failed)]
+    [InlineData("Aborting", null, ArrCommandState.Failed)]
+    [InlineData("Surprise", null, ArrCommandState.Unknown)]
+    public async Task GetCommandStatusAsync_MapsTaskStatus(string status, string? exception, ArrCommandState expected)
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new { id = 77, status, exception })));
+
+        // Act
+        ArrCommandStatus result = await _client.GetCommandStatusAsync(_arrInstance, 77);
+
+        // Assert
+        result.Id.ShouldBe(77);
+        result.Status.ShouldBe(expected);
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/task/77");
+    }
+
+    [Fact]
+    public async Task GetCommandStatusAsync_TaskNotFound_ThrowsNotFound()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.NotFound);
+
+        // Act
+        HttpRequestException exception = await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetCommandStatusAsync(_arrInstance, 77));
+
+        // Assert
+        exception.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
+    #region GetCommandsAsync
+
+    [Fact]
+    public async Task GetCommandsAsync_ReadsTaskListAndMapsStatuses()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new object[]
+        {
+            new { id = 3, status = "Running" },
+            new { id = 2, status = "Failed", exception = (string?)null },
+            new { id = 1, status = "Failed", exception = "boom" },
+        })));
+
+        // Act
+        List<ArrCommandStatus> result = await _client.GetCommandsAsync(_arrInstance);
+
+        // Assert
+        result.Select(x => (x.Id, x.Status)).ShouldBe(new[]
+        {
+            (3L, ArrCommandState.Started),
+            (2L, ArrCommandState.Completed),
+            (1L, ArrCommandState.Failed),
+        });
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/task");
+        request.RequestUri.Query.ShouldBe("?pageSize=500");
     }
 
     #endregion
 
     #region Helpers
 
-    private void RouteResponses(long commandIdForPost)
-    {
-        _httpMessageHandler.SetupResponse((req, _) =>
-        {
-            if (req.Method == HttpMethod.Post && req.RequestUri!.AbsolutePath.EndsWith("/command"))
-            {
-                return Task.FromResult(JsonResponse(new { id = commandIdForPost }));
-            }
-            // GET log-context calls (/series/{id}, /episode?...) return null so log context bails out
-            return Task.FromResult(JsonNullResponse());
-        });
-    }
-
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {
         Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
-    };
-
-    private static HttpResponseMessage JsonNullResponse() => new(HttpStatusCode.OK)
-    {
-        Content = new StringContent("null", Encoding.UTF8, "application/json"),
     };
 
     #endregion

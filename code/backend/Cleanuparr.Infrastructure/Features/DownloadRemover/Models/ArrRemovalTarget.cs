@@ -10,6 +10,11 @@ public sealed record ArrRemovalTarget : RemovalTarget
     public required SearchItem SearchItem { get; init; }
 
     /// <summary>
+    /// Further searches queued next to <see cref="SearchItem"/>, one per extra event a Sportarr pack covers.
+    /// </summary>
+    public IReadOnlyList<SearchItem> AdditionalSearchItems { get; init; } = [];
+
+    /// <summary>
     /// The *arr removes the download from the client on our behalf.
     /// Mutually exclusive with <see cref="ChangeCategory"/>.
     /// </summary>

@@ -88,6 +88,22 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     }
 
     [Fact]
+    public void GetRecordSearchItem_SportarrPack_ReturnsEpisodeSearchItem()
+    {
+        // Arrange
+        var record = NewRecord(seriesId: 10, episodeId: 99, seasonNumber: 3);
+
+        // Act
+        var item = _handler.PublicGetRecordSearchItem(InstanceType.Sportarr, 1f, record, isPack: true);
+
+        // Assert
+        var seriesItem = item.ShouldBeOfType<SeriesSearchItem>();
+        seriesItem.Id.ShouldBe(99);
+        seriesItem.SeriesId.ShouldBe(10);
+        seriesItem.SearchType.ShouldBe(SeriesSearchType.Episode);
+    }
+
+    [Fact]
     public void GetRecordSearchItem_Radarr_ReturnsMovieIdSearchItem()
     {
         // Arrange
@@ -753,7 +769,14 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             bool skipSearch = false,
             DownloadClientConfig? downloadClient = null,
             bool changeCategory = false)
-            => PublishQueueItemRemoveRequest(instance, record, isPack, removeFromClient, deleteReason, skipSearch, downloadClient, changeCategory);
+            => PublishQueueItemRemoveRequest(instance, isPack ? [record, record] : [record], removeFromClient, deleteReason, skipSearch, downloadClient, changeCategory);
+
+        public Task PublicPublishQueueItemRemoveRequest(
+            ArrInstance instance,
+            IReadOnlyList<QueueRecord> records,
+            bool removeFromClient,
+            DeleteReason deleteReason)
+            => PublishQueueItemRemoveRequest(instance, records, removeFromClient, deleteReason);
 
         public async Task<IReadOnlyList<IDownloadService>> PublicGetInitializedDownloadServicesAsync()
             => await GetInitializedDownloadServicesAsync();

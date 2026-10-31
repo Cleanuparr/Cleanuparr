@@ -1,5 +1,6 @@
 ﻿using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Features.LazyLibrarian;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
@@ -148,8 +149,7 @@ public abstract class GenericHandler : IHandler
 
     protected async Task PublishQueueItemRemoveRequest(
         ArrInstance instance,
-        QueueRecord record,
-        bool isPack,
+        IReadOnlyList<QueueRecord> records,
         bool removeFromClient,
         DeleteReason deleteReason,
         bool skipSearch = false,
@@ -157,6 +157,9 @@ public abstract class GenericHandler : IHandler
         bool changeCategory = false
     )
     {
+        QueueRecord record = records[0];
+        bool isPack = records.Count > 1;
+
         if (_cache.TryGetValue(CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url), out bool _))
         {
             _logger.LogDebug("skip removal request | already marked for removal | {Title}", record.Title);
@@ -169,6 +172,9 @@ public abstract class GenericHandler : IHandler
         {
             Record = record,
             SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
+            AdditionalSearchItems = SeekerApps.SearchesEventsOnly(instance) && isPack
+                ? GetAdditionalEventSearchItems(instanceType, instance.Version, records)
+                : [],
             RemoveFromClient = removeFromClient,
             ChangeCategory = changeCategory,
         };
@@ -218,6 +224,16 @@ public abstract class GenericHandler : IHandler
             });
     }
     
+    private IReadOnlyList<SearchItem> GetAdditionalEventSearchItems(InstanceType type, float version, IReadOnlyList<QueueRecord> records)
+    {
+        return records
+            .Skip(1)
+            .Where(record => record.EpisodeId > 0 && record.EpisodeId != records[0].EpisodeId)
+            .DistinctBy(record => record.EpisodeId)
+            .Select(record => GetRecordSearchItem(type, version, record))
+            .ToList();
+    }
+
     protected SearchItem GetRecordSearchItem(InstanceType type, float version, QueueRecord record, bool isPack = false)
     {
         return type switch
@@ -234,17 +250,11 @@ public abstract class GenericHandler : IHandler
                 SeriesId = record.SeriesId,
                 SearchType = SeriesSearchType.Season
             },
-            InstanceType.Sportarr when !isPack => new SeriesSearchItem
+            InstanceType.Sportarr => new SeriesSearchItem
             {
                 Id = record.EpisodeId,
                 SeriesId = record.SeriesId,
                 SearchType = SeriesSearchType.Episode
-            },
-            InstanceType.Sportarr when isPack => new SeriesSearchItem
-            {
-                Id = record.SeasonNumber,
-                SeriesId = record.SeriesId,
-                SearchType = SeriesSearchType.Season
             },
             InstanceType.Radarr => new SearchItem
             {
