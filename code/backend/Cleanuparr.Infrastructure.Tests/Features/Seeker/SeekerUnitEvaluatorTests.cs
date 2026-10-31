@@ -3196,6 +3196,46 @@ public class SeekerUnitEvaluatorTests : IDisposable
     }
 
     [Fact]
+    public async Task EvaluateAsync_Chaptarr_BothSidesExcluded_RecordsSkipTagOverMissingInclude()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns(
+        [
+            new Tag { Id = 1, Label = "keep" },
+            new Tag { Id = 3, Label = "skip" },
+        ]);
+        SetupChaptarr(
+            [Author(1, ebookTags: [3])],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c =>
+        {
+            c.SkipTags = ["skip"];
+            c.IncludeTags = ["keep"];
+        }));
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.SkipTag);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_UnknownSideWithIncludeTagOnOneSide_IsKept()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 1, Label = "keep" }]);
+        SetupChaptarr([Author(1, audiobookTags: [1])], [Book(10, 1, ChaptarrMediaType.Unknown)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.IncludeTags = ["keep"]));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+        evaluation.Excluded.ShouldNotContain(e => e.Name == "Author 1 - Book 10");
+    }
+
+    [Fact]
     public async Task EvaluateAsync_Chaptarr_UnmonitoredAuthor_ExcludesAsNotMonitored()
     {
         // Arrange
