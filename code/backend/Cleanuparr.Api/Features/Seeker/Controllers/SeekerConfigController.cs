@@ -127,10 +127,18 @@ public sealed class SeekerConfigController : ControllerBase
             var existingInstanceConfigs = await _dataContext.SeekerInstanceConfigs
                 .Include(e => e.ArrInstance)
                 .ToListAsync();
+            Dictionary<Guid, ArrInstance> arrInstancesById = await _dataContext.ArrInstances
+                .AsNoTracking()
+                .Include(a => a.ArrConfig)
+                .ToDictionaryAsync(a => a.Id);
             bool previousAnyUseCustomFormatScore = existingInstanceConfigs.Any(e => e.Enabled && e.ArrInstance.Enabled && e.UseCustomFormatScore);
 
             foreach (var instanceReq in request.Instances)
             {
+                bool useCustomFormatScore = instanceReq.UseCustomFormatScore
+                    && arrInstancesById.TryGetValue(instanceReq.ArrInstanceId, out ArrInstance? arrInstance)
+                    && SeekerApps.ReadsCustomFormatScores(arrInstance);
+
                 var existing = existingInstanceConfigs
                     .FirstOrDefault(e => e.ArrInstanceId == instanceReq.ArrInstanceId);
 
@@ -144,7 +152,7 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.MinCycleTimeDays = instanceReq.MinCycleTimeDays;
                     existing.MonitoredOnly = instanceReq.MonitoredOnly;
                     existing.UseCutoff = instanceReq.UseCutoff;
-                    existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
+                    existing.UseCustomFormatScore = useCustomFormatScore;
                     existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
                     existing.SonarrSearchMode = instanceReq.SonarrSearchMode;
                     existing.RadarrReleaseGate = instanceReq.RadarrReleaseGate;
@@ -165,7 +173,7 @@ public sealed class SeekerConfigController : ControllerBase
                         MinCycleTimeDays = instanceReq.MinCycleTimeDays,
                         MonitoredOnly = instanceReq.MonitoredOnly,
                         UseCutoff = instanceReq.UseCutoff,
-                        UseCustomFormatScore = instanceReq.UseCustomFormatScore,
+                        UseCustomFormatScore = useCustomFormatScore,
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
                         SonarrSearchMode = instanceReq.SonarrSearchMode,
                         RadarrReleaseGate = instanceReq.RadarrReleaseGate,

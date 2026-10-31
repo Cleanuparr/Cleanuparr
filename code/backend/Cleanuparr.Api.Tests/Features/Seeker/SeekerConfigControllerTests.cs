@@ -230,9 +230,43 @@ public class SeekerConfigControllerTests : IDisposable
         response.Instances.ShouldContain(i => i.ArrInstanceId == lidarr.Id);
     }
 
+    [Fact]
+    public async Task GetSeekerConfig_ListsChaptarrInstances()
+    {
+        ArrInstance chaptarr = SeekerTestDataFactory.AddChaptarrInstance(_dataContext);
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldContain(i => i.ArrInstanceId == chaptarr.Id);
+    }
+
     #endregion
 
     #region UpdateSeekerConfig Tests
+
+    [Fact]
+    public async Task UpdateSeekerConfig_ChaptarrWithCustomFormatScore_StoresItAsOff()
+    {
+        ArrInstance chaptarr = SeekerTestDataFactory.AddChaptarrInstance(_dataContext);
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = chaptarr.Id, Enabled = true, UseCustomFormatScore = true }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerInstanceConfig stored = _dataContext.SeekerInstanceConfigs.Single(s => s.ArrInstanceId == chaptarr.Id);
+        stored.UseCustomFormatScore.ShouldBeFalse();
+        await _jobManagementService.DidNotReceive()
+            .StartJob(JobType.CustomFormatScoreSyncer, null, Arg.Any<string>());
+    }
 
     [Fact]
     public async Task UpdateSeekerConfig_WithProactiveEnabledAndNoInstancesEnabled_ThrowsValidationException()

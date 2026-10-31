@@ -498,7 +498,7 @@ public sealed class Seeker : IHandler
             SearchItem searchItem = instanceType switch
             {
                 _ when SeekerApps.SearchesMovies(arrInstance) => new SearchItem { Id = candidate.ItemId },
-                InstanceType.Lidarr => new SearchItem { Id = candidate.EpisodeId },
+                InstanceType.Lidarr or InstanceType.Chaptarr => new SearchItem { Id = candidate.EpisodeId },
                 _ when candidate.EpisodeId > 0 => new SeriesSearchItem
                 {
                     Id = candidate.EpisodeId,
