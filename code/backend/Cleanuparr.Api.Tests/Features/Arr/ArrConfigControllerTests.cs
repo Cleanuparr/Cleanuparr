@@ -55,6 +55,7 @@ public class ArrConfigControllerTests : IDisposable
     [InlineData(InstanceType.Whisparr)]
     [InlineData(InstanceType.Sportarr)]
     [InlineData(InstanceType.LazyLibrarian)]
+    [InlineData(InstanceType.Chaptarr)]
     public async Task GetArrConfig_AllTypes_ReturnOk(InstanceType type)
     {
         // Act
@@ -464,6 +465,7 @@ public class ArrConfigControllerTests : IDisposable
     [InlineData(InstanceType.Whisparr)]
     [InlineData(InstanceType.Sportarr)]
     [InlineData(InstanceType.LazyLibrarian)]
+    [InlineData(InstanceType.Chaptarr)]
     public async Task InstanceRoutes_AllTypes_CreateUpdateDeleteAndTest(InstanceType type)
     {
         // Arrange: every route delegates to the same helper, so this covers the wiring per type.
@@ -515,6 +517,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Whisparr => _controller.CreateWhisparrInstance(request),
         InstanceType.Sportarr => _controller.CreateSportarrInstance(request),
         InstanceType.LazyLibrarian => _controller.CreateLazyLibrarianInstance(request),
+        InstanceType.Chaptarr => _controller.CreateChaptarrInstance(request),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -527,6 +530,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Whisparr => _controller.UpdateWhisparrInstance(id, request),
         InstanceType.Sportarr => _controller.UpdateSportarrInstance(id, request),
         InstanceType.LazyLibrarian => _controller.UpdateLazyLibrarianInstance(id, request),
+        InstanceType.Chaptarr => _controller.UpdateChaptarrInstance(id, request),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -539,6 +543,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Whisparr => _controller.DeleteWhisparrInstance(id),
         InstanceType.Sportarr => _controller.DeleteSportarrInstance(id),
         InstanceType.LazyLibrarian => _controller.DeleteLazyLibrarianInstance(id),
+        InstanceType.Chaptarr => _controller.DeleteChaptarrInstance(id),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -551,6 +556,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Whisparr => _controller.TestWhisparrInstance(request),
         InstanceType.Sportarr => _controller.TestSportarrInstance(request),
         InstanceType.LazyLibrarian => _controller.TestLazyLibrarianInstance(request),
+        InstanceType.Chaptarr => _controller.TestChaptarrInstance(request),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
@@ -563,6 +569,7 @@ public class ArrConfigControllerTests : IDisposable
         InstanceType.Whisparr => _controller.GetWhisparrConfig(),
         InstanceType.Sportarr => _controller.GetSportarrConfig(),
         InstanceType.LazyLibrarian => _controller.GetLazyLibrarianConfig(),
+        InstanceType.Chaptarr => _controller.GetChaptarrConfig(),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 }

@@ -16,7 +16,7 @@ public class ArrInstanceHealthDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Instance type (Sonarr, Radarr, Lidarr, Readarr, Whisparr).
+    /// Instance type (Sonarr, Radarr, Lidarr, Readarr, Whisparr, Chaptarr).
     /// </summary>
     public string Type { get; set; } = string.Empty;
 

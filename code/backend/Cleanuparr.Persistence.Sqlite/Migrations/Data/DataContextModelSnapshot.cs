@@ -865,6 +865,24 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("use_advanced_scheduling");
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Chaptarr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Chaptarr#BlocklistSettings", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("BlocklistPath")
+                                .HasColumnType("TEXT")
+                                .HasColumnName("chaptarr_blocklist_path");
+
+                            b1.Property<string>("BlocklistType")
+                                .IsRequired()
+                                .HasColumnType("TEXT")
+                                .HasColumnName("chaptarr_blocklist_type");
+
+                            b1.Property<bool>("Enabled")
+                                .HasColumnType("INTEGER")
+                                .HasColumnName("chaptarr_enabled");
+                        });
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "LazyLibrarian", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.LazyLibrarian#BlocklistSettings", b1 =>
                         {
                             b1.IsRequired();

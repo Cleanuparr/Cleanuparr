@@ -81,7 +81,8 @@ public static class TestDataContextFactory
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Readarr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Whisparr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Sportarr, Instances = [], FailedImportMaxStrikes = 3 },
-            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.LazyLibrarian, Instances = [], FailedImportMaxStrikes = 3 }
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.LazyLibrarian, Instances = [], FailedImportMaxStrikes = 3 },
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Chaptarr, Instances = [], FailedImportMaxStrikes = 3 }
         );
 
         // Queue cleaner config
@@ -104,7 +105,8 @@ public static class TestDataContextFactory
             Readarr = new BlocklistSettings { Enabled = false },
             Whisparr = new BlocklistSettings { Enabled = false },
             Sportarr = new BlocklistSettings { Enabled = false },
-            LazyLibrarian = new BlocklistSettings { Enabled = false }
+            LazyLibrarian = new BlocklistSettings { Enabled = false },
+            Chaptarr = new BlocklistSettings { Enabled = false }
         });
 
         // Download cleaner config
@@ -209,6 +211,31 @@ public static class TestDataContextFactory
             Name = "Test Readarr",
             Url = new Uri(url),
             ApiKey = "test-api-key",
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
+    /// Adds an enabled Chaptarr instance to the context
+    /// </summary>
+    public static ArrInstance AddChaptarrInstance(DataContext context, string url = "http://chaptarr:8789", bool enabled = true)
+    {
+        ArrConfig arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Chaptarr);
+        ArrInstance instance = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Chaptarr",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Version = 0.9f,
             Enabled = enabled,
             ArrConfigId = arrConfig.Id,
             ArrConfig = arrConfig

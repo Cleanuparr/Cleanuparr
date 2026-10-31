@@ -9,6 +9,7 @@ public enum InstanceType
     Whisparr,
     Sportarr,
     LazyLibrarian,
+    Chaptarr,
 
     /// <summary>
     /// Text this build does not know.

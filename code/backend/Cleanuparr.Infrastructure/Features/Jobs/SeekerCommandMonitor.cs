@@ -500,7 +500,7 @@ public class SeekerCommandMonitor : BackgroundService
             InstanceType.Lidarr => tracker.EpisodeId > 0
                 ? record.AlbumId == tracker.EpisodeId
                 : record.AlbumId == tracker.ExternalItemId,
-            InstanceType.Readarr => record.BookId == tracker.ExternalItemId,
+            InstanceType.Readarr or InstanceType.Chaptarr => record.BookId == tracker.ExternalItemId,
             _ => tracker.EpisodeId > 0
                 ? record.EpisodeId == tracker.EpisodeId
                 : record.SeriesId == tracker.ExternalItemId && record.SeasonNumber == tracker.SeasonNumber,

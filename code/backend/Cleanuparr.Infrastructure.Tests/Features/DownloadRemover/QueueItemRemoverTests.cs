@@ -363,6 +363,7 @@ public class QueueItemRemoverTests : IDisposable
     [InlineData(InstanceType.Radarr)]
     [InlineData(InstanceType.Lidarr)]
     [InlineData(InstanceType.Readarr)]
+    [InlineData(InstanceType.Chaptarr)]
     [InlineData(InstanceType.Whisparr)]
     public async Task RemoveQueueItemAsync_UsesCorrectClientForInstanceType(InstanceType instanceType)
     {
@@ -908,6 +909,7 @@ public class QueueItemRemoverTests : IDisposable
             InstanceType.Radarr => TestDataContextFactory.AddRadarrInstance(_dataContext),
             InstanceType.Lidarr => TestDataContextFactory.AddLidarrInstance(_dataContext),
             InstanceType.Readarr => TestDataContextFactory.AddReadarrInstance(_dataContext),
+            InstanceType.Chaptarr => TestDataContextFactory.AddChaptarrInstance(_dataContext),
             InstanceType.Whisparr => TestDataContextFactory.AddWhisparrInstance(_dataContext),
             InstanceType.LazyLibrarian => TestDataContextFactory.AddLazyLibrarianInstance(_dataContext),
             _ => TestDataContextFactory.AddSonarrInstance(_dataContext),
