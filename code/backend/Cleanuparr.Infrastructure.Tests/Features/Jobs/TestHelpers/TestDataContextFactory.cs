@@ -249,6 +249,31 @@ public static class TestDataContextFactory
     }
 
     /// <summary>
+    /// Adds an enabled Sportarr instance to the context
+    /// </summary>
+    public static ArrInstance AddSportarrInstance(DataContext context, string url = "http://sportarr:1867", bool enabled = true)
+    {
+        ArrConfig arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Sportarr);
+        ArrInstance instance = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Sportarr",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Version = 4.1f,
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
     /// Adds an enabled Whisparr instance to the context
     /// </summary>
     public static ArrInstance AddWhisparrInstance(DataContext context, string url = "http://whisparr:6969", bool enabled = true, float version = 2)

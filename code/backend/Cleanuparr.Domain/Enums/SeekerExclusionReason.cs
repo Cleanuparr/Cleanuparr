@@ -67,4 +67,9 @@ public enum SeekerExclusionReason
     /// Radarr does not count the movie as available yet
     /// </summary>
     NotAvailable,
+
+    /// <summary>
+    /// A Sportarr event marked postponed or cancelled, which Sportarr never searches
+    /// </summary>
+    PostponedOrCancelled,
 }

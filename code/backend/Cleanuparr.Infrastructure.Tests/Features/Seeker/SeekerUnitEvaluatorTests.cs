@@ -26,6 +26,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IChaptarrClient _chaptarrClient;
+    private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly FakeTimeProvider _timeProvider;
@@ -36,6 +37,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly ArrInstance _whisparr;
     private readonly ArrInstance _lidarr;
     private readonly ArrInstance _chaptarr;
+    private readonly ArrInstance _sportarr;
 
     public SeekerUnitEvaluatorTests()
     {
@@ -45,6 +47,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
         _chaptarrClient = Substitute.For<IChaptarrClient>();
+        _sportarrClient = Substitute.For<ISportarrClient>();
         _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 1, 10, 12, 0, 0, TimeSpan.Zero));
@@ -53,6 +56,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _whisparr = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 3);
         _lidarr = TestDataContextFactory.AddLidarrInstance(_dataContext);
         _chaptarr = TestDataContextFactory.AddChaptarrInstance(_dataContext);
+        _sportarr = TestDataContextFactory.AddSportarrInstance(_dataContext);
 
         _radarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _sonarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
@@ -76,6 +80,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             _sonarrClient,
             _lidarrClient,
             _chaptarrClient,
+            _sportarrClient,
             _whisparrV2Client,
             _whisparrV3Client,
             _timeProvider);
@@ -3450,6 +3455,134 @@ public class SeekerUnitEvaluatorTests : IDisposable
         // Assert
         grabs.BookIds.ShouldBe([10L]);
         grabs.Episodes.ShouldBeEmpty();
+        await _sonarrClient.DidNotReceive()
+            .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
+    #region Sportarr
+
+    private SearchableEpisode Event(long id, long leagueId = 1, string title = "UFC 300", bool unsearchable = false, DateTimeOffset? eventDate = null)
+    {
+        return Episode(id, leagueId, season: 2024, number: 0, airDate: eventDate) with { Title = title, Unsearchable = unsearchable };
+    }
+
+    private void SetupSportarr(List<SearchableSeries> library, List<SearchableEpisode> missing)
+    {
+        _sportarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _sportarrClient.StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(library));
+        _sportarrClient.GetMissingEpisodesAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(missing);
+        _sportarrClient.GetCutoffUnmetEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+    }
+
+    private Task<SeekerEvaluation> EvaluateSportarrAsync(Action<SeekerInstanceConfig>? configure = null)
+    {
+        return _sut.EvaluateAsync(
+            _config,
+            InstanceConfig(_sportarr, configure),
+            _sportarr,
+            [],
+            new SeekerRecentGrabs(),
+            [],
+            CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData(SonarrSearchMode.Season)]
+    [InlineData(SonarrSearchMode.Auto)]
+    [InlineData(SonarrSearchMode.Episode)]
+    public async Task EvaluateAsync_Sportarr_BuildsEpisodeUnitsWhateverTheSearchMode(SonarrSearchMode mode)
+    {
+        // Arrange
+        SetupSportarr(
+            [Series(1, seasons: [Season(2024, 2)]) with { Title = "UFC" }],
+            [Event(10), Event(11, title: "UFC 301")]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSportarrAsync(c => c.SonarrSearchMode = mode);
+
+        // Assert
+        evaluation.Units.Count.ShouldBe(2);
+        evaluation.Units.ShouldAllBe(u => u.EpisodeId > 0);
+        evaluation.Units.Select(u => u.Name).ShouldBe(["UFC - UFC 300", "UFC - UFC 301"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sportarr_PostponedOrCancelledEvent_ExcludesAsPostponedOrCancelled()
+    {
+        // Arrange
+        SetupSportarr(
+            [Series(1) with { Title = "UFC" }],
+            [Event(10, unsearchable: true), Event(11, title: "UFC 301")]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSportarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "UFC - UFC 300").ShouldBe(SeekerExclusionReason.PostponedOrCancelled);
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sportarr_PostponedEventInTheFuture_ExcludesAsPostponedOrCancelled()
+    {
+        // Arrange
+        SetupSportarr(
+            [Series(1) with { Title = "UFC" }],
+            [Event(10, unsearchable: true, eventDate: _timeProvider.GetUtcNow().AddDays(10))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSportarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "UFC - UFC 300").ShouldBe(SeekerExclusionReason.PostponedOrCancelled);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sportarr_UnmonitoredLeague_KeepsItsMonitoredEvents()
+    {
+        // Arrange
+        SetupSportarr([Series(1, monitored: false) with { Title = "UFC" }], [Event(10)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSportarrAsync(c => c.MonitoredOnly = true);
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+        evaluation.ItemExclusions.ShouldNotContain(e => e.Reason == SeekerExclusionReason.NotMonitored);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sportarr_ReadsThroughTheSportarrClientOnly()
+    {
+        // Arrange
+        SetupSportarr([Series(1)], [Event(10)]);
+
+        // Act
+        await EvaluateSportarrAsync();
+
+        // Assert
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ReadRecentGrabsAsync_Sportarr_ReadsGrabbedEpisodesThroughTheSportarrClient()
+    {
+        // Arrange
+        _sportarrClient
+            .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<(long, long, long)> { (0, 0, 10) });
+
+        // Act
+        SeekerRecentGrabs grabs = await _sut.ReadRecentGrabsAsync(
+            InstanceConfig(_sportarr, c => c.RecentGrabWindowHours = 6), _sportarr, CancellationToken.None);
+
+        // Assert
+        grabs.Episodes.ShouldBe([(0L, 0L, 10L)]);
         await _sonarrClient.DidNotReceive()
             .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }

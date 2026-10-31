@@ -1019,6 +1019,37 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Reports_the_grab_of_a_proactive_sportarr_event_search()
+    {
+        // Arrange
+        ArrInstance sportarrInstance = TestDataContextFactory.AddSportarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(sportarrInstance.Id, externalItemId: 5, episodeId: 88, itemTitle: "UFC - UFC 300"),
+            new QueueRecord { Id = 1, SeriesId = 5, EpisodeId = 88, Title = "UFC.300.1080p", DownloadId = "SP88", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["UFC.300.1080p"]);
+    }
+
+    [Fact]
+    public async Task Ignores_another_event_of_a_proactive_sportarr_search()
+    {
+        // Arrange
+        ArrInstance sportarrInstance = TestDataContextFactory.AddSportarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(sportarrInstance.Id, externalItemId: 5, episodeId: 88, itemTitle: "UFC - UFC 300"),
+            new QueueRecord { Id = 1, SeriesId = 5, EpisodeId = 89, Title = "UFC.301.1080p", DownloadId = "SP89", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Reports_the_grab_of_a_readarr_search()
     {
         // Arrange

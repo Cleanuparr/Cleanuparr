@@ -40,6 +40,7 @@ public sealed class SeekerUnitEvaluator
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IChaptarrClient _chaptarrClient;
+    private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
@@ -51,6 +52,7 @@ public sealed class SeekerUnitEvaluator
         ISonarrClient sonarrClient,
         ILidarrClient lidarrClient,
         IChaptarrClient chaptarrClient,
+        ISportarrClient sportarrClient,
         IWhisparrV2Client whisparrV2Client,
         IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider)
@@ -61,6 +63,7 @@ public sealed class SeekerUnitEvaluator
         _sonarrClient = sonarrClient;
         _lidarrClient = lidarrClient;
         _chaptarrClient = chaptarrClient;
+        _sportarrClient = sportarrClient;
         _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
@@ -312,8 +315,12 @@ public sealed class SeekerUnitEvaluator
     private IRadarrClient MovieClient(ArrInstance arrInstance) =>
         arrInstance.ArrConfig.Type is InstanceType.Whisparr ? _whisparrV3Client : _radarrClient;
 
-    private ISonarrClient SeriesClient(ArrInstance arrInstance) =>
-        arrInstance.ArrConfig.Type is InstanceType.Whisparr ? _whisparrV2Client : _sonarrClient;
+    private ISonarrClient SeriesClient(ArrInstance arrInstance) => arrInstance.ArrConfig.Type switch
+    {
+        InstanceType.Whisparr => _whisparrV2Client,
+        InstanceType.Sportarr => _sportarrClient,
+        _ => _sonarrClient,
+    };
 
     private async Task<SeekerEvaluation> EvaluateMoviesAsync(
         SeekerConfig config,
@@ -556,7 +563,7 @@ public sealed class SeekerUnitEvaluator
 
             releasedCount++;
 
-            if (instanceConfig.MonitoredOnly && !series.Monitored)
+            if (instanceConfig.MonitoredOnly && !series.Monitored && !SeekerApps.SearchesEventsOnly(arrInstance))
             {
                 exclusions.Add(new SeekerExclusion(series.Title, SeekerExclusionReason.NotMonitored));
                 continue;
@@ -595,12 +602,20 @@ public sealed class SeekerUnitEvaluator
                 return false;
             }
 
+            string name = SeekerApps.EpisodeName(arrInstance, series.Title, e.SeasonNumber, e.EpisodeNumber, e.AirDateUtc, e.Title);
+
+            if (e.Unsearchable)
+            {
+                ExcludeEpisode(e.SeriesId, e.Id, name, SeekerExclusionReason.PostponedOrCancelled);
+                return false;
+            }
+
             if (e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff)
             {
                 return true;
             }
 
-            ExcludeEpisode(e.SeriesId, e.Id, SeekerApps.EpisodeName(arrInstance, series.Title, e.SeasonNumber, e.EpisodeNumber, e.AirDateUtc),
+            ExcludeEpisode(e.SeriesId, e.Id, name,
                 e.AirDateUtc is null || e.AirDateUtc.Value > now
                     ? SeekerExclusionReason.NotReleased
                     : SeekerExclusionReason.InGracePeriod);
@@ -613,6 +628,7 @@ public sealed class SeekerUnitEvaluator
             SeasonNumber = e.SeasonNumber,
             EpisodeId = e.Id,
             EpisodeNumber = e.EpisodeNumber,
+            Title = e.Title,
             AirDateUtc = e.AirDateUtc,
             LastSearchTime = e.LastSearchTime,
             Monitored = e.Monitored,
@@ -1201,7 +1217,7 @@ public sealed class SeekerUnitEvaluator
     /// <summary>
     /// Groups wanted episodes into season and episode units.
     /// Sonarr runs one query per episode for a specials or airing anime season search, so those get episode units.
-    /// The search mode decides the unit for standard and daily seasons.
+    /// The search mode decides the unit for standard and daily seasons, except that Sportarr always gets episode units.
     /// A season partly searched in this cycle continues by episode.
     /// </summary>
     private static List<SeekerSearchUnit> BuildSonarrUnits(
@@ -1214,6 +1230,11 @@ public sealed class SeekerUnitEvaluator
         SonarrSearchMode mode)
     {
         List<SeekerSearchUnit> units = [];
+
+        if (SeekerApps.SearchesEventsOnly(arrInstance))
+        {
+            mode = SonarrSearchMode.Episode;
+        }
 
         foreach (IGrouping<(long SeriesId, int SeasonNumber), SonarrWantedEpisode> season in wanted.GroupBy(w => (w.SeriesId, w.SeasonNumber)))
         {
@@ -1261,7 +1282,7 @@ public sealed class SeekerUnitEvaluator
                     SeasonNumber = season.Key.SeasonNumber,
                     EpisodeId = episode.Key,
                     Name = SeekerApps.NamesScenesByDate(arrInstance) || episodeNumber is not null
-                        ? SeekerApps.EpisodeName(arrInstance, series.Title, season.Key.SeasonNumber, episodeNumber ?? 0, first.AirDateUtc)
+                        ? SeekerApps.EpisodeName(arrInstance, series.Title, season.Key.SeasonNumber, episodeNumber ?? 0, first.AirDateUtc, first.Title)
                         : first.Title ?? SeekerApps.SeasonName(arrInstance, series.Title, season.Key.SeasonNumber),
                     ContentKind = kind,
                     Reasons = episode.Select(w => w.Reason).ToList(),

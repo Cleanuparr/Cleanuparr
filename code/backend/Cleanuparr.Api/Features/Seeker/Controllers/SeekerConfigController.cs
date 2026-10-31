@@ -135,9 +135,12 @@ public sealed class SeekerConfigController : ControllerBase
 
             foreach (var instanceReq in request.Instances)
             {
+                arrInstancesById.TryGetValue(instanceReq.ArrInstanceId, out ArrInstance? arrInstance);
                 bool useCustomFormatScore = instanceReq.UseCustomFormatScore
-                    && arrInstancesById.TryGetValue(instanceReq.ArrInstanceId, out ArrInstance? arrInstance)
+                    && arrInstance is not null
                     && SeekerApps.ReadsCustomFormatScores(arrInstance);
+                bool monitoredOnly = instanceReq.MonitoredOnly
+                    || (arrInstance is not null && SeekerApps.SearchesEventsOnly(arrInstance));
 
                 var existing = existingInstanceConfigs
                     .FirstOrDefault(e => e.ArrInstanceId == instanceReq.ArrInstanceId);
@@ -150,7 +153,7 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.ActiveDownloadLimit = instanceReq.ActiveDownloadLimit;
                     existing.IgnoreStruckDownloads = instanceReq.IgnoreStruckDownloads;
                     existing.MinCycleTimeDays = instanceReq.MinCycleTimeDays;
-                    existing.MonitoredOnly = instanceReq.MonitoredOnly;
+                    existing.MonitoredOnly = monitoredOnly;
                     existing.UseCutoff = instanceReq.UseCutoff;
                     existing.UseCustomFormatScore = useCustomFormatScore;
                     existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
@@ -171,7 +174,7 @@ public sealed class SeekerConfigController : ControllerBase
                         ActiveDownloadLimit = instanceReq.ActiveDownloadLimit,
                         IgnoreStruckDownloads = instanceReq.IgnoreStruckDownloads,
                         MinCycleTimeDays = instanceReq.MinCycleTimeDays,
-                        MonitoredOnly = instanceReq.MonitoredOnly,
+                        MonitoredOnly = monitoredOnly,
                         UseCutoff = instanceReq.UseCutoff,
                         UseCustomFormatScore = useCustomFormatScore,
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,

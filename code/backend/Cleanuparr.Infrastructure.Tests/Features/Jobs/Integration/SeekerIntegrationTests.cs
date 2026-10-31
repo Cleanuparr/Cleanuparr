@@ -55,6 +55,7 @@ public class SeekerIntegrationTests : IDisposable
                 Substitute.For<ISonarrClient>(),
                 Substitute.For<ILidarrClient>(),
                 Substitute.For<IChaptarrClient>(),
+                Substitute.For<ISportarrClient>(),
                 Substitute.For<IWhisparrV2Client>(),
                 Substitute.For<IWhisparrV3Client>(),
                 _fixture.TimeProvider));

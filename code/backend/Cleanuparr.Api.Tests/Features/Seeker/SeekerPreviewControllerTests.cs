@@ -32,6 +32,7 @@ public class SeekerPreviewControllerTests : IDisposable
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IChaptarrClient _chaptarrClient;
+    private readonly ISportarrClient _sportarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IArrClientFactory _arrClientFactory;
@@ -46,6 +47,7 @@ public class SeekerPreviewControllerTests : IDisposable
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
         _chaptarrClient = Substitute.For<IChaptarrClient>();
+        _sportarrClient = Substitute.For<ISportarrClient>();
         _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
@@ -70,6 +72,7 @@ public class SeekerPreviewControllerTests : IDisposable
             _sonarrClient,
             _lidarrClient,
             _chaptarrClient,
+            _sportarrClient,
             _whisparrV2Client,
             _whisparrV3Client,
             timeProvider);
