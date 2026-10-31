@@ -62,6 +62,19 @@ public class ChaptarrClientTests
     }
 
     [Fact]
+    public async Task GetAllTagsAsync_EmptyBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+
+        // Act
+        List<Tag> tags = await _client.GetAllTagsAsync(_arrInstance);
+
+        // Assert
+        tags.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task StreamAllAuthorsAsync_DeserializesPerSideFields()
     {
         // Arrange
