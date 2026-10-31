@@ -453,8 +453,8 @@ describe('ArrAppsComponent', () => {
     const api = createApi();
     const { fixture, component, confirm } = setup(api);
 
-    const sectionBefore = component.sections()[0];
-    const sectionElBefore = fixture.nativeElement.querySelectorAll('app-arr-section')[0];
+    const sectionBefore = component.sections().find((s) => s.type() === 'sonarr')!;
+    const sectionElBefore = fixture.nativeElement.querySelector('app-arr-section#sonarr');
     sectionBefore.failedImportForm.override().value.set(true);
     sectionBefore.failedImportForm.maxStrikes().value.set(9);
     fixture.detectChanges();
@@ -468,14 +468,18 @@ describe('ArrAppsComponent', () => {
     fixture.detectChanges();
 
     expect(component.loader.loading()).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('app-arr-section')[0]).toBe(sectionElBefore);
-    expect(component.sections()[0]).toBe(sectionBefore);
+    expect(fixture.nativeElement.querySelector('app-arr-section#sonarr')).toBe(sectionElBefore);
+    expect(component.sections().find((s) => s.type() === 'sonarr')).toBe(sectionBefore);
 
     pending.next(SONARR_CONFIG);
     pending.complete();
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    const sectionAfter = component.sections()[0];
+    expect(component.loader.loading()).toBe(false);
+    expect(component.configured()).toHaveLength(8);
+    expect(fixture.nativeElement.querySelector('app-arr-section#sonarr')).toBe(sectionElBefore);
+    const sectionAfter = component.sections().find((s) => s.type() === 'sonarr')!;
     expect(sectionAfter).toBe(sectionBefore);
     expect(sectionAfter.failedImportModel()).toEqual({ override: true, maxStrikes: 9 });
   });
