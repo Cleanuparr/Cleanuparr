@@ -2,14 +2,14 @@ import type { ArrType } from '@shared/models/enums';
 import type { ArrAppMeta } from './arr-app-meta.model';
 
 export const ARR_TYPES: ArrType[] = [
-  'sonarr',
-  'radarr',
-  'lidarr',
-  'readarr',
   'chaptarr',
-  'whisparr',
-  'sportarr',
   'lazylibrarian',
+  'lidarr',
+  'radarr',
+  'readarr',
+  'sonarr',
+  'sportarr',
+  'whisparr',
 ];
 
 export const ARR_APP_META: Record<ArrType, ArrAppMeta> = {
