@@ -1,3 +1,4 @@
+using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
@@ -57,7 +58,10 @@ public sealed class DynamicHttpClientProviderTests : IDisposable
             expected,
             Arg.Any<RetryConfig>(),
             Arg.Any<CertificateValidationType>(),
-            Arg.Any<bool>());
+            Arg.Any<bool>(),
+            Arg.Any<HttpAuthType>(),
+            Arg.Any<NetworkCredential>(),
+            Arg.Any<Uri>());
     }
 
     [Theory]
@@ -75,7 +79,10 @@ public sealed class DynamicHttpClientProviderTests : IDisposable
             Arg.Any<HttpClientType>(),
             Arg.Any<RetryConfig>(),
             Arg.Any<CertificateValidationType>(),
-            sendUserAgent);
+            sendUserAgent,
+            Arg.Any<HttpAuthType>(),
+            Arg.Any<NetworkCredential>(),
+            Arg.Any<Uri>());
     }
 
     [Fact]
@@ -91,7 +98,10 @@ public sealed class DynamicHttpClientProviderTests : IDisposable
             Arg.Any<HttpClientType>(),
             Arg.Is<RetryConfig>(retry => retry.MaxRetries == 4 && retry.ExcludeUnauthorized),
             CertificateValidationType.DisabledForLocalAddresses,
-            false);
+            false,
+            Arg.Any<HttpAuthType>(),
+            Arg.Any<NetworkCredential>(),
+            Arg.Any<Uri>());
     }
 
     [Fact]

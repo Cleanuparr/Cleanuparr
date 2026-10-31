@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Xml.Linq;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
 
@@ -218,7 +219,8 @@ public sealed class RTorrentClient
 
         var request = new HttpRequestMessage(HttpMethod.Post, _config.Url) { Content = content };
 
-        if (!string.IsNullOrEmpty(_config.Username))
+        // In Digest mode the handler's CredentialCache answers instead.
+        if (_config.HttpAuthType == HttpAuthType.Basic && !string.IsNullOrEmpty(_config.Username))
         {
             var credentials = Convert.ToBase64String(
                 Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password ?? ""}"));

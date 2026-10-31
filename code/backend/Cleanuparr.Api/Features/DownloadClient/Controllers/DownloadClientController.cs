@@ -113,6 +113,9 @@ public sealed class DownloadClientController : ControllerBase
             _dataContext.Entry(existingClient).CurrentValues.SetValues(clientToPersist);
             await _dataContext.SaveChangesAsync();
 
+            // Otherwise the cached handler keeps the old HTTP auth and URL.
+            _dynamicHttpClientFactory.UnregisterConfiguration($"DownloadClient_{id}");
+
             return Ok(DownloadClientConfigResponse.From(clientToPersist));
         }
         finally
@@ -170,8 +173,9 @@ public sealed class DownloadClientController : ControllerBase
 
             string? resolvedPassword = null;
             string? resolvedApiKey = null;
+            string? resolvedHttpAuthPassword = null;
 
-            if ((request.Password.IsPlaceholder() || request.ApiKey.IsPlaceholder()) && request.ClientId.HasValue)
+            if ((request.Password.IsPlaceholder() || request.ApiKey.IsPlaceholder() || request.HttpAuthPassword.IsPlaceholder()) && request.ClientId.HasValue)
             {
                 var existingClient = await _dataContext.DownloadClients
                     .AsNoTracking()
@@ -184,9 +188,10 @@ public sealed class DownloadClientController : ControllerBase
 
                 resolvedPassword = request.Password.IsPlaceholder() ? existingClient.Password : null;
                 resolvedApiKey = request.ApiKey.IsPlaceholder() ? existingClient.ApiKey : null;
+                resolvedHttpAuthPassword = request.HttpAuthPassword.IsPlaceholder() ? existingClient.HttpAuthPassword : null;
             }
 
-            var testConfig = request.ToTestConfig(resolvedPassword, resolvedApiKey);
+            var testConfig = request.ToTestConfig(resolvedPassword, resolvedApiKey, resolvedHttpAuthPassword);
             using var downloadService = _downloadServiceFactory.GetDownloadService(testConfig);
             var healthResult = await downloadService.HealthCheckAsync();
 

@@ -37,6 +37,14 @@ export const TEST_CONFIG = {
     seededMovieTitle: 'F1',
   },
 
+  // Auth proxy in front of wiremock-dlc (proxyuser / proxypass).
+  authProxy: {
+    basicUrl: 'http://localhost:8099/basic',
+    digestUrl: 'http://localhost:8099/digest',
+    username: 'proxyuser',
+    password: 'proxypass',
+  },
+
   // Real qBittorrent container: the API key seeded into
   // test-data/qbittorrent-config/qBittorrent/qBittorrent.conf by setup-test-data.sh.
   liveQbittorrent: {

@@ -20,6 +20,9 @@ export interface DownloadClientPayload {
   urlBase?: string;
   externalUrl?: string;
   enabled?: boolean;
+  httpAuthType?: 'Basic' | 'Digest';
+  httpAuthUsername?: string;
+  httpAuthPassword?: string;
   /** Existing client id, for test-connection requests that resolve a masked secret. */
   clientId?: string;
 }

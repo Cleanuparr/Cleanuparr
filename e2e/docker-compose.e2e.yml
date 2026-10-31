@@ -130,6 +130,25 @@ services:
     network_mode: host
     restart: unless-stopped
 
+  # Basic (/basic/) and Digest (/digest/) auth proxy in front of wiremock-dlc.
+  # Creds: proxyuser / proxypass.
+  download-client-auth-proxy:
+    image: httpd:alpine
+    network_mode: host
+    volumes:
+      - ./download-client-auth-proxy/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+      - ./download-client-auth-proxy/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    depends_on:
+      wiremock-dlc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- --header='Authorization: Basic cHJveHl1c2VyOnByb3h5cGFzcw==' http://127.0.0.1:8099/basic/__admin/health > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:5.2.3
     network_mode: host

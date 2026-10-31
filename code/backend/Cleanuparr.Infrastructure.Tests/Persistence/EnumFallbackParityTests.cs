@@ -35,6 +35,7 @@ public class EnumFallbackParityTests
         ["NtfyConfig.Priority"] = NtfyPriority.Default,
         ["PushoverConfig.Priority"] = PushoverPriority.Normal,
         ["AppriseConfig.Mode"] = AppriseMode.Api,
+        ["DownloadClientConfig.HttpAuthType"] = HttpAuthType.Basic,
     };
 
     [Fact]

@@ -145,6 +145,88 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateDownloadClientConfig_QBittorrentWithApiKeyAndHttpAuthUsername_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "qbit-httpauth-conflict-client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://localhost:8080",
+            ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
+            HttpAuthUsername = "proxyuser",
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_DigestWithoutUsername_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "rtorrent-digest-no-creds",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Host = "http://localhost:8080",
+            HttpAuthType = HttpAuthType.Digest,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("HTTP Digest authentication requires a username");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_DigestWithUsername_PersistsHttpAuthType()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Enabled = true,
+            Name = "rtorrent-digest-with-creds",
+            TypeName = DownloadClientTypeName.rTorrent,
+            Host = "http://localhost:8080",
+            HttpAuthType = HttpAuthType.Digest,
+            Username = "proxyuser",
+            Password = "proxypass",
+        };
+
+        // Act
+        await _controller.CreateDownloadClientConfig(request);
+
+        // Assert
+        var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Name == "rtorrent-digest-with-creds");
+        saved.HttpAuthType.ShouldBe(HttpAuthType.Digest);
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_PlaceholderHttpAuthPassword_PropagatesValidationException()
+    {
+        // Arrange
+        CreateDownloadClientRequest request = new()
+        {
+            Enabled = true,
+            Name = "qbit-httpauth-placeholder",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://localhost:8080",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("HTTP auth password cannot be a placeholder value");
+    }
+
+    [Fact]
     public async Task CreateDownloadClientConfig_SabnzbdWithNoType_StoresUsenet()
     {
         // Arrange
@@ -206,6 +288,58 @@ public class DownloadClientControllerTests : IDisposable
         // Act / Assert — Validate throws, controller's generic catch logs and re-throws
         await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.CreateDownloadClientConfig(request));
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_UnparseableHost_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Name = "x",
+            Host = "http://host:abc",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("Host is not a valid URL");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_HostWithUserInfo_PropagatesValidationException()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Name = "x",
+            Host = "http://user:pass@localhost:8080",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.CreateDownloadClientConfig(request));
+        exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
+    }
+
+    [Fact]
+    public async Task CreateDownloadClientConfig_RelativeHost_ReturnsCreated()
+    {
+        // Arrange
+        var request = new CreateDownloadClientRequest
+        {
+            Name = "x",
+            Host = "192.168.1.5",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act
+        IActionResult result = await _controller.CreateDownloadClientConfig(request);
+
+        // Assert
+        result.ShouldBeOfType<CreatedAtActionResult>();
     }
 
     [Fact]
@@ -282,6 +416,7 @@ public class DownloadClientControllerTests : IDisposable
         var saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
         saved.Name.ShouldBe("renamed");
         saved.Host!.ToString().ShouldContain("newhost");
+        _dynamicHttpClientFactory.Received(1).UnregisterConfiguration($"DownloadClient_{client.Id}");
     }
 
     [Fact]
@@ -341,6 +476,83 @@ public class DownloadClientControllerTests : IDisposable
         // Act / Assert
         await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
             () => _controller.UpdateDownloadClientConfig(client.Id, request));
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_PlaceholderHttpAuthPassword_KeepsExistingHttpAuthPassword()
+    {
+        // Arrange
+        DownloadClientConfig client = new()
+        {
+            Id = Guid.NewGuid(),
+            Name = "qbit-client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "stored-http-pass",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "qbit-client",
+            Host = "http://localhost:8080",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act
+        IActionResult result = await _controller.UpdateDownloadClientConfig(client.Id, request);
+
+        // Assert
+        result.ShouldBeOfType<OkObjectResult>();
+        DownloadClientConfig saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
+        saved.HttpAuthPassword.ShouldBe("stored-http-pass");
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_UnparseableHost_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://host:abc",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+        exception.Message.ShouldBe("Host is not a valid URL");
+    }
+
+    [Fact]
+    public async Task UpdateDownloadClientConfig_HostWithUserInfo_PropagatesValidationException()
+    {
+        // Arrange
+        DownloadClientConfig client = NewClient("orig", DownloadClientTypeName.qBittorrent);
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        UpdateDownloadClientRequest request = new()
+        {
+            Name = "renamed",
+            Host = "http://user:pass@newhost:9090",
+            TypeName = DownloadClientTypeName.qBittorrent,
+        };
+
+        // Act / Assert
+        Cleanuparr.Domain.Exceptions.CustomValidationException exception = await Should.ThrowAsync<Cleanuparr.Domain.Exceptions.CustomValidationException>(
+            () => _controller.UpdateDownloadClientConfig(client.Id, request));
+        exception.Message.ShouldBe("Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
     }
 
     [Fact]
@@ -405,6 +617,7 @@ public class DownloadClientControllerTests : IDisposable
 
         DownloadClientConfig saved = await _dataContext.DownloadClients.AsNoTracking().FirstAsync(c => c.Id == client.Id);
         saved.TypeName.ShouldBe(DownloadClientTypeName.qBittorrent);
+        _dynamicHttpClientFactory.DidNotReceive().UnregisterConfiguration(Arg.Any<string>());
     }
 
     [Fact]
@@ -508,6 +721,45 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task TestDownloadClient_QBittorrentWithApiKeyAndHttpAuthUsername_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://localhost:8080",
+            ApiKey = "qbt_abcdefghijklmnopqrstuvwxyz12",
+            HttpAuthUsername = "proxyuser",
+        };
+
+        // Act
+        var result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_DigestWithoutUsername_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.rTorrent,
+            Host = "http://localhost:8080",
+            HttpAuthType = HttpAuthType.Digest,
+        };
+
+        // Act
+        var result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
     public async Task TestDownloadClient_NewApiKeyWithPlaceholderPassword_UsesNewApiKeyAndStoredPassword()
     {
         // Arrange
@@ -586,6 +838,67 @@ public class DownloadClientControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task TestDownloadClient_NewPasswordWithPlaceholderHttpAuthPassword_UsesStoredHttpAuthPassword()
+    {
+        // Arrange
+        DownloadClientConfig client = new()
+        {
+            Name = "deluge",
+            TypeName = DownloadClientTypeName.Deluge,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            Password = "stored-password",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = "stored-http-pass",
+        };
+        _dataContext.DownloadClients.Add(client);
+        await _dataContext.SaveChangesAsync();
+
+        DownloadClientConfig? capturedConfig = null;
+        IDownloadService downloadService = Substitute.For<IDownloadService>();
+        downloadService.HealthCheckAsync().Returns(new HealthCheckResult { IsHealthy = true });
+        _downloadServiceFactory.GetDownloadService(Arg.Do<DownloadClientConfig>(c => capturedConfig = c)).Returns(downloadService);
+
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.Deluge,
+            Host = "http://localhost:8080",
+            Password = "new-password",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+            ClientId = client.Id,
+        };
+
+        // Act
+        await _controller.TestDownloadClient(request);
+
+        // Assert
+        capturedConfig.ShouldNotBeNull();
+        capturedConfig.Password.ShouldBe("new-password");
+        capturedConfig.HttpAuthPassword.ShouldBe("stored-http-pass");
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_RawPlaceholderHttpAuthPasswordNoClientId_ReturnsBadRequest()
+    {
+        // Arrange: no ClientId, so there is no stored value to resolve the placeholder against
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.Deluge,
+            Host = "http://localhost:8080",
+            HttpAuthUsername = "proxyuser",
+            HttpAuthPassword = SensitiveDataHelper.Placeholder,
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
     public async Task TestDownloadClient_InvalidHost_ReturnsBadRequest()
     {
         // Arrange — empty host fails Validate; the controller wraps the exception in BadRequest
@@ -601,6 +914,44 @@ public class DownloadClientControllerTests : IDisposable
 
         // Assert
         result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_UnparseableHost_ReturnsBadRequest()
+    {
+        // Arrange
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://host:abc",
+            Password = "pass",
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
+    }
+
+    [Fact]
+    public async Task TestDownloadClient_HostWithUserInfo_ReturnsBadRequest()
+    {
+        // Arrange
+        TestDownloadClientRequest request = new()
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Host = "http://user:pass@localhost:8080",
+            Password = "pass",
+        };
+
+        // Act
+        IActionResult result = await _controller.TestDownloadClient(request);
+
+        // Assert
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
     }
 
     [Fact]

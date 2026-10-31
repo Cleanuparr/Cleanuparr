@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -12,10 +13,13 @@ namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 /// </summary>
 public class DynamicHttpClientFactory : IDynamicHttpClientFactory
 {
+    private const char VersionSeparator = '#';
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHttpClientConfigStore _configStore;
     private readonly IOptionsMonitorCache<HttpClientFactoryOptions> _optionsCache;
     private readonly ILogger<DynamicHttpClientFactory> _logger;
+    private readonly ConcurrentDictionary<string, int> _generations = new();
 
     public DynamicHttpClientFactory(
         IHttpClientFactory httpClientFactory,
@@ -29,11 +33,24 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         _logger = logger;
     }
 
-    public HttpClient CreateClient(string clientName, HttpClientConfig config)
+    /// <summary>
+    /// Appends the generation so IHttpClientFactory builds a fresh handler. Generation 0 keeps the plain name.
+    /// </summary>
+    internal static string ComposeVersionedName(string clientName, int generation) =>
+        generation == 0 ? clientName : $"{clientName}{VersionSeparator}{generation}";
+
+    /// <summary>
+    /// Recovers the configuration store key from a name built by <see cref="ComposeVersionedName"/>.
+    /// </summary>
+    internal static string StripVersion(string versionedName)
     {
-        _configStore.AddConfiguration(clientName, config);
-        return _httpClientFactory.CreateClient(clientName);
+        int index = versionedName.IndexOf(VersionSeparator);
+        return index < 0 ? versionedName : versionedName[..index];
     }
+
+    private int GetGeneration(string clientName) => _generations.GetOrAdd(clientName, 0);
+
+    private void BumpGeneration(string clientName) => _generations.AddOrUpdate(clientName, 1, (_, generation) => generation + 1);
 
     public HttpClient CreateClient(string clientName)
     {
@@ -41,12 +58,13 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         {
             throw new InvalidOperationException($"No configuration found for client '{clientName}'. Register configuration first.");
         }
-        
-        return _httpClientFactory.CreateClient(clientName);
+
+        return _httpClientFactory.CreateClient(ComposeVersionedName(clientName, GetGeneration(clientName)));
     }
 
     public void RegisterConfiguration(string clientName, HttpClientConfig config)
     {
+        // No bump: this runs on every download-service build, not only on changes.
         _configStore.AddConfiguration(clientName, config);
     }
 
@@ -82,7 +100,16 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         RegisterConfiguration(clientName, config);
     }
 
-    public void RegisterDownloadClient(string clientName, int timeout, HttpClientType clientType, RetryConfig retryConfig, CertificateValidationType certificateType, bool sendUserAgent)
+    public void RegisterDownloadClient(
+        string clientName,
+        int timeout,
+        HttpClientType clientType,
+        RetryConfig retryConfig,
+        CertificateValidationType certificateType,
+        bool sendUserAgent,
+        HttpAuthType httpAuthType = HttpAuthType.Basic,
+        NetworkCredential? httpAuthCredential = null,
+        Uri? baseUri = null)
     {
         HttpClientConfig config = new()
         {
@@ -91,7 +118,10 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
             Type = clientType,
             RetryConfig = retryConfig,
             CertificateValidationType = certificateType,
-            SendUserAgent = sendUserAgent
+            SendUserAgent = sendUserAgent,
+            HttpAuthType = httpAuthType,
+            HttpAuthCredential = httpAuthCredential,
+            BaseUri = baseUri,
         };
 
         // Configure Deluge-specific settings if needed
@@ -120,8 +150,9 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
     {
         _configStore.RemoveConfiguration(clientName);
 
-        // Also invalidate the cached options for this client
-        _optionsCache.TryRemove(clientName);
+        // The cached handler outlives the options, so only a new name drops stale credentials.
+        _optionsCache.TryRemove(ComposeVersionedName(clientName, GetGeneration(clientName)));
+        BumpGeneration(clientName);
 
         _logger.LogDebug("Unregistered and invalidated HTTP client configuration: {ClientName}", clientName);
     }
@@ -162,7 +193,10 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         var clientNames = updatedConfigurations.Select(kvp => kvp.Key).ToList();
         foreach (string clientName in clientNames)
         {
+            // Direct IHttpClientFactory consumers (ArrClient, notification proxies) request the bare name.
             _optionsCache.TryRemove(clientName);
+            _optionsCache.TryRemove(ComposeVersionedName(clientName, GetGeneration(clientName)));
+            BumpGeneration(clientName);
         }
 
         _logger.LogInformation("Updated and invalidated {Count} HTTP client configurations with new general settings: " +

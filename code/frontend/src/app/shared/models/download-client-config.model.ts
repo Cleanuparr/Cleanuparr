@@ -1,4 +1,4 @@
-import { DownloadClientAuthField, DownloadClientCapability, DownloadClientType, DownloadClientTypeName } from './enums';
+import { DownloadClientAuthField, DownloadClientCapability, DownloadClientType, DownloadClientTypeName, HttpAuthType } from './enums';
 
 export interface ClientConfig {
   enabled: boolean;
@@ -10,6 +10,9 @@ export interface ClientConfig {
   username: string;
   password?: string;
   apiKey?: string;
+  httpAuthType: HttpAuthType;
+  httpAuthUsername?: string;
+  httpAuthPassword?: string;
   urlBase: string;
   externalUrl?: string;
   downloadDirectorySource?: string | null;
@@ -28,6 +31,9 @@ export interface CreateDownloadClientDto {
   username?: string;
   password?: string;
   apiKey?: string;
+  httpAuthType: HttpAuthType;
+  httpAuthUsername?: string;
+  httpAuthPassword?: string;
   urlBase?: string;
   externalUrl?: string;
   downloadDirectorySource?: string | null;
@@ -42,6 +48,9 @@ export interface UpdateDownloadClientDto {
   username?: string;
   password?: string;
   apiKey?: string;
+  httpAuthType: HttpAuthType;
+  httpAuthUsername?: string;
+  httpAuthPassword?: string;
   urlBase?: string;
   externalUrl?: string;
   downloadDirectorySource?: string | null;
@@ -54,6 +63,9 @@ export interface TestDownloadClientRequest {
   username?: string;
   password?: string;
   apiKey?: string;
+  httpAuthType: HttpAuthType;
+  httpAuthUsername?: string;
+  httpAuthPassword?: string;
   urlBase?: string;
   clientId?: string;
 }

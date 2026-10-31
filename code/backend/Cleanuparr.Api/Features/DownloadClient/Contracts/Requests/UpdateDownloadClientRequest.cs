@@ -23,6 +23,12 @@ public sealed record UpdateDownloadClientRequest
 
     public string? ApiKey { get; init; }
 
+    public HttpAuthType HttpAuthType { get; init; }
+
+    public string? HttpAuthUsername { get; init; }
+
+    public string? HttpAuthPassword { get; init; }
+
     public string? UrlBase { get; init; }
 
     public string? ExternalUrl { get; init; }
@@ -48,9 +54,15 @@ public sealed record UpdateDownloadClientRequest
             throw new CustomValidationException("Host cannot be empty");
         }
 
-        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
+        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out Uri? parsedHost))
         {
             throw new CustomValidationException("Host is not a valid URL");
+        }
+
+        if (parsedHost.IsAbsoluteUri && parsedHost.UserInfo.Length > 0)
+        {
+            throw new CustomValidationException(
+                "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 
         if (!string.IsNullOrWhiteSpace(ExternalUrl) && !Uri.TryCreate(ExternalUrl, UriKind.RelativeOrAbsolute, out _))
@@ -74,6 +86,9 @@ public sealed record UpdateDownloadClientRequest
         Username = Username,
         Password = Password.IsPlaceholder() ? existing.Password : Password,
         ApiKey = ApiKey.IsPlaceholder() ? existing.ApiKey : ApiKey,
+        HttpAuthType = HttpAuthType,
+        HttpAuthUsername = HttpAuthUsername,
+        HttpAuthPassword = HttpAuthPassword.IsPlaceholder() ? existing.HttpAuthPassword : HttpAuthPassword,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
         DownloadDirectorySource = DownloadDirectorySource,
