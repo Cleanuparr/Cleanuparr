@@ -108,8 +108,8 @@ describe('ArrAppsComponent', () => {
     expect(api.getConfig).toHaveBeenCalledTimes(8);
     expect(component.configured()).toHaveLength(2);
     expect(component.unconfigured()).toHaveLength(6);
-    expect(component.configured().map(e => e.type)).toEqual(['sonarr', 'radarr']);
-    expect(component.unconfigured()).toEqual(['lidarr', 'readarr', 'chaptarr', 'whisparr', 'sportarr', 'lazylibrarian']);
+    expect(component.configured().map(e => e.type)).toEqual(['radarr', 'sonarr']);
+    expect(component.unconfigured()).toEqual(['chaptarr', 'lazylibrarian', 'lidarr', 'readarr', 'sportarr', 'whisparr']);
   });
 
   it('renders configured apps as arr-section components', () => {
