@@ -34,6 +34,16 @@ public sealed record SeekerInstanceConfigResponse
 
     public bool UseCustomFormatScore { get; init; }
 
+    /// <summary>
+    /// True when the custom format score toggle applies to this instance type.
+    /// </summary>
+    public bool ReadsCustomFormatScores { get; init; }
+
+    /// <summary>
+    /// False when the instance type follows each item's own monitored flag.
+    /// </summary>
+    public bool ChoosesMonitoredOnly { get; init; }
+
     public int RecentGrabWindowHours { get; init; }
 
     public SonarrSearchMode SonarrSearchMode { get; init; }

@@ -98,6 +98,7 @@ export enum SeekerExclusionReason {
   RecentlyGrabbed = 'RecentlyGrabbed',
   Resting = 'Resting',
   SearchedThisCycle = 'SearchedThisCycle',
+  PostponedOrCancelled = 'PostponedOrCancelled',
 }
 
 export interface SeekerPreviewUnit {

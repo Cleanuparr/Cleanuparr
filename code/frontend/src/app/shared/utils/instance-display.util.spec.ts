@@ -25,6 +25,7 @@ describe('instanceTypeHighlight', () => {
     [InstanceType.Whisparr, 'info'],
     [InstanceType.Lidarr, 'info'],
     [InstanceType.Chaptarr, 'info'],
+    [InstanceType.Sportarr, 'info'],
   ])('maps %s to %s', (type, expected) => {
     expect(instanceTypeHighlight(type)).toBe(expected);
   });

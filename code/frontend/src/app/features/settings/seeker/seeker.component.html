@@ -102,6 +102,9 @@
                 @if (instance.instanceType === 'Chaptarr') {
                   <app-new-badge variant="inline" featureId="seeker-chaptarr" />
                 }
+                @if (instance.instanceType === 'Sportarr') {
+                  <app-new-badge variant="inline" featureId="seeker-sportarr" />
+                }
               </div>
               <app-toggle [checked]="instance.enabled" [disabled]="!instance.arrInstanceEnabled" (checkedChange)="toggleInstance($index)" helpKey="seeker:enabled" />
             </div>
@@ -112,10 +115,12 @@
             }
             @if (instance.enabled) {
               <div class="instance-row__details">
-                <app-toggle label="Monitored Only" [checked]="instance.monitoredOnly"
-                  hint="Only search for items that are monitored in the arr app"
-                  (checkedChange)="patchInstance($index, { monitoredOnly: $event })"
-                  helpKey="seeker:monitoredOnly" />
+                @if (choosesMonitoredOnly(instance)) {
+                  <app-toggle label="Monitored Only" [checked]="instance.monitoredOnly"
+                    hint="Only search for items that are monitored in the arr app"
+                    (checkedChange)="patchInstance($index, { monitoredOnly: $event })"
+                    helpKey="seeker:monitoredOnly" />
+                }
                 <app-toggle label="Use Cutoff" [checked]="instance.useCutoff"
                   hint="Skip items that have already met their quality cutoff"
                   (checkedChange)="patchInstance($index, { useCutoff: $event })"

@@ -89,6 +89,8 @@ function libraryLabel(instanceType: string, instanceVersion: number): string {
       return 'artists';
     case 'Chaptarr':
       return 'authors';
+    case 'Sportarr':
+      return 'leagues';
     default:
       return 'movies';
   }
@@ -131,4 +133,5 @@ export const EXCLUSION_REASON_LABELS: Record<SeekerExclusionReason, string> = {
   [SeekerExclusionReason.RecentlyGrabbed]: 'Recently grabbed',
   [SeekerExclusionReason.Resting]: 'Resting after repeated misses',
   [SeekerExclusionReason.SearchedThisCycle]: 'Searched this cycle',
+  [SeekerExclusionReason.PostponedOrCancelled]: 'Postponed or cancelled',
 };

@@ -98,6 +98,8 @@ interface InstanceState {
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;
+  readsCustomFormatScores: boolean;
+  choosesMonitoredOnly: boolean;
   useCustomFormatScore: boolean;
   sonarrSearchMode: SonarrSearchMode;
   radarrReleaseGate: RadarrReleaseGate;
@@ -227,6 +229,8 @@ export class SeekerComponent implements HasPendingChanges {
           minCycleTimeDays: i.minCycleTimeDays,
           monitoredOnly: i.monitoredOnly,
           useCutoff: i.useCutoff,
+          readsCustomFormatScores: i.readsCustomFormatScores,
+          choosesMonitoredOnly: i.choosesMonitoredOnly,
           useCustomFormatScore: i.useCustomFormatScore,
           sonarrSearchMode: i.sonarrSearchMode,
           radarrReleaseGate: i.radarrReleaseGate,
@@ -293,7 +297,11 @@ export class SeekerComponent implements HasPendingChanges {
   }
 
   readsCustomFormatScores(instance: InstanceState): boolean {
-    return instance.instanceType !== 'Chaptarr';
+    return instance.readsCustomFormatScores;
+  }
+
+  choosesMonitoredOnly(instance: InstanceState): boolean {
+    return instance.choosesMonitoredOnly;
   }
 
   updateInstanceRadarrReleaseGate(index: number, gate: unknown): void {

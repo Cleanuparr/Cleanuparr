@@ -32,6 +32,8 @@ export interface SeekerInstanceConfig {
   monitoredOnly: boolean;
   useCutoff: boolean;
   useCustomFormatScore: boolean;
+  readsCustomFormatScores: boolean;
+  choosesMonitoredOnly: boolean;
   sonarrSearchMode: SonarrSearchMode;
   radarrReleaseGate: RadarrReleaseGate;
 }

@@ -252,6 +252,27 @@ public class SeekerConfigControllerTests : IDisposable
         response.Instances.ShouldContain(i => i.ArrInstanceId == chaptarr.Id);
     }
 
+    [Theory]
+    [InlineData(InstanceType.Sonarr, true, true)]
+    [InlineData(InstanceType.Chaptarr, false, true)]
+    [InlineData(InstanceType.Sportarr, false, false)]
+    public async Task GetSeekerConfig_ReportsWhichTogglesTheInstanceTypeAllows(InstanceType type, bool readsCustomFormatScores, bool choosesMonitoredOnly)
+    {
+        ArrInstance instance = type switch
+        {
+            InstanceType.Sonarr => SeekerTestDataFactory.AddSonarrInstance(_dataContext),
+            InstanceType.Chaptarr => SeekerTestDataFactory.AddChaptarrInstance(_dataContext),
+            _ => SeekerTestDataFactory.AddSportarrInstance(_dataContext),
+        };
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        SeekerInstanceConfigResponse row = response.Instances.Single(i => i.ArrInstanceId == instance.Id);
+        row.ReadsCustomFormatScores.ShouldBe(readsCustomFormatScores);
+        row.ChoosesMonitoredOnly.ShouldBe(choosesMonitoredOnly);
+    }
+
     #endregion
 
     #region UpdateSeekerConfig Tests

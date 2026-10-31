@@ -73,6 +73,8 @@ public sealed class SeekerConfigController : ControllerBase
                 MonitoredOnly = seekerConfig?.MonitoredOnly ?? true,
                 UseCutoff = seekerConfig?.UseCutoff ?? false,
                 UseCustomFormatScore = seekerConfig?.UseCustomFormatScore ?? false,
+                ReadsCustomFormatScores = SeekerApps.ReadsCustomFormatScores(instance),
+                ChoosesMonitoredOnly = !SeekerApps.SearchesEventsOnly(instance),
                 RecentGrabWindowHours = seekerConfig?.RecentGrabWindowHours ?? 24,
                 SonarrSearchMode = seekerConfig?.SonarrSearchMode ?? SonarrSearchMode.Auto,
                 RadarrReleaseGate = seekerConfig?.RadarrReleaseGate ?? RadarrReleaseGate.ReleaseDate,
