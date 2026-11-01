@@ -175,7 +175,10 @@ public class SportarrClient : SonarrClient, ISportarrClient
         HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> grabbed = [];
 
         // History has no since filter, so read newest first and stop at the first older row
-        for (int page = 1; ; page++)
+        int page = 1;
+        int pageCount;
+
+        do
         {
             UriBuilder uriBuilder = new(arrInstance.Url);
             uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/history";
@@ -216,11 +219,10 @@ public class SportarrClient : SonarrClient, ISportarrClient
                 }
             }
 
-            if (history.Records.Count < HistoryPageSize)
-            {
-                break;
-            }
+            pageCount = history.Records.Count;
+            page++;
         }
+        while (pageCount == HistoryPageSize);
 
         return grabbed;
     }
