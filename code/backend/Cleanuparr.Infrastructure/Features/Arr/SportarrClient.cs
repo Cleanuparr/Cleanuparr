@@ -73,14 +73,9 @@ public class SportarrClient : SonarrClient, ISportarrClient
                 {
                     SportarrSearchQueueItem? queued = await DeserializeStreamAsync<SportarrSearchQueueItem>(response);
 
-                    if (queued?.TaskId is { } taskId)
-                    {
-                        taskIds.Add(taskId);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("events search returned no task id | {Url} | event id: {EventId}", arrInstance.Url, item.Id);
-                    }
+                    long taskId = queued?.TaskId
+                        ?? throw new InvalidOperationException($"Sportarr queued no task for event {item.Id}");
+                    taskIds.Add(taskId);
                 }
 
                 _logger.LogInformation("events search triggered | {Url} | event id: {EventId}", arrInstance.Url, item.Id);

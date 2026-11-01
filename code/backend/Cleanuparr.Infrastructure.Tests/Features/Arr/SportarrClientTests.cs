@@ -114,17 +114,14 @@ public class SportarrClientTests
     }
 
     [Fact]
-    public async Task SearchItemsAsync_ResponseWithoutTaskId_ReturnsNoIds()
+    public async Task SearchItemsAsync_ResponseWithoutTaskId_Throws()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new { id = "guid" })));
         HashSet<SearchItem> items = [new SeriesSearchItem { Id = 5, SeriesId = 10, SearchType = SeriesSearchType.Episode }];
 
-        // Act
-        List<long> ids = await _client.SearchItemsAsync(_arrInstance, items);
-
-        // Assert
-        ids.ShouldBeEmpty();
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(() => _client.SearchItemsAsync(_arrInstance, items));
     }
 
     [Fact]
