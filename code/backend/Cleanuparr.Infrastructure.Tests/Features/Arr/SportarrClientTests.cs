@@ -114,6 +114,30 @@ public class SportarrClientTests
     }
 
     [Fact]
+    public async Task SearchItemsAsync_NoItems_SendsNothing()
+    {
+        // Act
+        List<long> fromNull = await _client.SearchItemsAsync(_arrInstance, null);
+        List<long> fromEmpty = await _client.SearchItemsAsync(_arrInstance, []);
+
+        // Assert
+        fromNull.ShouldBeEmpty();
+        fromEmpty.ShouldBeEmpty();
+        _httpMessageHandler.CapturedRequests.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_RequestFails_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+        HashSet<SearchItem> items = [new SeriesSearchItem { Id = 5, SeriesId = 10, SearchType = SeriesSearchType.Episode }];
+
+        // Act & Assert
+        await Should.ThrowAsync<HttpRequestException>(() => _client.SearchItemsAsync(_arrInstance, items));
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_ResponseWithoutTaskId_Throws()
     {
         // Arrange
@@ -164,6 +188,20 @@ public class SportarrClientTests
     }
 
     [Fact]
+    public async Task GetCommandStatusAsync_NullBody_ReturnsUnknown()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse<object?>(null)));
+
+        // Act
+        ArrCommandStatus result = await _client.GetCommandStatusAsync(_arrInstance, 77);
+
+        // Assert
+        result.Id.ShouldBe(77);
+        result.Status.ShouldBe(ArrCommandState.Unknown);
+    }
+
+    [Fact]
     public async Task GetCommandStatusAsync_TaskNotFound_ThrowsNotFound()
     {
         // Arrange
@@ -205,6 +243,19 @@ public class SportarrClientTests
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.RequestUri!.AbsolutePath.ShouldBe("/api/task");
         request.RequestUri.Query.ShouldBe("?pageSize=500");
+    }
+
+    [Fact]
+    public async Task GetCommandsAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse<object?>(null)));
+
+        // Act
+        List<ArrCommandStatus> result = await _client.GetCommandsAsync(_arrInstance);
+
+        // Assert
+        result.ShouldBeEmpty();
     }
 
     #endregion
@@ -460,6 +511,32 @@ public class SportarrClientTests
         result.Count.ShouldBe(501);
         result.ShouldContain((0, 0, 900));
         _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedEpisodesAsync_RequestFails_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act & Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedEpisodesAsync_EmptyPage_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new { records = Array.Empty<object>() })));
+
+        // Act
+        HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> result =
+            await _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, DateTimeOffset.UtcNow);
+
+        // Assert
+        result.ShouldBeEmpty();
+        _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
     }
 
     #endregion
