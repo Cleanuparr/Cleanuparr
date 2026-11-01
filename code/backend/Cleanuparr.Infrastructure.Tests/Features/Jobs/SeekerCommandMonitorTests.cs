@@ -535,6 +535,29 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Abandons_an_old_tracker_when_the_queue_read_fails_after_an_empty_recheck()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
+        AddTracker(radarrInstance.Id, Guid.NewGuid(), status: SearchCommandStatus.Completed, age: TimeSpan.FromMinutes(91));
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(
+                _ => new QueueListResponse(),
+                _ => throw new HttpRequestException("arr offline"));
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        await AdvanceUntilAsync(WaitForTrackerCountAsync(0));
+
+        // Assert
+        await _eventPublisher.DidNotReceive().PublishSearchCompleted(
+            Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
+    }
+
+    [Fact]
     public async Task Fails_the_event_when_the_arr_instance_no_longer_exists()
     {
         // Arrange

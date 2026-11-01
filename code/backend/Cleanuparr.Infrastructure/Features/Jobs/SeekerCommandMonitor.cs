@@ -149,6 +149,7 @@ public class SeekerCommandMonitor : BackgroundService
         foreach (SeekerCommandTracker tracker in trackers.Where(t => IsTerminal(t.Status)))
         {
             didWork = true;
+            bool recheckPending = _emptyQueueRechecks.Contains(tracker.Id);
 
             if (await TryPublishOutcomeAsync(tracker, instancesById, queueSnapshots, eventPublisher, eventsContext))
             {
@@ -157,7 +158,9 @@ public class SeekerCommandMonitor : BackgroundService
                 continue;
             }
 
-            if (now - tracker.CreatedAt > AbandonAfter && !_emptyQueueRechecks.Contains(tracker.Id))
+            bool deferredThisPass = !recheckPending && _emptyQueueRechecks.Contains(tracker.Id);
+
+            if (now - tracker.CreatedAt > AbandonAfter && !deferredThisPass)
             {
                 _logger.LogWarning(
                     "Abandoning search command {CommandId} for '{Title}' after repeated publish failures (event {EventId})",
