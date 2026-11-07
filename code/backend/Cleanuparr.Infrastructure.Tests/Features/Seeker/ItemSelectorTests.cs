@@ -8,13 +8,13 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Seeker;
 
 public sealed class ItemSelectorTests
 {
-    private static readonly List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> SampleCandidates =
+    private static readonly List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> SampleCandidates =
     [
-        (1, new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero)),
-        (2, new DateTimeOffset(2024, 3, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero)),
-        (3, new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero), null),
-        (4, new DateTimeOffset(2024, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero)),
-        (5, null, new DateTimeOffset(2024, 4, 1, 0, 0, 0, TimeSpan.Zero)),
+        (1, new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero), 0),
+        (2, new DateTimeOffset(2024, 3, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero), 0),
+        (3, new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero), null, 0),
+        (4, new DateTimeOffset(2024, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero), 0),
+        (5, null, new DateTimeOffset(2024, 4, 1, 0, 0, 0, TimeSpan.Zero), 0),
     ];
 
     #region ItemSelectorFactory Tests
@@ -26,6 +26,7 @@ public sealed class ItemSelectorTests
     [InlineData(SelectionStrategy.NewestWeighted, typeof(NewestWeightedSelector))]
     [InlineData(SelectionStrategy.BalancedWeighted, typeof(BalancedWeightedSelector))]
     [InlineData(SelectionStrategy.Random, typeof(RandomSelector))]
+    [InlineData(SelectionStrategy.CustomFormatGapWeighted, typeof(CustomFormatGapWeightedSelector))]
     public void Factory_Create_ReturnsCorrectSelectorType(SelectionStrategy strategy, Type expectedType)
     {
         var selector = ItemSelectorFactory.Create(strategy);
@@ -244,7 +245,7 @@ public sealed class ItemSelectorTests
     public void NewestWeighted_Select_SingleCandidate_ReturnsThatCandidate()
     {
         var selector = new NewestWeightedSelector();
-        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> single = [(42, DateTimeOffset.UtcNow, null)];
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> single = [(42, DateTimeOffset.UtcNow, null, 0)];
 
         var result = selector.Select(single, 1);
 
@@ -300,7 +301,7 @@ public sealed class ItemSelectorTests
     public void OldestSearchWeighted_Select_SingleCandidate_ReturnsThatCandidate()
     {
         var selector = new OldestSearchWeightedSelector();
-        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> single = [(42, DateTimeOffset.UtcNow, null)];
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> single = [(42, DateTimeOffset.UtcNow, null, 0)];
 
         var result = selector.Select(single, 1);
 
@@ -356,7 +357,7 @@ public sealed class ItemSelectorTests
     public void BalancedWeighted_Select_SingleCandidate_ReturnsThatCandidate()
     {
         var selector = new BalancedWeightedSelector();
-        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> single = [(42, DateTimeOffset.UtcNow, null)];
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> single = [(42, DateTimeOffset.UtcNow, null, 0)];
 
         var result = selector.Select(single, 1);
 
@@ -373,6 +374,72 @@ public sealed class ItemSelectorTests
         var result = selector.Select(SampleCandidates, 3);
 
         foreach (var id in result) { inputIds.ShouldContain(id); }
+    }
+
+    #endregion
+
+    #region CustomFormatGapWeightedSelector Tests
+
+    [Fact]
+    public void CustomFormatGapWeighted_Select_EmptyInput_ReturnsEmptyList()
+    {
+        CustomFormatGapWeightedSelector selector = new();
+
+        List<long> result = selector.Select([], 5);
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void CustomFormatGapWeighted_Select_CountExceedsCandidates_ReturnsAll()
+    {
+        CustomFormatGapWeightedSelector selector = new();
+
+        List<long> result = selector.Select(SampleCandidates, 100);
+
+        result.Count.ShouldBe(5);
+    }
+
+    [Fact]
+    public void CustomFormatGapWeighted_Select_NoDuplicateIds()
+    {
+        CustomFormatGapWeightedSelector selector = new();
+
+        List<long> result = selector.Select(SampleCandidates, 5);
+
+        result.Distinct().Count().ShouldBe(result.Count);
+    }
+
+    [Fact]
+    public void CustomFormatGapWeighted_Select_LargeGap_WinsMoreOftenThanZeroGap()
+    {
+        CustomFormatGapWeightedSelector selector = new();
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> candidates =
+        [
+            (1, null, DateTimeOffset.UtcNow, 50),
+            (2, null, null, 0),
+        ];
+
+        int wins = Enumerable.Range(0, 1000).Count(_ => selector.Select(candidates, 1)[0] == 1);
+
+        // Weights 0.75 vs 0.5: expect about 600 wins
+        wins.ShouldBeGreaterThan(530);
+    }
+
+    [Fact]
+    public void CustomFormatGapWeighted_Select_NoGaps_FavoursTheOldestSearch()
+    {
+        CustomFormatGapWeightedSelector selector = new();
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)> candidates =
+        [
+            (1, null, DateTimeOffset.UtcNow, 0),
+            (2, null, DateTimeOffset.UtcNow.AddDays(-30), 0),
+        ];
+
+        int wins = Enumerable.Range(0, 1000).Count(_ => selector.Select(candidates, 1)[0] == 2);
+
+        // Weights 0.5 vs 0.25: expect about 667 wins
+        wins.ShouldBeGreaterThan(590);
     }
 
     #endregion

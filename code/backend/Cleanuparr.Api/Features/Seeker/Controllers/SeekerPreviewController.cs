@@ -131,9 +131,10 @@ public sealed class SeekerPreviewController : ControllerBase
         }
 
         InstanceFunnelStat funnel = ToFunnel(evaluation);
+        SelectionStrategy strategy = SeekerUnitEvaluator.EffectiveStrategy(config.SelectionStrategy, instanceConfig);
 
         List<SeekerSearchCandidate> nextUp = waitingUntil is null
-            ? SeekerUnitEvaluator.SelectNext(evaluation, config.SelectionStrategy, NextUpCount)
+            ? SeekerUnitEvaluator.SelectNext(evaluation, strategy, NextUpCount)
             : [];
 
         HashSet<long> nextUpIds = nextUp.Select(c => c.ItemId).ToHashSet();
@@ -147,8 +148,8 @@ public sealed class SeekerPreviewController : ControllerBase
             Funnel = funnel,
             CycleWaitingUntil = waitingUntil,
             RandomPick = randomSeason
-                || config.SelectionStrategy is not (SelectionStrategy.OldestSearchFirst or SelectionStrategy.NewestFirst)
-                || SeekerUnitEvaluator.HasTiedPicks(evaluation, config.SelectionStrategy, nextUpIds),
+                || strategy is not (SelectionStrategy.OldestSearchFirst or SelectionStrategy.NewestFirst)
+                || SeekerUnitEvaluator.HasTiedPicks(evaluation, strategy, nextUpIds),
             NextUp = nextUp
                 .Select(c => new SeekerPreviewUnitResponse { Name = c.Name, Reason = c.Reason, ContentKind = c.ContentKind })
                 .ToList(),

@@ -571,7 +571,8 @@ public sealed class Seeker : IHandler
             }
         }
 
-        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, config.SelectionStrategy, 1);
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(
+            evaluation, SeekerUnitEvaluator.EffectiveStrategy(config.SelectionStrategy, instanceConfig), 1);
 
         foreach (SeekerSearchCandidate candidate in candidates)
         {

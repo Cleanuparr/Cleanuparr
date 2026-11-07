@@ -294,6 +294,22 @@ describe('SeekerComponent', () => {
     expect(fixture.nativeElement.querySelector('.strategy-hint').textContent).toContain('equal chance');
   });
 
+  it('offers the custom format gap strategy and describes its fallback', () => {
+    const { fixture, component } = setup();
+
+    expect(component.strategyOptions).toContainEqual({
+      label: 'Custom Format Gap Weighted',
+      value: SelectionStrategy.CustomFormatGapWeighted,
+    });
+
+    component.seekerForm.selectionStrategy().value.set(SelectionStrategy.CustomFormatGapWeighted);
+    fixture.detectChanges();
+
+    const hint = fixture.nativeElement.querySelector('.strategy-hint').textContent;
+    expect(hint).toContain('furthest below their custom format cutoff');
+    expect(hint).toContain('Instances without custom format scores use Balanced Weighted');
+  });
+
   it('drops the strategy hint for a strategy it does not describe', () => {
     const { fixture, component } = setup({
       config: { ...CONFIG, selectionStrategy: 'Unknown' as SelectionStrategy },

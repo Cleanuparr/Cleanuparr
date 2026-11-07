@@ -1,23 +1,27 @@
-import { rmSync, truncateSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test, expect } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  HD_1080P_PROFILE,
   RADARR,
   SONARR,
+  type ProfileChanges,
   arrangeInstance,
+  dropImportedMovie,
   expectNoSearch,
   firstSearchEvent,
+  importLowQualityMovie,
   listSearchEvents,
   resetLiveArrState,
   restoreLibrary,
   snapshotLibrary,
   teardownInstances,
   triggerSeeker,
+  writeFakeVideo,
 } from '../helpers/seeker-live';
 import { torznabSearchStub } from '../helpers/mocks/torznab-stubs';
-import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
 
 /**
  * Searching an item that already has a file, because its quality or custom format score is too low.
@@ -26,33 +30,15 @@ import { mkdirShared, writeFileShared } from '../helpers/shared-volume';
  * imports it and parses its quality from the name.
  */
 
-/** The stock HD-1080p profile in both arrs, whose cutoff is Bluray-1080p. */
-const HD_1080P_PROFILE = 4;
-
-/** Allowed by that profile and below its cutoff, so the import counts as upgradable. */
-const IMPORTED_MOVIE_FILE = 'F1 (2025) WEBDL-1080p.mkv';
-
 /** S01E01's id equals the series id, which hides id mix-ups, so this uses S01E02. */
 const IMPORTED_EPISODE = { seasonNumber: 1, episodeNumber: 2 };
 const IMPORTED_EPISODE_FILE = 'Agatha All Along - S01E02 - WEBDL-1080p.mkv';
 
-/** The arr ignores a file small enough to look like a sample. */
-const FILE_SIZE_BYTES = 300 * 1024 * 1024;
-
 /** No custom format exists, so every file scores 0 and sits below this cutoff. */
 const CUSTOM_FORMAT_CUTOFF = 100;
 
-const MOVIES_DIR = resolve(__dirname, '..', '..', 'test-data', 'radarr-movies');
 const TV_DIR = resolve(__dirname, '..', '..', 'test-data', 'sonarr-tv');
 const SETTLE_MS = 20_000;
-
-interface Movie {
-  id: number;
-  path: string;
-  hasFile: boolean;
-  qualityProfileId: number;
-  movieFile?: { id: number; qualityCutoffNotMet: boolean };
-}
 
 interface Series {
   id: number;
@@ -68,51 +54,8 @@ interface Episode {
   monitored: boolean;
 }
 
-type ProfileChanges = { upgradeAllowed: boolean; cutoffFormatScore?: number };
-
-function movieFolder(movie: Movie): string {
-  return join(MOVIES_DIR, movie.path.replace(/^\/movies\/?/, ''));
-}
-
 function seriesFolder(series: Series): string {
   return join(TV_DIR, series.path.replace(/^\/tv\/?/, ''));
-}
-
-function writeFakeVideo(folder: string, name: string): void {
-  mkdirShared(folder);
-  const file = join(folder, name);
-  writeFileShared(file, Buffer.alloc(0));
-  truncateSync(file, FILE_SIZE_BYTES);
-}
-
-/** Gives the seeded movie a real file that sits below the profile cutoff. */
-async function importLowQualityMovie(profileChanges: ProfileChanges): Promise<Movie> {
-  const movie = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
-  const profile = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`);
-
-  await RADARR.arr.put(`/api/v3/qualityprofile/${HD_1080P_PROFILE}`, { ...profile, ...profileChanges });
-  await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, { ...movie, qualityProfileId: HD_1080P_PROFILE });
-
-  writeFakeVideo(movieFolder(movie), IMPORTED_MOVIE_FILE);
-
-  await RADARR.arr.post('/api/v3/command', { name: 'RescanMovie', movieIds: [RADARR.itemId] });
-
-  await expect
-    .poll(async () => (await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`)).hasFile, { timeout: 90_000 })
-    .toBe(true);
-
-  return RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
-}
-
-/** Runs even when no test imported anything, because a half-done import still leaves a file. */
-async function dropImportedMovie(): Promise<void> {
-  const movie = await RADARR.arr.get<Movie>(`/api/v3/movie/${RADARR.itemId}`);
-
-  if (movie.movieFile) {
-    await RADARR.arr.delete(`/api/v3/moviefile/${movie.movieFile.id}`);
-  }
-
-  rmSync(movieFolder(movie), { recursive: true, force: true });
 }
 
 async function listEpisodes(): Promise<Episode[]> {

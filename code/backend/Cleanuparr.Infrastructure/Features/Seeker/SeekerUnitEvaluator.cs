@@ -110,6 +110,16 @@ public sealed class SeekerUnitEvaluator
     }
 
     /// <summary>
+    /// The strategy the instance runs: <see cref="SelectionStrategy.CustomFormatGapWeighted"/> needs custom format scores.
+    /// </summary>
+    public static SelectionStrategy EffectiveStrategy(SelectionStrategy strategy, SeekerInstanceConfig instanceConfig)
+    {
+        return strategy is SelectionStrategy.CustomFormatGapWeighted && !instanceConfig.UseCustomFormatScore
+            ? SelectionStrategy.BalancedWeighted
+            : strategy;
+    }
+
+    /// <summary>
     /// Picks up to <paramref name="count"/> unsearched units, at most one per movie or series.
     /// </summary>
     public static List<SeekerSearchCandidate> SelectNext(SeekerEvaluation evaluation, SelectionStrategy strategy, int count)
@@ -118,14 +128,14 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] selectionCandidates = BuildSelectionCandidates(evaluation, remainingByItem);
+        (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)[] selectionCandidates = BuildSelectionCandidates(evaluation, remainingByItem);
 
         // The selectors sort stably, so unshuffled ties would favour the arr's lowest ids
         Random.Shared.Shuffle(selectionCandidates);
 
         return ItemSelectorFactory.Create(strategy)
             .Select([.. selectionCandidates], count)
-            .Select(id => ToCandidate(PickUnit(remainingByItem[id])))
+            .Select(id => ToCandidate(PickUnit(remainingByItem[id], strategy)))
             .ToList();
     }
 
@@ -143,7 +153,7 @@ public sealed class SeekerUnitEvaluator
             .Any(g => g.Count() > 1 && g.Any(c => pickedIds.Contains(c.Id)));
     }
 
-    private static (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)[] BuildSelectionCandidates(
+    private static (long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched, double Gap)[] BuildSelectionCandidates(
         SeekerEvaluation evaluation,
         Dictionary<long, List<SeekerSearchUnit>> remainingByItem)
     {
@@ -151,12 +161,25 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(u => u.ItemId)
             .ToDictionary(g => g.Key, g => g.Max(u => u.LastSearchTime));
 
+        HashSet<long> missingItemIds = remainingByItem
+            .Where(p => p.Value.Any(u => u.Reasons.Contains(SeekerSearchReason.Missing)))
+            .Select(p => p.Key)
+            .ToHashSet();
+
+        // Missing items rank as furthest below the cutoff
+        int missingGap = Math.Max(1, remainingByItem
+            .Where(p => !missingItemIds.Contains(p.Key))
+            .Select(p => p.Value.Max(u => u.CustomFormatGap))
+            .DefaultIfEmpty(0)
+            .Max());
+
         return remainingByItem
             .Select(p =>
             {
                 DateTimeOffset? cycleSearched = evaluation.LastSearchedByItem.TryGetValue(p.Key, out DateTimeOffset at) ? at : null;
                 DateTimeOffset? lastSearched = new[] { arrSearchedByItem[p.Key], cycleSearched }.Max();
-                return (p.Key, p.Value[0].Added, lastSearched);
+                int gap = missingItemIds.Contains(p.Key) ? missingGap : p.Value.Max(u => u.CustomFormatGap);
+                return (p.Key, p.Value[0].Added, lastSearched, (double)gap);
             })
             .ToArray();
     }
@@ -277,7 +300,8 @@ public sealed class SeekerUnitEvaluator
         List<SeekerSearchUnit> units = [];
         foreach (SearchableMovie movie in released)
         {
-            bool belowCustomFormatCutoff = instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(movie.Id, out var entry) && entry.CurrentScore < entry.CutoffScore;
+            CustomFormatScoreEntry? entry = cfScores?.GetValueOrDefault(movie.Id);
+            bool belowCustomFormatCutoff = entry is not null && entry.CurrentScore < entry.CutoffScore;
             bool upgradesDisabled = belowCustomFormatCutoff && upgradesDisabledProfileIds.Contains(movie.QualityProfileId);
 
             List<SeekerSearchReason> reasons = [];
@@ -291,9 +315,11 @@ public sealed class SeekerUnitEvaluator
                 reasons.Add(SeekerSearchReason.QualityCutoffNotMet);
             }
 
+            int customFormatGap = 0;
             if (belowCustomFormatCutoff && !upgradesDisabled)
             {
                 reasons.Add(SeekerSearchReason.CustomFormatScoreBelowCutoff);
+                customFormatGap = entry!.CutoffScore - entry.CurrentScore;
             }
 
             if (reasons.Count == 0)
@@ -327,6 +353,7 @@ public sealed class SeekerUnitEvaluator
                 Reasons = reasons,
                 Added = movie.Added,
                 LastSearchTime = movie.LastSearchTime,
+                CustomFormatGap = customFormatGap,
                 Searched = false,
                 BlockedBy = blockedBy,
             });
@@ -511,6 +538,7 @@ public sealed class SeekerUnitEvaluator
                     AirDateUtc = entry.AirDateUtc,
                     LastSearchTime = entry.LastSearchTime,
                     Monitored = entry.IsMonitored,
+                    CustomFormatGap = entry.CutoffScore - entry.CurrentScore,
                     Reason = SeekerSearchReason.CustomFormatScoreBelowCutoff,
                 });
             }
@@ -629,6 +657,7 @@ public sealed class SeekerUnitEvaluator
                     Reasons = season.Select(w => w.Reason).ToList(),
                     Added = series.Added,
                     LastSearchTime = season.Max(w => w.LastSearchTime),
+                    CustomFormatGap = season.Max(w => w.CustomFormatGap),
                     Searched = seasonSearched,
                 });
                 continue;
@@ -652,6 +681,7 @@ public sealed class SeekerUnitEvaluator
                     AirDateUtc = first.AirDateUtc,
                     Added = series.Added,
                     LastSearchTime = episode.Max(w => w.LastSearchTime),
+                    CustomFormatGap = episode.Max(w => w.CustomFormatGap),
                     Searched = seasonSearched || searchedEpisodeIds.Contains(episode.Key),
                 });
             }
@@ -678,9 +708,20 @@ public sealed class SeekerUnitEvaluator
 
     /// <summary>
     /// Picks a random season of the item, then its earliest airing unit.
+    /// Under <see cref="SelectionStrategy.CustomFormatGapWeighted"/> it picks the missing unit, else the largest gap unit.
     /// </summary>
-    private static SeekerSearchUnit PickUnit(List<SeekerSearchUnit> itemUnits)
+    private static SeekerSearchUnit PickUnit(List<SeekerSearchUnit> itemUnits, SelectionStrategy strategy)
     {
+        if (strategy is SelectionStrategy.CustomFormatGapWeighted)
+        {
+            return itemUnits
+                .OrderByDescending(u => u.Reasons.Contains(SeekerSearchReason.Missing))
+                .ThenByDescending(u => u.CustomFormatGap)
+                .ThenBy(u => u.AirDateUtc ?? DateTimeOffset.MaxValue)
+                .ThenBy(u => u.EpisodeId)
+                .First();
+        }
+
         List<int> seasons = itemUnits.Select(u => u.SeasonNumber).Distinct().ToList();
         int seasonNumber = seasons[Random.Shared.Next(seasons.Count)];
 

@@ -18,6 +18,7 @@ public static class ItemSelectorFactory
             SelectionStrategy.NewestWeighted => new NewestWeightedSelector(),
             SelectionStrategy.BalancedWeighted => new BalancedWeightedSelector(),
             SelectionStrategy.Random => new RandomSelector(),
+            SelectionStrategy.CustomFormatGapWeighted => new CustomFormatGapWeightedSelector(),
             _ => throw new ArgumentOutOfRangeException(nameof(strategy), strategy, "Unknown selection strategy")
         };
     }

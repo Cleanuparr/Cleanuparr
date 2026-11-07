@@ -29,5 +29,10 @@ internal sealed record SonarrWantedEpisode
 
     public required bool Monitored { get; init; }
 
+    /// <summary>
+    /// Cutoff minus current custom format score; 0 unless the reason is a custom format score below cutoff.
+    /// </summary>
+    public int CustomFormatGap { get; init; }
+
     public required SeekerSearchReason Reason { get; init; }
 }
