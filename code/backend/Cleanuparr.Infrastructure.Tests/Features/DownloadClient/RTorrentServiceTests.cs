@@ -383,6 +383,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 1,
                 DownRate = 100
             };
@@ -429,6 +430,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 0,
                 SizeBytes = 1000,
@@ -477,6 +479,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 1000,
                 SizeBytes = 1000,
@@ -525,6 +528,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 1000,
                 SizeBytes = 1000,
@@ -581,6 +585,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 5000,
                 SizeBytes = 1000,
@@ -629,6 +634,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 0,
                 SizeBytes = 1000,
@@ -663,6 +669,52 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             result.DeleteFromClient.ShouldBeTrue();
             result.ChangeCategory.ShouldBeFalse();
         }
+
+        [Fact]
+        public async Task PausedDownload_WithNoSpeed_IsNotRemovedOrEvaluated()
+        {
+            // Arrange
+            const string hash = "TEST-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+
+            // d.pause leaves State=1 and clears IsActive
+            RTorrentTorrent download = new RTorrentTorrent
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                IsPrivate = 0,
+                State = 1,
+                IsActive = 0,
+                Complete = 0,
+                DownRate = 0,
+                SizeBytes = 1000,
+                CompletedBytes = 500
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(download);
+
+            _fixture.ClientWrapper
+                .GetTrackersAsync(hash)
+                .Returns(new List<string>());
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file.mkv", Priority = 1 }
+                });
+
+            // Act
+            DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            result.ShouldRemove.ShouldBeFalse();
+            await _fixture.RuleEvaluator
+                .DidNotReceive()
+                .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>());
+        }
     }
 
     public class ShouldRemoveFromArrQueueAsync_IntegrationScenarios : RTorrentServiceTests
@@ -685,6 +737,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 0,
                 SizeBytes = 1000,
@@ -736,6 +789,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 5000000, // Good speed
                 SizeBytes = 10000000,

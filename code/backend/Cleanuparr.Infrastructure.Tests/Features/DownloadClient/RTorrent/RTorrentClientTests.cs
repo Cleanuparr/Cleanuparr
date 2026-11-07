@@ -1,6 +1,8 @@
 using System.Net;
 using System.Xml.Linq;
+using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -59,5 +61,73 @@ public class RTorrentClientTests
         (RTorrentClient client, _) = CreateClient(response);
 
         await Should.ThrowAsync<Exception>(() => client.StopTorrentAsync("HASH123"));
+    }
+
+    private static string TorrentRowsResponse(params string[] cells)
+    {
+        string values = string.Concat(cells);
+        return $"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <methodResponse><params><param><value><array><data>
+            <value><array><data>{values}</data></array></value>
+            </data></array></value></param></params></methodResponse>
+            """;
+    }
+
+    private static string[] TorrentCells(int isActive, bool includeIsActive)
+    {
+        List<string> cells =
+        [
+            "<value><string>HASH1</string></value>",
+            "<value><string>Torrent 1</string></value>",
+            "<value><i8>1</i8></value>",
+            "<value><i8>1000</i8></value>",
+            "<value><i8>500</i8></value>",
+            "<value><i8>0</i8></value>",
+            "<value><i8>0</i8></value>",
+            "<value><i8>1</i8></value>",
+            "<value><i8>0</i8></value>",
+            "<value><i8>0</i8></value>",
+            "<value><string>tv</string></value>",
+            "<value><string>/downloads/Torrent 1</string></value>",
+            "<value><string>/downloads</string></value>",
+        ];
+
+        if (includeIsActive)
+        {
+            cells.Add($"<value><i8>{isActive}</i8></value>");
+        }
+
+        return cells.ToArray();
+    }
+
+    [Fact]
+    public async Task GetAllTorrentsAsync_RequestsIsActive()
+    {
+        (RTorrentClient client, FakeHttpMessageHandler handler) = CreateClient(TorrentRowsResponse(TorrentCells(0, true)));
+
+        await client.GetAllTorrentsAsync();
+
+        handler.CapturedRequestBodies[0]!.ShouldContain("d.is_active=");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task GetAllTorrentsAsync_ParsesIsActive(int isActive)
+    {
+        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells(isActive, true)));
+
+        List<RTorrentTorrent> torrents = await client.GetAllTorrentsAsync();
+
+        torrents.Single().IsActive.ShouldBe(isActive);
+    }
+
+    [Fact]
+    public async Task GetAllTorrentsAsync_WhenRowLacksIsActive_Throws()
+    {
+        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells(0, false)));
+
+        await Should.ThrowAsync<RTorrentClientException>(() => client.GetAllTorrentsAsync());
     }
 }

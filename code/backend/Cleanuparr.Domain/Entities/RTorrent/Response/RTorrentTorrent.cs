@@ -46,6 +46,12 @@ public sealed record RTorrentTorrent
     public int State { get; init; }
 
     /// <summary>
+    /// d.is_active: 0 when paused or stopped, 1 when active.
+    /// d.pause clears it but leaves State at 1.
+    /// </summary>
+    public int IsActive { get; init; }
+
+    /// <summary>
     /// Completion status: 0 = incomplete, 1 = complete
     /// </summary>
     public int Complete { get; init; }

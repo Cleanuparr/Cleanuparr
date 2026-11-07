@@ -499,10 +499,21 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
         {
             // Arrange
             RTorrentItemWrapper wrapper = new RTorrentItemWrapper(
-                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1 }, null, TimeProvider.System);
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1, IsActive = 1 }, null, TimeProvider.System);
 
             // Act & Assert
             wrapper.IsStopped.ShouldBeFalse();
+        }
+
+        [Fact]
+        public void ReturnsTrueWhenStartedButNotActive()
+        {
+            // Arrange
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(
+                new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1, IsActive = 0 }, null, TimeProvider.System);
+
+            // Act & Assert
+            wrapper.IsStopped.ShouldBeTrue();
         }
     }
 

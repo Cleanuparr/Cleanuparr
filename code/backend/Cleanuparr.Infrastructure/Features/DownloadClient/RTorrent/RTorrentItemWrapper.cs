@@ -82,14 +82,14 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     public IReadOnlyList<string> Tags => Array.Empty<string>();
 
     /// <summary>
-    /// Stopped when state is 0
+    /// Stopped when state is 0, or paused (state 1, not active)
     /// </summary>
-    public bool IsStopped => Info.State == 0;
+    public bool IsStopped => Info.State == 0 || Info.IsActive == 0;
 
     /// <summary>
-    /// Downloading when state is 1 (started) and complete is 0 (not finished)
+    /// Downloading when started, active and not finished
     /// </summary>
-    public bool IsDownloading() => Info.State == 1 && Info.Complete == 0;
+    public bool IsDownloading() => Info is { State: 1, IsActive: 1, Complete: 0 };
 
     /// <summary>
     /// rTorrent reports no error state.

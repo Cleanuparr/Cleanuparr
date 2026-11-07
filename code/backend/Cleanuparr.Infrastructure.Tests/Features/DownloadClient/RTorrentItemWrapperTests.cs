@@ -244,6 +244,7 @@ public class RTorrentItemWrapperTests
                 Hash = "HASH1",
                 Name = "Test",
                 State = 1,  // Started
+                IsActive = 1,
                 Complete = 0  // Not complete
             };
 
@@ -252,6 +253,26 @@ public class RTorrentItemWrapperTests
 
             // Assert
             wrapper.IsDownloading().ShouldBeTrue();
+        }
+
+        [Fact]
+        public void ReturnsFalse_WhenPaused()
+        {
+            // Arrange
+            RTorrentTorrent torrent = new RTorrentTorrent
+            {
+                Hash = "HASH1",
+                Name = "Test",
+                State = 1,
+                IsActive = 0,
+                Complete = 0
+            };
+
+            // Act
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
+
+            // Assert
+            wrapper.IsDownloading().ShouldBeFalse();
         }
 
         [Fact]
@@ -282,6 +303,7 @@ public class RTorrentItemWrapperTests
                 Hash = "HASH1",
                 Name = "Test",
                 State = 1,  // Started
+                IsActive = 1,
                 Complete = 1  // Complete (seeding)
             };
 
@@ -304,6 +326,7 @@ public class RTorrentItemWrapperTests
                 Hash = "HASH1",
                 Name = "Test",
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 0,
                 SizeBytes = 1000,
@@ -318,6 +341,29 @@ public class RTorrentItemWrapperTests
         }
 
         [Fact]
+        public void ReturnsFalse_WhenPausedWithNoSpeed()
+        {
+            // Arrange
+            RTorrentTorrent torrent = new RTorrentTorrent
+            {
+                Hash = "HASH1",
+                Name = "Test",
+                State = 1,
+                IsActive = 0,
+                Complete = 0,
+                DownRate = 0,
+                SizeBytes = 1000,
+                CompletedBytes = 500
+            };
+
+            // Act
+            RTorrentItemWrapper wrapper = new RTorrentItemWrapper(torrent, null, TimeProvider.System);
+
+            // Assert
+            wrapper.IsStalled().ShouldBeFalse();
+        }
+
+        [Fact]
         public void ReturnsFalse_WhenDownloadingWithSpeed()
         {
             // Arrange
@@ -326,6 +372,7 @@ public class RTorrentItemWrapperTests
                 Hash = "HASH1",
                 Name = "Test",
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 100000,
                 SizeBytes = 1000,
