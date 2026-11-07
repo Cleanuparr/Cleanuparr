@@ -383,6 +383,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 1,
                 DownRate = 100
             };
@@ -429,6 +430,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 0,
                 SizeBytes = 1000,
@@ -583,6 +585,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 5000,
                 SizeBytes = 1000,
@@ -786,6 +789,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
                 Name = "Test Torrent",
                 IsPrivate = 0,
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 5000000, // Good speed
                 SizeBytes = 10000000,

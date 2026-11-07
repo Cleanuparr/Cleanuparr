@@ -303,6 +303,7 @@ public class RTorrentItemWrapperTests
                 Hash = "HASH1",
                 Name = "Test",
                 State = 1,  // Started
+                IsActive = 1,
                 Complete = 1  // Complete (seeding)
             };
 
@@ -371,6 +372,7 @@ public class RTorrentItemWrapperTests
                 Hash = "HASH1",
                 Name = "Test",
                 State = 1,
+                IsActive = 1,
                 Complete = 0,
                 DownRate = 100000,
                 SizeBytes = 1000,
