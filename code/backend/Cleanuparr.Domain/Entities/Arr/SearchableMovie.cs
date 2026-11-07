@@ -27,6 +27,11 @@ public sealed record SearchableMovie
     public DateTimeOffset? InCinemas { get; init; }
 
     /// <summary>
+    /// Whisparr v3's only release date.
+    /// </summary>
+    public DateTimeOffset? ReleaseDate { get; init; }
+
+    /// <summary>
     /// Radarr's own verdict from the movie's minimum availability and the availability delay.
     /// </summary>
     public bool IsAvailable { get; init; }

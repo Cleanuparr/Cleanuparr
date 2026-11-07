@@ -161,6 +161,7 @@ describe('funnelStages', () => {
   it('names the library stage after the instance type', () => {
     expect(funnelStages(funnel, 'Radarr').narrowing[0]).toEqual({ label: 'movies', value: 10 });
     expect(funnelStages(funnel, 'Sonarr').narrowing[0]).toEqual({ label: 'series', value: 10 });
+    expect(funnelStages(funnel, 'Whisparr').narrowing[0]).toEqual({ label: 'movies', value: 10 });
   });
 
   it('splits the units needing a search by state', () => {

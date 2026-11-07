@@ -3,6 +3,7 @@ import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
   SONARR,
+  WHISPARR,
   TRANSITION_TIMEOUT,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
@@ -42,7 +43,7 @@ test.describe('Seeker grab on demand', () => {
     await resetLiveArrState();
   });
 
-  for (const target of [SONARR, RADARR]) {
+  for (const target of [SONARR, RADARR, WHISPARR]) {
     test(`records the real ${target.type} grab on the search event`, async ({ api }) => {
       test.setTimeout(TEST_TIMEOUT);
 

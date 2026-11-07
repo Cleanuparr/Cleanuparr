@@ -305,6 +305,24 @@ public class WhisparrV3ClientTests
         _client.HasContentId(new QueueRecord { DownloadId = "HASH", Title = "movie" }).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task GetAllTagsAsync_ReadsV3TagEndpoint()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new[]
+        {
+            new Tag { Id = 1, Label = "skip" },
+        })));
+
+        // Act
+        List<Tag> tags = await _client.GetAllTagsAsync(_arrInstance);
+
+        // Assert
+        tags.ShouldHaveSingleItem().Label.ShouldBe("skip");
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/tag");
+    }
+
     #region Helpers
 
     private void RouteResponses(long commandIdForPost)

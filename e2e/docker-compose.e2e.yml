@@ -213,7 +213,7 @@ services:
       retries: 12
       start_period: 30s
 
-  # Real Sonarr and Radarr, restored from e2e/arr-seed by setup-test-data.sh.
+  # Real Sonarr, Radarr and Whisparr, restored from e2e/arr-seed by setup-test-data.sh.
   # Every run starts with the same library, API key, indexer and download client.
   # Regenerate the seed with `make seed-arr`.
   # The tags are pinned: a seed database is only valid for the version that wrote it.
@@ -248,6 +248,25 @@ services:
       - ./test-data/downloads/qbittorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:7878/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+  # Listens on 6970 from the seeded config.xml, since the tracker holds 6969.
+  whisparr:
+    image: ghcr.io/hotio/whisparr:v3-3.1.0.2116
+    network_mode: host
+    environment:
+      PUID: "${E2E_PUID:-1000}"
+      PGID: "${E2E_PGID:-1000}"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/whisparr-config:/config
+      - ./test-data/whisparr-movies:/movies
+      - ./test-data/downloads/qbittorrent:/downloads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs -o /dev/null http://localhost:6970/ping || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 12

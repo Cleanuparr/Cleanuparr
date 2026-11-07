@@ -42,6 +42,20 @@ public class SeekerConfigControllerTests : IDisposable
     #region GetSeekerConfig Tests
 
     [Fact]
+    public async Task GetSeekerConfig_ListsWhisparrV3AndLeavesOutWhisparrV2()
+    {
+        ArrInstance whisparrV3 = SeekerTestDataFactory.AddWhisparrInstance(_dataContext, version: 3);
+        SeekerTestDataFactory.AddWhisparrInstance(_dataContext, version: 2);
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        SeekerInstanceConfigResponse instance = response.Instances.ShouldHaveSingleItem();
+        instance.ArrInstanceId.ShouldBe(whisparrV3.Id);
+        instance.InstanceType.ShouldBe(InstanceType.Whisparr);
+    }
+
+    [Fact]
     public async Task GetSeekerConfig_WithNoSeekerInstanceConfigs_ReturnsDefaults()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);

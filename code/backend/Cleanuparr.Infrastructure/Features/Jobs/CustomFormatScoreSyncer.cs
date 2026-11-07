@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 /// <summary>
-/// Periodically syncs custom format scores from Radarr/Sonarr instances.
+/// Periodically syncs custom format scores from Sonarr, Radarr and Whisparr v3 instances.
 /// Tracks score changes over time for dashboard display and Seeker filtering.
 /// </summary>
 public sealed class CustomFormatScoreSyncer : IHandler
@@ -28,6 +29,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
     private readonly IStatusNotifier _statusNotifier;
     private readonly IDatabaseProvider _databaseProvider;
@@ -38,6 +40,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
+        IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider,
         IStatusNotifier statusNotifier,
         IDatabaseProvider databaseProvider)
@@ -47,6 +50,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
+        _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
         _statusNotifier = statusNotifier;
         _databaseProvider = databaseProvider;
@@ -79,7 +83,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             .ToListAsync(cancellationToken: cancellationToken);
 
         instanceConfigs = instanceConfigs
-            .Where(s => s.ArrInstance.ArrConfig.Type is InstanceType.Sonarr or InstanceType.Radarr)
+            .Where(s => SeekerApps.IsSupported(s.ArrInstance))
             .ToList();
 
         _logger.LogDebug("CF score sync found {Count} enabled instance(s): {Instances}",
@@ -117,9 +121,10 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogDebug("Syncing CF scores for {InstanceType} instance: {InstanceName}",
             instanceType, arrInstance.Name);
 
-        if (instanceType == InstanceType.Radarr)
+        if (SeekerApps.SearchesMovies(arrInstance))
         {
-            await SyncRadarrAsync(arrInstance, cancellationToken);
+            IRadarrClient movieClient = instanceType is InstanceType.Whisparr ? _whisparrV3Client : _radarrClient;
+            await SyncMoviesAsync(arrInstance, movieClient, cancellationToken);
         }
         else
         {
@@ -127,15 +132,16 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
     }
 
-    private async Task SyncRadarrAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
+    private async Task SyncMoviesAsync(ArrInstance arrInstance, IRadarrClient movieClient, CancellationToken cancellationToken)
     {
         await ConfigureSqliteCacheSizeAsync(cancellationToken);
 
-        List<ArrQualityProfile> profiles = await _radarrClient.GetQualityProfilesAsync(arrInstance);
+        InstanceType instanceType = arrInstance.ArrConfig.Type;
+        List<ArrQualityProfile> profiles = await movieClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
-        _logger.LogTrace("[Radarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
-            arrInstance.Name, profiles.Count);
+        _logger.LogTrace("[{InstanceType}] {InstanceName}: fetched {ProfileCount} quality profile(s)",
+            instanceType, arrInstance.Name, profiles.Count);
 
         DateTimeOffset now = _timeProvider.GetUtcNow();
 
@@ -148,7 +154,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         int totalSkipped = 0;
         int flushedChunks = 0;
 
-        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
+        await foreach (SearchableMovie movie in movieClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
         {
             totalMovies++;
 
@@ -159,7 +165,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
                 if (withFilesBuffer.Count >= ChunkSize)
                 {
-                    (int synced, int skipped) = await FlushRadarrWithFilesChunkAsync(arrInstance, profileMap, withFilesBuffer, now);
+                    (int synced, int skipped) = await FlushMovieWithFilesChunkAsync(arrInstance, movieClient, profileMap, withFilesBuffer, now);
                     totalSynced += synced;
                     totalSkipped += skipped;
                     withFilesBuffer.Clear();
@@ -173,7 +179,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
                 if (withoutFilesBuffer.Count >= ChunkSize)
                 {
-                    await FlushRadarrTouchChunkAsync(arrInstance, withoutFilesBuffer, now);
+                    await FlushMovieTouchChunkAsync(arrInstance, withoutFilesBuffer, now);
                     withoutFilesBuffer.Clear();
                     flushedChunks++;
                     await CheckpointWalIfDueAsync(flushedChunks, cancellationToken);
@@ -183,7 +189,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         if (withFilesBuffer.Count > 0)
         {
-            (int synced, int skipped) = await FlushRadarrWithFilesChunkAsync(arrInstance, profileMap, withFilesBuffer, now);
+            (int synced, int skipped) = await FlushMovieWithFilesChunkAsync(arrInstance, movieClient, profileMap, withFilesBuffer, now);
             totalSynced += synced;
             totalSkipped += skipped;
             withFilesBuffer.Clear();
@@ -192,51 +198,54 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         if (withoutFilesBuffer.Count > 0)
         {
-            await FlushRadarrTouchChunkAsync(arrInstance, withoutFilesBuffer, now);
+            await FlushMovieTouchChunkAsync(arrInstance, withoutFilesBuffer, now);
             withoutFilesBuffer.Clear();
             flushedChunks++;
         }
 
-        _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
-            arrInstance.Name, totalMovies, totalWithFiles);
+        _logger.LogTrace("[{InstanceType}] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
+            instanceType, arrInstance.Name, totalMovies, totalWithFiles);
 
-        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, now);
+        await CleanupStaleEntriesAsync(arrInstance.Id, instanceType, now);
 
         await CheckpointWalAsync(cancellationToken);
 
-        _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
-            totalSynced, arrInstance.Name, totalSkipped);
+        _logger.LogInformation("[{InstanceType}] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
+            instanceType, totalSynced, arrInstance.Name, totalSkipped);
     }
 
-    private async Task FlushRadarrTouchChunkAsync(ArrInstance arrInstance, List<long> movieIds, DateTimeOffset now)
+    private async Task FlushMovieTouchChunkAsync(ArrInstance arrInstance, List<long> movieIds, DateTimeOffset now)
     {
+        InstanceType instanceType = arrInstance.ArrConfig.Type;
         List<long> chunkList = movieIds.ToList();
         await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstance.Id
-                && e.ItemType == InstanceType.Radarr
+                && e.ItemType == instanceType
                 && chunkList.Contains(e.ExternalItemId))
             .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
     }
 
-    private async Task<(int Synced, int Skipped)> FlushRadarrWithFilesChunkAsync(
+    private async Task<(int Synced, int Skipped)> FlushMovieWithFilesChunkAsync(
         ArrInstance arrInstance,
+        IRadarrClient movieClient,
         Dictionary<int, ArrQualityProfile> profileMap,
         List<(SearchableMovie Movie, long FileId)> chunk,
         DateTimeOffset now)
     {
+        InstanceType instanceType = arrInstance.ArrConfig.Type;
         int synced = 0;
         int skipped = 0;
 
         List<long> fileIds = chunk.Select(x => x.FileId).ToList();
-        Dictionary<long, int> scores = await _radarrClient.GetMovieFileScoresAsync(arrInstance, fileIds);
+        Dictionary<long, int> scores = await movieClient.GetMovieFileScoresAsync(arrInstance, fileIds);
 
-        _logger.LogTrace("[Radarr] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
-            arrInstance.Name, fileIds.Count, scores.Count);
+        _logger.LogTrace("[{InstanceType}] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
+            instanceType, arrInstance.Name, fileIds.Count, scores.Count);
 
         List<long> movieIds = chunk.Select(x => x.Movie.Id).ToList();
         Dictionary<long, CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstance.Id
-                && e.ItemType == InstanceType.Radarr
+                && e.ItemType == instanceType
                 && movieIds.Contains(e.ExternalItemId))
             .ToDictionaryAsync(e => e.ExternalItemId);
 
@@ -254,8 +263,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     {
                         skippedEntry.LastSyncedAt = now;
                     }
-                    _logger.LogTrace("[Radarr] {InstanceName}: skipping movie '{Title}' (fileId={FileId}) — no score returned",
-                        arrInstance.Name, movie.Title, fileId);
+                    _logger.LogTrace("[{InstanceType}] {InstanceName}: skipping movie '{Title}' (fileId={FileId}), no score returned",
+                        instanceType, arrInstance.Name, movie.Title, fileId);
                     continue;
                 }
 
@@ -264,7 +273,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string profileName = profile?.Name ?? "Unknown";
 
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now, seasonNumber: null, airDateUtc: null, lastSearchTime: null);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, instanceType, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now, seasonNumber: null, airDateUtc: null, lastSearchTime: null);
 
                 synced++;
             }

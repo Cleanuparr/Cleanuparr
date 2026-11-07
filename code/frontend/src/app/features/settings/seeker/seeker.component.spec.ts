@@ -535,6 +535,16 @@ describe('SeekerComponent', () => {
     expect(releaseGateSelect(fixture, 1)).toBeDefined();
   });
 
+  it('marks a Whisparr row as new and shows no release gate or search mode', () => {
+    const whisparr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Whisparr', instanceType: 'Whisparr', enabled: true };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [whisparr] } });
+
+    const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
+    expect(badge.getAttribute('featureId')).toBe('seeker-whisparr');
+    expect(releaseGateSelect(fixture, 0)).toBeUndefined();
+    expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
+  });
+
   it('sends the picked release gate for the Radarr row only', () => {
     const { fixture, updateConfig } = setup();
 

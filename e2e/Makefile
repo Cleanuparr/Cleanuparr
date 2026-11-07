@@ -13,7 +13,7 @@ APP_SERVICES = app nginx
 
 CORE_STACK = keycloak $(WIREMOCKS)
 CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent sabnews sabnzbd
-ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr
+ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr whisparr
 LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sabnews sabnzbd lazylibrarian
 
 setup:
@@ -61,7 +61,7 @@ up-app:
 	$(COMPOSE) up -d $(WAIT) $(APP_SERVICES)
 
 # Rebuilds e2e/arr-seed from scratch.
-# Needs internet: Sonarr reads Skyhook and Radarr reads TMDB.
+# Needs internet: each arr reads its metadata provider.
 seed-arr:
 	bash ./scripts/seed-arr.sh
 

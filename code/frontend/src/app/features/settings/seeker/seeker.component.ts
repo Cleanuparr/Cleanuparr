@@ -5,7 +5,7 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
   SelectComponent, ChipInputComponent, NumberInputComponent, TimeInputComponent,
-  EmptyStateComponent, LoadingStateComponent, BadgeComponent,
+  EmptyStateComponent, LoadingStateComponent, BadgeComponent, NewBadgeComponent,
   type SelectOption,
 } from '@ui';
 import { SeekerApi } from '@core/api/seeker.api';
@@ -108,7 +108,7 @@ interface InstanceState {
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent, TimeInputComponent,
-    EmptyStateComponent, LoadingStateComponent, BadgeComponent, DatePipe, FormField,
+    EmptyStateComponent, LoadingStateComponent, BadgeComponent, NewBadgeComponent, DatePipe, FormField,
   ],
   templateUrl: './seeker.component.html',
   styleUrl: './seeker.component.scss',
