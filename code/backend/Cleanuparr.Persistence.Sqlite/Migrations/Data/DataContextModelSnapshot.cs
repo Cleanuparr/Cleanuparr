@@ -1740,6 +1740,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("skip_tags");
 
+                    b.Property<string>("SonarrSearchMode")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("sonarr_search_mode");
+
                     b.Property<bool>("UseCustomFormatScore")
                         .HasColumnType("INTEGER")
                         .HasColumnName("use_custom_format_score");

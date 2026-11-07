@@ -33,4 +33,6 @@ public sealed record SeekerInstanceConfigResponse
     public bool UseCustomFormatScore { get; init; }
 
     public int RecentGrabWindowHours { get; init; }
+
+    public SonarrSearchMode SonarrSearchMode { get; init; }
 }

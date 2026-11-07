@@ -19,4 +19,6 @@ public sealed record SearchableSeries
     public string SeriesType { get; init; } = string.Empty;
 
     public SeriesStatistics? Statistics { get; init; }
+
+    public List<SeriesSeason> Seasons { get; init; } = [];
 }

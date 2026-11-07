@@ -248,6 +248,7 @@ export class DocumentationService {
       'minCycleTimeDays': 'instance-min-cycle-time-days',
       'searchSpecials': 'instance-search-for-specials',
       'searchAnime': 'instance-search-for-anime',
+      'sonarrSearchMode': 'instance-search-mode',
     },
   };
 

@@ -1,4 +1,4 @@
-import { SelectionStrategy } from './enums';
+import { SelectionStrategy, SonarrSearchMode } from './enums';
 
 export interface SeekerConfig {
   searchEnabled: boolean;
@@ -26,6 +26,7 @@ export interface SeekerInstanceConfig {
   monitoredOnly: boolean;
   useCutoff: boolean;
   useCustomFormatScore: boolean;
+  sonarrSearchMode: SonarrSearchMode;
 }
 
 export interface UpdateSeekerConfig {
@@ -50,4 +51,5 @@ export interface UpdateSeekerInstanceConfig {
   monitoredOnly: boolean;
   useCutoff: boolean;
   useCustomFormatScore: boolean;
+  sonarrSearchMode: SonarrSearchMode;
 }

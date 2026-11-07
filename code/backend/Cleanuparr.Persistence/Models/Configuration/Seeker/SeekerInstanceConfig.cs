@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 
@@ -90,6 +91,11 @@ public sealed record SeekerInstanceConfig
     /// Skips items the arr grabbed within this many hours, even after the download left the queue. 0 = disabled.
     /// </summary>
     public int RecentGrabWindowHours { get; set; } = 24;
+
+    /// <summary>
+    /// How Sonarr seasons are searched. Ignored for Radarr.
+    /// </summary>
+    public SonarrSearchMode SonarrSearchMode { get; set; } = SonarrSearchMode.Auto;
 
     /// <summary>
     /// Validates this instance's configuration, throwing <see cref="CustomValidationException"/> on failure.

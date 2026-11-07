@@ -71,6 +71,7 @@ public sealed class SeekerConfigController : ControllerBase
                 UseCutoff = seekerConfig?.UseCutoff ?? false,
                 UseCustomFormatScore = seekerConfig?.UseCustomFormatScore ?? false,
                 RecentGrabWindowHours = seekerConfig?.RecentGrabWindowHours ?? 24,
+                SonarrSearchMode = seekerConfig?.SonarrSearchMode ?? SonarrSearchMode.Auto,
             };
         }).ToList();
 
@@ -136,6 +137,7 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.UseCutoff = instanceReq.UseCutoff;
                     existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
                     existing.RecentGrabWindowHours = instanceReq.RecentGrabWindowHours;
+                    existing.SonarrSearchMode = instanceReq.SonarrSearchMode;
                     existing.Validate();
                 }
                 else
@@ -153,6 +155,7 @@ public sealed class SeekerConfigController : ControllerBase
                         UseCutoff = instanceReq.UseCutoff,
                         UseCustomFormatScore = instanceReq.UseCustomFormatScore,
                         RecentGrabWindowHours = instanceReq.RecentGrabWindowHours,
+                        SonarrSearchMode = instanceReq.SonarrSearchMode,
                     };
                     newInstanceConfig.Validate();
                     await _dataContext.SeekerInstanceConfigs.AddAsync(newInstanceConfig);

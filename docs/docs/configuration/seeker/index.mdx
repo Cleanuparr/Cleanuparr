@@ -64,7 +64,7 @@ Replacement search is always enabled when Search is on and cannot be disabled. W
 <Note>
 Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle completes and the next one starts after the minimum cycle time.
 
-For Radarr, each movie is one item. For Sonarr, a cycle holds season units and episode units. The Seeker searches most seasons whole, and specials and airing anime seasons one episode at a time. Cycle progress counts the searches still needed.
+For Radarr, each movie is one item. For Sonarr, a cycle holds season units and episode units. [Search Mode](#instance-search-mode) picks the unit for regular and daily seasons. Specials and airing anime seasons go one episode at a time. Cycle progress counts the searches still needed.
 
 The Searches tab shows per instance how many items the current cycle searched, how many are left, how long it has been running and how long the previous cycle took. Items in the download queue are not counted as left. Dry run tracks its own cycles and never moves the live one.
 
@@ -76,7 +76,7 @@ The **Eligibility** row on an instance card counts what passed each filter on th
 
 **Preview** on an instance card reads the instance live and lists the next 10 units the selection strategy would pick, plus every excluded item with the first filter that dropped it. You can filter the excluded list by reason or title. Preview searches nothing and saves nothing. With a random or weighted strategy, the next up list is one random draw, so the next run can pick other items. A series with missing episodes in several seasons also gets a random season draw under any strategy. When the cycle is complete and waits for the minimum cycle time, the preview shows when the next cycle starts.
 
-Each Sonarr search event records a content kind: `Standard` (a regular season), `Daily` (a daily series season), `Anime` (an anime season or episode) or `Special` (an episode from season 0). Radarr and replacement searches carry none. The Searches tab can filter events by content kind.
+Each Sonarr search event records a content kind: `Standard` (a regular season or episode), `Daily` (a daily series season or episode), `Anime` (an anime season or episode) or `Special` (an episode from season 0). Radarr and replacement searches carry none. The Searches tab can filter events by content kind.
 </Note>
 
 <Note>
@@ -271,7 +271,7 @@ Only downloads that have received strikes in the most recent completed `Queue Cl
 
 Seeker reads the arr's grab history for this many hours and skips every item grabbed in that window, even when the download already left the queue (imported, failed and removed, grabbed by RSS or another tool).
 
-For Sonarr, a grabbed episode skips its whole season for the window.
+For Sonarr, a grabbed episode skips its whole season for the window when the season is searched whole.
 
 Set to `0` to turn this off.
 
@@ -286,6 +286,24 @@ Default is `24`, maximum is `168`.
 The minimum number of days that a complete search cycle must span before a new cycle can begin. Once all eligible items in an instance have been searched, Seeker will not start a new cycle until this many days have passed since the cycle started.
 
 **Reset cycle** on the Searches tab skips this wait once.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Search Mode"
+>
+
+Sonarr only. Picks how the Seeker searches a regular or daily season.
+
+- **Auto** searches a whole season only when the season has finished airing and every aired monitored episode in it needs a search. Otherwise it searches one episode per run.
+- **Season** always searches the whole season.
+- **Episode** always searches one episode per run.
+
+A season search returns mostly season packs. With default settings, Sonarr skips a pack unless it can upgrade every file in it, so a season with a few wanted episodes rarely gets a grab. Episode searches find single releases, but each partly wanted episode adds one run to the cycle.
+
+Specials and anime follow their own rules below in every mode.
+
+Default is **Auto**.
 
 </ConfigSection>
 

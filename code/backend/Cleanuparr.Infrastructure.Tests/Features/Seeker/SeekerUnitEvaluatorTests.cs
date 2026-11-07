@@ -101,7 +101,9 @@ public class SeekerUnitEvaluatorTests : IDisposable
         string status = "continuing",
         bool monitored = true,
         List<long>? tags = null,
-        int qualityProfileId = 0)
+        int qualityProfileId = 0,
+        string seriesType = "standard",
+        List<SeriesSeason>? seasons = null)
     {
         return new SearchableSeries
         {
@@ -110,8 +112,24 @@ public class SeekerUnitEvaluatorTests : IDisposable
             Status = status,
             Monitored = monitored,
             Tags = tags ?? [],
-            SeriesType = "standard",
+            SeriesType = seriesType,
             QualityProfileId = qualityProfileId,
+            Seasons = seasons ?? [],
+        };
+    }
+
+    private static SeriesSeason Season(int number, int episodeCount, DateTimeOffset? nextAiring = null)
+    {
+        return new SeriesSeason
+        {
+            SeasonNumber = number,
+            Monitored = true,
+            Statistics = new SeasonStatistics
+            {
+                EpisodeCount = episodeCount,
+                TotalEpisodeCount = episodeCount,
+                NextAiring = nextAiring,
+            },
         };
     }
 
@@ -581,7 +599,9 @@ public class SeekerUnitEvaluatorTests : IDisposable
         SetupSonarr([Series(1)], [Episode(10, 1), Episode(11, 1, number: 2)]);
 
         // Act
-        SeekerEvaluation evaluation = await EvaluateSonarrAsync(queue: [Queued(seriesId: 1, seasonNumber: 1)]);
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c => c.SonarrSearchMode = SonarrSearchMode.Season),
+            queue: [Queued(seriesId: 1, seasonNumber: 1)]);
 
         // Assert
         ReasonOf(evaluation, "Series 1 S01").ShouldBe(SeekerExclusionReason.InQueue);
@@ -596,6 +616,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Act
         SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c => c.SonarrSearchMode = SonarrSearchMode.Season),
             history: [History(_sonarr, 1, _timeProvider.GetUtcNow().AddDays(-1), seasonNumber: 1)]);
 
         // Assert
@@ -686,7 +707,11 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Act
         SeekerEvaluation evaluation = await EvaluateSonarrAsync(
-            InstanceConfig(_sonarr, c => c.SkipTags = ["skip"]),
+            InstanceConfig(_sonarr, c =>
+            {
+                c.SkipTags = ["skip"];
+                c.SonarrSearchMode = SonarrSearchMode.Season;
+            }),
             queue: [Queued(seriesId: 4, seasonNumber: 1)]);
 
         // Assert
@@ -697,6 +722,212 @@ public class SeekerUnitEvaluatorTests : IDisposable
         evaluation.Units.Count.ShouldBe(2);
         evaluation.QueuedUnits.ShouldBe(1);
         evaluation.RecentlyGrabbedUnits.ShouldBe(0);
+    }
+
+    #endregion
+
+    #region Sonarr search mode
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndEveryAiredEpisodeWanted_BuildsSeasonUnit()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(1, 2)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.EpisodeId.ShouldBe(0);
+        unit.Name.ShouldBe("Series 1 S01");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndSeasonPartlyWanted_BuildsEpisodeUnits()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(1, 10)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndSeasonStillAiring_BuildsEpisodeUnits()
+    {
+        // Arrange
+        SetupSonarr(
+            [Series(1, seasons: [Season(1, 2, nextAiring: _timeProvider.GetUtcNow().AddDays(7))])],
+            [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndWantedEpisodeUnmonitored_BuildsEpisodeUnits()
+    {
+        // Arrange
+        SetupSonarr(
+            [Series(1, seasons: [Season(1, 2)])],
+            [Episode(102, 1), Episode(103, 1, number: 2) with { Monitored = false }]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c => c.MonitoredOnly = false));
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndSeasonMissingFromStatistics_BuildsEpisodeUnits()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(2, 2)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndFullDailySeason_BuildsDailySeasonUnit()
+    {
+        // Arrange
+        SetupSonarr(
+            [Series(1, seriesType: "daily", seasons: [Season(1, 2)])],
+            [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.EpisodeId.ShouldBe(0);
+        unit.ContentKind.ShouldBe(SeekerContentKind.Daily);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndPartlyWantedDailySeason_BuildsEpisodeUnits()
+    {
+        // Arrange
+        SetupSonarr(
+            [Series(1, seriesType: "daily", seasons: [Season(1, 10)])],
+            [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync();
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+    }
+
+    [Theory]
+    [InlineData(SonarrSearchMode.Auto)]
+    [InlineData(SonarrSearchMode.Episode)]
+    public async Task EvaluateAsync_Sonarr_FinishedAnimeSeasonPartlyWanted_BuildsSeasonUnit(SonarrSearchMode mode)
+    {
+        // Arrange
+        List<SearchableEpisode> wanted = [Episode(102, 1), Episode(103, 1, number: 2)];
+        SetupSonarr([Series(1, seriesType: "anime", seasons: [Season(1, 10)])], wanted);
+        _sonarrClient.GetEpisodesAsync(Arg.Any<ArrInstance>(), 1, Arg.Any<CancellationToken>())
+            .Returns([..wanted, Episode(104, 1, number: 3)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c => c.SonarrSearchMode = mode));
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.EpisodeId.ShouldBe(0);
+        unit.ContentKind.ShouldBe(SeekerContentKind.Anime);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_SeasonModeAndSeasonPartlyWanted_BuildsSeasonUnit()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(1, 10)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c => c.SonarrSearchMode = SonarrSearchMode.Season));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_EpisodeModeAndEveryAiredEpisodeWanted_BuildsEpisodeUnits()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(1, 2)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c => c.SonarrSearchMode = SonarrSearchMode.Episode));
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+    }
+
+    [Theory]
+    [InlineData(SonarrSearchMode.Auto)]
+    [InlineData(SonarrSearchMode.Season)]
+    [InlineData(SonarrSearchMode.Episode)]
+    public async Task EvaluateAsync_Sonarr_FullSpecialsSeason_BuildsEpisodeUnits(SonarrSearchMode mode)
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(0, 2)])], [Episode(102, 1, season: 0), Episode(103, 1, season: 0, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(InstanceConfig(_sonarr, c => c.SonarrSearchMode = mode));
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+        evaluation.Units.ShouldAllBe(u => u.ContentKind == SeekerContentKind.Special);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_AutoAndSeasonSearchedThisCycle_MarksEpisodeUnitsSearched()
+    {
+        // Arrange
+        SetupSonarr([Series(1, seasons: [Season(1, 10)])], [Episode(102, 1), Episode(103, 1, number: 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            history: [History(_sonarr, 1, _timeProvider.GetUtcNow().AddDays(-1), seasonNumber: 1)]);
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103], ignoreOrder: true);
+        evaluation.Units.ShouldAllBe(u => u.Searched);
+        evaluation.Remaining.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Sonarr_SeasonModeAndEpisodeSearchedThisCycle_ContinuesByEpisode()
+    {
+        // Arrange
+        SetupSonarr(
+            [Series(1, seasons: [Season(1, 10)])],
+            [Episode(102, 1), Episode(103, 1, number: 2), Episode(104, 1, number: 3)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateSonarrAsync(
+            InstanceConfig(_sonarr, c => c.SonarrSearchMode = SonarrSearchMode.Season),
+            history: [History(_sonarr, 1, _timeProvider.GetUtcNow().AddDays(-1), seasonNumber: 1, episodeId: 102)]);
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).ShouldBe([102, 103, 104], ignoreOrder: true);
+        evaluation.Remaining.Select(u => u.EpisodeId).ShouldBe([103, 104], ignoreOrder: true);
     }
 
     #endregion

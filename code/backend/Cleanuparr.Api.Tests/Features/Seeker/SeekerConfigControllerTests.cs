@@ -57,6 +57,7 @@ public class SeekerConfigControllerTests : IDisposable
         instance.IgnoreStruckDownloads.ShouldBeFalse();
         instance.MinCycleTimeDays.ShouldBe(7);
         instance.RecentGrabWindowHours.ShouldBe(24);
+        instance.SonarrSearchMode.ShouldBe(SonarrSearchMode.Auto);
     }
 
     [Fact]
@@ -114,6 +115,25 @@ public class SeekerConfigControllerTests : IDisposable
         SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
 
         response.Instances.ShouldHaveSingleItem().RecentGrabWindowHours.ShouldBe(48);
+    }
+
+    [Fact]
+    public async Task GetSeekerConfig_WithSonarrSearchMode_ReturnsStoredValue()
+    {
+        ArrInstance sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarr.Id,
+            Enabled = true,
+            SonarrSearchMode = SonarrSearchMode.Episode
+        });
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldHaveSingleItem().SonarrSearchMode.ShouldBe(SonarrSearchMode.Episode);
     }
 
     [Fact]
@@ -431,7 +451,8 @@ public class SeekerConfigControllerTests : IDisposable
                     IncludeTags = ["sonarr-include"],
                     ActiveDownloadLimit = 3,
                     MinCycleTimeDays = 7,
-                    RecentGrabWindowHours = 6
+                    RecentGrabWindowHours = 6,
+                    SonarrSearchMode = SonarrSearchMode.Episode
                 }
             ]
         };
@@ -456,6 +477,41 @@ public class SeekerConfigControllerTests : IDisposable
         sonarrConfig.IncludeTags.ShouldBe(["sonarr-include"]);
         sonarrConfig.IgnoreStruckDownloads.ShouldBeFalse();
         sonarrConfig.RecentGrabWindowHours.ShouldBe(6);
+        sonarrConfig.SonarrSearchMode.ShouldBe(SonarrSearchMode.Episode);
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WithSonarrSearchMode_OnExistingInstance_PersistsValue()
+    {
+        ArrInstance sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarr.Id,
+            Enabled = true,
+            SonarrSearchMode = SonarrSearchMode.Auto
+        });
+        await _dataContext.SaveChangesAsync();
+
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = sonarr.Id,
+                    Enabled = true,
+                    SonarrSearchMode = SonarrSearchMode.Season
+                }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerInstanceConfig config = await _dataContext.SeekerInstanceConfigs.SingleAsync();
+        config.SonarrSearchMode.ShouldBe(SonarrSearchMode.Season);
     }
 
     [Theory]
