@@ -13,27 +13,11 @@ public static class UTorrentExtensions
     /// </summary>
     public static bool IsSeeding(this UTorrentItem item)
     {
-        return IsDownloading(item.Status) && item.DateCompleted > 0;
+        return (item.Status & UTorrentStatus.Checked) != 0 &&
+               (item.Status & UTorrentStatus.Error) == 0 &&
+               item.DateCompleted > 0;
     }
 
-    /// <summary>
-    /// Checks if the torrent is currently downloading
-    /// </summary>
-    public static bool IsDownloading(this UTorrentItem item)
-    {
-        return IsDownloading(item.Status);
-    }
-
-    /// <summary>
-    /// Checks if the status indicates downloading
-    /// </summary>
-    public static bool IsDownloading(int status)
-    {
-        return (status & UTorrentStatus.Started) != 0 && 
-               (status & UTorrentStatus.Checked) != 0 &&
-               (status & UTorrentStatus.Error) == 0;
-    }
-    
     /// <summary>
     /// Checks if a torrent should be ignored based on the ignored patterns
     /// </summary>

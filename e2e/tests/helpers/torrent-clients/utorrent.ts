@@ -136,6 +136,19 @@ export class UTorrentDriver implements TorrentClientDriver {
     return (status & STATUS_STARTED) === 0 || (status & STATUS_PAUSED) !== 0;
   }
 
+  async stop(infoHash: string): Promise<void> {
+    const url = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&action=stop&hash=${infoHash.toUpperCase()}`;
+    const res = await fetch(url, { headers: this.requestHeaders() });
+    if (!res.ok) {
+      throw new Error(`uTorrent stop: ${res.status}`);
+    }
+  }
+
+  async getStatusAndCompleted(infoHash: string): Promise<{ status: number; dateCompleted: number } | undefined> {
+    const row = await this.getRow(infoHash);
+    return row ? { status: Number(row[1]), dateCompleted: Number(row[24]) } : undefined;
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     // `remove` removes the torrent from the client without touching files;
     // `removedata` / `removedatatorrent` delete data and torrent file.
