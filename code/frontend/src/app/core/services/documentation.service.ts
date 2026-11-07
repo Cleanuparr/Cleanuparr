@@ -252,6 +252,7 @@ export class DocumentationService {
       'searchSpecials': 'instance-search-for-specials',
       'searchAnime': 'instance-search-for-anime',
       'sonarrSearchMode': 'instance-search-mode',
+      'radarrReleaseGate': 'instance-release-gate',
     },
   };
 

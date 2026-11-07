@@ -1,4 +1,4 @@
-import { SelectionStrategy, SonarrSearchMode } from './enums';
+import { RadarrReleaseGate, SelectionStrategy, SonarrSearchMode } from './enums';
 
 export interface SeekerConfig {
   searchEnabled: boolean;
@@ -32,6 +32,7 @@ export interface SeekerInstanceConfig {
   useCutoff: boolean;
   useCustomFormatScore: boolean;
   sonarrSearchMode: SonarrSearchMode;
+  radarrReleaseGate: RadarrReleaseGate;
 }
 
 export interface UpdateSeekerConfig {
@@ -62,4 +63,5 @@ export interface UpdateSeekerInstanceConfig {
   useCutoff: boolean;
   useCustomFormatScore: boolean;
   sonarrSearchMode: SonarrSearchMode;
+  radarrReleaseGate: RadarrReleaseGate;
 }

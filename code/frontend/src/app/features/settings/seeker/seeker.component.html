@@ -130,6 +130,13 @@
                     helpKey="seeker:searchAnime"
                     featureId="seeker-search-anime" />
                 }
+                @if (instance.instanceType === 'Radarr') {
+                  <app-select label="Release Gate" [options]="radarrReleaseGateOptions" [value]="instance.radarrReleaseGate"
+                    (valueChange)="updateInstanceRadarrReleaseGate($index, $event)"
+                    hint="Release dates searches a movie once Radarr marks it released and its digital, physical or cinema date is past the grace period. Follow Radarr availability uses each movie's minimum availability and Radarr's availability delay; the grace period does not apply."
+                    helpKey="seeker:radarrReleaseGate"
+                    featureId="seeker-radarr-release-gate" />
+                }
                 <app-chip-input
                   label="Include Tags"
                   placeholder="Add tag..."

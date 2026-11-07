@@ -5,7 +5,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { ToastService } from '@core/services/toast.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { SeekerConfig, SeekerInstanceConfig, UpdateSeekerConfig } from '@shared/models/seeker-config.model';
-import { SelectionStrategy, SonarrSearchMode } from '@shared/models/enums';
+import { RadarrReleaseGate, SelectionStrategy, SonarrSearchMode } from '@shared/models/enums';
 import { SeekerComponent } from './seeker.component';
 
 const SONARR: SeekerInstanceConfig = {
@@ -26,6 +26,7 @@ const SONARR: SeekerInstanceConfig = {
   useCutoff: false,
   useCustomFormatScore: false,
   sonarrSearchMode: SonarrSearchMode.Auto,
+  radarrReleaseGate: RadarrReleaseGate.ReleaseDate,
 };
 
 const RADARR: SeekerInstanceConfig = {
@@ -47,6 +48,7 @@ const RADARR: SeekerInstanceConfig = {
   useCutoff: true,
   useCustomFormatScore: true,
   sonarrSearchMode: SonarrSearchMode.Auto,
+  radarrReleaseGate: RadarrReleaseGate.ReleaseDate,
 };
 
 const CONFIG: SeekerConfig = {
@@ -139,6 +141,13 @@ describe('SeekerComponent', () => {
     const details = fixture.nativeElement.querySelectorAll('.instance-row__details')[row] as HTMLElement;
     return Array.from(details.querySelectorAll('app-select')).find(
       (el) => el.textContent!.includes('Search Mode'),
+    ) as HTMLElement | undefined;
+  }
+
+  function releaseGateSelect(fixture: ComponentFixture<SeekerComponent>, row: number): HTMLElement | undefined {
+    const details = fixture.nativeElement.querySelectorAll('.instance-row__details')[row] as HTMLElement;
+    return Array.from(details.querySelectorAll('app-select')).find(
+      (el) => el.textContent!.includes('Release Gate'),
     ) as HTMLElement | undefined;
   }
 
@@ -514,6 +523,42 @@ describe('SeekerComponent', () => {
     expect(sent.instances[1].sonarrSearchMode).toBe(SonarrSearchMode.Auto);
   });
 
+  it('shows the release gate select for Radarr only', () => {
+    const { fixture } = setup();
+
+    expect(releaseGateSelect(fixture, 0)).toBeUndefined();
+
+    const radarrToggle = fixture.nativeElement.querySelectorAll('.instance-row__header [role="switch"]')[1] as HTMLButtonElement;
+    radarrToggle.click();
+    fixture.detectChanges();
+
+    expect(releaseGateSelect(fixture, 1)).toBeDefined();
+  });
+
+  it('sends the picked release gate for the Radarr row only', () => {
+    const { fixture, updateConfig } = setup();
+
+    const radarrToggle = fixture.nativeElement.querySelectorAll('.instance-row__header [role="switch"]')[1] as HTMLButtonElement;
+    radarrToggle.click();
+    fixture.detectChanges();
+
+    const select = releaseGateSelect(fixture, 1)!;
+    (select.querySelector('.select-trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const option = Array.from(select.querySelectorAll('.select-option')).find(
+      (el) => el.textContent!.trim() === 'Follow Radarr availability',
+    ) as HTMLButtonElement;
+    option.click();
+    fixture.detectChanges();
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    const sent = updateConfig.mock.calls[0][0] as UpdateSeekerConfig;
+    expect(sent.instances[0].radarrReleaseGate).toBe(RadarrReleaseGate.ReleaseDate);
+    expect(sent.instances[1].radarrReleaseGate).toBe(RadarrReleaseGate.ArrAvailability);
+  });
+
   it('patches the instance limits typed into the numeric inputs', () => {
     const { fixture, component } = setup();
 
@@ -774,6 +819,7 @@ describe('SeekerComponent', () => {
           useCutoff: false,
           useCustomFormatScore: false,
           sonarrSearchMode: SonarrSearchMode.Auto,
+          radarrReleaseGate: RadarrReleaseGate.ReleaseDate,
         },
         {
           arrInstanceId: RADARR.arrInstanceId,
@@ -790,6 +836,7 @@ describe('SeekerComponent', () => {
           useCutoff: true,
           useCustomFormatScore: true,
           sonarrSearchMode: SonarrSearchMode.Auto,
+          radarrReleaseGate: RadarrReleaseGate.ReleaseDate,
         },
       ],
     });

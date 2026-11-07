@@ -98,6 +98,11 @@ public sealed record SeekerInstanceConfig
     public SonarrSearchMode SonarrSearchMode { get; set; } = SonarrSearchMode.Auto;
 
     /// <summary>
+    /// How Radarr movies count as released. Ignored for Sonarr.
+    /// </summary>
+    public RadarrReleaseGate RadarrReleaseGate { get; set; } = RadarrReleaseGate.ReleaseDate;
+
+    /// <summary>
     /// Skips units whose recent searches in a row found nothing, for a rest that doubles with each further miss.
     /// </summary>
     public bool RestUnitsEnabled { get; set; }

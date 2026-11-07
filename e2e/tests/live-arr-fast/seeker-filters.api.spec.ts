@@ -49,6 +49,20 @@ async function mutateMovie(mutate: (movie: Record<string, unknown>) => Record<st
   await RADARR.arr.put(`/api/v3/movie/${RADARR.itemId}`, mutate({ ...movie }));
 }
 
+/** Pushes Radarr's isAvailable for the seeded movie past today. */
+const UNAVAILABLE_DELAY_DAYS = 3650;
+
+async function withAvailabilityDelay(days: number, run: () => Promise<void>): Promise<void> {
+  const original = await RADARR.arr.get<Record<string, unknown>>('/api/v3/config/indexer');
+  await RADARR.arr.put('/api/v3/config/indexer', { ...original, availabilityDelay: days });
+
+  try {
+    await run();
+  } finally {
+    await RADARR.arr.put('/api/v3/config/indexer', original);
+  }
+}
+
 test.describe('Seeker candidate filters', () => {
   let library: Array<Record<string, unknown>> = [];
 
@@ -279,6 +293,35 @@ test.describe('Seeker candidate filters', () => {
 
   test('still searches an old release when the grace period is at its longest', async ({ api }) => {
     const instanceId = await arrangeInstance(api, RADARR, { config: { postReleaseGraceHours: 72 } });
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+  });
+
+  test('skips a movie Radarr does not count as available in Radarr availability mode', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { radarrReleaseGate: 'ArrAvailability' } });
+
+    await withAvailabilityDelay(UNAVAILABLE_DELAY_DAYS, async () => {
+      await expectNoSearch(api, instanceId, SETTLE_MS);
+
+      const preview = await (await api.seeker.getPreview(instanceId)).json();
+      const excluded = preview.excluded.find((e: { name: string }) => e.name.includes(RADARR.seededTitle));
+      expect(excluded?.reason).toBe('NotAvailable');
+    });
+  });
+
+  test('searches the same movie with release dates', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { radarrReleaseGate: 'ReleaseDate' } });
+
+    await withAvailabilityDelay(UNAVAILABLE_DELAY_DAYS, async () => {
+      await triggerSeeker(api);
+
+      await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+    });
+  });
+
+  test('searches an available movie in Radarr availability mode', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { radarrReleaseGate: 'ArrAvailability' } });
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);

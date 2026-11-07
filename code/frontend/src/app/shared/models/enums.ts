@@ -128,6 +128,11 @@ export enum SonarrSearchMode {
   Episode = 'Episode',
 }
 
+export enum RadarrReleaseGate {
+  ReleaseDate = 'ReleaseDate',
+  ArrAvailability = 'ArrAvailability',
+}
+
 export enum SearchCommandStatus {
   Pending = 'Pending',
   Started = 'Started',

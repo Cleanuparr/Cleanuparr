@@ -28,6 +28,8 @@ public sealed record UpdateSeekerInstanceConfigRequest
 
     public SonarrSearchMode SonarrSearchMode { get; init; } = SonarrSearchMode.Auto;
 
+    public RadarrReleaseGate RadarrReleaseGate { get; init; } = RadarrReleaseGate.ReleaseDate;
+
     public bool RestUnitsEnabled { get; init; }
 
     public int RestMaxDays { get; init; } = 30;

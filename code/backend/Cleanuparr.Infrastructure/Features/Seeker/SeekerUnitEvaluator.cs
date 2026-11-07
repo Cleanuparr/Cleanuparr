@@ -309,15 +309,10 @@ public sealed class SeekerUnitEvaluator
         {
             allLibraryIds.Add(movie.Id);
 
-            if (movie.Status is not "released")
+            SeekerExclusionReason? releaseExclusion = GetReleaseExclusion(movie, instanceConfig.RadarrReleaseGate, graceCutoff);
+            if (releaseExclusion is not null)
             {
-                exclusions.Add(new SeekerExclusion(movie.Title, SeekerExclusionReason.NotReleased));
-                continue;
-            }
-
-            if (!IsMoviePastGracePeriod(movie, graceCutoff))
-            {
-                exclusions.Add(new SeekerExclusion(movie.Title, SeekerExclusionReason.InGracePeriod));
+                exclusions.Add(new SeekerExclusion(movie.Title, releaseExclusion.Value));
                 continue;
             }
 
@@ -944,6 +939,27 @@ public sealed class SeekerUnitEvaluator
     {
         DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
         return releaseDate is null || releaseDate.Value <= graceCutoff;
+    }
+
+    /// <summary>
+    /// Returns why the release gate keeps the movie out, or null when it lets it through.
+    /// </summary>
+    private static SeekerExclusionReason? GetReleaseExclusion(
+        SearchableMovie movie,
+        RadarrReleaseGate gate,
+        DateTimeOffset graceCutoff)
+    {
+        if (gate is RadarrReleaseGate.ArrAvailability)
+        {
+            return movie.IsAvailable ? null : SeekerExclusionReason.NotAvailable;
+        }
+
+        if (movie.Status is not "released")
+        {
+            return SeekerExclusionReason.NotReleased;
+        }
+
+        return IsMoviePastGracePeriod(movie, graceCutoff) ? null : SeekerExclusionReason.InGracePeriod;
     }
 
     /// <summary>

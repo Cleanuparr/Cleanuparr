@@ -60,6 +60,7 @@ public class SeekerConfigControllerTests : IDisposable
         instance.MinCycleTimeDays.ShouldBe(7);
         instance.RecentGrabWindowHours.ShouldBe(24);
         instance.SonarrSearchMode.ShouldBe(SonarrSearchMode.Auto);
+        instance.RadarrReleaseGate.ShouldBe(RadarrReleaseGate.ReleaseDate);
     }
 
     [Fact]
@@ -139,6 +140,25 @@ public class SeekerConfigControllerTests : IDisposable
         SeekerInstanceConfigResponse instance = response.Instances.ShouldHaveSingleItem();
         instance.RestUnitsEnabled.ShouldBeTrue();
         instance.RestMaxDays.ShouldBe(90);
+    }
+
+    [Fact]
+    public async Task GetSeekerConfig_WithRadarrReleaseGate_ReturnsStoredValue()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            RadarrReleaseGate = RadarrReleaseGate.ArrAvailability
+        });
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldHaveSingleItem().RadarrReleaseGate.ShouldBe(RadarrReleaseGate.ArrAvailability);
     }
 
     [Fact]
@@ -612,6 +632,40 @@ public class SeekerConfigControllerTests : IDisposable
 
         SeekerInstanceConfig config = await _dataContext.SeekerInstanceConfigs.SingleAsync();
         config.SonarrSearchMode.ShouldBe(SonarrSearchMode.Season);
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WithRadarrReleaseGate_OnExistingInstance_PersistsValue()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            RadarrReleaseGate = RadarrReleaseGate.ReleaseDate
+        });
+        await _dataContext.SaveChangesAsync();
+
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RadarrReleaseGate = RadarrReleaseGate.ArrAvailability
+                }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerInstanceConfig config = await _dataContext.SeekerInstanceConfigs.SingleAsync();
+        config.RadarrReleaseGate.ShouldBe(RadarrReleaseGate.ArrAvailability);
     }
 
     [Theory]

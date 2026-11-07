@@ -296,7 +296,7 @@ public class RadarrClientTests
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new[]
         {
-            new SearchableMovie { Id = 1, Title = "Movie", QualityProfileId = 1 },
+            new SearchableMovie { Id = 1, Title = "Movie", QualityProfileId = 1, IsAvailable = true },
         })));
 
         // Act
@@ -309,6 +309,7 @@ public class RadarrClientTests
         // Assert
         movies.Count.ShouldBe(1);
         movies[0].Title.ShouldBe("Movie");
+        movies[0].IsAvailable.ShouldBeTrue();
         var request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
         request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/movie");
     }

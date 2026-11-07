@@ -27,6 +27,11 @@ public sealed record SearchableMovie
     public DateTimeOffset? InCinemas { get; init; }
 
     /// <summary>
+    /// Radarr's own verdict from the movie's minimum availability and the availability delay.
+    /// </summary>
+    public bool IsAvailable { get; init; }
+
+    /// <summary>
     /// Set when a search reached an indexer; RSS grabs leave it alone.
     /// </summary>
     public DateTimeOffset? LastSearchTime { get; init; }
