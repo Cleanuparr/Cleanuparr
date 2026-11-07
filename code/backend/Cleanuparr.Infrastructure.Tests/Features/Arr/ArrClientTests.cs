@@ -103,69 +103,6 @@ public class ArrClientTests
 
     #endregion
 
-    #region GetActiveDownloadCountAsync
-
-    [Fact]
-    public async Task GetActiveDownloadCountAsync_EmptyQueue_ReturnsZero()
-    {
-        // Arrange
-        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
-            new QueueListResponse { TotalRecords = 0, Records = Array.Empty<QueueRecord>() })));
-
-        // Act
-        var count = await _client.GetActiveDownloadCountAsync(_arrInstance);
-
-        // Assert
-        count.ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task GetActiveDownloadCountAsync_CountsRecordsWithSizeLeftAboveZero()
-    {
-        // Arrange — 3 records, only 2 have SizeLeft > 0
-        var records = new[]
-        {
-            BuildRecord(1, sizeLeft: 100),
-            BuildRecord(2, sizeLeft: 0),
-            BuildRecord(3, sizeLeft: 50),
-        };
-        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(
-            new QueueListResponse { TotalRecords = records.Length, Records = records })));
-
-        // Act
-        var count = await _client.GetActiveDownloadCountAsync(_arrInstance);
-
-        // Assert
-        count.ShouldBe(2);
-    }
-
-    [Fact]
-    public async Task GetActiveDownloadCountAsync_MultiPage_AccumulatesAcrossPages()
-    {
-        // Arrange — page 1: 2 active of 2; page 2: 1 active of 2; total = 4 records
-        int call = 0;
-        _httpMessageHandler.SetupResponse((_, _) =>
-        {
-            call++;
-            QueueRecord[] records = call switch
-            {
-                1 => new[] { BuildRecord(1, sizeLeft: 10), BuildRecord(2, sizeLeft: 10) },
-                2 => new[] { BuildRecord(3, sizeLeft: 0), BuildRecord(4, sizeLeft: 5) },
-                _ => Array.Empty<QueueRecord>(),
-            };
-            return Task.FromResult(JsonResponse(new QueueListResponse { TotalRecords = 4, Records = records }));
-        });
-
-        // Act
-        var count = await _client.GetActiveDownloadCountAsync(_arrInstance);
-
-        // Assert
-        count.ShouldBe(3);
-        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
-    }
-
-    #endregion
-
     #region DeleteQueueItemAsync
 
     [Fact]
@@ -792,7 +729,6 @@ public class ArrClientTests
 
     private static QueueRecord BuildRecord(
         long id,
-        long sizeLeft = 0,
         string status = "downloading",
         string trackedStatus = "ok",
         string trackedState = "downloading",
@@ -804,7 +740,6 @@ public class ArrClientTests
             Title = $"item-{id}",
             DownloadId = id.ToString(),
             Protocol = "torrent",
-            SizeLeft = sizeLeft,
             Status = status,
             TrackedDownloadStatus = trackedStatus,
             TrackedDownloadState = trackedState,

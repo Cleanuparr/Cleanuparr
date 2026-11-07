@@ -8,6 +8,7 @@ import {
   WHISPARR,
   WHISPARR2,
   addDecoyDownloads,
+  addMetadataDecoys,
   arrangeInstance,
   arrangeQueueCleaner,
   createStallRule,
@@ -27,6 +28,7 @@ import {
   type SeededArr,
 } from '../helpers/seeker-live';
 import { grabbableRelease, grabbableReleases, torznabSearchStub } from '../helpers/mocks/torznab-stubs';
+import { appLogsSince } from '../helpers/test-lifecycle';
 
 /**
  * The per-instance filters that decide whether the Seeker searches at all.
@@ -249,7 +251,24 @@ test.describe('Seeker candidate filters', () => {
     const instanceId = await arrangeInstance(api, RADARR, { instance: { activeDownloadLimit: 1 } });
     await addDecoyDownloads(RADARR, 2);
 
+    const startedAt = new Date().toISOString();
     await expectNoSearch(api, instanceId, SETTLE_MS);
+    expect(appLogsSince(startedAt), 'the Seeker should skip on the active download limit').toContain(
+      'items actively downloading (limit: 1)',
+    );
+  });
+
+  test('skips the run while metadata downloads fill the limit', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { activeDownloadLimit: 1 } });
+    await addMetadataDecoys(RADARR, 2);
+
+    const startedAt = new Date().toISOString();
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+    expect(appLogsSince(startedAt), 'the Seeker should skip on the active download limit').toContain(
+      'items actively downloading (limit: 1)',
+    );
   });
 
   test('searches once the active download limit is out of reach', async ({ api }) => {
