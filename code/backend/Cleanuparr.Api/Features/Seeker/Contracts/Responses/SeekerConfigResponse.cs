@@ -16,5 +16,11 @@ public sealed record SeekerConfigResponse
 
     public int PostReleaseGraceHours { get; init; }
 
+    public bool QuietHoursEnabled { get; init; }
+
+    public TimeOnly QuietHoursStart { get; init; }
+
+    public TimeOnly QuietHoursEnd { get; init; }
+
     public List<SeekerInstanceConfigResponse> Instances { get; init; } = [];
 }

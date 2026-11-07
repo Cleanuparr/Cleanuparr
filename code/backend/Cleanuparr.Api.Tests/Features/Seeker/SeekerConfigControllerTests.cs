@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Api.Features.Seeker.Controllers;
+using Cleanuparr.Api.Json;
 using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
@@ -159,6 +161,25 @@ public class SeekerConfigControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSeekerConfig_WithQuietHours_ReturnsStoredValues()
+    {
+        SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        SeekerConfig config = await _dataContext.SeekerConfigs.FirstAsync();
+        config.QuietHoursEnabled = true;
+        config.QuietHoursStart = new TimeOnly(22, 30);
+        config.QuietHoursEnd = new TimeOnly(6, 15);
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.QuietHoursEnabled.ShouldBeTrue();
+        response.QuietHoursStart.ShouldBe(new TimeOnly(22, 30));
+        response.QuietHoursEnd.ShouldBe(new TimeOnly(6, 15));
+    }
+
+    [Fact]
     public async Task GetSeekerConfig_OnlyReturnsSonarrAndRadarrInstances()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
@@ -199,6 +220,63 @@ public class SeekerConfigControllerTests : IDisposable
         };
 
         await Should.ThrowAsync<CustomValidationException>(() => _controller.UpdateSeekerConfig(request));
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WithQuietHours_PersistsValues()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 5,
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(21, 0),
+            QuietHoursEnd = new TimeOnly(8, 45),
+            Instances = [new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true }]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerConfig saved = await _dataContext.SeekerConfigs.AsNoTracking().FirstAsync();
+        saved.QuietHoursEnabled.ShouldBeTrue();
+        saved.QuietHoursStart.ShouldBe(new TimeOnly(21, 0));
+        saved.QuietHoursEnd.ShouldBe(new TimeOnly(8, 45));
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WithEqualQuietHours_ThrowsValidationException()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 5,
+            ProactiveSearchEnabled = true,
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(7, 0),
+            QuietHoursEnd = new TimeOnly(7, 0),
+            Instances = [new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true }]
+        };
+
+        await Should.ThrowAsync<CustomValidationException>(() => _controller.UpdateSeekerConfig(request));
+    }
+
+    [Theory]
+    [InlineData("23:00")]
+    [InlineData("23:00:00")]
+    public void UpdateSeekerConfigRequest_DeserializesQuietHoursWithOrWithoutSeconds(string time)
+    {
+        JsonSerializerOptions options = new();
+        CleanuparrJsonConfiguration.ConfigureApiInbound(options);
+
+        UpdateSeekerConfigRequest? request = JsonSerializer.Deserialize<UpdateSeekerConfigRequest>(
+            $"{{\"quietHoursEnabled\":true,\"quietHoursStart\":\"{time}\",\"quietHoursEnd\":\"07:00\"}}",
+            options);
+
+        request.ShouldNotBeNull();
+        request.QuietHoursStart.ShouldBe(new TimeOnly(23, 0));
+        request.QuietHoursEnd.ShouldBe(new TimeOnly(7, 0));
     }
 
     [Fact]

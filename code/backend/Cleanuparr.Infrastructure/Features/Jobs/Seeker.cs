@@ -111,6 +111,12 @@ public sealed class Seeker : IHandler
             return;
         }
 
+        if (IsQuietNow(config))
+        {
+            _logger.LogDebug("Quiet hours, skipping proactive search");
+            return;
+        }
+
         await ProcessProactiveSearchAsync(config, isDryRun, cancellationToken);
 
         await _statusNotifier.NotifySearchStatsUpdatedAsync(cancellationToken);
@@ -265,6 +271,11 @@ public sealed class Seeker : IHandler
 
     private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun, CancellationToken cancellationToken)
     {
+        if (IsQuietNow(config))
+        {
+            return false;
+        }
+
         Guid arrInstanceId = instanceConfig.ArrInstanceId;
         await _cycleLock.WaitAsync(arrInstanceId, cancellationToken);
 
@@ -366,9 +377,12 @@ public sealed class Seeker : IHandler
                 instanceType, arrInstance.Name);
         }
 
-        // Update LastProcessedAt so round-robin moves on
-        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
-        await _dataContext.SaveChangesAsync();
+        // A run cut short by quiet hours keeps this instance first in the round-robin order
+        if (searched || !IsQuietNow(config))
+        {
+            instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
+            await _dataContext.SaveChangesAsync();
+        }
 
         return searched;
     }
@@ -412,6 +426,11 @@ public sealed class Seeker : IHandler
         }
 
         return downloadIds.Count - struckCount;
+    }
+
+    private bool IsQuietNow(SeekerConfig config)
+    {
+        return config.IsQuietTime(TimeOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime));
     }
 
     private async Task<bool> ProcessInstanceAsync(
@@ -465,8 +484,16 @@ public sealed class Seeker : IHandler
         // Search each item individually so each gets its own event and command tracker
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
 
+        bool searchedAny = false;
+
         foreach (SeekerSearchCandidate candidate in result.Candidates)
         {
+            if (IsQuietNow(config))
+            {
+                _logger.LogDebug("Quiet hours started, stopping proactive search on {InstanceName}", arrInstance.Name);
+                break;
+            }
+
             SearchItem searchItem = instanceType switch
             {
                 InstanceType.Radarr => new SearchItem { Id = candidate.ItemId },
@@ -485,6 +512,7 @@ public sealed class Seeker : IHandler
             };
 
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
+            searchedAny = true;
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
                 candidate.Name, SeekerSearchType.Proactive, candidate.Reason, result.Cycle.Id, isDryRun, candidate.ContentKind);
@@ -515,7 +543,7 @@ public sealed class Seeker : IHandler
             await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.Evaluation.AllLibraryIds, allHistoryExternalIds);
         }
 
-        return true;
+        return searchedAny;
     }
 
     /// <summary>

@@ -25,5 +25,6 @@ export { ToastContainerComponent } from './toast-container/toast-container.compo
 export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
 export { SizeInputComponent } from './size-input/size-input.component';
 export type { SizeUnit } from './size-input/size-input.component';
+export { TimeInputComponent } from './time-input/time-input.component';
 export { TooltipComponent } from './tooltip/tooltip.component';
 export { LogoComponent } from './logo/logo.component';

@@ -177,6 +177,22 @@ Set to `0` to disable the grace period and search immediately.
 
 </ConfigSection>
 
+<ConfigSection
+  title="Quiet Hours"
+>
+
+Set a daily window in which Seeker does not start proactive searches. Replacement searches keep running inside the window.
+
+Times use the container's local time. Set the `TZ` environment variable to your timezone. The default is `Etc/UTC`.
+
+Start is inclusive and end is exclusive. Start and end must differ.
+
+A window that ends before it starts runs past midnight. For example, 23:00 to 07:00 blocks proactive searches from 23:00 until 07:00 the next morning.
+
+Seeker resumes proactive search at its first scheduled run after the window ends.
+
+</ConfigSection>
+
 </div>
 
 <PrefixedSection prefix="instance">

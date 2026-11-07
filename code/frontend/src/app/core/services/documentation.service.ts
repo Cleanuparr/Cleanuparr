@@ -238,6 +238,7 @@ export class DocumentationService {
       'useCustomFormatScore': 'use-custom-format-score',
       'useRoundRobin': 'round-robin',
       'postReleaseGraceHours': 'post-release-grace-period',
+      'quietHoursEnabled': 'quiet-hours',
       'missingSearchEnabled': 'enable-missing-search',
       'enabled': 'instance-enabled',
       'includeTags': 'instance-include-tags',

@@ -7,6 +7,9 @@ export interface SeekerConfig {
   selectionStrategy: SelectionStrategy;
   useRoundRobin: boolean;
   postReleaseGraceHours: number;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
   instances: SeekerInstanceConfig[];
 }
 
@@ -38,6 +41,9 @@ export interface UpdateSeekerConfig {
   selectionStrategy: SelectionStrategy;
   useRoundRobin: boolean;
   postReleaseGraceHours: number;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
   instances: UpdateSeekerInstanceConfig[];
 }
 

@@ -66,4 +66,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-sonarr-search-mode' },
   { id: 'seeker-cf-gap-strategy' },
   { id: 'seeker-unit-rest' },
+  { id: 'seeker-quiet-hours' },
 ];

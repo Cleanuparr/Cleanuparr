@@ -47,6 +47,46 @@ test.describe.serial('Seeker — config', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 
+  test('round-trips quiet hours', async ({ api }) => {
+    const current = await (await api.seeker.getConfig()).json();
+    expect(current).toHaveProperty('quietHoursEnabled');
+    expect(current).toHaveProperty('quietHoursStart');
+    expect(current).toHaveProperty('quietHoursEnd');
+
+    const updateRes = await api.seeker.updateConfig({
+      ...current,
+      quietHoursEnabled: true,
+      quietHoursStart: '22:30',
+      quietHoursEnd: '06:15',
+    });
+    expect(updateRes.status).toBe(200);
+
+    const updated = await (await api.seeker.getConfig()).json();
+    expect(updated.quietHoursEnabled).toBe(true);
+    expect(updated.quietHoursStart).toBe('22:30:00');
+    expect(updated.quietHoursEnd).toBe('06:15:00');
+
+    await api.seeker.updateConfig({
+      ...updated,
+      quietHoursEnabled: current.quietHoursEnabled,
+      quietHoursStart: current.quietHoursStart,
+      quietHoursEnd: current.quietHoursEnd,
+    });
+  });
+
+  test('rejects quiet hours with equal start and end', async ({ api }) => {
+    const current = await (await api.seeker.getConfig()).json();
+    const res = await api.seeker.updateConfig({
+      ...current,
+      searchEnabled: true,
+      proactiveSearchEnabled: true,
+      quietHoursEnabled: true,
+      quietHoursStart: '08:00',
+      quietHoursEnd: '08:00',
+    });
+    expect(res.status).toBe(400);
+  });
+
   test('returns search stats summary with zero counts initially', async ({ api }) => {
     const res = await api.seeker.getSearchStatsSummary();
     expect(res.status).toBe(200);

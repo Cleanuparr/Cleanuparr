@@ -77,6 +77,32 @@ public sealed class SeekerConfigTests
         exception.Message.ShouldContain("Invalid search interval");
     }
 
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(73)]
+    public void Validate_WithGraceHoursOutOfRange_ThrowsValidationException(int graceHours)
+    {
+        SeekerConfig config = new() { ProactiveSearchEnabled = true, PostReleaseGraceHours = graceHours };
+
+        CustomValidationException exception = Should.Throw<CustomValidationException>(() => config.Validate());
+        exception.Message.ShouldContain(nameof(SeekerConfig.PostReleaseGraceHours));
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void Validate_WithGraceHoursOutOfRangeThatNeverApply_DoesNotThrow(bool searchEnabled, bool proactiveSearchEnabled)
+    {
+        SeekerConfig config = new()
+        {
+            SearchEnabled = searchEnabled,
+            ProactiveSearchEnabled = proactiveSearchEnabled,
+            PostReleaseGraceHours = 73
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
     #endregion
 
     #region ToCronExpression
@@ -96,6 +122,85 @@ public sealed class SeekerConfigTests
         var config = new SeekerConfig { SearchInterval = interval };
 
         config.ToCronExpression().ShouldBe(expectedCron);
+    }
+
+    #endregion
+
+    #region Quiet Hours
+
+    [Fact]
+    public void Validate_WithEqualQuietHours_ThrowsValidationException()
+    {
+        SeekerConfig config = new()
+        {
+            ProactiveSearchEnabled = true,
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(5, 0),
+            QuietHoursEnd = new TimeOnly(5, 0)
+        };
+
+        Should.Throw<CustomValidationException>(() => config.Validate());
+    }
+
+    [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public void Validate_WithEqualQuietHoursThatNeverApply_DoesNotThrow(bool searchEnabled, bool proactiveSearchEnabled, bool quietHoursEnabled)
+    {
+        SeekerConfig config = new()
+        {
+            SearchEnabled = searchEnabled,
+            ProactiveSearchEnabled = proactiveSearchEnabled,
+            QuietHoursEnabled = quietHoursEnabled,
+            QuietHoursStart = new TimeOnly(5, 0),
+            QuietHoursEnd = new TimeOnly(5, 0)
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void IsQuietTime_WhenDisabled_ReturnsFalse()
+    {
+        SeekerConfig config = new() { QuietHoursEnabled = false };
+
+        config.IsQuietTime(new TimeOnly(23, 30)).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, 59, false)]
+    [InlineData(1, 0, true)]
+    [InlineData(4, 59, true)]
+    [InlineData(5, 0, false)]
+    public void IsQuietTime_WithSameDayWindow_RespectsBounds(int hour, int minute, bool expected)
+    {
+        SeekerConfig config = new()
+        {
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(1, 0),
+            QuietHoursEnd = new TimeOnly(5, 0)
+        };
+
+        config.IsQuietTime(new TimeOnly(hour, minute)).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(22, 59, false)]
+    [InlineData(23, 0, true)]
+    [InlineData(0, 0, true)]
+    [InlineData(6, 59, true)]
+    [InlineData(7, 0, false)]
+    public void IsQuietTime_WithOvernightWindow_RespectsBounds(int hour, int minute, bool expected)
+    {
+        SeekerConfig config = new()
+        {
+            QuietHoursEnabled = true,
+            QuietHoursStart = new TimeOnly(23, 0),
+            QuietHoursEnd = new TimeOnly(7, 0)
+        };
+
+        config.IsQuietTime(new TimeOnly(hour, minute)).ShouldBe(expected);
     }
 
     #endregion
