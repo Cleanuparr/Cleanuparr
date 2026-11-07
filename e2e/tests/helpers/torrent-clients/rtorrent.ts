@@ -95,6 +95,16 @@ export class RTorrentDriver implements TorrentClientDriver {
     await this.call('d.pause', [infoHash.toUpperCase()]);
   }
 
+  /** d.stop then d.close, the pair ruTorrent's Stop button sends. */
+  async stopTorrent(infoHash: string): Promise<void> {
+    await this.call('d.stop', [infoHash.toUpperCase()]);
+    await this.call('d.close', [infoHash.toUpperCase()]);
+  }
+
+  async getIsOpen(infoHash: string): Promise<number> {
+    return Number(await this.call('d.is_open', [infoHash.toUpperCase()]));
+  }
+
   /** d.complete: 1 once the hash check confirms all pieces are present. */
   async getComplete(infoHash: string): Promise<number> {
     return Number(await this.call('d.complete', [infoHash.toUpperCase()]));
