@@ -85,4 +85,9 @@ public sealed record CustomFormatScoreEntry
     /// Sonarr episode air date; null for Radarr and for rows not yet re-synced.
     /// </summary>
     public DateTimeOffset? AirDateUtc { get; set; }
+
+    /// <summary>
+    /// Sonarr episode's last search time at the last sync; null for Radarr and for rows not yet re-synced.
+    /// </summary>
+    public DateTimeOffset? LastSearchTime { get; set; }
 }

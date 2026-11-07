@@ -17,4 +17,9 @@ public sealed record SearchableEpisode
     public bool HasFile { get; init; }
 
     public long EpisodeFileId { get; init; }
+
+    /// <summary>
+    /// Set when a search reached an indexer; RSS grabs leave it alone.
+    /// </summary>
+    public DateTimeOffset? LastSearchTime { get; init; }
 }

@@ -337,6 +337,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
 
+                    b.Property<string>("LastSearchTime")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("last_search_time");
+
                     b.Property<string>("LastSyncedAt")
                         .IsRequired()
                         .HasColumnType("TEXT")

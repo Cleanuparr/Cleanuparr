@@ -42,6 +42,11 @@ public sealed record SeekerSearchUnit
     public DateTimeOffset? Added { get; init; }
 
     /// <summary>
+    /// Latest search the arr recorded for the movie or any episode the unit covers.
+    /// </summary>
+    public DateTimeOffset? LastSearchTime { get; init; }
+
+    /// <summary>
     /// Whether the current cycle already searched this unit.
     /// </summary>
     public required bool Searched { get; init; }

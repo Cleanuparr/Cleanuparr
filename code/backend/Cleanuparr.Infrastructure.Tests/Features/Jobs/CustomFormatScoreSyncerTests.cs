@@ -546,6 +546,121 @@ public class CustomFormatScoreSyncerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_SyncsSonarrEpisodeScores_StoresLastSearchTime()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
+            ]));
+
+        DateTimeOffset lastSearchTime = new(2026, 3, 10, 0, 0, 0, TimeSpan.Zero);
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
+                new SearchableEpisode { Id = 100, SeasonNumber = 3, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true, LastSearchTime = lastSearchTime }
+            ]);
+
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([
+                new ArrEpisodeFile { Id = 500, CustomFormatScore = 300, QualityCutoffNotMet = false }
+            ]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the synced entry carries the episode's last search time
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].LastSearchTime.ShouldBe(lastSearchTime);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SyncsSonarrEpisodeScores_RefreshesLastSearchTimeOnExistingEntry()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S02E01",
+            FileId = 500,
+            CurrentScore = 300,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSearchTime = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        _sonarrClient
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
+            ]));
+
+        DateTimeOffset lastSearchTime = new(2026, 4, 5, 0, 0, 0, TimeSpan.Zero);
+        _sonarrClient
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
+                new SearchableEpisode { Id = 100, SeasonNumber = 2, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true, LastSearchTime = lastSearchTime }
+            ]);
+
+        _sonarrClient
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([
+                new ArrEpisodeFile { Id = 500, CustomFormatScore = 300, QualityCutoffNotMet = false }
+            ]);
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the next sync overwrites the stored last search time
+        List<CustomFormatScoreEntry> entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
+        entries.ShouldHaveSingleItem();
+        entries[0].LastSearchTime.ShouldBe(lastSearchTime);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_SonarrSync_SkipsEpisodesWithoutFiles()
     {
         // Arrange

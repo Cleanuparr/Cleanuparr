@@ -409,6 +409,19 @@ public class SeekerPreviewControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPreview_TiedMoviesUnderOldestFirst_FlagsRandomPick()
+    {
+        _dataContext.SeekerConfigs.First().SelectionStrategy = SelectionStrategy.OldestSearchFirst;
+        ArrInstance radarr = AddRadarr();
+        SetupMovies(Movie(1), Movie(2));
+
+        SeekerPreviewResponse response = Preview(await _controller.GetPreview(radarr.Id, CancellationToken.None));
+
+        response.NextUp.ShouldNotBeEmpty();
+        response.RandomPick.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task GetPreview_QueueReadCancelled_Rethrows()
     {
         ArrInstance radarr = AddRadarr();

@@ -146,7 +146,9 @@ public sealed class SeekerPreviewController : ControllerBase
         {
             Funnel = funnel,
             CycleWaitingUntil = waitingUntil,
-            RandomPick = randomSeason || config.SelectionStrategy is not (SelectionStrategy.OldestSearchFirst or SelectionStrategy.NewestFirst),
+            RandomPick = randomSeason
+                || config.SelectionStrategy is not (SelectionStrategy.OldestSearchFirst or SelectionStrategy.NewestFirst)
+                || SeekerUnitEvaluator.HasTiedPicks(evaluation, config.SelectionStrategy, nextUpIds),
             NextUp = nextUp
                 .Select(c => new SeekerPreviewUnitResponse { Name = c.Name, Reason = c.Reason, ContentKind = c.ContentKind })
                 .ToList(),

@@ -29,6 +29,7 @@ interface Candidate {
   id: number;
   title: string;
   added: string;
+  lastSearchTime: string | null;
 }
 
 async function monitorEveryMovie(): Promise<Candidate[]> {
@@ -44,7 +45,18 @@ async function monitorEveryMovie(): Promise<Candidate[]> {
     id: movie.id as number,
     title: movie.title as string,
     added: movie.added as string,
+    lastSearchTime: (movie.lastSearchTime as string | undefined) ?? null,
   }));
+}
+
+function searchedAt(lastSearchTime: string | null | undefined): number {
+  return lastSearchTime ? Date.parse(lastSearchTime) : 0;
+}
+
+/** Every title tied for the oldest search time. */
+function oldestSearched(candidates: Candidate[]): string[] {
+  const oldest = Math.min(...candidates.map((c) => searchedAt(c.lastSearchTime)));
+  return candidates.filter((c) => searchedAt(c.lastSearchTime) === oldest).map((c) => c.title);
 }
 
 test.describe('Seeker selection strategies', () => {
@@ -68,7 +80,9 @@ test.describe('Seeker selection strategies', () => {
     const candidates = await monitorEveryMovie();
     expect(candidates.length).toBeGreaterThan(1);
 
-    const newest = [...candidates].sort((a, b) => b.added.localeCompare(a.added))[0];
+    // The seed adds both movies in the same second, and Radarr ignores edits to the date.
+    const newestAdded = Math.max(...candidates.map((c) => Date.parse(c.added)));
+    const newest = candidates.filter((c) => Date.parse(c.added) === newestAdded).map((c) => c.title);
 
     const instanceId = await arrangeInstance(api, RADARR, { config: { selectionStrategy: 'NewestFirst' } });
     await triggerSeeker(api);
@@ -76,10 +90,10 @@ test.describe('Seeker selection strategies', () => {
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
 
     const event = await firstSearchEvent(api, instanceId);
-    expect(event?.itemTitle).toBe(newest.title);
+    expect(newest).toContain(event?.itemTitle);
   });
 
-  test('oldest search first makes the same choice every time', async ({ api }) => {
+  test("oldest search first follows the arr's last search time", async ({ api }) => {
     test.setTimeout(180_000);
 
     const candidates = await monitorEveryMovie();
@@ -91,15 +105,27 @@ test.describe('Seeker selection strategies', () => {
     await triggerSeeker(api);
     await expect.poll(async () => (await listSearchEvents(api, firstRun)).length, { timeout: SETTLE_MS }).toBe(1);
     const firstChoice = (await firstSearchEvent(api, firstRun))?.itemTitle;
+    expect(oldestSearched(candidates)).toContain(firstChoice);
 
-    // A fresh instance starts with no search history, so the choice is made from scratch.
+    const picked = candidates.find((c) => c.title === firstChoice)!;
+    await expect
+      .poll(
+        async () => searchedAt((await RADARR.arr.get<Record<string, unknown>>(`/api/v3/movie/${picked.id}`)).lastSearchTime as string),
+        { timeout: SETTLE_MS },
+      )
+      .toBeGreaterThan(searchedAt(picked.lastSearchTime));
+
+    // A fresh instance has no Seeker history, so only the arr's search times order the movies.
     await teardownInstances(api);
+    const searchedOnce = await monitorEveryMovie();
 
     const secondRun = await arrangeInstance(api, RADARR, strategy);
     await triggerSeeker(api);
     await expect.poll(async () => (await listSearchEvents(api, secondRun)).length, { timeout: SETTLE_MS }).toBe(1);
+    const secondChoice = (await firstSearchEvent(api, secondRun))?.itemTitle;
 
-    expect((await firstSearchEvent(api, secondRun))?.itemTitle).toBe(firstChoice);
+    expect(oldestSearched(searchedOnce)).toContain(secondChoice);
+    expect(secondChoice).not.toBe(firstChoice);
   });
 
   test('a cycle covers every candidate before repeating one', async ({ api }) => {

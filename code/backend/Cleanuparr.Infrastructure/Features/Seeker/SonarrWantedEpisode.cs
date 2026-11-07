@@ -25,6 +25,8 @@ internal sealed record SonarrWantedEpisode
 
     public DateTimeOffset? AirDateUtc { get; init; }
 
+    public DateTimeOffset? LastSearchTime { get; init; }
+
     public required bool Monitored { get; init; }
 
     public required SeekerSearchReason Reason { get; init; }
