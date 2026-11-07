@@ -1714,6 +1714,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("ignore_struck_downloads");
 
+                    b.PrimitiveCollection<List<string>>("IncludeTags")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("include_tags");
+
                     b.Property<DateTimeOffset?>("LastProcessedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_processed_at");

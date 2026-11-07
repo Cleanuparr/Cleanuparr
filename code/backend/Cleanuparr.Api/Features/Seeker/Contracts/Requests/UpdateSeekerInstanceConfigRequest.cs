@@ -8,6 +8,8 @@ public sealed record UpdateSeekerInstanceConfigRequest
 
     public List<string> SkipTags { get; init; } = [];
 
+    public List<string> IncludeTags { get; init; } = [];
+
     public int ActiveDownloadLimit { get; init; } = 3;
 
     public bool IgnoreStruckDownloads { get; init; }

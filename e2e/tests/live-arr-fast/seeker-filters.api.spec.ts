@@ -30,6 +30,7 @@ import { grabbableRelease, grabbableReleases } from '../helpers/mocks/torznab-st
  */
 
 const SKIP_TAG = 'e2e-seeker-skip';
+const INCLUDE_TAG = 'e2e-seeker-include';
 
 /** A search event shows up within a second of the run, so this is generous. */
 const SETTLE_MS = 20_000;
@@ -142,6 +143,37 @@ test.describe('Seeker candidate filters', () => {
     const instanceId = await arrangeInstance(api, RADARR, { instance: { skipTags: [SKIP_TAG] } });
 
     await mutateMovie((movie) => ({ ...movie, tags: [tagId] }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('skips a movie without an included tag', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { includeTags: [INCLUDE_TAG] } });
+
+    await mutateMovie((movie) => ({ ...movie, tags: [] }));
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches a movie carrying an included tag', async ({ api }) => {
+    const tagId = await RADARR.arr.ensureTag(INCLUDE_TAG);
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { includeTags: [INCLUDE_TAG] } });
+
+    await mutateMovie((movie) => ({ ...movie, tags: [tagId] }));
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain(RADARR.seededTitle);
+  });
+
+  test('skips a movie carrying both an included and a skipped tag', async ({ api }) => {
+    const includeId = await RADARR.arr.ensureTag(INCLUDE_TAG);
+    const skipId = await RADARR.arr.ensureTag(SKIP_TAG);
+    const instanceId = await arrangeInstance(api, RADARR, {
+      instance: { includeTags: [INCLUDE_TAG], skipTags: [SKIP_TAG] },
+    });
+
+    await mutateMovie((movie) => ({ ...movie, tags: [includeId, skipId] }));
     await expectNoSearch(api, instanceId, SETTLE_MS);
   });
 

@@ -1710,6 +1710,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("ignore_struck_downloads");
 
+                    b.PrimitiveCollection<string>("IncludeTags")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("include_tags");
+
                     b.Property<string>("LastProcessedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("last_processed_at");
