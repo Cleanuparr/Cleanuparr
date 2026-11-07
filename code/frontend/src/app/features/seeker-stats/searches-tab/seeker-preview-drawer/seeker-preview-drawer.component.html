@@ -49,6 +49,9 @@
           <li class="preview__row preview__row--excluded">
             <span class="preview__name">{{ item.name }}</span>
             <app-badge size="sm">{{ reasonLabels[item.reason] }}</app-badge>
+            @if (restDetail(item); as detail) {
+              <span class="preview__detail">{{ detail }}</span>
+            }
           </li>
         } @empty {
           <li class="preview__note">No excluded items match.</li>

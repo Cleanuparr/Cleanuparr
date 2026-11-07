@@ -118,6 +118,28 @@ public class SeekerConfigControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSeekerConfig_WithRestSettings_ReturnsStoredValues()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            RestUnitsEnabled = true,
+            RestMaxDays = 90
+        });
+        await _dataContext.SaveChangesAsync();
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        OkObjectResult okResult = result.ShouldBeOfType<OkObjectResult>();
+        SeekerConfigResponse response = okResult.Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        SeekerInstanceConfigResponse instance = response.Instances.ShouldHaveSingleItem();
+        instance.RestUnitsEnabled.ShouldBeTrue();
+        instance.RestMaxDays.ShouldBe(90);
+    }
+
+    [Fact]
     public async Task GetSeekerConfig_WithSonarrSearchMode_ReturnsStoredValue()
     {
         ArrInstance sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
@@ -566,6 +588,130 @@ public class SeekerConfigControllerTests : IDisposable
                     ArrInstanceId = radarr.Id,
                     Enabled = true,
                     RecentGrabWindowHours = recentGrabWindowHours
+                }
+            ]
+        };
+
+        await Should.ThrowAsync<CustomValidationException>(() => _controller.UpdateSeekerConfig(request));
+
+        (await _dataContext.SeekerInstanceConfigs.AnyAsync(c => c.ArrInstanceId == radarr.Id)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WithRestSettings_OnExistingInstance_PersistsValues()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true
+        });
+        await _dataContext.SaveChangesAsync();
+
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RestUnitsEnabled = true,
+                    RestMaxDays = 60
+                }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerInstanceConfig config = await _dataContext.SeekerInstanceConfigs.SingleAsync();
+        config.RestUnitsEnabled.ShouldBeTrue();
+        config.RestMaxDays.ShouldBe(60);
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WithRestSettings_OnNewInstance_PersistsValues()
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RestUnitsEnabled = true,
+                    RestMaxDays = 365
+                }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerInstanceConfig config = await _dataContext.SeekerInstanceConfigs.SingleAsync();
+        config.RestUnitsEnabled.ShouldBeTrue();
+        config.RestMaxDays.ShouldBe(365);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(366)]
+    public async Task UpdateSeekerConfig_WithOutOfRangeRestMaxDays_OnExistingInstance_Throws(int restMaxDays)
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true
+        });
+        await _dataContext.SaveChangesAsync();
+
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RestMaxDays = restMaxDays
+                }
+            ]
+        };
+
+        await Should.ThrowAsync<CustomValidationException>(() => _controller.UpdateSeekerConfig(request));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(366)]
+    public async Task UpdateSeekerConfig_WithOutOfRangeRestMaxDays_OnNewInstance_ThrowsAndSavesNothing(int restMaxDays)
+    {
+        ArrInstance radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest
+                {
+                    ArrInstanceId = radarr.Id,
+                    Enabled = true,
+                    RestMaxDays = restMaxDays
                 }
             ]
         };

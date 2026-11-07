@@ -30,6 +30,10 @@ public sealed class SeekerUnitEvaluator
         "importBlocked"
     };
 
+    internal const int MissesBeforeRest = 3;
+
+    internal const int MaxRestCycles = 8;
+
     private readonly ILogger<SeekerUnitEvaluator> _logger;
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
@@ -99,14 +103,95 @@ public sealed class SeekerUnitEvaluator
             .GroupBy(h => h.ExternalItemId)
             .ToDictionary(g => g.Key, g => g.Max(h => h.LastSearchedAt));
 
+        Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests =
+            await ReadRestsAsync(instanceConfig, arrInstance, cancellationToken);
+
         if (arrInstance.ArrConfig.Type == InstanceType.Radarr)
         {
             return await EvaluateRadarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
-                recentGrabs.MovieIds, lastSearchedByItem, cancellationToken);
+                recentGrabs.MovieIds, rests, lastSearchedByItem, cancellationToken);
         }
 
         return await EvaluateSonarrAsync(config, instanceConfig, arrInstance, activeQueueRecords,
-            recentGrabs.Episodes, currentCycleHistory, lastSearchedByItem, cancellationToken);
+            recentGrabs.Episodes, rests, currentCycleHistory, lastSearchedByItem, cancellationToken);
+    }
+
+    /// <summary>
+    /// The rest a unit is on, or null when it can be searched.
+    /// It starts after <see cref="MissesBeforeRest"/> misses in a row and doubles with each further miss, up to <see cref="MaxRestCycles"/> cycles.
+    /// </summary>
+    /// <param name="cycleStarts">Start times of the instance's live cycles; each one after the last search counts as a cycle passed.</param>
+    public static SeekerUnitRest? GetRest(SeekerHistory unit, IReadOnlyList<DateTimeOffset> cycleStarts, int maxRestDays, DateTimeOffset now)
+    {
+        if (unit.ConsecutiveMisses < MissesBeforeRest)
+        {
+            return null;
+        }
+
+        DateTimeOffset anchor = unit.LastMissAt ?? unit.LastSearchedAt;
+        DateTimeOffset until = anchor.AddDays(maxRestDays);
+        if (now >= until)
+        {
+            return null;
+        }
+
+        int restCycles = (int)Math.Min(Math.Pow(2, unit.ConsecutiveMisses - MissesBeforeRest), MaxRestCycles);
+        int cyclesSince = cycleStarts.Count(s => s > anchor);
+        if (cyclesSince > restCycles)
+        {
+            return null;
+        }
+
+        return new SeekerUnitRest(unit.ConsecutiveMisses, restCycles - cyclesSince + 1, until);
+    }
+
+    /// <summary>
+    /// Reads the live units resting now, keyed by unit. Empty when resting is off.
+    /// </summary>
+    private async Task<Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest>> ReadRestsAsync(
+        SeekerInstanceConfig instanceConfig,
+        ArrInstance arrInstance,
+        CancellationToken cancellationToken)
+    {
+        if (!instanceConfig.RestUnitsEnabled)
+        {
+            return [];
+        }
+
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        DateTimeOffset restCap = now.AddDays(-instanceConfig.RestMaxDays);
+
+        List<SeekerHistory> missed = await _eventsContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == arrInstance.Id
+                        && !h.IsDryRun
+                        && h.ConsecutiveMisses >= MissesBeforeRest
+                        && (h.LastMissAt ?? h.LastSearchedAt) > restCap)
+            .ToListAsync(cancellationToken);
+
+        if (missed.Count == 0)
+        {
+            return [];
+        }
+
+        DateTimeOffset earliestSearch = missed.Min(h => h.LastMissAt ?? h.LastSearchedAt);
+        List<DateTimeOffset> cycleStarts = await _eventsContext.SeekerCycles
+            .AsNoTracking()
+            .Where(c => c.ArrInstanceId == arrInstance.Id && !c.IsDryRun && c.StartedAt > earliestSearch)
+            .Select(c => c.StartedAt)
+            .ToListAsync(cancellationToken);
+
+        Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests = [];
+        foreach (SeekerHistory unit in missed)
+        {
+            SeekerUnitRest? rest = GetRest(unit, cycleStarts, instanceConfig.RestMaxDays, now);
+            if (rest is not null)
+            {
+                rests[(unit.ExternalItemId, unit.SeasonNumber, unit.EpisodeId)] = rest;
+            }
+        }
+
+        return rests;
     }
 
     /// <summary>
@@ -190,6 +275,7 @@ public sealed class SeekerUnitEvaluator
         ArrInstance arrInstance,
         List<QueueRecord> activeQueueRecords,
         HashSet<long> recentlyGrabbedMovieIds,
+        Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests,
         Dictionary<long, DateTimeOffset> lastSearchedByItem,
         CancellationToken cancellationToken)
     {
@@ -335,6 +421,7 @@ public sealed class SeekerUnitEvaluator
             }
 
             SeekerExclusionReason? blockedBy = null;
+            SeekerUnitRest? rest = null;
             if (queuedMovieIds.Contains(movie.Id))
             {
                 blockedBy = SeekerExclusionReason.InQueue;
@@ -342,6 +429,10 @@ public sealed class SeekerUnitEvaluator
             else if (recentlyGrabbedMovieIds.Contains(movie.Id))
             {
                 blockedBy = SeekerExclusionReason.RecentlyGrabbed;
+            }
+            else if (rests.TryGetValue((movie.Id, 0, 0), out rest))
+            {
+                blockedBy = SeekerExclusionReason.Resting;
             }
 
             units.Add(new SeekerSearchUnit
@@ -356,6 +447,7 @@ public sealed class SeekerUnitEvaluator
                 CustomFormatGap = customFormatGap,
                 Searched = false,
                 BlockedBy = blockedBy,
+                Rest = rest,
             });
         }
 
@@ -368,6 +460,7 @@ public sealed class SeekerUnitEvaluator
             ItemExclusions = exclusions,
             Units = units.Select(u => u with { Searched = searched.ContainsKey(u.ItemId) }).ToList(),
             LastSearchedByItem = searched,
+            // Keeps this run's rests, so a rest that ends with the rollover ends one run late
             WithoutCycleHistory = () => Build(new Dictionary<long, DateTimeOffset>()),
         };
 
@@ -380,6 +473,7 @@ public sealed class SeekerUnitEvaluator
         ArrInstance arrInstance,
         List<QueueRecord> activeQueueRecords,
         HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> recentlyGrabbedEpisodes,
+        Dictionary<(long ItemId, int SeasonNumber, long EpisodeId), SeekerUnitRest> rests,
         List<SeekerHistory> currentCycleHistory,
         Dictionary<long, DateTimeOffset> lastSearchedByItem,
         CancellationToken cancellationToken)
@@ -567,20 +661,27 @@ public sealed class SeekerUnitEvaluator
             .Select(e => e.EpisodeId)
             .ToHashSet();
 
-        SeekerExclusionReason? GetBlockedBy(SeekerSearchUnit unit)
+        SeekerSearchUnit WithBlockedBy(SeekerSearchUnit unit)
         {
             bool queued = unit.EpisodeId == 0
                 ? queuedSeasons.Contains((unit.ItemId, unit.SeasonNumber))
                 : queuedEpisodeIds.Contains(unit.EpisodeId);
             if (queued)
             {
-                return SeekerExclusionReason.InQueue;
+                return unit with { BlockedBy = SeekerExclusionReason.InQueue };
             }
 
             bool grabbed = unit.EpisodeId == 0
                 ? grabbedSeasons.Contains((unit.ItemId, unit.SeasonNumber))
                 : grabbedEpisodeIds.Contains(unit.EpisodeId);
-            return grabbed ? SeekerExclusionReason.RecentlyGrabbed : null;
+            if (grabbed)
+            {
+                return unit with { BlockedBy = SeekerExclusionReason.RecentlyGrabbed };
+            }
+
+            return rests.TryGetValue((unit.ItemId, unit.SeasonNumber, unit.EpisodeId), out SeekerUnitRest? rest)
+                ? unit with { BlockedBy = SeekerExclusionReason.Resting, Rest = rest }
+                : unit;
         }
 
         SeekerEvaluation Build(List<SeekerHistory> history, Dictionary<long, DateTimeOffset> searched)
@@ -602,9 +703,10 @@ public sealed class SeekerUnitEvaluator
                 TagFilteredItems = seriesById.Count,
                 ItemExclusions = exclusions,
                 Units = BuildSonarrUnits(wanted, seriesById, finishedAnimeSeasons, searchedSeasons, searchedEpisodeIds, instanceConfig.SonarrSearchMode)
-                    .Select(u => u with { BlockedBy = GetBlockedBy(u) })
+                    .Select(WithBlockedBy)
                     .ToList(),
                 LastSearchedByItem = searched,
+                // Keeps this run's rests, so a rest that ends with the rollover ends one run late
                 WithoutCycleHistory = () => Build([], new Dictionary<long, DateTimeOffset>()),
             };
         }

@@ -66,10 +66,17 @@
   &__row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--space-2);
     padding: var(--space-1-5) 0;
     border-bottom: 1px solid var(--divider);
     font-size: var(--font-size-sm);
+  }
+
+  &__detail {
+    flex-basis: 100%;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
   }
 
   &__name {

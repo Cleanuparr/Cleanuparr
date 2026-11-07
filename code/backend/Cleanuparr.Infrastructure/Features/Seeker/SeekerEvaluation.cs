@@ -55,10 +55,12 @@ public sealed record SeekerEvaluation
 
     public int RecentlyGrabbedUnits => Units.Count(u => u.BlockedBy is SeekerExclusionReason.RecentlyGrabbed);
 
+    public int RestingUnits => Units.Count(u => u.BlockedBy is SeekerExclusionReason.Resting);
+
     /// <summary>
     /// Everything that did not reach <see cref="Remaining"/>, with one reason each.
     /// </summary>
     public IEnumerable<SeekerExclusion> Excluded => ItemExclusions.Concat(Units
         .Where(u => u.BlockedBy is not null || u.Searched)
-        .Select(u => new SeekerExclusion(u.Name, u.BlockedBy ?? SeekerExclusionReason.SearchedThisCycle)));
+        .Select(u => new SeekerExclusion(u.Name, u.BlockedBy ?? SeekerExclusionReason.SearchedThisCycle, u.Rest)));
 }

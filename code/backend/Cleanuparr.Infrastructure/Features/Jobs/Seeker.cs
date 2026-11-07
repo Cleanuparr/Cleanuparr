@@ -554,7 +554,7 @@ public sealed class Seeker : IHandler
 
         if (cycle.RemainingUnits == 0)
         {
-            SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, arrInstance.Name);
+            SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, eligibleCount, evaluation.RestingUnits, arrInstance.Name);
             if (next is null)
             {
                 return new SeekerProcessResult { Candidates = [], Cycle = cycle, Evaluation = evaluation };
@@ -591,6 +591,7 @@ public sealed class Seeker : IHandler
         cycle.TagFilteredItems = evaluation.TagFilteredItems;
         cycle.QueuedUnits = evaluation.QueuedUnits;
         cycle.RecentlyGrabbedUnits = evaluation.RecentlyGrabbedUnits;
+        cycle.RestingUnits = evaluation.RestingUnits;
         cycle.FunnelCountedAt = _timeProvider.GetUtcNow();
     }
 
@@ -814,10 +815,11 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         bool isDryRun,
         int eligibleCount,
+        int restingUnits,
         string instanceName)
     {
-        // An empty cycle stays open, so an instance with nothing eligible does not complete a cycle every week.
-        if (cycle.SearchedUnits == 0)
+        // An empty cycle stays open until resting units let it roll after the minimum cycle time.
+        if (cycle.SearchedUnits == 0 && (restingUnits == 0 || ShouldWaitForMinCycleTime(instanceConfig, cycle.StartedAt)))
         {
             return null;
         }
@@ -827,10 +829,13 @@ public sealed class Seeker : IHandler
             cycle.CompletedAt = _timeProvider.GetUtcNow();
             cycle.CompletionReason = SeekerCycleCompletionReason.Completed;
 
-            _logger.LogInformation("Cycle completed on {InstanceName} after {Count} searches",
-                instanceName, cycle.SearchedUnits);
+            if (cycle.SearchedUnits > 0)
+            {
+                _logger.LogInformation("Cycle completed on {InstanceName} after {Count} searches",
+                    instanceName, cycle.SearchedUnits);
 
-            await _eventPublisher.PublishSeekerCycleCompleted(cycle, instanceName);
+                await _eventPublisher.PublishSeekerCycleCompleted(cycle, instanceName);
+            }
         }
 
         if (ShouldWaitForMinCycleTime(instanceConfig, cycle.StartedAt))
@@ -857,7 +862,7 @@ public sealed class Seeker : IHandler
 
     /// <summary>
     /// Early-exit helper for a run with no candidates to search: still completes the cycle when it already
-    /// searched something, so a cycle with nothing left does not stay "in progress" forever.
+    /// searched something or has resting units, so a cycle with nothing left does not stay "in progress" forever.
     /// </summary>
     private async Task<SeekerProcessResult> CompleteEmptyCycleAsync(
         SeekerCycle cycle,
@@ -866,7 +871,7 @@ public sealed class Seeker : IHandler
         string instanceName,
         SeekerEvaluation evaluation)
     {
-        SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, evaluation.Units.Count, instanceName);
+        SeekerCycle? next = await CompleteCycleAsync(cycle, instanceConfig, isDryRun, evaluation.Units.Count, evaluation.RestingUnits, instanceName);
         return new SeekerProcessResult { Candidates = [], Cycle = next ?? cycle, Evaluation = evaluation };
     }
 

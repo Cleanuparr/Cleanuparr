@@ -57,7 +57,13 @@ public sealed record SeekerSearchUnit
     public required bool Searched { get; init; }
 
     /// <summary>
-    /// <see cref="SeekerExclusionReason.InQueue"/> or <see cref="SeekerExclusionReason.RecentlyGrabbed"/> while a download covers the unit.
+    /// <see cref="SeekerExclusionReason.InQueue"/> or <see cref="SeekerExclusionReason.RecentlyGrabbed"/> while a download covers the unit,
+    /// <see cref="SeekerExclusionReason.Resting"/> while it rests after repeated misses.
     /// </summary>
     public SeekerExclusionReason? BlockedBy { get; init; }
+
+    /// <summary>
+    /// Set when <see cref="BlockedBy"/> is <see cref="SeekerExclusionReason.Resting"/>.
+    /// </summary>
+    public SeekerUnitRest? Rest { get; init; }
 }

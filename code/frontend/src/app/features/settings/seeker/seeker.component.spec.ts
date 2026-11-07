@@ -19,6 +19,8 @@ const SONARR: SeekerInstanceConfig = {
   activeDownloadLimit: 3,
   ignoreStruckDownloads: false,
   recentGrabWindowHours: 24,
+  restUnitsEnabled: false,
+  restMaxDays: 30,
   minCycleTimeDays: 7,
   monitoredOnly: true,
   useCutoff: false,
@@ -38,6 +40,8 @@ const RADARR: SeekerInstanceConfig = {
   activeDownloadLimit: 5,
   ignoreStruckDownloads: true,
   recentGrabWindowHours: 48,
+  restUnitsEnabled: true,
+  restMaxDays: 60,
   minCycleTimeDays: 14,
   monitoredOnly: false,
   useCutoff: true,
@@ -387,6 +391,48 @@ describe('SeekerComponent', () => {
     expect(component.hasPendingChanges()).toBe(false);
   });
 
+  it('loads the rest toggle and saves it when flipped', () => {
+    const { fixture, component, updateConfig } = setup();
+    const toggle = toggleByLabel(fixture, 'Rest Items That Find Nothing');
+
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    expect(component.instances()[1].restUnitsEnabled).toBe(true);
+
+    toggle.click();
+    fixture.detectChanges();
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(updateConfig.mock.calls[0][0].instances[0].restUnitsEnabled).toBe(true);
+  });
+
+  it('shows the max rest days input only while the rest toggle is on and saves it', () => {
+    const { fixture, component, updateConfig } = setup();
+
+    expect(text(fixture)).not.toContain('Max Rest (Days)');
+
+    toggleByLabel(fixture, 'Rest Items That Find Nothing').click();
+    fixture.detectChanges();
+
+    expect(numberField(fixture, 'Max Rest').value).toBe('30');
+
+    setNumberField(fixture, 'Max Rest', '45');
+    expect(component.instances()[0].restMaxDays).toBe(45);
+
+    saveButton(fixture).click();
+    fixture.detectChanges();
+
+    expect(updateConfig.mock.calls[0][0].instances[0].restMaxDays).toBe(45);
+
+    setNumberField(fixture, 'Max Rest', '');
+    expect(component.instances()[0].restMaxDays).toBe(30);
+
+    toggleByLabel(fixture, 'Rest Items That Find Nothing').click();
+    fixture.detectChanges();
+
+    expect(text(fixture)).not.toContain('Max Rest (Days)');
+  });
+
   it('patches the remaining instance toggles from the DOM', () => {
     const { fixture, component } = setup();
 
@@ -607,6 +653,8 @@ describe('SeekerComponent', () => {
           activeDownloadLimit: 3,
           ignoreStruckDownloads: true,
           recentGrabWindowHours: 48,
+          restUnitsEnabled: false,
+          restMaxDays: 30,
           minCycleTimeDays: 7,
           monitoredOnly: true,
           useCutoff: false,
@@ -621,6 +669,8 @@ describe('SeekerComponent', () => {
           activeDownloadLimit: 5,
           ignoreStruckDownloads: true,
           recentGrabWindowHours: 48,
+          restUnitsEnabled: true,
+          restMaxDays: 60,
           minCycleTimeDays: 14,
           monitoredOnly: false,
           useCutoff: true,

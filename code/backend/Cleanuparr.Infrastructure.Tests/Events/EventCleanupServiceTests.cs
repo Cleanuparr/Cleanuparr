@@ -4,7 +4,9 @@ using Cleanuparr.Infrastructure.Features.DryRun;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.Data.Sqlite;
@@ -337,6 +339,66 @@ public class EventCleanupServiceTests : IDisposable
 
         // Assert
         (await eventsContext.SeekerCycles.CountAsync()).ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task PerformCleanupAsync_CycleOlderThanRetention_SurvivesOnlyWhileRestEnabled(bool restEnabled, int expectedCycles)
+    {
+        // Arrange
+        using DataContext dataContext = TestDataContextFactory.Create();
+        using EventsContext eventsContext = TestDataContextFactory.CreateEvents();
+        FakeTimeProvider timeProvider = new();
+
+        GeneralConfig generalConfig = await dataContext.GeneralConfigs.FirstAsync();
+        generalConfig.HistoryRetentionDays = 1;
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(dataContext);
+        dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            RestUnitsEnabled = restEnabled,
+            RestMaxDays = 30,
+        });
+        await dataContext.SaveChangesAsync();
+
+        Guid arrInstanceId = Guid.NewGuid();
+        Guid olderCompletedId = Guid.NewGuid();
+        eventsContext.SeekerCycles.AddRange(
+            new SeekerCycle
+            {
+                Id = olderCompletedId,
+                ArrInstanceId = arrInstanceId,
+                StartedAt = timeProvider.GetUtcNow().AddDays(-12),
+                CompletedAt = timeProvider.GetUtcNow().AddDays(-10),
+                CompletionReason = SeekerCycleCompletionReason.Completed,
+            },
+            new SeekerCycle
+            {
+                Id = Guid.NewGuid(),
+                ArrInstanceId = arrInstanceId,
+                StartedAt = timeProvider.GetUtcNow().AddDays(-6),
+                CompletedAt = timeProvider.GetUtcNow().AddDays(-5),
+                CompletionReason = SeekerCycleCompletionReason.Completed,
+            });
+        await eventsContext.SaveChangesAsync();
+
+        ServiceCollection services = new();
+        services.AddSingleton(dataContext);
+        services.AddSingleton(eventsContext);
+        services.AddSingleton(Substitute.For<IDryRunPurger>());
+        EventCleanupService service = new EventCleanupService(
+            _logger,
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            timeProvider,
+            new DryRunActivity());
+
+        // Act
+        await service.PerformCleanupAsync();
+
+        // Assert
+        (await eventsContext.SeekerCycles.CountAsync(c => c.Id == olderCompletedId)).ShouldBe(expectedCycles);
     }
 
     [Fact]

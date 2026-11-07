@@ -177,7 +177,12 @@ public class EventCleanupService : BackgroundService
 
             // Prune events older than the configured retention window
             await PruneEventsAsync(eventsContext, config.HistoryRetentionDays);
-            await PruneSeekerCyclesAsync(eventsContext, config.HistoryRetentionDays);
+
+            // An active rest counts cycles for up to RestMaxDays, so keep them that long
+            int restDays = await dataContext.SeekerInstanceConfigs
+                .Where(c => c.RestUnitsEnabled)
+                .MaxAsync(c => (int?)c.RestMaxDays) ?? 0;
+            await PruneSeekerCyclesAsync(eventsContext, Math.Max(config.HistoryRetentionDays, restDays));
 
             await CleanupStrikesAsync(eventsContext, config.StrikeInactivityWindowHours);
 
@@ -218,7 +223,7 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    internal async Task PruneSeekerCyclesAsync(EventsContext eventsContext, ushort retentionDays)
+    internal async Task PruneSeekerCyclesAsync(EventsContext eventsContext, int retentionDays)
     {
         DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-retentionDays);
         int deleted = await eventsContext.SeekerCycles

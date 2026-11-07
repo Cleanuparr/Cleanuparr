@@ -22,6 +22,8 @@ export interface SeekerInstanceConfig {
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
   recentGrabWindowHours: number;
+  restUnitsEnabled: boolean;
+  restMaxDays: number;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;
@@ -47,6 +49,8 @@ export interface UpdateSeekerInstanceConfig {
   activeDownloadLimit: number;
   ignoreStruckDownloads: boolean;
   recentGrabWindowHours: number;
+  restUnitsEnabled: boolean;
+  restMaxDays: number;
   minCycleTimeDays: number;
   monitoredOnly: boolean;
   useCutoff: boolean;

@@ -1739,6 +1739,14 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("integer")
                         .HasColumnName("recent_grab_window_hours");
 
+                    b.Property<int>("RestMaxDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("rest_max_days");
+
+                    b.Property<bool>("RestUnitsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("rest_units_enabled");
+
                     b.PrimitiveCollection<List<string>>("SkipTags")
                         .IsRequired()
                         .HasColumnType("text[]")

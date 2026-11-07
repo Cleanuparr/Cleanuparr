@@ -27,4 +27,8 @@ public sealed record UpdateSeekerInstanceConfigRequest
     public int RecentGrabWindowHours { get; init; } = 24;
 
     public SonarrSearchMode SonarrSearchMode { get; init; } = SonarrSearchMode.Auto;
+
+    public bool RestUnitsEnabled { get; init; }
+
+    public int RestMaxDays { get; init; } = 30;
 }

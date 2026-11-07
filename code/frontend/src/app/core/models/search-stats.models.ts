@@ -25,6 +25,7 @@ export interface InstanceFunnel {
   eligibleUnits: number;
   queuedUnits: number;
   recentlyGrabbedUnits: number;
+  restingUnits: number;
   searchedUnits: number;
   remainingUnits: number;
   countedAt: string;
@@ -93,6 +94,7 @@ export enum SeekerExclusionReason {
   UpgradesDisabled = 'UpgradesDisabled',
   InQueue = 'InQueue',
   RecentlyGrabbed = 'RecentlyGrabbed',
+  Resting = 'Resting',
   SearchedThisCycle = 'SearchedThisCycle',
 }
 
@@ -105,6 +107,9 @@ export interface SeekerPreviewUnit {
 export interface SeekerPreviewExclusion {
   name: string;
   reason: SeekerExclusionReason;
+  consecutiveMisses?: number;
+  restCyclesLeft?: number;
+  restUntil?: string;
 }
 
 export interface SeekerPreview {

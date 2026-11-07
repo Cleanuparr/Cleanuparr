@@ -245,6 +245,8 @@ export class DocumentationService {
       'activeDownloadLimit': 'instance-active-download-limit',
       'ignoreStruckDownloads': 'instance-ignore-struck-downloads',
       'recentGrabWindowHours': 'instance-recent-grab-window',
+      'restUnitsEnabled': 'instance-rest-items-that-find-nothing',
+      'restMaxDays': 'instance-max-rest-days',
       'minCycleTimeDays': 'instance-min-cycle-time-days',
       'searchSpecials': 'instance-search-for-specials',
       'searchAnime': 'instance-search-for-anime',
