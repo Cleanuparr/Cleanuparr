@@ -9,6 +9,8 @@ public sealed record SeekerInstanceConfigResponse
     public string InstanceName { get; init; } = string.Empty;
     
     public InstanceType InstanceType { get; init; }
+
+    public float InstanceVersion { get; init; }
     
     public bool Enabled { get; init; }
     

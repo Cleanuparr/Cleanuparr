@@ -7,6 +7,7 @@ import {
   RUN_TAG,
   SONARR,
   WHISPARR,
+  WHISPARR2,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   listSearchEvents,
@@ -200,6 +201,56 @@ test.describe('Seeker preview on Whisparr v3', () => {
     expect(preview.funnel.libraryItems).toBe(library.length);
     expect(preview.funnel.eligibleUnits).toBeGreaterThan(0);
     expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  });
+});
+
+test.describe('Seeker preview on Whisparr v2', () => {
+  const { yearSearch, singleScene } = TEST_CONFIG.whisparr2Seed;
+
+  let library: Array<Record<string, unknown>> = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(WHISPARR2);
+    await indexerMock.stub(torznabSearchStub(WHISPARR2.searchMode, []));
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await WHISPARR2.arr.put('/api/v3/episode/monitor', {
+      episodeIds: [...yearSearch.scenes.map((scene) => scene.id), singleScene.monitored.id],
+      monitored: true,
+    });
+    await restoreLibrary(WHISPARR2, library);
+    await resetLiveArrState();
+  });
+
+  test('lists the seeded site by year and scene dates with funnel counts', async ({ api }) => {
+    // Seeker picks a random year; leave 2019 as the only wanted one
+    await WHISPARR2.arr.put('/api/v3/episode/monitor', {
+      episodeIds: [singleScene.monitored.id],
+      monitored: false,
+    });
+    const instanceId = await arrangeInstance(api, WHISPARR2);
+
+    const preview = await getPreview(api, instanceId);
+
+    expect(preview.nextUp.map((u) => u.name)).toContain(`${WHISPARR2.seededTitle} ${yearSearch.year}`);
+    expect(preview.funnel.libraryItems).toBe(library.length);
+    expect(preview.funnel.eligibleUnits).toBeGreaterThan(0);
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  });
+
+  test('lists a single scene by its release date once the year is not fully wanted', async ({ api }) => {
+    await WHISPARR2.arr.put('/api/v3/episode/monitor', {
+      episodeIds: yearSearch.scenes.map((scene) => scene.id),
+      monitored: false,
+    });
+    const instanceId = await arrangeInstance(api, WHISPARR2);
+
+    const preview = await getPreview(api, instanceId);
+
+    expect(preview.nextUp.map((u) => u.name)).toContain(`${WHISPARR2.seededTitle} ${singleScene.monitored.releaseDate}`);
   });
 });
 

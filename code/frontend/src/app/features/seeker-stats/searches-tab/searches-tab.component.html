@@ -54,7 +54,7 @@
 
           <div class="instance-card__progress">
             <div class="instance-card__progress-row">
-              <app-tooltip text="Items searched in the current cycle out of total eligible. For Sonarr, each season counts as one item. For Lidarr, each album counts as one item.">
+              <app-tooltip text="Items searched in the current cycle out of total eligible. For Sonarr, each season counts as one item. For Lidarr, each album counts as one item. For Whisparr v2, each year of a site or each scene counts as one item.">
                 <span class="instance-card__progress-label">Cycle Progress</span>
               </app-tooltip>
               <span class="instance-card__progress-count">
@@ -71,7 +71,7 @@
           </div>
 
           @if (inst.funnel; as funnel) {
-            @let stages = funnelStages(funnel, inst.instanceType);
+            @let stages = funnelStages(funnel, inst.instanceType, inst.instanceVersion);
             <div class="instance-card__funnel">
               <app-tooltip [text]="'How many items passed each filter on the latest run, counted ' + (funnel.countedAt | date:'MM/dd HH:mm')">
                 <span class="instance-card__progress-label">

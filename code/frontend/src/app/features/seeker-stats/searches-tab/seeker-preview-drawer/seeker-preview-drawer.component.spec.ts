@@ -24,6 +24,7 @@ const INSTANCE: InstanceSearchStat = {
   instanceId: 'instance-1',
   instanceName: 'Main Sonarr',
   instanceType: 'Sonarr',
+  instanceVersion: 0,
   itemsTracked: 10,
   totalSearchCount: 5,
   lastSearchedAt: null,

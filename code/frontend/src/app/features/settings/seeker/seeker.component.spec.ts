@@ -12,6 +12,7 @@ const SONARR: SeekerInstanceConfig = {
   arrInstanceId: '11111111-1111-1111-1111-111111111111',
   instanceName: 'Sonarr',
   instanceType: 'Sonarr',
+  instanceVersion: 0,
   enabled: true,
   skipTags: ['alpha', 'beta'],
   includeTags: ['wanted'],
@@ -33,6 +34,7 @@ const RADARR: SeekerInstanceConfig = {
   arrInstanceId: '22222222-2222-2222-2222-222222222222',
   instanceName: 'Radarr',
   instanceType: 'Radarr',
+  instanceVersion: 0,
   enabled: false,
   skipTags: [],
   includeTags: [],
@@ -535,14 +537,26 @@ describe('SeekerComponent', () => {
     expect(releaseGateSelect(fixture, 1)).toBeDefined();
   });
 
-  it('marks a Whisparr row as new and shows no release gate or search mode', () => {
-    const whisparr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Whisparr', instanceType: 'Whisparr', enabled: true };
+  it('marks a Whisparr v3 row as new and shows no release gate or search mode', () => {
+    const whisparr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Whisparr', instanceType: 'Whisparr', instanceVersion: 3, enabled: true };
     const { fixture } = setup({ config: { ...CONFIG, instances: [whisparr] } });
 
     const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
     expect(badge.getAttribute('featureId')).toBe('seeker-whisparr');
     expect(releaseGateSelect(fixture, 0)).toBeUndefined();
     expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
+  });
+
+  it('marks a Whisparr v2 row as new and shows the search mode without the specials and anime toggles', () => {
+    const whisparr: SeekerInstanceConfig = { ...SONARR, instanceName: 'Whisparr', instanceType: 'Whisparr', instanceVersion: 2 };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [whisparr] } });
+
+    const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
+    expect(badge.getAttribute('featureId')).toBe('seeker-whisparr');
+    expect(searchModeSelect(fixture, 0)).toBeDefined();
+    expect(releaseGateSelect(fixture, 0)).toBeUndefined();
+    expect(fixture.nativeElement.textContent).not.toContain('Search for specials');
+    expect(fixture.nativeElement.textContent).not.toContain('Search for anime');
   });
 
   it('marks a Lidarr row as new and shows no release gate or search mode', () => {

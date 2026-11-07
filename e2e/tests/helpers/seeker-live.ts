@@ -6,7 +6,7 @@ import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
 import { buildDownloadClientPayload } from './api/download-client';
 import type { ArrType } from './api/arr';
-import { LiveArr, indexerMock, liveLidarr, liveRadarr, liveSonarr, liveWhisparr } from './live-arr';
+import { LiveArr, indexerMock, liveLidarr, liveRadarr, liveSonarr, liveWhisparr, liveWhisparr2 } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
 import {
   TORZNAB_AUDIO_CATEGORY,
@@ -59,7 +59,7 @@ export interface SeededArr {
   url: string;
   apiKey: string;
   version: number;
-  searchMode: 'tvsearch' | 'movie' | 'music';
+  searchMode: 'tvsearch' | 'movie' | 'music' | 'search';
   category: number;
   release: string;
   /** Id of the seeded library item, which is always 1 in a freshly restored seed. */
@@ -115,6 +115,22 @@ export const WHISPARR: SeededArr = {
   itemPath: 'movie',
   seededTitle: TEST_CONFIG.liveArr.seededWhisparrTitle,
   downloadCategory: 'whisparr',
+};
+
+export const WHISPARR2: SeededArr = {
+  type: 'whisparr',
+  arr: liveWhisparr2,
+  url: TEST_CONFIG.liveArr.whisparr2Url,
+  apiKey: TEST_CONFIG.liveArr.whisparr2ApiKey,
+  version: 2,
+  // Its category is outside the TV range, so Whisparr v2 sends a plain search.
+  searchMode: 'search',
+  category: TORZNAB_XXX_CATEGORY,
+  release: `Tushy.18.01.01.Jane.Doe.Scene.183.XXX.1080p.WEB-DL-E2E${RUN_TAG}`,
+  itemId: TEST_CONFIG.whisparr2Seed.siteId,
+  itemPath: 'series',
+  seededTitle: TEST_CONFIG.liveArr.seededWhisparr2Title,
+  downloadCategory: 'whisparr2',
 };
 
 export const LIDARR: SeededArr = {
@@ -335,12 +351,14 @@ export async function resetDownloads(): Promise<void> {
     liveSonarr.clearQueue(),
     liveRadarr.clearQueue(),
     liveWhisparr.clearQueue(),
+    liveWhisparr2.clearQueue(),
     liveLidarr.clearQueue(),
   ]);
   await Promise.all([
     waitForEmptyQueue(liveSonarr),
     waitForEmptyQueue(liveRadarr),
     waitForEmptyQueue(liveWhisparr),
+    waitForEmptyQueue(liveWhisparr2),
     waitForEmptyQueue(liveLidarr),
   ]);
 }

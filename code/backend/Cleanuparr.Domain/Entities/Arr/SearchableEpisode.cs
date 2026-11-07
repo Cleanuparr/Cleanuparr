@@ -14,6 +14,11 @@ public sealed record SearchableEpisode
 
     public DateTimeOffset? AirDateUtc { get; init; }
 
+    /// <summary>
+    /// Whisparr v2 sends a release date in place of an air date.
+    /// </summary>
+    public DateOnly? ReleaseDate { get; init; }
+
     public bool HasFile { get; init; }
 
     public long EpisodeFileId { get; init; }

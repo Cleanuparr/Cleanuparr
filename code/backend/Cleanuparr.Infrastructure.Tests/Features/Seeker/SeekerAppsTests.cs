@@ -23,12 +23,12 @@ public class SeekerAppsTests
     [Theory]
     [InlineData(InstanceType.Sonarr, 0, true)]
     [InlineData(InstanceType.Radarr, 0, true)]
-    [InlineData(InstanceType.Whisparr, 2, false)]
+    [InlineData(InstanceType.Whisparr, 2, true)]
     [InlineData(InstanceType.Whisparr, 3, true)]
     [InlineData(InstanceType.Lidarr, 0, true)]
     [InlineData(InstanceType.Lidarr, 2, true)]
     [InlineData(InstanceType.Readarr, 0, false)]
-    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrAndWhisparrV3(InstanceType type, float version, bool expected)
+    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrAndWhisparr(InstanceType type, float version, bool expected)
     {
         // Act
         bool supported = SeekerApps.IsSupported(Instance(type, version));
@@ -51,5 +51,60 @@ public class SeekerAppsTests
 
         // Assert
         searchesMovies.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(InstanceType.Sonarr, 0, false)]
+    [InlineData(InstanceType.Whisparr, 2, true)]
+    [InlineData(InstanceType.Whisparr, 3, false)]
+    public void NamesScenesByDate_ReturnsTrueOnlyForWhisparrV2(InstanceType type, float version, bool expected)
+    {
+        // Act
+        bool namesScenesByDate = SeekerApps.NamesScenesByDate(Instance(type, version));
+
+        // Assert
+        namesScenesByDate.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(InstanceType.Sonarr, 0, "Show S01")]
+    [InlineData(InstanceType.Whisparr, 2, "Show 1")]
+    public void SeasonName_NamesTheSeasonPerApp(InstanceType type, float version, string expected)
+    {
+        // Act
+        string name = SeekerApps.SeasonName(Instance(type, version), "Show", 1);
+
+        // Assert
+        name.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void EpisodeName_Sonarr_UsesSeasonAndEpisodeNumbers()
+    {
+        // Act
+        string name = SeekerApps.EpisodeName(Instance(InstanceType.Sonarr), "Show", 1, 5, DateTimeOffset.UtcNow);
+
+        // Assert
+        name.ShouldBe("Show S01E05");
+    }
+
+    [Fact]
+    public void EpisodeName_WhisparrV2_UsesTheReleaseDate()
+    {
+        // Act
+        string name = SeekerApps.EpisodeName(Instance(InstanceType.Whisparr, 2), "Site", 2024, 0, new DateTimeOffset(2024, 5, 12, 0, 0, 0, TimeSpan.Zero));
+
+        // Assert
+        name.ShouldBe("Site 2024-05-12");
+    }
+
+    [Fact]
+    public void EpisodeName_WhisparrV2WithoutReleaseDate_UsesTheYear()
+    {
+        // Act
+        string name = SeekerApps.EpisodeName(Instance(InstanceType.Whisparr, 2), "Site", 2024, 0, null);
+
+        // Assert
+        name.ShouldBe("Site 2024");
     }
 }

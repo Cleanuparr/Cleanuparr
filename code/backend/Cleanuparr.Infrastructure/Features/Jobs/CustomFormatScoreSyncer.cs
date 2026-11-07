@@ -30,6 +30,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
     private readonly IStatusNotifier _statusNotifier;
@@ -42,6 +43,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         ILidarrClient lidarrClient,
+        IWhisparrV2Client whisparrV2Client,
         IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider,
         IStatusNotifier statusNotifier,
@@ -53,6 +55,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _lidarrClient = lidarrClient;
+        _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
         _statusNotifier = statusNotifier;
@@ -135,7 +138,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
         else
         {
-            await SyncSonarrAsync(arrInstance, cancellationToken);
+            ISonarrClient seriesClient = instanceType is InstanceType.Whisparr ? _whisparrV2Client : _sonarrClient;
+            await SyncSonarrAsync(arrInstance, seriesClient, cancellationToken);
         }
     }
 
@@ -304,15 +308,16 @@ public sealed class CustomFormatScoreSyncer : IHandler
         return (synced, skipped);
     }
 
-    private async Task SyncSonarrAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
+    private async Task SyncSonarrAsync(ArrInstance arrInstance, ISonarrClient seriesClient, CancellationToken cancellationToken)
     {
         await ConfigureSqliteCacheSizeAsync(cancellationToken);
 
-        List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
+        InstanceType instanceType = arrInstance.ArrConfig.Type;
+        List<ArrQualityProfile> profiles = await seriesClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
-        _logger.LogTrace("[Sonarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
-            arrInstance.Name, profiles.Count);
+        _logger.LogTrace("[{InstanceType}] {InstanceName}: fetched {ProfileCount} quality profile(s)",
+            instanceType, arrInstance.Name, profiles.Count);
 
         DateTimeOffset now = _timeProvider.GetUtcNow();
 
@@ -323,14 +328,14 @@ public sealed class CustomFormatScoreSyncer : IHandler
         int totalSkipped = 0;
         int flushedChunks = 0;
 
-        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
+        await foreach (SearchableSeries series in seriesClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
         {
             totalSeries++;
             buffer.Add(series);
 
             if (buffer.Count >= ChunkSize)
             {
-                (int synced, int skipped) = await FlushSonarrSeriesChunkAsync(arrInstance, profileMap, buffer, now, cancellationToken);
+                (int synced, int skipped) = await FlushSonarrSeriesChunkAsync(arrInstance, seriesClient, profileMap, buffer, now, cancellationToken);
                 totalSynced += synced;
                 totalSkipped += skipped;
                 buffer.Clear();
@@ -341,26 +346,27 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         if (buffer.Count > 0)
         {
-            (int synced, int skipped) = await FlushSonarrSeriesChunkAsync(arrInstance, profileMap, buffer, now, cancellationToken);
+            (int synced, int skipped) = await FlushSonarrSeriesChunkAsync(arrInstance, seriesClient, profileMap, buffer, now, cancellationToken);
             totalSynced += synced;
             totalSkipped += skipped;
             buffer.Clear();
             flushedChunks++;
         }
 
-        _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
-            arrInstance.Name, totalSeries);
+        _logger.LogTrace("[{InstanceType}] {InstanceName}: found {SeriesCount} total series",
+            instanceType, arrInstance.Name, totalSeries);
 
-        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, now);
+        await CleanupStaleEntriesAsync(arrInstance.Id, instanceType, now);
 
         await CheckpointWalAsync(cancellationToken);
 
-        _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
-            totalSynced, arrInstance.Name, totalSkipped);
+        _logger.LogInformation("[{InstanceType}] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
+            instanceType, totalSynced, arrInstance.Name, totalSkipped);
     }
 
     private async Task<(int Synced, int Skipped)> FlushSonarrSeriesChunkAsync(
         ArrInstance arrInstance,
+        ISonarrClient seriesClient,
         Dictionary<int, ArrQualityProfile> profileMap,
         List<SearchableSeries> chunk,
         DateTimeOffset now,
@@ -373,7 +379,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         List<Task<SeriesFetch>> fetchTasks = new(chunk.Count);
         foreach (SearchableSeries series in chunk)
         {
-            fetchTasks.Add(FetchSeriesAsync(arrInstance, series, gate, cancellationToken));
+            fetchTasks.Add(FetchSeriesAsync(arrInstance, seriesClient, series, gate, cancellationToken));
         }
 
         SeriesFetch[] fetched = await Task.WhenAll(fetchTasks);
@@ -414,8 +420,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
             }
 
-            _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {FileCount} files, {Matched} matched",
-                arrInstance.Name, series.Title, series.Id, episodes.Count, episodeFiles.Count, matched);
+            _logger.LogTrace("[{InstanceType}] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {FileCount} files, {Matched} matched",
+                arrInstance.ArrConfig.Type, arrInstance.Name, series.Title, series.Id, episodes.Count, episodeFiles.Count, matched);
         }
 
         if (itemsInChunk.Count > 0)
@@ -423,7 +429,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
             Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
                 .Where(e => e.ArrInstanceId == arrInstance.Id
-                    && e.ItemType == InstanceType.Sonarr
+                    && e.ItemType == arrInstance.ArrConfig.Type
                     && seriesIds.Contains(e.ExternalItemId))
                 .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
 
@@ -437,10 +443,10 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     int cutoffScore = profile?.CutoffFormatScore ?? 0;
                     string profileName = profile?.Name ?? "Unknown";
 
-                    string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
+                    string title = SeekerApps.EpisodeName(arrInstance, series.Title, episode.SeasonNumber, episode.EpisodeNumber, episode.AirDateUtc);
 
                     existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now, episode.SeasonNumber, episode.AirDateUtc, episode.LastSearchTime);
+                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, arrInstance.ArrConfig.Type, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now, episode.SeasonNumber, episode.AirDateUtc, episode.LastSearchTime);
 
                     synced++;
                 }
@@ -456,8 +462,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
         else
         {
-            _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files",
-                arrInstance.Name, chunk.Count);
+            _logger.LogTrace("[{InstanceType}] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files",
+                arrInstance.ArrConfig.Type, arrInstance.Name, chunk.Count);
         }
 
         // Touch entries for episodes that exist but have no file (e.g., RSS upgrade in progress)
@@ -470,7 +476,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 List<long> epChunkList = epChunk.ToList();
                 await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
-                        && e.ItemType == InstanceType.Sonarr
+                        && e.ItemType == arrInstance.ArrConfig.Type
                         && e.ExternalItemId == seriesId
                         && epChunkList.Contains(e.EpisodeId))
                     .ExecuteUpdateAsync(s => s
@@ -486,7 +492,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 List<long> failedChunkList = failedChunk.ToList();
                 await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
-                        && e.ItemType == InstanceType.Sonarr
+                        && e.ItemType == arrInstance.ArrConfig.Type
                         && failedChunkList.Contains(e.ExternalItemId))
                     .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
             }
@@ -497,6 +503,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
     private async Task<SeriesFetch> FetchSeriesAsync(
         ArrInstance arrInstance,
+        ISonarrClient seriesClient,
         SearchableSeries series,
         SemaphoreSlim gate,
         CancellationToken cancellationToken)
@@ -504,16 +511,16 @@ public sealed class CustomFormatScoreSyncer : IHandler
         await gate.WaitAsync(cancellationToken);
         try
         {
-            Task<List<SearchableEpisode>> episodesTask = _sonarrClient.GetEpisodesAsync(arrInstance, series.Id, cancellationToken);
-            Task<List<ArrEpisodeFile>> episodeFilesTask = _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id, cancellationToken);
+            Task<List<SearchableEpisode>> episodesTask = seriesClient.GetEpisodesAsync(arrInstance, series.Id, cancellationToken);
+            Task<List<ArrEpisodeFile>> episodeFilesTask = seriesClient.GetEpisodeFilesAsync(arrInstance, series.Id, cancellationToken);
             await Task.WhenAll(episodesTask, episodeFilesTask);
 
             return new SeriesFetch(series, episodesTask.Result, episodeFilesTask.Result, Failed: false);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Sonarr] Failed to fetch episodes for series '{SeriesTitle}' (id={SeriesId}) on {InstanceName}",
-                series.Title, series.Id, arrInstance.Name);
+            _logger.LogWarning(ex, "[{InstanceType}] Failed to fetch episodes for series '{SeriesTitle}' (id={SeriesId}) on {InstanceName}",
+                arrInstance.ArrConfig.Type, series.Title, series.Id, arrInstance.Name);
 
             return new SeriesFetch(series, [], [], Failed: true);
         }

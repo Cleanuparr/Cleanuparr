@@ -99,6 +99,7 @@ public sealed class SearchStatsController : ControllerBase
                 InstanceId = ic.ArrInstanceId,
                 InstanceName = ic.ArrInstance.Name,
                 InstanceType = ic.ArrInstance.ArrConfig.Type.ToString(),
+                InstanceVersion = ic.ArrInstance.Version,
                 ItemsTracked = history?.ItemsTracked ?? 0,
                 TotalSearchCount = history?.TotalSearchCount ?? 0,
                 LastSearchedAt = history?.LastSearchedAt,

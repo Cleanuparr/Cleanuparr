@@ -21,7 +21,7 @@ test.describe.serial('Seeker — config', () => {
     expect(body).not.toHaveProperty('useCustomFormatScore');
   });
 
-  test('lists a Whisparr v3 instance but not a v2 one', async ({ api, mocks }) => {
+  test('lists Whisparr v2 and v3 instances', async ({ api, mocks }) => {
     await mocks.arr.stub(ArrStubs.arrHealthStub());
 
     const created: string[] = [];
@@ -42,8 +42,13 @@ test.describe.serial('Seeker — config', () => {
       const config = await (await api.seeker.getConfig()).json();
       const listed = config.instances.map((i: { arrInstanceId: string }) => i.arrInstanceId);
 
+      expect(listed).toContain(v2Id);
       expect(listed).toContain(v3Id);
-      expect(listed).not.toContain(v2Id);
+
+      const versionOf = (id: string) =>
+        config.instances.find((i: { arrInstanceId: string }) => i.arrInstanceId === id).instanceVersion;
+      expect(versionOf(v2Id)).toBe(2);
+      expect(versionOf(v3Id)).toBe(3);
     } finally {
       for (const id of created) {
         await api.arr.deleteInstance('whisparr', id);

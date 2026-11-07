@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import {
   RADARR,
+  RUN_TAG,
   TRIGGERED_SEARCH_TIMEOUT,
   arrangeInstance,
   arrangeQueueCleaner,
@@ -28,6 +29,9 @@ const SETTLE_MS = 30_000;
 /** The rule's floor is above one, so the cleaner needs this many runs to remove. */
 const MAX_STRIKES = 3;
 
+// Cleanuparr deletes with blocklist=true, so a later spec grabbing RADARR.release would be rejected.
+const RELEASE = `F1.2025.1080p.WEB-DL.DDP5.1.H.264-E2ER${RUN_TAG}`;
+
 test.describe('Seeker replacement searches', () => {
   test.beforeEach(async () => {
     await resetLiveArrState();
@@ -42,7 +46,7 @@ test.describe('Seeker replacement searches', () => {
   test('queues a replacement search when the queue cleaner removes the grab', async ({ api }) => {
     test.setTimeout(300_000);
 
-    const release = grabbableRelease(RADARR.searchMode, RADARR.release, RADARR.category);
+    const release = grabbableRelease(RADARR.searchMode, RELEASE, RADARR.category);
     await indexerMock.stubMany(release.mappings);
 
     await arrangeQueueCleaner(api);

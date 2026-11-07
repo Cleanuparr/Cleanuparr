@@ -18,6 +18,7 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     instanceId: 'instance-1',
     instanceName: 'Instance',
     instanceType: 'Sonarr',
+    instanceVersion: 0,
     itemsTracked: 10,
     totalSearchCount: 5,
     lastSearchedAt: '2026-07-30T10:00:00Z',
@@ -159,20 +160,21 @@ describe('funnelStages', () => {
   };
 
   it('names the library stage after the instance type', () => {
-    expect(funnelStages(funnel, 'Radarr').narrowing[0]).toEqual({ label: 'movies', value: 10 });
-    expect(funnelStages(funnel, 'Sonarr').narrowing[0]).toEqual({ label: 'series', value: 10 });
-    expect(funnelStages(funnel, 'Whisparr').narrowing[0]).toEqual({ label: 'movies', value: 10 });
-    expect(funnelStages(funnel, 'Lidarr').narrowing[0]).toEqual({ label: 'artists', value: 10 });
+    expect(funnelStages(funnel, 'Radarr', 0).narrowing[0]).toEqual({ label: 'movies', value: 10 });
+    expect(funnelStages(funnel, 'Sonarr', 0).narrowing[0]).toEqual({ label: 'series', value: 10 });
+    expect(funnelStages(funnel, 'Whisparr', 2).narrowing[0]).toEqual({ label: 'sites', value: 10 });
+    expect(funnelStages(funnel, 'Whisparr', 3).narrowing[0]).toEqual({ label: 'movies', value: 10 });
+    expect(funnelStages(funnel, 'Lidarr', 0).narrowing[0]).toEqual({ label: 'artists', value: 10 });
   });
 
   it('splits the units needing a search by state', () => {
-    expect(funnelStages(funnel, 'Sonarr').split.map((s) => s.value)).toEqual([1, 2, 1, 2]);
+    expect(funnelStages(funnel, 'Sonarr', 0).split.map((s) => s.value)).toEqual([1, 2, 1, 2]);
   });
 
   it('adds the resting stage only when units are resting', () => {
-    expect(funnelStages(funnel, 'Sonarr').split.map((s) => s.label)).not.toContain('resting');
+    expect(funnelStages(funnel, 'Sonarr', 0).split.map((s) => s.label)).not.toContain('resting');
 
-    const split = funnelStages({ ...funnel, restingUnits: 4 }, 'Sonarr').split;
+    const split = funnelStages({ ...funnel, restingUnits: 4 }, 'Sonarr', 0).split;
 
     expect(split.map((s) => s.label)).toEqual(['in queue', 'grabbed', 'resting', 'searched', 'left']);
     expect(split[2].value).toBe(4);

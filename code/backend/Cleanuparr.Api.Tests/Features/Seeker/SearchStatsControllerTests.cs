@@ -153,6 +153,19 @@ public class SearchStatsControllerTests : IDisposable
     #region GetSummary PerInstanceStats
 
     [Fact]
+    public async Task GetSummary_PerInstanceStats_ReportsTheInstanceVersion()
+    {
+        ArrInstance whisparr = SeekerTestDataFactory.AddWhisparrInstance(_dataContext, version: 2);
+        AddInstanceConfig(whisparr.Id, Guid.NewGuid());
+
+        SearchStatsSummaryResponse summary = Summary(await _controller.GetSummary());
+
+        InstanceSearchStat stat = summary.PerInstanceStats.ShouldHaveSingleItem();
+        stat.InstanceType.ShouldBe("Whisparr");
+        stat.InstanceVersion.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task GetSummary_PerInstanceStats_UsesTheCurrentCycleRow()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
