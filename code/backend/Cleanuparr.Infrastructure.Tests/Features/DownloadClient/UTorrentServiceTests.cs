@@ -502,7 +502,7 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
                 Name = "Test Torrent",
                 Status = UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Paused | UTorrentStatus.Queued | UTorrentStatus.Loaded,
                 DownloadSpeed = 0,
-                ETA = 0
+                ETA = -1
             };
 
             _fixture.ClientWrapper
@@ -518,6 +518,43 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
                 .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
+                });
+
+            DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeFalse();
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>());
+        }
+
+        [Fact]
+        public async Task CompletedDownload_WithNoSpeedAndNoEta_SkipsStallCheck()
+        {
+            const string hash = "test-hash";
+            UTorrentService sut = _fixture.CreateSut();
+
+            UTorrentItem torrentItem = new UTorrentItem
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                Status = UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Queued | UTorrentStatus.Loaded,
+                DownloadSpeed = 0,
+                ETA = -1,
+                DateCompleted = 1794079216
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(new UTorrentProperties { Hash = hash, Pex = 1, Trackers = "" });
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
+                {
+                    new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 1000 }
                 });
 
             DownloadCheckResult result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -639,7 +676,7 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
                 Name = "Test Torrent",
                 Status = 9, // Started + Checked
                 DownloadSpeed = 0,
-                ETA = 0
+                ETA = -1
             };
 
             var torrentProperties = new UTorrentProperties
@@ -736,7 +773,7 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
                 Name = "Test Torrent",
                 Status = 9,
                 DownloadSpeed = 0,
-                ETA = 0
+                ETA = -1
             };
 
             var torrentProperties = new UTorrentProperties

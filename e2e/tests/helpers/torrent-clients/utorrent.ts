@@ -144,6 +144,19 @@ export class UTorrentDriver implements TorrentClientDriver {
     }
   }
 
+  async pause(infoHash: string): Promise<void> {
+    const url = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&action=pause&hash=${infoHash.toUpperCase()}`;
+    const res = await fetch(url, { headers: this.requestHeaders() });
+    if (!res.ok) {
+      throw new Error(`uTorrent pause: ${res.status}`);
+    }
+  }
+
+  async getStatus(infoHash: string): Promise<number | undefined> {
+    const row = await this.getRow(infoHash);
+    return row ? Number(row[1]) : undefined;
+  }
+
   async getStatusAndCompleted(infoHash: string): Promise<{ status: number; dateCompleted: number } | undefined> {
     const row = await this.getRow(infoHash);
     return row ? { status: Number(row[1]), dateCompleted: Number(row[24]) } : undefined;
