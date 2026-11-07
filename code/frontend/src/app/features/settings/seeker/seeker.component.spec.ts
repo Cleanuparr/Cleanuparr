@@ -375,6 +375,28 @@ describe('SeekerComponent', () => {
     expect(component.instances()[0].useCustomFormatScore).toBe(true);
   });
 
+  it('shows the always-on specials and anime toggles for Sonarr only', () => {
+    const { fixture } = setup();
+
+    const specialsToggle = toggleByLabel(fixture, 'Search for specials');
+    const animeToggle = toggleByLabel(fixture, 'Search for anime');
+
+    expect(specialsToggle).not.toBeNull();
+    expect(specialsToggle.disabled).toBe(true);
+    expect(specialsToggle.getAttribute('aria-checked')).toBe('true');
+    expect(animeToggle).not.toBeNull();
+    expect(animeToggle.disabled).toBe(true);
+    expect(animeToggle.getAttribute('aria-checked')).toBe('true');
+
+    const radarrToggle = fixture.nativeElement.querySelectorAll('.instance-row__header [role="switch"]')[1] as HTMLButtonElement;
+    radarrToggle.click();
+    fixture.detectChanges();
+
+    const radarrDetails = fixture.nativeElement.querySelectorAll('.instance-row__details')[1] as HTMLElement;
+    expect(radarrDetails.textContent).not.toContain('Search for specials');
+    expect(radarrDetails.textContent).not.toContain('Search for anime');
+  });
+
   it('patches the instance limits typed into the numeric inputs', () => {
     const { fixture, component } = setup();
 

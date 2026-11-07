@@ -974,6 +974,69 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Grabbed_outcome_of_an_episode_search_marks_only_the_episode_unit()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_dataContext);
+        Guid cycleId = Guid.NewGuid();
+        Guid eventId = Guid.NewGuid();
+
+        _eventsContext.Events.Add(new AppEvent
+        {
+            Id = eventId,
+            EventType = EventType.SearchTriggered,
+            Message = "Search triggered",
+            Severity = EventSeverity.Information,
+            CycleId = cycleId,
+        });
+        _eventsContext.SeekerCycles.Add(new SeekerCycle { Id = cycleId, ArrInstanceId = sonarrInstance.Id });
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 42,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 0,
+            CycleId = cycleId,
+            ItemTitle = "Example Show S00",
+        });
+        _eventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 42,
+            ItemType = InstanceType.Sonarr,
+            SeasonNumber = 0,
+            EpisodeId = 9001,
+            ContentKind = SeekerContentKind.Special,
+            CycleId = cycleId,
+            ItemTitle = "Example Show S00E04",
+        });
+        _eventsContext.SeekerCommandTrackers.Add(Tracker(sonarrInstance.Id, externalItemId: 42, episodeId: 9001) with { EventId = eventId });
+        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
+
+        StubCommandState(ArrCommandState.Completed);
+        _arrClient.GetQueueItemsAsync(Arg.Any<ArrInstance>(), Arg.Any<int>())
+            .Returns(new QueueListResponse
+            {
+                TotalRecords = 1,
+                Records = [new QueueRecord { Id = 1, SeriesId = 42, EpisodeId = 9001, SeasonNumber = 0, Title = "Example.Show.S00E04", DownloadId = "EP9001", Protocol = "torrent", Status = "downloading" }]
+            });
+
+        Task<SearchCommandStatus> publishTask = CaptureNextPublishedStatus();
+
+        // Act
+        await _sut.StartAsync(_cts.Token);
+        _timeProvider.Advance(TimeSpan.FromSeconds(11));
+        await publishTask.WaitAsync(TimeSpan.FromSeconds(5));
+        await WaitForTrackerCountAsync(0);
+
+        // Assert
+        List<SeekerHistory> units = await _eventsContext.SeekerHistory.AsNoTracking().ToListAsync();
+        units.Single(h => h.EpisodeId == 9001).LastOutcome.ShouldBe(SeekerSearchOutcome.Grabbed);
+        units.Single(h => h.EpisodeId == 0).LastOutcome.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task NothingGrabbed_outcome_marks_the_unit_and_leaves_counters_untouched()
     {
         // Arrange

@@ -106,6 +106,8 @@ services:
     environment:
       PORT: "5000"
       HTTP_PORTS: "5000"
+      PUID: "${E2E_PUID:-1000}"
+      PGID: "${E2E_PGID:-1000}"
     # Ephemeral /config — wiped on every container restart. The e2e harness
     # restarts the app container between spec folders for a clean baseline.
     tmpfs:

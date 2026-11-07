@@ -64,7 +64,7 @@ public interface IEventPublisher
     /// Records that a search started for an item.
     /// </summary>
     /// <returns>The ID of the new event.</returns>
-    Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null);
+    Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null, bool? isDryRun = null, SeekerContentKind? contentKind = null);
 
     /// <summary>
     /// Sets the terminal status of a search event and records the grabbed items.

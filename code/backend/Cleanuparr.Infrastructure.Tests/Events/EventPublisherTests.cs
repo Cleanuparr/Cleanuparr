@@ -787,6 +787,19 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
+    public async Task PublishSearchTriggered_StoresContentKind()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered(
+            "Show S00E01", SeekerSearchType.Proactive, SeekerSearchReason.Missing, contentKind: SeekerContentKind.Special);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.ContentKind.ShouldBe(SeekerContentKind.Special);
+    }
+
+    [Fact]
     public async Task PublishSearchStarted_UpdatesStatusWithoutCompletingTheEvent()
     {
         // Arrange

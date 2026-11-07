@@ -245,6 +245,8 @@ export class DocumentationService {
       'ignoreStruckDownloads': 'instance-ignore-struck-downloads',
       'recentGrabWindowHours': 'instance-recent-grab-window',
       'minCycleTimeDays': 'instance-min-cycle-time-days',
+      'searchSpecials': 'instance-search-for-specials',
+      'searchAnime': 'instance-search-for-anime',
     },
   };
 

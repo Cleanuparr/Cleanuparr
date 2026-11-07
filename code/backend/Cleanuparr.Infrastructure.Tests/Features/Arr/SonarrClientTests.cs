@@ -696,17 +696,17 @@ public class SonarrClientTests
 
     #endregion
 
-    #region GetRecentlyGrabbedSeasonsAsync
+    #region GetRecentlyGrabbedEpisodesAsync
 
     [Fact]
-    public async Task GetRecentlyGrabbedSeasonsAsync_BuildsExpectedUri()
+    public async Task GetRecentlyGrabbedEpisodesAsync_BuildsExpectedUri()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(Array.Empty<object>())));
         DateTimeOffset since = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
         // Act
-        await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, since);
+        await _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, since);
 
         // Assert
         HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
@@ -715,12 +715,12 @@ public class SonarrClientTests
     }
 
     [Fact]
-    public async Task GetRecentlyGrabbedSeasonsAsync_DropsRowsWithoutSeriesOrEpisode()
+    public async Task GetRecentlyGrabbedEpisodesAsync_DropsRowsWithoutSeriesOrEpisode()
     {
         // Arrange
         const string body = """
         [
-            { "seriesId": 10, "episode": { "seasonNumber": 1 } },
+            { "seriesId": 10, "episodeId": 100, "episode": { "seasonNumber": 1 } },
             { "seriesId": 0, "episode": { "seasonNumber": 2 } },
             { "seriesId": 11, "episode": null }
         ]
@@ -731,34 +731,34 @@ public class SonarrClientTests
         }));
 
         // Act
-        HashSet<(long SeriesId, long SeasonNumber)> seasons = await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow);
+        HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> episodes = await _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, DateTimeOffset.UtcNow);
 
         // Assert
-        seasons.ShouldBe([(10L, 1L)]);
+        episodes.ShouldBe([(10L, 1L, 100L)]);
     }
 
     [Fact]
-    public async Task GetRecentlyGrabbedSeasonsAsync_NullBody_ReturnsEmpty()
+    public async Task GetRecentlyGrabbedEpisodesAsync_NullBody_ReturnsEmpty()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
 
         // Act
-        HashSet<(long SeriesId, long SeasonNumber)> seasons = await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow);
+        HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> episodes = await _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, DateTimeOffset.UtcNow);
 
         // Assert
-        seasons.ShouldBeEmpty();
+        episodes.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task GetRecentlyGrabbedSeasonsAsync_TheArrRefused_Throws()
+    public async Task GetRecentlyGrabbedEpisodesAsync_TheArrRefused_Throws()
     {
         // Arrange
         _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
 
         // Act, Assert
         await Should.ThrowAsync<HttpRequestException>(
-            () => _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow));
+            () => _client.GetRecentlyGrabbedEpisodesAsync(_arrInstance, DateTimeOffset.UtcNow));
     }
 
     #endregion

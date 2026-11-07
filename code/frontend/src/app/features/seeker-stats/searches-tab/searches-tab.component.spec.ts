@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchEventsQuery } from '@core/api/search-stats.api';
-import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SeekerContentKind, SearchCommandStatus } from '@core/models/search-stats.models';
 import type { InstanceSearchStat, SearchEvent, SearchStatsSummary } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 import { AppHubService } from '@core/realtime/app-hub.service';
@@ -80,6 +80,7 @@ const EVENTS: PaginatedResult<SearchEvent> = {
       grabbedItems: ['Release.One', 'Release.Two'],
       cycleId: 'cycle-aaaaaaaa-1111',
       isDryRun: false,
+      contentKind: SeekerContentKind.Special,
     },
     {
       id: 'event-2',
@@ -94,6 +95,7 @@ const EVENTS: PaginatedResult<SearchEvent> = {
       grabbedItems: null,
       cycleId: null,
       isDryRun: true,
+      contentKind: null,
     },
   ],
   page: 1,
@@ -198,6 +200,7 @@ describe('SearchesTabComponent', () => {
       searchStatus: undefined,
       searchType: undefined,
       searchReason: undefined,
+      contentKind: undefined,
       grabbed: undefined,
     });
   });
@@ -213,22 +216,35 @@ describe('SearchesTabComponent', () => {
     component.toggleStatus(SearchCommandStatus.Completed);
     component.updateDraft('searchType', SeekerSearchType.Replacement);
     component.updateDraft('searchReason', SeekerSearchReason.Missing);
+    component.updateDraft('contentKind', SeekerContentKind.Anime);
     component.updateDraft('grabbed', 'false');
     component.applyFilters();
     fixture.detectChanges();
 
     expect(component.drawerOpen()).toBe(false);
     expect(component.selectedInstanceId()).toBe('radarr-zulu');
-    expect(component.activeFilterCount()).toBe(5);
+    expect(component.activeFilterCount()).toBe(6);
     expect(lastQuery()).toMatchObject({
       instanceId: 'radarr-zulu',
       search: 'show',
       searchStatus: [SearchCommandStatus.Failed],
       searchType: SeekerSearchType.Replacement,
       searchReason: SeekerSearchReason.Missing,
+      contentKind: SeekerContentKind.Anime,
       grabbed: false,
       cycleId: undefined,
     });
+  });
+
+  it('sends the chosen content kind in the events query', () => {
+    const { fixture, component, lastQuery } = setup();
+
+    component.openFilters();
+    component.updateDraft('contentKind', SeekerContentKind.Special);
+    component.applyFilters();
+    fixture.detectChanges();
+
+    expect(lastQuery().contentKind).toBe(SeekerContentKind.Special);
   });
 
   it('resolves the current cycle id only for the selected instance and drops it when the instance is cleared', () => {
@@ -331,6 +347,14 @@ describe('SearchesTabComponent', () => {
     expect(fixture.nativeElement.querySelector('.list-row__detail-text').textContent).toContain(
       'Grabbed: Release.One, Release.Two',
     );
+  });
+
+  it('shows a content kind badge only for an event that has one', () => {
+    const { fixture } = setup();
+
+    const rows = fixture.nativeElement.querySelectorAll('.list-row');
+    expect((rows[0] as HTMLElement).textContent).toContain('Special');
+    expect((rows[1] as HTMLElement).textContent).not.toContain('Special');
   });
 
   it('shows how many items remain in the cycle progress row', () => {

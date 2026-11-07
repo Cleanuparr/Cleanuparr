@@ -412,7 +412,13 @@ test.describe('Seeker monitored-only filters on Sonarr', () => {
   });
 
   test('searches the season once monitoredOnly lets the unmonitored gap count', async ({ api }) => {
-    const instanceId = await arrangeInstance(api, SONARR, { instance: { monitoredOnly: false } });
+    // The seed's unmonitored specials series would count too.
+    const skipTagId = await SONARR.arr.ensureTag(SKIP_TAG);
+    for (const other of library.filter((series) => series.id !== SONARR.itemId)) {
+      await SONARR.arr.put(`/api/v3/series/${other.id}`, { ...other, tags: [skipTagId] });
+    }
+
+    const instanceId = await arrangeInstance(api, SONARR, { instance: { monitoredOnly: false, skipTags: [SKIP_TAG] } });
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);

@@ -64,9 +64,11 @@ Replacement search is always enabled when Search is on and cannot be disabled. W
 <Note>
 Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle completes and the next one starts after the minimum cycle time.
 
-For Radarr, each movie is one item. For Sonarr, each season of each series is one item, and searches run per season.
+For Radarr, each movie is one item. For Sonarr, a cycle holds season units and episode units. The Seeker searches most seasons whole, and specials and airing anime seasons one episode at a time. Cycle progress counts the searches still needed.
 
 The Searches tab shows per instance how many items the current cycle searched, how many are left, how long it has been running and how long the previous cycle took. Items in the download queue are not counted as left. Dry run tracks its own cycles and never moves the live one.
+
+Each Sonarr search event records a content kind: `Standard` (a regular season), `Daily` (a daily series season), `Anime` (an anime season or episode) or `Special` (an episode from season 0). Radarr and replacement searches carry none. The Searches tab can filter events by content kind.
 </Note>
 
 <Note>
@@ -274,6 +276,26 @@ Default is `24`, maximum is `168`.
 >
 
 The minimum number of days that a complete search cycle must span before a new cycle can begin. Once all eligible items in an instance have been searched, Seeker will not start a new cycle until this many days have passed since the cycle started.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Search for Specials"
+>
+
+Sonarr only. Always on and cannot be disabled.
+
+The Seeker searches specials (season 0) one episode at a time. Sonarr runs two indexer queries for every special, so a season search would query every special back to back.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Search for Anime"
+>
+
+Sonarr only. Always on and cannot be disabled.
+
+The Seeker searches an anime season whole once every episode in it has aired or airs within 24 hours. Before that, it searches the episodes one at a time. Sonarr uses the same rule, and runs one query per aired episode when a season search comes too early.
 
 </ConfigSection>
 

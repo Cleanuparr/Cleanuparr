@@ -41,6 +41,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("completed_at");
 
+                    b.Property<string>("ContentKind")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_kind");
+
                     b.Property<Guid?>("CycleId")
                         .HasColumnType("TEXT")
                         .HasColumnName("cycle_id");
@@ -666,6 +670,11 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.Property<Guid>("ArrInstanceId")
                         .HasColumnType("TEXT")
                         .HasColumnName("arr_instance_id");
+
+                    b.Property<string>("ContentKind")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("content_kind");
 
                     b.Property<Guid>("CycleId")
                         .HasColumnType("TEXT")
