@@ -243,6 +243,35 @@ public class UTorrentItemWrapperTests
         result.ShouldBe(expected);
     }
 
+    // uTorrent keeps Started set on a paused torrent
+    private const int PausedDownloadStatus =
+        UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Paused | UTorrentStatus.Queued | UTorrentStatus.Loaded;
+
+    [Theory]
+    [InlineData(UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Queued | UTorrentStatus.Loaded, true)]
+    [InlineData(PausedDownloadStatus, false)]
+    public void IsDownloading_ReturnsCorrectValue(int status, bool expected)
+    {
+        // Arrange
+        UTorrentItem torrentItem = new UTorrentItem { Status = status };
+        UTorrentItemWrapper wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties(), TimeProvider.System);
+
+        // Act & Assert
+        wrapper.IsDownloading().ShouldBe(expected);
+    }
+
+    [Fact]
+    public void PausedDownload_WithNoSpeedAndNoEta_IsStoppedAndNotStalled()
+    {
+        // Arrange
+        UTorrentItem torrentItem = new UTorrentItem { Status = PausedDownloadStatus, DownloadSpeed = 0, ETA = 0 };
+        UTorrentItemWrapper wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties(), TimeProvider.System);
+
+        // Act & Assert
+        wrapper.IsStalled().ShouldBeFalse();
+        wrapper.IsStopped.ShouldBeTrue();
+    }
+
     [Fact]
     public void ErrorMessage_ReturnsStatusMessage()
     {
