@@ -14,7 +14,7 @@ public partial class RTorrentService
         var result = new List<ITorrentItemWrapper>();
         foreach (var torrent in downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => x is { Complete: 1, State: 1 }))
+            .Where(x => x.Complete == 1))
         {
             var trackers = await _client.GetTrackersAsync(torrent.Hash);
             result.Add(new RTorrentItemWrapper(torrent, trackers, _timeProvider));
