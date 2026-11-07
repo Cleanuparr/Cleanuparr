@@ -36,6 +36,10 @@ export class SeekerApi {
     return this.client.get('/api/seeker/search-stats/summary');
   }
 
+  resetCycle(instanceId: string): Promise<Response> {
+    return this.client.post(`/api/seeker/cycles/${instanceId}/reset`);
+  }
+
   getSearchEvents(query?: Record<string, string>): Promise<Response> {
     const qs = query ? '?' + new URLSearchParams(query).toString() : '';
     return this.client.get(`/api/seeker/search-stats/events${qs}`);

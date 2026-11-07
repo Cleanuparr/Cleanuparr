@@ -62,6 +62,7 @@ public sealed class Seeker : IHandler
     private readonly IHostEnvironment _environment;
     private readonly TimeProvider _timeProvider;
     private readonly IStatusNotifier _statusNotifier;
+    private readonly SeekerCycleLock _cycleLock;
 
     public Seeker(
         ILogger<Seeker> logger,
@@ -75,7 +76,8 @@ public sealed class Seeker : IHandler
         IDryRunInterceptor dryRunInterceptor,
         IHostEnvironment environment,
         TimeProvider timeProvider,
-        IStatusNotifier statusNotifier)
+        IStatusNotifier statusNotifier,
+        SeekerCycleLock cycleLock)
     {
         _logger = logger;
         _dataContext = dataContext;
@@ -89,6 +91,7 @@ public sealed class Seeker : IHandler
         _environment = environment;
         _timeProvider = timeProvider;
         _statusNotifier = statusNotifier;
+        _cycleLock = cycleLock;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -278,6 +281,23 @@ public sealed class Seeker : IHandler
     }
 
     private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun, CancellationToken cancellationToken)
+    {
+        Guid arrInstanceId = instanceConfig.ArrInstanceId;
+        await _cycleLock.WaitAsync(arrInstanceId, cancellationToken);
+
+        try
+        {
+            // A cycle reset may have changed CurrentCycleId while this run waited for the lock
+            await _dataContext.Entry(instanceConfig).ReloadAsync(cancellationToken);
+            return await ProcessLockedInstanceAsync(config, instanceConfig, isDryRun, cancellationToken);
+        }
+        finally
+        {
+            _cycleLock.Release(arrInstanceId);
+        }
+    }
+
+    private async Task<bool> ProcessLockedInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun, CancellationToken cancellationToken)
     {
         ArrInstance arrInstance = instanceConfig.ArrInstance;
         InstanceType instanceType = arrInstance.ArrConfig.Type;

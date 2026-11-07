@@ -121,6 +121,36 @@ test.describe('Seeker search cycles', () => {
     expect(second?.cycleItemsSearched).toBe(1);
   });
 
+  test('searches the same item again after a reset despite the minimum cycle time', async ({ api }) => {
+    test.setTimeout(180_000);
+
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { minCycleTimeDays: 7 } });
+
+    await triggerSeeker(api);
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+    const first = await instanceStat(api, instanceId);
+
+    // The search event is published while the run still holds the instance, so the reset can be refused as busy.
+    await expect.poll(async () => (await api.seeker.resetCycle(instanceId)).status, { timeout: SETTLE_MS }).toBe(204);
+
+    await triggerSeeker(api);
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(2);
+
+    const afterReset = await instanceStat(api, instanceId);
+    expect(afterReset?.currentCycleId).not.toBe(first?.currentCycleId);
+    expect(afterReset?.lastCycleStartedAt).toBe(first?.cycleStartedAt);
+    expect(afterReset?.lastCycleCompletedAt).not.toBeNull();
+    expect(afterReset?.cycleItemsSearched).toBe(1);
+  });
+
+  test('refuses to reset a cycle that has searched nothing', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, RADARR, { instance: { minCycleTimeDays: 7 } });
+
+    const res = await api.seeker.resetCycle(instanceId);
+    expect(res.status).toBe(409);
+    expect((await res.json()).detail).toContain('has not searched anything yet');
+  });
+
   test('completes the cycle once the only remaining movie is queued', async ({ api }) => {
     test.setTimeout(180_000);
 

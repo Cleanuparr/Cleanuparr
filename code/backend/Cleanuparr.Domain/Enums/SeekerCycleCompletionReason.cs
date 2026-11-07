@@ -12,4 +12,9 @@ public enum SeekerCycleCompletionReason
     /// Every eligible unit was searched
     /// </summary>
     Completed,
+
+    /// <summary>
+    /// The user started a new cycle before this one finished
+    /// </summary>
+    Reset,
 }

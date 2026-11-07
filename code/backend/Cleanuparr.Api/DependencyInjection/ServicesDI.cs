@@ -17,6 +17,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
@@ -47,6 +48,7 @@ public static class ServicesDI
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<IDryRunPurger, DryRunPurger>()
             .AddSingleton<DryRunActivity>()
+            .AddSingleton<SeekerCycleLock>()
             .AddScoped<CertificateValidationService>()
             .AddScoped<ISonarrClient, SonarrClient>()
             .AddScoped<ISportarrClient, SportarrClient>()
