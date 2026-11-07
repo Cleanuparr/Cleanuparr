@@ -1,7 +1,8 @@
-import { test, expect } from '../fixtures/base';
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  LIDARR,
   RADARR,
   RUN_TAG,
   SONARR,
@@ -195,6 +196,34 @@ test.describe('Seeker preview on Whisparr v3', () => {
     const preview = await getPreview(api, instanceId);
 
     const next = preview.nextUp.find((u) => u.name === WHISPARR.seededTitle);
+    expect(next?.reason).toBe('Missing');
+    expect(preview.funnel.libraryItems).toBe(library.length);
+    expect(preview.funnel.eligibleUnits).toBeGreaterThan(0);
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  });
+});
+
+test.describe('Seeker preview on Lidarr', () => {
+  let library: Array<Record<string, unknown>> = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(LIDARR);
+    await indexerMock.stub(torznabSearchStub(LIDARR.searchMode, []));
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreLibrary(LIDARR, library);
+    await resetLiveArrState();
+  });
+
+  test('lists the seeded album next up as missing with artist funnel counts', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, LIDARR);
+
+    const preview = await getPreview(api, instanceId);
+
+    const next = preview.nextUp.find((u) => u.name === `${LIDARR.seededTitle} - ${TEST_CONFIG.liveArr.seededAlbumTitle}`);
     expect(next?.reason).toBe('Missing');
     expect(preview.funnel.libraryItems).toBe(library.length);
     expect(preview.funnel.eligibleUnits).toBeGreaterThan(0);

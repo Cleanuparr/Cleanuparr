@@ -545,6 +545,16 @@ describe('SeekerComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
   });
 
+  it('marks a Lidarr row as new and shows no release gate or search mode', () => {
+    const lidarr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Lidarr', instanceType: 'Lidarr', enabled: true };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [lidarr] } });
+
+    const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
+    expect(badge.getAttribute('featureId')).toBe('seeker-lidarr');
+    expect(releaseGateSelect(fixture, 0)).toBeUndefined();
+    expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
+  });
+
   it('sends the picked release gate for the Radarr row only', () => {
     const { fixture, updateConfig } = setup();
 
@@ -919,7 +929,7 @@ describe('SeekerComponent', () => {
     expect(component.getInstanceIcon('Radarr')).toBe('icons/ext/radarr-light.svg');
     expect(component.getInstanceTypeSeverity('Sonarr')).toBe('info');
     expect(component.getInstanceTypeSeverity('Radarr')).toBe('warning');
-    expect(component.getInstanceTypeSeverity('Lidarr')).toBe('default');
+    expect(component.getInstanceTypeSeverity('Lidarr')).toBe('lidarr');
 
     const icons = fixture.nativeElement.querySelectorAll('.instance-row__icon');
     expect((icons[0] as HTMLImageElement).getAttribute('src')).toBe('icons/ext/sonarr-light.svg');

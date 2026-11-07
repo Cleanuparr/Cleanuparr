@@ -96,6 +96,9 @@
                 @if (instance.instanceType === 'Whisparr') {
                   <app-new-badge variant="inline" featureId="seeker-whisparr" />
                 }
+                @if (instance.instanceType === 'Lidarr') {
+                  <app-new-badge variant="inline" featureId="seeker-lidarr" />
+                }
               </div>
               <app-toggle [checked]="instance.enabled" [disabled]="!instance.arrInstanceEnabled" (checkedChange)="toggleInstance($index)" helpKey="seeker:enabled" />
             </div>

@@ -51,6 +51,29 @@ test.describe.serial('Seeker — config', () => {
     }
   });
 
+  test('lists a Lidarr instance', async ({ api, mocks }) => {
+    await mocks.arr.stub(ArrStubs.arrHealthStub());
+
+    const res = await api.arr.createInstance('lidarr', {
+      name: 'lidarr-e2e',
+      url: TEST_CONFIG.mocks.arrUrl,
+      apiKey: 'e2e-test-key',
+      version: 3,
+      enabled: true,
+    });
+    expect(res.status).toBeLessThan(300);
+    const id = (await res.json()).id;
+
+    try {
+      const config = await (await api.seeker.getConfig()).json();
+      const listed = config.instances.map((i: { arrInstanceId: string }) => i.arrInstanceId);
+
+      expect(listed).toContain(id);
+    } finally {
+      await api.arr.deleteInstance('lidarr', id);
+    }
+  });
+
   test('updates seeker config', async ({ api }) => {
     const current = await (await api.seeker.getConfig()).json();
 

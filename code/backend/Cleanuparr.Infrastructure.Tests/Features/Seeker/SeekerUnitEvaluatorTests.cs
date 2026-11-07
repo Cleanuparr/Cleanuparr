@@ -24,6 +24,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly ILidarrClient _lidarrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly FakeTimeProvider _timeProvider;
     private readonly SeekerUnitEvaluator _sut;
@@ -31,6 +32,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly ArrInstance _radarr;
     private readonly ArrInstance _sonarr;
     private readonly ArrInstance _whisparr;
+    private readonly ArrInstance _lidarr;
 
     public SeekerUnitEvaluatorTests()
     {
@@ -38,11 +40,13 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _eventsContext = TestDataContextFactory.CreateEvents();
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
+        _lidarrClient = Substitute.For<ILidarrClient>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 1, 10, 12, 0, 0, TimeSpan.Zero));
         _radarr = TestDataContextFactory.AddRadarrInstance(_dataContext);
         _sonarr = TestDataContextFactory.AddSonarrInstance(_dataContext);
         _whisparr = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 3);
+        _lidarr = TestDataContextFactory.AddLidarrInstance(_dataContext);
 
         _radarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _sonarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
@@ -50,6 +54,9 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _sonarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
         _radarrClient.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
         _sonarrClient.GetCutoffUnmetEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
+        _lidarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _lidarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _lidarrClient.GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
         _whisparrV3Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _whisparrV3Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
         _whisparrV3Client.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
@@ -59,6 +66,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             _eventsContext,
             _radarrClient,
             _sonarrClient,
+            _lidarrClient,
             _whisparrV3Client,
             _timeProvider);
     }
@@ -2194,6 +2202,510 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Assert
         evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe("Movie 1");
+    }
+
+    #endregion
+
+    #region Lidarr
+
+    private static SearchableArtist Artist(
+        long id,
+        bool monitored = true,
+        List<long>? tags = null,
+        int qualityProfileId = 0,
+        DateTimeOffset? added = null)
+    {
+        return new SearchableArtist
+        {
+            Id = id,
+            ArtistName = $"Artist {id}",
+            Monitored = monitored,
+            Tags = tags ?? [],
+            QualityProfileId = qualityProfileId,
+            Added = added,
+        };
+    }
+
+    private SearchableAlbum Album(
+        long id,
+        long artistId,
+        bool monitored = true,
+        DateTimeOffset? releaseDate = null,
+        bool noReleaseDate = false,
+        DateTimeOffset? lastSearchTime = null)
+    {
+        return new SearchableAlbum
+        {
+            Id = id,
+            Title = $"Album {id}",
+            ArtistId = artistId,
+            Monitored = monitored,
+            ReleaseDate = noReleaseDate ? null : releaseDate ?? _timeProvider.GetUtcNow().AddDays(-30),
+            LastSearchTime = lastSearchTime,
+        };
+    }
+
+    private void SetupLidarr(List<SearchableArtist> library, List<SearchableAlbum> missing, List<SearchableAlbum>? cutoffUnmet = null)
+    {
+        _lidarrClient.StreamAllArtistsAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(library));
+        _lidarrClient.GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(missing.Where(a => a.Monitored).ToList());
+        _lidarrClient.GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns(missing.Where(a => !a.Monitored).ToList());
+
+        if (cutoffUnmet is not null)
+        {
+            _lidarrClient.GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+                .Returns(cutoffUnmet.Where(a => a.Monitored).ToList());
+            _lidarrClient.GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+                .Returns(cutoffUnmet.Where(a => !a.Monitored).ToList());
+        }
+    }
+
+    private Task<SeekerEvaluation> EvaluateLidarrAsync(
+        SeekerInstanceConfig? instanceConfig = null,
+        List<QueueRecord>? queue = null,
+        SeekerRecentGrabs? recentGrabs = null,
+        List<SeekerHistory>? history = null)
+    {
+        return _sut.EvaluateAsync(
+            _config,
+            instanceConfig ?? InstanceConfig(_lidarr),
+            _lidarr,
+            queue ?? [],
+            recentGrabs ?? new SeekerRecentGrabs(),
+            history ?? [],
+            CancellationToken.None);
+    }
+
+    private async Task AddLidarrCustomFormatEntryAsync(
+        long artistId,
+        long albumId,
+        int currentScore,
+        int cutoffScore,
+        bool monitored = true,
+        DateTimeOffset? airDate = null)
+    {
+        await _eventsContext.CustomFormatScoreEntries.AddAsync(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _lidarr.Id,
+            ExternalItemId = artistId,
+            EpisodeId = albumId,
+            Title = $"Artist {artistId} - Album {albumId}",
+            ItemType = InstanceType.Lidarr,
+            SeasonNumber = 0,
+            AirDateUtc = airDate ?? _timeProvider.GetUtcNow().AddDays(-30),
+            IsMonitored = monitored,
+            CurrentScore = currentScore,
+            CutoffScore = cutoffScore,
+        });
+        await _eventsContext.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_MissingAlbum_BuildsUnitKeyedByArtistAndAlbum()
+    {
+        // Arrange
+        DateTimeOffset added = _timeProvider.GetUtcNow().AddDays(-100);
+        DateTimeOffset releaseDate = _timeProvider.GetUtcNow().AddDays(-40);
+        SetupLidarr([Artist(1, added: added)], [Album(10, 1, releaseDate: releaseDate)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.ItemId.ShouldBe(1);
+        unit.SeasonNumber.ShouldBe(0);
+        unit.EpisodeId.ShouldBe(10);
+        unit.Name.ShouldBe("Artist 1 - Album 10");
+        unit.ContentKind.ShouldBeNull();
+        unit.Reasons.ShouldBe([SeekerSearchReason.Missing]);
+        unit.AirDateUtc.ShouldBe(releaseDate);
+        unit.Added.ShouldBe(added);
+        evaluation.AllLibraryIds.ShouldBe([1L]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_AlbumMissingAndCutoffUnmet_CarriesBothReasons()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1)], [Album(10, 1), Album(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.UseCutoff = true));
+
+        // Assert
+        evaluation.Units.Count.ShouldBe(2);
+        evaluation.Units.Single(u => u.EpisodeId == 10).Reasons
+            .ShouldBe([SeekerSearchReason.Missing, SeekerSearchReason.QualityCutoffNotMet]);
+        evaluation.Units.Single(u => u.EpisodeId == 11).Reasons
+            .ShouldBe([SeekerSearchReason.QualityCutoffNotMet]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_UseCutoffOff_SkipsTheCutoffRead()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1)], [Album(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.UseCutoff = false));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+        await _lidarrClient.DidNotReceive()
+            .GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_MonitoredOnlyOff_ReadsBothMonitoredValues()
+    {
+        // Arrange
+        SetupLidarr([Artist(1, monitored: false)], [Album(10, 1, monitored: false), Album(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.MonitoredOnly = false));
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).OrderBy(id => id).ShouldBe([10L, 11L]);
+        await _lidarrClient.Received(1).GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>());
+        await _lidarrClient.Received(1).GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_MonitoredOnly_ReadsOnlyMonitoredAlbums()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1)]);
+
+        // Act
+        await EvaluateLidarrAsync();
+
+        // Assert
+        await _lidarrClient.DidNotReceive().GetMissingAlbumsAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_AlbumDatedInTheFuture_ExcludesAsNotReleased()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1, releaseDate: _timeProvider.GetUtcNow().AddDays(5))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1 - Album 10").ShouldBe(SeekerExclusionReason.NotReleased);
+        evaluation.Units.ShouldBeEmpty();
+        evaluation.Excluded.ShouldNotContain(e => e.Name == "Artist 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_AlbumReleasedInsideGraceWindow_ExcludesAsInGracePeriod()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1, releaseDate: _timeProvider.GetUtcNow().AddHours(-1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1 - Album 10").ShouldBe(SeekerExclusionReason.InGracePeriod);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_AlbumReleasedPastGraceWindow_BuildsUnit()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1, releaseDate: _timeProvider.GetUtcNow().AddHours(-7))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_AlbumWithoutReleaseDate_CountsAsReleased()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1, noReleaseDate: true)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.AirDateUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_SkipTag_ExcludesArtistAsSkipTag()
+    {
+        // Arrange
+        _lidarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "skip" }]);
+        SetupLidarr([Artist(1, tags: [3])], [Album(10, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.SkipTags = ["skip"]));
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1").ShouldBe(SeekerExclusionReason.SkipTag);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_IncludeTagMissing_ExcludesArtistAsMissingIncludeTag()
+    {
+        // Arrange
+        _lidarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "keep" }]);
+        SetupLidarr([Artist(1), Artist(2, tags: [3])], [Album(10, 1), Album(20, 2)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.IncludeTags = ["keep"]));
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1").ShouldBe(SeekerExclusionReason.MissingIncludeTag);
+        evaluation.Units.ShouldHaveSingleItem().ItemId.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_UnmonitoredArtist_ExcludesAsNotMonitored()
+    {
+        // Arrange
+        SetupLidarr([Artist(1, monitored: false)], [Album(10, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1").ShouldBe(SeekerExclusionReason.NotMonitored);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_ArtistWithoutWantedAlbums_ExcludesAsNothingToSearch()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], []);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1").ShouldBe(SeekerExclusionReason.NothingToSearch);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_StageCounts_CountArtists()
+    {
+        // Arrange
+        _lidarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "skip" }]);
+        SetupLidarr([Artist(1), Artist(2, monitored: false), Artist(3, tags: [3])], [Album(10, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.SkipTags = ["skip"]));
+
+        // Assert
+        evaluation.ReleasedItems.ShouldBe(3);
+        evaluation.MonitoredItems.ShouldBe(2);
+        evaluation.TagFilteredItems.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_QueuedAlbum_BlocksOnlyThatAlbum()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1), Album(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(
+            queue: [new QueueRecord
+            {
+                Id = 1,
+                Title = "Download",
+                DownloadId = "hash",
+                Protocol = "torrent",
+                SizeLeft = 1000,
+                ArtistId = 1,
+                AlbumId = 10,
+                TrackedDownloadState = "downloading",
+            }]);
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 10).BlockedBy.ShouldBe(SeekerExclusionReason.InQueue);
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_RecentlyGrabbedAlbum_BlocksOnlyThatAlbum()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1), Album(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(recentGrabs: new SeekerRecentGrabs { AlbumIds = [10] });
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 10).BlockedBy.ShouldBe(SeekerExclusionReason.RecentlyGrabbed);
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_RestingAlbum_ExcludesAsResting()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1), Album(11, 1)]);
+        await SeedMissesAsync(_lidarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2), episodeId: 10);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.RestUnitsEnabled = true));
+
+        // Assert
+        SeekerSearchUnit resting = evaluation.Units.Single(u => u.EpisodeId == 10);
+        resting.BlockedBy.ShouldBe(SeekerExclusionReason.Resting);
+        resting.Rest.ShouldNotBeNull().ConsecutiveMisses.ShouldBe(3);
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_AlbumInCycleHistory_IsSearchedThisCycle()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], [Album(10, 1), Album(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(
+            history: [History(_lidarr, 1, _timeProvider.GetUtcNow().AddDays(-1), episodeId: 10)]);
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 10).Searched.ShouldBeTrue();
+        evaluation.Units.Single(u => u.EpisodeId == 11).Searched.ShouldBeFalse();
+        evaluation.WithoutCycleHistory().Units.ShouldAllBe(u => !u.Searched);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_BelowCustomFormatCutoff_AddsReasonAndGap()
+    {
+        // Arrange
+        SetupLidarr([Artist(1, qualityProfileId: 5)], []);
+        _lidarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 5, UpgradeAllowed = true }]);
+        await AddLidarrCustomFormatEntryAsync(1, 10, currentScore: 10, cutoffScore: 35);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.ItemId.ShouldBe(1);
+        unit.EpisodeId.ShouldBe(10);
+        unit.Name.ShouldBe("Artist 1 - Album 10");
+        unit.Reasons.ShouldBe([SeekerSearchReason.CustomFormatScoreBelowCutoff]);
+        unit.CustomFormatGap.ShouldBe(25);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_CustomFormatEntryOffByDefault_IsIgnored()
+    {
+        // Arrange
+        SetupLidarr([Artist(1)], []);
+        await AddLidarrCustomFormatEntryAsync(1, 10, currentScore: 10, cutoffScore: 35);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Assert
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_BelowCustomFormatCutoffWithUpgradesDisabled_ExcludesAsUpgradesDisabled()
+    {
+        // Arrange
+        SetupLidarr([Artist(1, qualityProfileId: 5)], []);
+        _lidarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 5, UpgradeAllowed = false }]);
+        await AddLidarrCustomFormatEntryAsync(1, 10, currentScore: 10, cutoffScore: 35);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        ReasonOf(evaluation, "Artist 1 - Album 10").ShouldBe(SeekerExclusionReason.UpgradesDisabled);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_MissingAlbumWithUpgradesDisabled_StaysAUnit()
+    {
+        // Arrange
+        SetupLidarr([Artist(1, qualityProfileId: 5)], [Album(10, 1)]);
+        _lidarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>())
+            .Returns([new ArrQualityProfile { Id = 5, UpgradeAllowed = false }]);
+        await AddLidarrCustomFormatEntryAsync(1, 10, currentScore: 10, cutoffScore: 35);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Reasons.ShouldBe([SeekerSearchReason.Missing]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Lidarr_CustomFormatEntryOfFilteredArtist_IsIgnored()
+    {
+        // Arrange
+        SetupLidarr([Artist(1, monitored: false)], []);
+        await AddLidarrCustomFormatEntryAsync(1, 10, currentScore: 10, cutoffScore: 35);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync(InstanceConfig(_lidarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        evaluation.Units.ShouldBeEmpty();
+        ReasonOf(evaluation, "Artist 1").ShouldBe(SeekerExclusionReason.NotMonitored);
+    }
+
+    [Fact]
+    public async Task SelectNext_Lidarr_ReturnsOneAlbumPerArtist()
+    {
+        // Arrange
+        SetupLidarr(
+            [Artist(1), Artist(2)],
+            [Album(10, 1), Album(11, 1), Album(12, 1), Album(13, 1), Album(14, 1), Album(20, 2)]);
+        SeekerEvaluation evaluation = await EvaluateLidarrAsync();
+
+        // Act
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.Random, 2);
+
+        // Assert
+        evaluation.Remaining.Count().ShouldBe(6);
+        candidates.Select(c => c.ItemId).OrderBy(id => id).ShouldBe([1L, 2L]);
+        candidates.Single(c => c.ItemId == 2).EpisodeId.ShouldBe(20);
+    }
+
+    [Fact]
+    public async Task ReadRecentGrabsAsync_Lidarr_ReadsGrabbedAlbumIds()
+    {
+        // Arrange
+        _lidarrClient
+            .GetRecentlyGrabbedAlbumIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long> { 10 });
+
+        // Act
+        SeekerRecentGrabs grabs = await _sut.ReadRecentGrabsAsync(
+            InstanceConfig(_lidarr, c => c.RecentGrabWindowHours = 6), _lidarr, CancellationToken.None);
+
+        // Assert
+        grabs.AlbumIds.ShouldBe([10L]);
+        grabs.Episodes.ShouldBeEmpty();
+        await _sonarrClient.DidNotReceive()
+            .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
     }
 
     #endregion

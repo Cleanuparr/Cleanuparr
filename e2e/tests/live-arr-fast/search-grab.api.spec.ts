@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  LIDARR,
   RADARR,
   SONARR,
   WHISPARR,
@@ -43,7 +44,7 @@ test.describe('Seeker grab on demand', () => {
     await resetLiveArrState();
   });
 
-  for (const target of [SONARR, RADARR, WHISPARR]) {
+  for (const target of [SONARR, RADARR, WHISPARR, LIDARR]) {
     test(`records the real ${target.type} grab on the search event`, async ({ api }) => {
       test.setTimeout(TEST_TIMEOUT);
 

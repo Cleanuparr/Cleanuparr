@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.History;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Lidarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -164,6 +166,102 @@ public class LidarrClient : ArrClient, ILidarrClient
 
     public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
     {
-        throw new NotImplementedException();
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/tag";
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<Tag>>(response) ?? [];
     }
+
+    public async IAsyncEnumerable<SearchableArtist> StreamAllArtistsAsync(
+        ArrInstance arrInstance,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/artist";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await foreach (SearchableArtist artist in JsonStreamReader.StreamArrayAsync<SearchableArtist>(stream, cancellationToken))
+        {
+            yield return artist;
+        }
+    }
+
+    public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/qualityprofile";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrQualityProfile>>(response) ?? [];
+    }
+
+    public async Task<List<SearchableAlbum>> GetAlbumsAsync(ArrInstance arrInstance, long artistId, CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/album";
+        uriBuilder.Query = $"artistId={artistId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        // An empty list would make the CF syncer delete every album entry of the artist
+        return await DeserializeStreamAsync<List<SearchableAlbum>>(response, cancellationToken)
+            ?? throw new InvalidOperationException($"Lidarr returned null albums for artist {artistId}");
+    }
+
+    public async Task<List<ArrTrackFile>> GetTrackFilesAsync(ArrInstance arrInstance, long artistId, CancellationToken cancellationToken = default)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/trackfile";
+        uriBuilder.Query = $"artistId={artistId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrTrackFile>>(response, cancellationToken) ?? [];
+    }
+
+    /// <inheritdoc/>
+    public async Task<HashSet<long>> GetRecentlyGrabbedAlbumIdsAsync(ArrInstance arrInstance, DateTimeOffset since, CancellationToken cancellationToken = default)
+    {
+        List<ArrHistoryRecord> records = await GetGrabHistorySinceAsync(arrInstance, since, string.Empty, cancellationToken);
+
+        return records
+            .Where(record => record.AlbumId > 0)
+            .Select(record => record.AlbumId)
+            .ToHashSet();
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<SearchableAlbum>> GetMissingAlbumsAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+        await GetAllWantedAsync<SearchableAlbum>(arrInstance, "missing", monitored, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<List<SearchableAlbum>> GetCutoffUnmetAlbumsAsync(ArrInstance arrInstance, bool monitored, CancellationToken cancellationToken = default) =>
+        await GetAllWantedAsync<SearchableAlbum>(arrInstance, "cutoff", monitored, cancellationToken);
 }

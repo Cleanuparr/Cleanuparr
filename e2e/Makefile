@@ -13,7 +13,7 @@ APP_SERVICES = app nginx
 
 CORE_STACK = keycloak $(WIREMOCKS)
 CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent sabnews sabnzbd
-ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr whisparr
+ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr whisparr lidarr
 LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sabnews sabnzbd lazylibrarian
 
 setup:

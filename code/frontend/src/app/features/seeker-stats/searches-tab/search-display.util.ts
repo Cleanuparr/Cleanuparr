@@ -79,6 +79,17 @@ export interface FunnelStage {
   value: number;
 }
 
+function libraryLabel(instanceType: string): string {
+  switch (instanceType) {
+    case 'Sonarr':
+      return 'series';
+    case 'Lidarr':
+      return 'artists';
+    default:
+      return 'movies';
+  }
+}
+
 /**
  * Splits the funnel into the stages that narrow the library down to units needing a search,
  * and the split of those units by state.
@@ -87,7 +98,7 @@ export function funnelStages(funnel: InstanceFunnel, instanceType: string): { na
   const resting: FunnelStage[] = funnel.restingUnits > 0 ? [{ label: 'resting', value: funnel.restingUnits }] : [];
   return {
     narrowing: [
-      { label: instanceType === 'Sonarr' ? 'series' : 'movies', value: funnel.libraryItems },
+      { label: libraryLabel(instanceType), value: funnel.libraryItems },
       { label: 'released', value: funnel.releasedItems },
       { label: 'monitored', value: funnel.monitoredItems },
       { label: 'tag filtered', value: funnel.tagFilteredItems },

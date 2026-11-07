@@ -71,6 +71,12 @@
     border: 1px solid rgba(255, 105, 180, 0.2);
   }
 
+  &--lidarr {
+    background: rgba(0, 146, 82, 0.12);
+    color: rgb(0, 146, 82);
+    border: 1px solid rgba(0, 146, 82, 0.2);
+  }
+
   // Severity indicator dot for non-default badges
   &--primary,
   &--success,
@@ -78,7 +84,8 @@
   &--error,
   &--info,
   &--accent,
-  &--whisparr {
+  &--whisparr,
+  &--lidarr {
     &::before {
       content: '';
       width: 6px;

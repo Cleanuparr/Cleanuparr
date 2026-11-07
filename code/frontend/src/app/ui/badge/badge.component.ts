@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input } from '@angular/core';
 
-export type BadgeSeverity = 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'accent' | 'whisparr';
+export type BadgeSeverity = 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'accent' | 'whisparr' | 'lidarr';
 export type BadgeSize = 'sm' | 'md';
 
 @Component({

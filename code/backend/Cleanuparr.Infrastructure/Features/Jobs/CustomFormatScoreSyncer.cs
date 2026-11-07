@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 /// <summary>
-/// Periodically syncs custom format scores from Sonarr, Radarr and Whisparr v3 instances.
+/// Periodically syncs custom format scores from Sonarr, Radarr, Lidarr and Whisparr v3 instances.
 /// Tracks score changes over time for dashboard display and Seeker filtering.
 /// </summary>
 public sealed class CustomFormatScoreSyncer : IHandler
@@ -29,6 +29,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly ILidarrClient _lidarrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly TimeProvider _timeProvider;
     private readonly IStatusNotifier _statusNotifier;
@@ -40,6 +41,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
+        ILidarrClient lidarrClient,
         IWhisparrV3Client whisparrV3Client,
         TimeProvider timeProvider,
         IStatusNotifier statusNotifier,
@@ -50,6 +52,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
+        _lidarrClient = lidarrClient;
         _whisparrV3Client = whisparrV3Client;
         _timeProvider = timeProvider;
         _statusNotifier = statusNotifier;
@@ -126,6 +129,10 @@ public sealed class CustomFormatScoreSyncer : IHandler
             IRadarrClient movieClient = instanceType is InstanceType.Whisparr ? _whisparrV3Client : _radarrClient;
             await SyncMoviesAsync(arrInstance, movieClient, cancellationToken);
         }
+        else if (instanceType is InstanceType.Lidarr)
+        {
+            await SyncLidarrAsync(arrInstance, cancellationToken);
+        }
         else
         {
             await SyncSonarrAsync(arrInstance, cancellationToken);
@@ -146,7 +153,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         DateTimeOffset now = _timeProvider.GetUtcNow();
 
         List<(SearchableMovie Movie, long FileId)> withFilesBuffer = new(ChunkSize);
-        List<long> withoutFilesBuffer = new(ChunkSize);
+        List<(long Id, bool Monitored)> withoutFilesBuffer = new(ChunkSize);
 
         int totalMovies = 0;
         int totalWithFiles = 0;
@@ -175,7 +182,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             }
             else
             {
-                withoutFilesBuffer.Add(movie.Id);
+                withoutFilesBuffer.Add((movie.Id, movie.Monitored));
 
                 if (withoutFilesBuffer.Count >= ChunkSize)
                 {
@@ -214,15 +221,21 @@ public sealed class CustomFormatScoreSyncer : IHandler
             instanceType, totalSynced, arrInstance.Name, totalSkipped);
     }
 
-    private async Task FlushMovieTouchChunkAsync(ArrInstance arrInstance, List<long> movieIds, DateTimeOffset now)
+    private async Task FlushMovieTouchChunkAsync(ArrInstance arrInstance, List<(long Id, bool Monitored)> movies, DateTimeOffset now)
     {
         InstanceType instanceType = arrInstance.ArrConfig.Type;
-        List<long> chunkList = movieIds.ToList();
-        await _eventsContext.CustomFormatScoreEntries
-            .Where(e => e.ArrInstanceId == arrInstance.Id
-                && e.ItemType == instanceType
-                && chunkList.Contains(e.ExternalItemId))
-            .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
+        foreach (IGrouping<bool, (long Id, bool Monitored)> group in movies.GroupBy(x => x.Monitored))
+        {
+            bool isMonitored = group.Key;
+            List<long> chunkList = group.Select(x => x.Id).ToList();
+            await _eventsContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == instanceType
+                    && chunkList.Contains(e.ExternalItemId))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.LastSyncedAt, now)
+                    .SetProperty(e => e.IsMonitored, isMonitored));
+        }
     }
 
     private async Task<(int Synced, int Skipped)> FlushMovieWithFilesChunkAsync(
@@ -262,6 +275,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     if (existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? skippedEntry))
                     {
                         skippedEntry.LastSyncedAt = now;
+                        skippedEntry.IsMonitored = movie.Monitored;
                     }
                     _logger.LogTrace("[{InstanceType}] {InstanceName}: skipping movie '{Title}' (fileId={FileId}), no score returned",
                         instanceType, arrInstance.Name, movie.Title, fileId);
@@ -372,7 +386,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         // Collect all episodes with files for this chunk of series
         List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
-        List<(long SeriesId, long EpisodeId)> episodesToTouch = [];
+        List<(long SeriesId, long EpisodeId, bool IsMonitored)> episodesToTouch = [];
 
         foreach (SeriesFetch seriesFetch in fetched)
         {
@@ -392,7 +406,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
                 else
                 {
-                    episodesToTouch.Add((series.Id, episode.Id));
+                    episodesToTouch.Add((series.Id, episode.Id, series.Monitored && episode.Monitored));
                     if (episode.EpisodeFileId > 0)
                     {
                         skipped++;
@@ -447,8 +461,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
 
         // Touch entries for episodes that exist but have no file (e.g., RSS upgrade in progress)
-        foreach (var group in episodesToTouch.GroupBy(x => x.SeriesId))
+        foreach (IGrouping<(long SeriesId, bool IsMonitored), (long SeriesId, long EpisodeId, bool IsMonitored)> group in episodesToTouch.GroupBy(x => (x.SeriesId, x.IsMonitored)))
         {
+            (long seriesId, bool isMonitored) = group.Key;
             List<long> episodeIds = group.Select(x => x.EpisodeId).ToList();
             foreach (long[] epChunk in episodeIds.Chunk(ChunkSize))
             {
@@ -456,9 +471,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 await _eventsContext.CustomFormatScoreEntries
                     .Where(e => e.ArrInstanceId == arrInstance.Id
                         && e.ItemType == InstanceType.Sonarr
-                        && e.ExternalItemId == group.Key
+                        && e.ExternalItemId == seriesId
                         && epChunkList.Contains(e.EpisodeId))
-                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(e => e.LastSyncedAt, now)
+                        .SetProperty(e => e.IsMonitored, isMonitored), cancellationToken);
             }
         }
 
@@ -499,6 +516,225 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 series.Title, series.Id, arrInstance.Name);
 
             return new SeriesFetch(series, [], [], Failed: true);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task SyncLidarrAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
+    {
+        await ConfigureSqliteCacheSizeAsync(cancellationToken);
+
+        List<ArrQualityProfile> profiles = await _lidarrClient.GetQualityProfilesAsync(arrInstance);
+        Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
+
+        _logger.LogTrace("[Lidarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
+            arrInstance.Name, profiles.Count);
+
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+
+        List<SearchableArtist> buffer = new(ChunkSize);
+
+        int totalArtists = 0;
+        int totalSynced = 0;
+        int totalSkipped = 0;
+        int flushedChunks = 0;
+
+        await foreach (SearchableArtist artist in _lidarrClient.StreamAllArtistsAsync(arrInstance, cancellationToken))
+        {
+            totalArtists++;
+            buffer.Add(artist);
+
+            if (buffer.Count >= ChunkSize)
+            {
+                (int synced, int skipped) = await FlushLidarrArtistChunkAsync(arrInstance, profileMap, buffer, now, cancellationToken);
+                totalSynced += synced;
+                totalSkipped += skipped;
+                buffer.Clear();
+                flushedChunks++;
+                await CheckpointWalIfDueAsync(flushedChunks, cancellationToken);
+            }
+        }
+
+        if (buffer.Count > 0)
+        {
+            (int synced, int skipped) = await FlushLidarrArtistChunkAsync(arrInstance, profileMap, buffer, now, cancellationToken);
+            totalSynced += synced;
+            totalSkipped += skipped;
+            buffer.Clear();
+        }
+
+        _logger.LogTrace("[Lidarr] {InstanceName}: found {ArtistCount} total artists",
+            arrInstance.Name, totalArtists);
+
+        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Lidarr, now);
+
+        await CheckpointWalAsync(cancellationToken);
+
+        _logger.LogInformation("[Lidarr] Synced CF scores for {Count} albums on {InstanceName} ({Skipped} skipped)",
+            totalSynced, arrInstance.Name, totalSkipped);
+    }
+
+    private async Task<(int Synced, int Skipped)> FlushLidarrArtistChunkAsync(
+        ArrInstance arrInstance,
+        Dictionary<int, ArrQualityProfile> profileMap,
+        List<SearchableArtist> chunk,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        int synced = 0;
+        int skipped = 0;
+
+        SemaphoreSlim gate = new(FetchConcurrency);
+        List<Task<ArtistFetch>> fetchTasks = new(chunk.Count);
+        foreach (SearchableArtist artist in chunk)
+        {
+            fetchTasks.Add(FetchArtistAsync(arrInstance, artist, gate, cancellationToken));
+        }
+
+        ArtistFetch[] fetched = await Task.WhenAll(fetchTasks);
+        gate.Dispose();
+
+        List<long> failedArtistIds = fetched
+            .Where(f => f.Failed)
+            .Select(f => f.Artist.Id)
+            .ToList();
+
+        List<(SearchableArtist Artist, SearchableAlbum Album, ArrTrackFile File)> itemsInChunk = [];
+        List<(long ArtistId, long AlbumId, bool IsMonitored)> albumsToTouch = [];
+
+        foreach (ArtistFetch artistFetch in fetched)
+        {
+            SearchableArtist artist = artistFetch.Artist;
+
+            int matched = 0;
+            foreach (SearchableAlbum album in artistFetch.Albums)
+            {
+                bool hasAllTracks = album.Statistics is { TrackFileCount: > 0 } stats && stats.TrackFileCount >= stats.TrackCount;
+
+                // Lidarr scores an album by its first track file
+                ArrTrackFile? first = hasAllTracks
+                    ? artistFetch.TrackFiles.Where(f => f.AlbumId == album.Id).MinBy(f => f.Id)
+                    : null;
+
+                if (first is not null)
+                {
+                    itemsInChunk.Add((artist, album, first));
+                    matched++;
+                }
+                else
+                {
+                    albumsToTouch.Add((artist.Id, album.Id, artist.Monitored && album.Monitored));
+                    if (hasAllTracks)
+                    {
+                        skipped++;
+                    }
+                }
+            }
+
+            _logger.LogTrace("[Lidarr] {InstanceName}: artist '{ArtistName}' (id={ArtistId}) has {TotalAlbums} albums, {FileCount} track files, {Matched} matched",
+                arrInstance.Name, artist.ArtistName, artist.Id, artistFetch.Albums.Count, artistFetch.TrackFiles.Count, matched);
+        }
+
+        if (itemsInChunk.Count > 0)
+        {
+            List<long> artistIds = itemsInChunk.Select(x => x.Artist.Id).Distinct().ToList();
+            Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Lidarr
+                    && artistIds.Contains(e.ExternalItemId))
+                .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId), cancellationToken);
+
+            bool autoDetect = _eventsContext.ChangeTracker.AutoDetectChangesEnabled;
+            _eventsContext.ChangeTracker.AutoDetectChangesEnabled = false;
+            try
+            {
+                foreach ((SearchableArtist artist, SearchableAlbum album, ArrTrackFile file) in itemsInChunk)
+                {
+                    profileMap.TryGetValue(artist.QualityProfileId, out ArrQualityProfile? profile);
+                    int cutoffScore = profile?.CutoffFormatScore ?? 0;
+                    string profileName = profile?.Name ?? "Unknown";
+
+                    string title = $"{artist.ArtistName} - {album.Title}";
+
+                    existingEntries.TryGetValue((artist.Id, album.Id), out CustomFormatScoreEntry? existing);
+                    UpsertCustomFormatScore(existing, arrInstance.Id, artist.Id, album.Id, InstanceType.Lidarr, title, file.Id, file.CustomFormatScore, cutoffScore, profileName, artist.Monitored && album.Monitored, now, seasonNumber: 0, airDateUtc: album.ReleaseDate, lastSearchTime: album.LastSearchTime);
+
+                    synced++;
+                }
+
+                _eventsContext.ChangeTracker.DetectChanges();
+                await _eventsContext.SaveChangesAsync(cancellationToken);
+                _eventsContext.ChangeTracker.Clear();
+            }
+            finally
+            {
+                _eventsContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
+            }
+        }
+        else
+        {
+            _logger.LogTrace("[Lidarr] {InstanceName}: chunk of {ChunkSize} artists yielded 0 albums with track files",
+                arrInstance.Name, chunk.Count);
+        }
+
+        // Keeps partial albums out of stale cleanup
+        foreach (IGrouping<(long ArtistId, bool IsMonitored), (long ArtistId, long AlbumId, bool IsMonitored)> group in albumsToTouch.GroupBy(x => (x.ArtistId, x.IsMonitored)))
+        {
+            (long artistId, bool isMonitored) = group.Key;
+            List<long> albumIds = group.Select(x => x.AlbumId).ToList();
+            foreach (long[] albumChunk in albumIds.Chunk(ChunkSize))
+            {
+                List<long> albumChunkList = albumChunk.ToList();
+                await _eventsContext.CustomFormatScoreEntries
+                    .Where(e => e.ArrInstanceId == arrInstance.Id
+                        && e.ItemType == InstanceType.Lidarr
+                        && e.ExternalItemId == artistId
+                        && albumChunkList.Contains(e.EpisodeId))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(e => e.LastSyncedAt, now)
+                        .SetProperty(e => e.IsMonitored, isMonitored), cancellationToken);
+            }
+        }
+
+        if (failedArtistIds.Count > 0)
+        {
+            foreach (long[] failedChunk in failedArtistIds.Chunk(ChunkSize))
+            {
+                List<long> failedChunkList = failedChunk.ToList();
+                await _eventsContext.CustomFormatScoreEntries
+                    .Where(e => e.ArrInstanceId == arrInstance.Id
+                        && e.ItemType == InstanceType.Lidarr
+                        && failedChunkList.Contains(e.ExternalItemId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
+            }
+        }
+
+        return (synced, skipped);
+    }
+
+    private async Task<ArtistFetch> FetchArtistAsync(
+        ArrInstance arrInstance,
+        SearchableArtist artist,
+        SemaphoreSlim gate,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            Task<List<SearchableAlbum>> albumsTask = _lidarrClient.GetAlbumsAsync(arrInstance, artist.Id, cancellationToken);
+            Task<List<ArrTrackFile>> trackFilesTask = _lidarrClient.GetTrackFilesAsync(arrInstance, artist.Id, cancellationToken);
+            await Task.WhenAll(albumsTask, trackFilesTask);
+
+            return new ArtistFetch(artist, albumsTask.Result, trackFilesTask.Result, Failed: false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[Lidarr] Failed to fetch albums for artist '{ArtistName}' (id={ArtistId}) on {InstanceName}",
+                artist.ArtistName, artist.Id, arrInstance.Name);
+            return new ArtistFetch(artist, [], [], Failed: true);
         }
         finally
         {
@@ -602,37 +838,29 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task CleanupStaleEntriesAsync(
         Guid arrInstanceId, InstanceType instanceType, DateTimeOffset syncStartTime)
     {
-        List<long> staleItemIds = await _eventsContext.CustomFormatScoreEntries
-            .Where(e => e.ArrInstanceId == arrInstanceId
-                && e.ItemType == instanceType
-                && e.LastSyncedAt < syncStartTime)
-            .Select(e => e.ExternalItemId)
-            .Distinct()
-            .ToListAsync();
-
-        if (staleItemIds.Count == 0)
-        {
-            return;
-        }
-
-        await _eventsContext.CustomFormatScoreEntries
+        int deletedEntries = await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
             .ExecuteDeleteAsync();
 
-        foreach (long[] chunk in staleItemIds.Chunk(ChunkSize))
+        if (deletedEntries == 0)
         {
-            List<long> chunkList = chunk.ToList();
-            await _eventsContext.CustomFormatScoreHistory
-                .Where(h => h.ArrInstanceId == arrInstanceId
-                    && h.ItemType == instanceType
-                    && chunkList.Contains(h.ExternalItemId))
-                .ExecuteDeleteAsync();
+            return;
         }
 
-        _logger.LogTrace("Cleaned up {Count} stale CF score item(s) for instance {InstanceId}",
-            staleItemIds.Count, arrInstanceId);
+        // Match on EpisodeId too, so a removed album or episode keeps its siblings' history
+        await _eventsContext.CustomFormatScoreHistory
+            .Where(h => h.ArrInstanceId == arrInstanceId
+                && h.ItemType == instanceType
+                && !_eventsContext.CustomFormatScoreEntries.Any(e => e.ArrInstanceId == h.ArrInstanceId
+                    && e.ItemType == h.ItemType
+                    && e.ExternalItemId == h.ExternalItemId
+                    && e.EpisodeId == h.EpisodeId))
+            .ExecuteDeleteAsync();
+
+        _logger.LogTrace("Cleaned up {Count} stale CF score entries for instance {InstanceId}",
+            deletedEntries, arrInstanceId);
     }
 
     /// <summary>

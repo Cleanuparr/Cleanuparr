@@ -6,9 +6,14 @@ import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
 import { buildDownloadClientPayload } from './api/download-client';
 import type { ArrType } from './api/arr';
-import { LiveArr, indexerMock, liveRadarr, liveSonarr, liveWhisparr } from './live-arr';
+import { LiveArr, indexerMock, liveLidarr, liveRadarr, liveSonarr, liveWhisparr } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
-import { TORZNAB_MOVIE_CATEGORY, TORZNAB_TV_CATEGORY, TORZNAB_XXX_CATEGORY } from './mocks/torznab-stubs';
+import {
+  TORZNAB_AUDIO_CATEGORY,
+  TORZNAB_MOVIE_CATEGORY,
+  TORZNAB_TV_CATEGORY,
+  TORZNAB_XXX_CATEGORY,
+} from './mocks/torznab-stubs';
 import { mkdirShared, writeFileShared } from './shared-volume';
 
 /**
@@ -54,13 +59,13 @@ export interface SeededArr {
   url: string;
   apiKey: string;
   version: number;
-  searchMode: 'tvsearch' | 'movie';
+  searchMode: 'tvsearch' | 'movie' | 'music';
   category: number;
   release: string;
   /** Id of the seeded library item, which is always 1 in a freshly restored seed. */
   itemId: number;
   /** The arr endpoint holding that item. */
-  itemPath: 'series' | 'movie';
+  itemPath: 'series' | 'movie' | 'artist';
   /** Title the seed gave that item. */
   seededTitle: string;
   /** Download client category the arr grabs into, set by the seed. */
@@ -110,6 +115,21 @@ export const WHISPARR: SeededArr = {
   itemPath: 'movie',
   seededTitle: TEST_CONFIG.liveArr.seededWhisparrTitle,
   downloadCategory: 'whisparr',
+};
+
+export const LIDARR: SeededArr = {
+  type: 'lidarr',
+  arr: liveLidarr,
+  url: TEST_CONFIG.liveArr.lidarrUrl,
+  apiKey: TEST_CONFIG.liveArr.lidarrApiKey,
+  version: 3,
+  searchMode: 'music',
+  category: TORZNAB_AUDIO_CATEGORY,
+  release: `${TEST_CONFIG.liveArr.seededArtistName} - ${TEST_CONFIG.liveArr.seededAlbumTitle} (1994) [FLAC]-E2E${RUN_TAG}`,
+  itemId: 1,
+  itemPath: 'artist',
+  seededTitle: TEST_CONFIG.liveArr.seededArtistName,
+  downloadCategory: 'lidarr',
 };
 
 export const qbittorrent = new QBittorrentDriver();
@@ -259,7 +279,7 @@ export async function teardownInstances(api: CleanuparrApi): Promise<void> {
  * A spec takes this in its setup and restores it in its teardown.
  */
 export async function snapshotLibrary(target: SeededArr): Promise<Array<Record<string, unknown>>> {
-  return target.arr.get<Array<Record<string, unknown>>>(`/api/v3/${target.itemPath}`);
+  return target.arr.get<Array<Record<string, unknown>>>(`/api/${target.arr.apiVersion}/${target.itemPath}`);
 }
 
 /**
@@ -271,7 +291,7 @@ export async function snapshotLibrary(target: SeededArr): Promise<Array<Record<s
  */
 export async function restoreLibrary(target: SeededArr, snapshot: Array<Record<string, unknown>>): Promise<void> {
   for (const item of snapshot) {
-    await target.arr.put(`/api/v3/${target.itemPath}/${item.id}`, item);
+    await target.arr.put(`/api/${target.arr.apiVersion}/${target.itemPath}/${item.id}`, item);
   }
 
   const restored = await snapshotLibrary(target);
@@ -311,8 +331,18 @@ export async function waitForArrQueue(arr: LiveArr, downloadId: string, timeoutM
  */
 export async function resetDownloads(): Promise<void> {
   await qbittorrent.clearAllTorrents();
-  await Promise.all([liveSonarr.clearQueue(), liveRadarr.clearQueue(), liveWhisparr.clearQueue()]);
-  await Promise.all([waitForEmptyQueue(liveSonarr), waitForEmptyQueue(liveRadarr), waitForEmptyQueue(liveWhisparr)]);
+  await Promise.all([
+    liveSonarr.clearQueue(),
+    liveRadarr.clearQueue(),
+    liveWhisparr.clearQueue(),
+    liveLidarr.clearQueue(),
+  ]);
+  await Promise.all([
+    waitForEmptyQueue(liveSonarr),
+    waitForEmptyQueue(liveRadarr),
+    waitForEmptyQueue(liveWhisparr),
+    waitForEmptyQueue(liveLidarr),
+  ]);
 }
 
 async function waitForEmptyQueue(arr: LiveArr, timeoutMs = 120_000): Promise<void> {
