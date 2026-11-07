@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync } from 'node:fs';
+import { existsSync, linkSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -10,6 +10,7 @@ import {
   getDownloadCleanerConfig,
   createSeedingRule,
   triggerJob,
+  updateUnlinkedConfig,
 } from '../helpers/app-api';
 import { CleanuparrApi } from '../helpers/api';
 import { RTorrentDriver } from '../helpers/torrent-clients/rtorrent';
@@ -18,6 +19,7 @@ import { mkdirShared } from '../helpers/shared-volume';
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const RTORRENT_DOWNLOADS = join(HOST_DOWNLOADS, 'rtorrent');
+const HARDLINK_DIR = join(RTORRENT_DOWNLOADS, 'hardlinks');
 const CLIENT_DOWNLOADS = '/downloads';
 const ANNOUNCE = 'http://127.0.0.1:6969/announce';
 
@@ -140,6 +142,7 @@ test.describe.serial('rTorrent stopped seeding rule', () => {
 
   test.afterEach(async () => {
     await rtorrent.clearAllTorrents().catch(() => {});
+    rmSync(HARDLINK_DIR, { recursive: true, force: true });
     if (clientId) {
       await deleteDownloadClient(token, clientId).catch(() => {});
       clientId = undefined;
@@ -184,5 +187,53 @@ test.describe.serial('rTorrent stopped seeding rule', () => {
     expect(await countEvents(api, 'DownloadStopped', fx.infoHash)).toBe(before);
     expect(await isPresent(fx.infoHash)).toBe(true);
     expect(await rtorrent.getState(fx.infoHash)).toBe(0);
+  });
+
+  test('an unlinked config moves a closed unlinked torrent but keeps a hardlinked one', async () => {
+    test.setTimeout(180_000);
+
+    const category = 'rt-closed-unlinked';
+    const target = 'cleanuparr-unlinked';
+    const unlinked = await addStoppedTorrent('unlinked', category);
+    const linked = await addStoppedTorrent('linked', category);
+    mkdirShared(HARDLINK_DIR);
+    linkSync(join(linked.contentPath, 'data.bin'), join(HARDLINK_DIR, 'data.bin'));
+
+    const createRes = await createDownloadClient(token, {
+      enabled: true,
+      name: 'rTorrent stopped unlinked e2e',
+      typeName: rtorrent.typeName,
+      host: rtorrent.cleanuparrHost,
+      username: rtorrent.username,
+      password: rtorrent.password,
+      downloadDirectorySource: '/downloads',
+      downloadDirectoryTarget: '/e2e-downloads/rtorrent',
+    });
+    expect(createRes.ok, `createDownloadClient: ${createRes.status}`).toBe(true);
+    clientId = (await createRes.json()).id;
+
+    const cfg = await updateUnlinkedConfig(token, clientId!, {
+      enabled: true,
+      targetCategory: target,
+      useTag: false,
+      ignoredRootDirs: [],
+      categories: [category],
+    });
+    expect(cfg.ok, `updateUnlinkedConfig: ${cfg.status}`).toBe(true);
+
+    const trig = await triggerJob(token, 'DownloadCleaner');
+    expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
+    await sleep(10_000); // The job waits 10 s for the Arr queue sync.
+
+    await expect
+      .poll(() => rtorrent.getLabel(unlinked.infoHash), {
+        message: 'the closed unlinked torrent did not move',
+        timeout: 60_000,
+        intervals: [1_000],
+      })
+      .toBe(target);
+    expect(await rtorrent.getLabel(linked.infoHash)).toBe(category);
+    expect(await rtorrent.getState(unlinked.infoHash)).toBe(0);
+    expect(await rtorrent.getState(linked.infoHash)).toBe(0);
   });
 });
