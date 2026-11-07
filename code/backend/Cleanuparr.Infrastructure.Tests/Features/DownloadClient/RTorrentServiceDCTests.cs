@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -37,7 +38,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", State = 1, Complete = 1, IsPrivate = 0, Label = "" },
                 new RTorrentTorrent { Hash = "HASH2", Name = "Torrent 2", State = 1, Complete = 0, IsPrivate = 0, Label = "" }, // Downloading, not seeding
                 new RTorrentTorrent { Hash = "HASH3", Name = "Torrent 3", State = 1, Complete = 1, IsPrivate = 0, Label = "" },
-                new RTorrentTorrent { Hash = "HASH4", Name = "Torrent 4", State = 0, Complete = 1, IsPrivate = 0, Label = "" } // Stopped, not seeding
+                new RTorrentTorrent { Hash = "HASH4", Name = "Torrent 4", State = 0, Complete = 1, IsPrivate = 0, Label = "" }, // Stopped but finished
+                new RTorrentTorrent { Hash = "HASH5", Name = "Torrent 5", State = 0, Complete = 0, IsPrivate = 0, Label = "" } // Stopped and unfinished
             };
 
             _fixture.ClientWrapper
@@ -52,12 +54,15 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 .GetTrackersAsync("HASH3")
                 .Returns(new List<string>());
 
+            _fixture.ClientWrapper
+                .GetTrackersAsync("HASH4")
+                .Returns(new List<string>());
+
             // Act
             var result = await sut.GetSeedingDownloads();
 
-            // Assert - only torrents with State=1 AND Complete=1 should be returned
-            result.Count.ShouldBe(2);
-            foreach (var item in result) { item.DownloadId.ShouldNotBeNull(); }
+            // Assert - every finished torrent is returned, started or stopped
+            result.Select(x => x.DownloadId).ShouldBe(["HASH1", "HASH3", "HASH4"]);
         }
 
         [Fact]
@@ -141,6 +146,78 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             await _fixture.ClientWrapper.Received(1)
                 .GetTrackersAsync("HASH1");
+        }
+    }
+
+    public class CleanDownloadsAsync_Tests : RTorrentServiceDCTests
+    {
+        public CleanDownloadsAsync_Tests(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        private ITorrentItemWrapper CreateStoppedFinishedTorrent()
+        {
+            RTorrentTorrent torrent = new()
+            {
+                Hash = "HASH1",
+                Name = "Stopped torrent",
+                State = 0,
+                IsActive = 0,
+                Complete = 1,
+                Label = "movies"
+            };
+
+            return new RTorrentItemWrapper(torrent, new List<string>(), TimeProvider.System);
+        }
+
+        private RTorrentSeedingRule CreateRule(SeedingRuleAction action)
+        {
+            return new RTorrentSeedingRule
+            {
+                Name = "rule",
+                Categories = ["movies"],
+                MaxRatio = 0,
+                MinSeedTime = 0,
+                MaxSeedTime = -1,
+                Action = action
+            };
+        }
+
+        [Fact]
+        public async Task StopRule_SkipsStoppedTorrent()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            ITorrentItemWrapper torrent = CreateStoppedFinishedTorrent();
+            RTorrentSeedingRule rule = CreateRule(SeedingRuleAction.Stop);
+            _fixture.SeedingRuleEvaluator
+                .GetMatchingRule(torrent, Arg.Any<List<ISeedingRule>>())
+                .Returns(rule);
+
+            // Act
+            await sut.CleanDownloadsAsync([torrent], [rule]);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive().StopTorrentAsync(Arg.Any<string>());
+            await _fixture.ClientWrapper.DidNotReceive().DeleteTorrentAsync(Arg.Any<string>());
+        }
+
+        [Fact]
+        public async Task DeleteRule_DeletesStoppedTorrent()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            ITorrentItemWrapper torrent = CreateStoppedFinishedTorrent();
+            RTorrentSeedingRule rule = CreateRule(SeedingRuleAction.Delete);
+            _fixture.SeedingRuleEvaluator
+                .GetMatchingRule(torrent, Arg.Any<List<ISeedingRule>>())
+                .Returns(rule);
+
+            // Act
+            await sut.CleanDownloadsAsync([torrent], [rule]);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1).DeleteTorrentAsync("HASH1");
         }
     }
 
