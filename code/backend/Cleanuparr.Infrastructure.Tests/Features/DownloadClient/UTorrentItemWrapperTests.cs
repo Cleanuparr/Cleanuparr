@@ -247,9 +247,15 @@ public class UTorrentItemWrapperTests
     private const int PausedDownloadStatus =
         UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Paused | UTorrentStatus.Queued | UTorrentStatus.Loaded;
 
+    private const int ActiveDownloadStatus =
+        UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Queued | UTorrentStatus.Loaded;
+
     [Theory]
     [InlineData(ActiveDownloadStatus, true)]
     [InlineData(PausedDownloadStatus, false)]
+    [InlineData(ActiveDownloadStatus | UTorrentStatus.Error, false)]
+    [InlineData(ActiveDownloadStatus & ~UTorrentStatus.Started, false)]
+    [InlineData(ActiveDownloadStatus & ~UTorrentStatus.Checked, false)]
     public void IsDownloading_ReturnsCorrectValue(int status, bool expected)
     {
         // Arrange
@@ -259,9 +265,6 @@ public class UTorrentItemWrapperTests
         // Act & Assert
         wrapper.IsDownloading().ShouldBe(expected);
     }
-
-    private const int ActiveDownloadStatus =
-        UTorrentStatus.Started | UTorrentStatus.Checked | UTorrentStatus.Queued | UTorrentStatus.Loaded;
 
     [Theory]
     [InlineData(ActiveDownloadStatus, 0, -1, 0L, true)]
