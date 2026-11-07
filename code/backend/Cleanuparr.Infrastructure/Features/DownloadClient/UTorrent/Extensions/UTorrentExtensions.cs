@@ -19,24 +19,6 @@ public static class UTorrentExtensions
     }
 
     /// <summary>
-    /// Checks if the torrent is currently downloading
-    /// </summary>
-    public static bool IsDownloading(this UTorrentItem item)
-    {
-        return IsDownloading(item.Status);
-    }
-
-    /// <summary>
-    /// Checks if the status indicates downloading
-    /// </summary>
-    public static bool IsDownloading(int status)
-    {
-        return (status & UTorrentStatus.Started) != 0 && 
-               (status & UTorrentStatus.Checked) != 0 &&
-               (status & UTorrentStatus.Error) == 0;
-    }
-    
-    /// <summary>
     /// Checks if a torrent should be ignored based on the ignored patterns
     /// </summary>
     public static bool ShouldIgnore(this UTorrentItem download, IReadOnlyList<string> ignoredDownloads)
