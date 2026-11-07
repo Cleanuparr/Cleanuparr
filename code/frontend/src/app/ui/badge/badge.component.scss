@@ -65,13 +65,20 @@
     border: 1px solid rgba(20, 184, 166, 0.2);
   }
 
+  &--whisparr {
+    background: rgba(255, 105, 180, 0.12);
+    color: rgb(255, 105, 180);
+    border: 1px solid rgba(255, 105, 180, 0.2);
+  }
+
   // Severity indicator dot for non-default badges
   &--primary,
   &--success,
   &--warning,
   &--error,
   &--info,
-  &--accent {
+  &--accent,
+  &--whisparr {
     &::before {
       content: '';
       width: 6px;

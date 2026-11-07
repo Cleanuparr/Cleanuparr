@@ -5,6 +5,7 @@ describe('instanceTypeSeverity', () => {
   it.each([
     [InstanceType.Radarr, 'warning'],
     [InstanceType.Sonarr, 'info'],
+    [InstanceType.Whisparr, 'whisparr'],
     [InstanceType.Lidarr, 'default'],
     [InstanceType.LazyLibrarian, 'default'],
   ])('maps %s to %s', (type, expected) => {
