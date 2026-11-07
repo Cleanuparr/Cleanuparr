@@ -3,6 +3,7 @@ import type { InstanceSearchStat } from '@core/models/search-stats.models';
 import {
   cycleProgress,
   formatCycleDuration,
+  formatDurationBetween,
   formatGrabbedItems,
   formatSearchReason,
   instanceHealthWarning,
@@ -24,6 +25,10 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     cycleItemsSearched: 3,
     cycleItemsTotal: 8,
     cycleStartedAt: '2026-07-29T09:00:00Z',
+    cycleItemsRemaining: 5,
+    cycleCompletedAt: null,
+    lastCycleStartedAt: null,
+    lastCycleCompletedAt: null,
     ...partial,
   };
 }
@@ -125,5 +130,13 @@ describe('formatCycleDuration', () => {
     expect(formatCycleDuration('2026-07-29T09:00:00Z')).toBe('2d 3h');
     expect(formatCycleDuration('2026-07-31T07:00:00Z')).toBe('5h');
     expect(formatCycleDuration('2026-07-31T11:30:00Z')).toBe('30m');
+  });
+});
+
+describe('formatDurationBetween', () => {
+  it('formats the span between two fixed timestamps', () => {
+    expect(formatDurationBetween('2026-07-29T09:00:00Z', '2026-07-31T12:00:00Z')).toBe('2d 3h');
+    expect(formatDurationBetween('2026-07-31T07:00:00Z', '2026-07-31T12:00:00Z')).toBe('5h');
+    expect(formatDurationBetween('2026-07-31T11:30:00Z', '2026-07-31T12:00:00Z')).toBe('30m');
   });
 });

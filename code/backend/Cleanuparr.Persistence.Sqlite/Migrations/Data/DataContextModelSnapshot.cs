@@ -1736,10 +1736,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("skip_tags");
 
-                    b.Property<int>("TotalEligibleItems")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("total_eligible_items");
-
                     b.Property<bool>("UseCustomFormatScore")
                         .HasColumnType("INTEGER")
                         .HasColumnName("use_custom_format_score");

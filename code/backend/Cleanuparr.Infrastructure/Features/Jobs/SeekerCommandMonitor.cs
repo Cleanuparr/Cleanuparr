@@ -145,7 +145,7 @@ public class SeekerCommandMonitor : BackgroundService
         {
             didWork = true;
 
-            if (await TryPublishOutcomeAsync(tracker, instancesById, queueSnapshots, eventPublisher))
+            if (await TryPublishOutcomeAsync(tracker, instancesById, queueSnapshots, eventPublisher, eventsContext))
             {
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
                 continue;
@@ -315,7 +315,8 @@ public class SeekerCommandMonitor : BackgroundService
         SeekerCommandTracker tracker,
         Dictionary<Guid, ArrInstance> instancesById,
         Dictionary<Guid, IReadOnlyList<QueueRecord>> queueSnapshots,
-        IEventPublisher eventPublisher)
+        IEventPublisher eventPublisher,
+        EventsContext eventsContext)
     {
         try
         {
@@ -337,6 +338,7 @@ public class SeekerCommandMonitor : BackgroundService
                 _logger.LogWarning(
                     "Search command {CommandId} for '{Title}' on {Instance} finished with status {Status} (event {EventId})",
                     tracker.CommandId, tracker.ItemTitle, arrInstance.Name, tracker.Status, tracker.EventId);
+                await RecordUnitOutcomeAsync(eventsContext, tracker, SeekerSearchOutcome.Failed);
                 return true;
             }
 
@@ -351,6 +353,8 @@ public class SeekerCommandMonitor : BackgroundService
             List<string>? grabbedItems = FindGrabbedItems(tracker, arrInstance, queue);
             await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
             _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);
+            await RecordUnitOutcomeAsync(eventsContext, tracker,
+                grabbedItems is null ? SeekerSearchOutcome.NothingGrabbed : SeekerSearchOutcome.Grabbed);
 
             return true;
         }
@@ -364,6 +368,63 @@ public class SeekerCommandMonitor : BackgroundService
                 "Failed to publish the outcome of search command {CommandId} for '{Title}' (event {EventId})",
                 tracker.CommandId, tracker.ItemTitle, tracker.EventId);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Stores the result of a proactive search on its unit and cycle.
+    /// </summary>
+    private async Task RecordUnitOutcomeAsync(EventsContext eventsContext, SeekerCommandTracker tracker, SeekerSearchOutcome outcome)
+    {
+        // The event is already published, so a failure here must not send the tracker round again.
+        try
+        {
+            Guid? cycleId = await eventsContext.Events
+                .Where(e => e.Id == tracker.EventId)
+                .Select(e => e.CycleId)
+                .FirstOrDefaultAsync();
+
+            // Replacement searches have no cycle and no unit.
+            if (cycleId is null)
+            {
+                return;
+            }
+
+            SeekerHistory? unit = await eventsContext.SeekerHistory
+                .FirstOrDefaultAsync(h => h.ArrInstanceId == tracker.ArrInstanceId
+                                          && h.ExternalItemId == tracker.ExternalItemId
+                                          && h.SeasonNumber == tracker.SeasonNumber
+                                          && h.EpisodeId == tracker.EpisodeId
+                                          && !h.IsDryRun);
+
+            if (unit is not null && unit.CycleId == cycleId.Value)
+            {
+                unit.LastOutcome = outcome;
+            }
+
+            if (outcome is not SeekerSearchOutcome.Grabbed)
+            {
+                return;
+            }
+
+            if (unit is not null)
+            {
+                unit.Grabs++;
+            }
+
+            SeekerCycle? cycle = await eventsContext.SeekerCycles.FindAsync(cycleId.Value);
+            if (cycle is not null)
+            {
+                cycle.GrabbedUnits++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record the outcome of '{Title}' (event {EventId})", tracker.ItemTitle, tracker.EventId);
         }
     }
 

@@ -1,3 +1,5 @@
+using Cleanuparr.Persistence.Models.State;
+
 namespace Cleanuparr.Infrastructure.Features.Seeker;
 
 /// <summary>
@@ -10,7 +12,6 @@ internal sealed record SeekerProcessResult
 
     /// <summary>
     /// Cycle the candidates belong to.
-    /// A dry run gets a simulated cycle that never reaches the config.
     /// </summary>
-    public required Guid CycleId { get; init; }
+    public required SeekerCycle Cycle { get; init; }
 }

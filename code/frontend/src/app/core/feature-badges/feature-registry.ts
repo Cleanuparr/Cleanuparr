@@ -55,4 +55,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'errored-downloads' },
   { id: 'seeker-include-tags' },
   { id: 'seeker-recent-grab-window' },
+  { id: 'seeker-last-cycle-duration' },
 ];

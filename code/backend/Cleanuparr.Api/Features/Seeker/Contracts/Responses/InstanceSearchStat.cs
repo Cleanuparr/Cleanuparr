@@ -12,5 +12,9 @@ public sealed record InstanceSearchStat
     public Guid? CurrentCycleId { get; init; }
     public int CycleItemsSearched { get; init; }
     public int CycleItemsTotal { get; init; }
+    public int CycleItemsRemaining { get; init; }
     public DateTimeOffset? CycleStartedAt { get; init; }
+    public DateTimeOffset? CycleCompletedAt { get; init; }
+    public DateTimeOffset? LastCycleStartedAt { get; init; }
+    public DateTimeOffset? LastCycleCompletedAt { get; init; }
 }

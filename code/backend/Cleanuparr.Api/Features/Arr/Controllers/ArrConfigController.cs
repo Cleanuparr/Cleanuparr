@@ -350,6 +350,10 @@ public sealed class ArrConfigController : ControllerBase
                 .Where(e => e.ArrInstanceId == arrInstanceId)
                 .ExecuteDeleteAsync(cancellationToken);
 
+            await _eventsContext.SeekerCycles
+                .Where(e => e.ArrInstanceId == arrInstanceId)
+                .ExecuteDeleteAsync(cancellationToken);
+
             await _eventsContext.SearchQueue
                 .Where(e => e.ArrInstanceId == arrInstanceId)
                 .ExecuteDeleteAsync(cancellationToken);

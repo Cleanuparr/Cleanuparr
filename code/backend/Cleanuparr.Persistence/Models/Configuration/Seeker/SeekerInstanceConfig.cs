@@ -53,12 +53,6 @@ public sealed record SeekerInstanceConfig
     public Guid CurrentCycleId { get; set; } = Guid.NewGuid();
 
     /// <summary>
-    /// Total number of eligible items in the library for this instance.
-    /// Updated each time the Seeker processes the instance.
-    /// </summary>
-    public int TotalEligibleItems { get; set; }
-
-    /// <summary>
     /// Skip proactive search cycles when the number of actively downloading items
     /// (SizeLeft > 0) in the arr queue is at or above this threshold. 0 = disabled.
     /// The count includes only the items that a download client has.
