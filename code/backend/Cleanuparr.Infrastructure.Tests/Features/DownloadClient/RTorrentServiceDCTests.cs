@@ -471,6 +471,61 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
                 }
             }
         }
+
+        [Fact]
+        public async Task Throws_WhenSavePathIsEmpty()
+        {
+            // Arrange
+            RTorrentService sut = _fixture.CreateSut();
+            ITorrentItemWrapper mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.DownloadId.Returns("hash");
+            mockTorrent.SavePath.Returns(string.Empty);
+
+            // Act & Assert
+            await Should.ThrowAsync<IOException>(() => sut.DeleteDownload(mockTorrent, deleteSourceFiles: true));
+            await _fixture.ClientWrapper.DidNotReceive().StopTorrentAsync(Arg.Any<string>());
+            await _fixture.ClientWrapper.DidNotReceive().DeleteTorrentAsync(Arg.Any<string>());
+        }
+
+        [Fact]
+        public async Task DeletesOnlyTheFile_WhenClosedSingleFileTorrentHasNoBasePath()
+        {
+            // Arrange
+            string root = Directory.CreateTempSubdirectory().FullName;
+            string filePath = Path.Combine(root, "movie.mkv");
+            string siblingPath = Path.Combine(root, "other.mkv");
+            File.WriteAllText(filePath, "content");
+            File.WriteAllText(siblingPath, "content");
+
+            RTorrentService sut = _fixture.CreateSut();
+            RTorrentTorrent torrent = new()
+            {
+                Hash = "HASH1",
+                Name = "movie.mkv",
+                BasePath = "",
+                Directory = root,
+                IsMultiFile = 0,
+            };
+            RTorrentItemWrapper wrapper = new(torrent, null, TimeProvider.System);
+
+            try
+            {
+                // Act
+                await sut.DeleteDownload(wrapper, deleteSourceFiles: true);
+
+                // Assert
+                File.Exists(filePath).ShouldBeFalse();
+                File.Exists(siblingPath).ShouldBeTrue();
+                await _fixture.ClientWrapper.Received(1).DeleteTorrentAsync("HASH1");
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
     }
 
     public class StopDownload_Tests : RTorrentServiceDCTests

@@ -75,7 +75,28 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
         set => _category = value;
     }
 
-    public string SavePath => Info.BasePath ?? string.Empty;
+    /// <inheritdoc/>
+    /// <remarks>
+    /// rTorrent empties d.base_path on closed torrents after a restart; d.directory survives.
+    /// For a single-file torrent, d.directory holds the parent folder.
+    /// </remarks>
+    public string SavePath
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(Info.BasePath))
+            {
+                return Info.BasePath;
+            }
+
+            if (string.IsNullOrEmpty(Info.Directory))
+            {
+                return string.Empty;
+            }
+
+            return Info.IsMultiFile == 1 ? Info.Directory : Path.Combine(Info.Directory, Info.Name);
+        }
+    }
 
     public IReadOnlyList<string> TrackerDomains => _trackerDomains.Value;
 

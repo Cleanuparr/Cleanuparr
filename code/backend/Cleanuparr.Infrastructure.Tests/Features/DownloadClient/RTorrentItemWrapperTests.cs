@@ -726,4 +726,51 @@ public class RTorrentItemWrapperTests
         // Assert
         result.ShouldBeNull();
     }
+
+    public class SavePath_Tests
+    {
+        [Fact]
+        public void ReturnsBasePath_WhenSet()
+        {
+            // Arrange
+            RTorrentTorrent torrent = new() { Hash = "HASH1", Name = "Test", BasePath = "/downloads/Test", Directory = "/downloads", IsMultiFile = 0 };
+            RTorrentItemWrapper wrapper = new(torrent, null, TimeProvider.System);
+
+            // Act & Assert
+            wrapper.SavePath.ShouldBe("/downloads/Test");
+        }
+
+        [Fact]
+        public void ReturnsDirectory_WhenBasePathEmptyAndMultiFile()
+        {
+            // Arrange
+            RTorrentTorrent torrent = new() { Hash = "HASH1", Name = "Test", BasePath = "", Directory = "/downloads/Test", IsMultiFile = 1 };
+            RTorrentItemWrapper wrapper = new(torrent, null, TimeProvider.System);
+
+            // Act & Assert
+            wrapper.SavePath.ShouldBe("/downloads/Test");
+        }
+
+        [Fact]
+        public void ReturnsDirectoryAndName_WhenBasePathEmptyAndSingleFile()
+        {
+            // Arrange
+            RTorrentTorrent torrent = new() { Hash = "HASH1", Name = "Test.mkv", BasePath = "", Directory = "/downloads", IsMultiFile = 0 };
+            RTorrentItemWrapper wrapper = new(torrent, null, TimeProvider.System);
+
+            // Act & Assert
+            wrapper.SavePath.ShouldBe(Path.Combine("/downloads", "Test.mkv"));
+        }
+
+        [Fact]
+        public void ReturnsEmpty_WhenBasePathAndDirectoryEmpty()
+        {
+            // Arrange
+            RTorrentTorrent torrent = new() { Hash = "HASH1", Name = "Test", BasePath = "", Directory = "", IsMultiFile = 0 };
+            RTorrentItemWrapper wrapper = new(torrent, null, TimeProvider.System);
+
+            // Act & Assert
+            wrapper.SavePath.ShouldBeEmpty();
+        }
+    }
 }

@@ -75,6 +75,11 @@ public partial class RTorrentService
             return;
         }
 
+        if (string.IsNullOrEmpty(item.SavePath))
+        {
+            throw new IOException($"rTorrent reported no data path, cannot delete files | {item.Name}");
+        }
+
         // rTorrent keeps files open while a torrent is active, so stop it before deleting them.
         await _client.StopTorrentAsync(hash);
 
