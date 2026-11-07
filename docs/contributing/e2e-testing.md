@@ -49,6 +49,8 @@ The seed holds one Sonarr series with its first season monitored, and two Radarr
 
 Chaptarr holds one author with eight titles. Only Finding Fortune stays monitored, as two rows, one audiobook and one ebook.
 
+Sportarr holds two leagues and seven events. UFC is monitored and Bellator is not. Event 5 is postponed, event 2 has a 720p file below its cutoff, and events 3 and 7 are unmonitored. Sportarr rejects a release that does not carry the event title, and a `PUT` on a league also sets the monitored flag of its events, so its specs restore events through `/api/v3/episode/monitor` and never write the league back.
+
 ### The two live folders
 
 `tests/live-arr` runs against the shipped image. It waits for the real cron schedule, which is the only place that path is exercised.

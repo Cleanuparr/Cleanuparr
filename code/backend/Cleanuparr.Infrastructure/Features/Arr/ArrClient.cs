@@ -303,19 +303,54 @@ public abstract class ArrClient : IArrClient
         CancellationToken cancellationToken = default
     )
     {
-        List<T> records = [];
-        int totalRecords = 0;
-        int page = 1;
         string monitoredValue = monitored ? "true" : "false";
+
+        return await GetAllPagesAsync<ArrPagedResponse<T>, T>(
+            page =>
+            {
+                UriBuilder uriBuilder = new(arrInstance.Url);
+                uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/wanted/{wantedKind}";
+                uriBuilder.Query = $"page={page}&pageSize={WantedPageSize}&monitored={monitoredValue}";
+                return uriBuilder.Uri;
+            },
+            arrInstance.ApiKey,
+            response => response.Records,
+            response => response.TotalRecords,
+            wantedKind,
+            cancellationToken
+        );
+    }
+
+    /// <summary>
+    /// Reads every page of a paged wanted list, stopping at the first page's total or at the page cap.
+    /// </summary>
+    /// <typeparam name="TPage">The response type of one page.</typeparam>
+    /// <typeparam name="TRecord">The record type held by a page.</typeparam>
+    /// <param name="pageUri">Builds the request uri of a 1-based page number.</param>
+    /// <param name="apiKey">The api key sent with every request.</param>
+    /// <param name="records">Selects the records of a page.</param>
+    /// <param name="totalRecords">Selects the total record count of a page.</param>
+    /// <param name="wantedKind">The wanted list name used in the failure log.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    protected async Task<List<TRecord>> GetAllPagesAsync<TPage, TRecord>(
+        Func<int, Uri> pageUri,
+        string apiKey,
+        Func<TPage, IReadOnlyList<TRecord>> records,
+        Func<TPage, int> totalRecords,
+        string wantedKind,
+        CancellationToken cancellationToken = default
+    )
+    {
+        List<TRecord> result = [];
+        int total = 0;
+        int page = 1;
 
         do
         {
-            UriBuilder uriBuilder = new(arrInstance.Url);
-            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/wanted/{wantedKind}";
-            uriBuilder.Query = $"page={page}&pageSize={WantedPageSize}&monitored={monitoredValue}";
+            Uri uri = pageUri(page);
 
-            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
-            SetApiKey(request, arrInstance.ApiKey);
+            using HttpRequestMessage request = new(HttpMethod.Get, uri);
+            SetApiKey(request, apiKey);
 
             using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
@@ -325,25 +360,25 @@ public abstract class ArrClient : IArrClient
             }
             catch
             {
-                _logger.LogError("wanted {Kind} failed | {Uri}", wantedKind, uriBuilder.Uri);
+                _logger.LogError("wanted {Kind} failed | {Uri}", wantedKind, uri);
                 throw;
             }
 
-            ArrPagedResponse<T>? wantedResponse = await DeserializeStreamAsync<ArrPagedResponse<T>>(response, cancellationToken);
+            TPage? pageResponse = await DeserializeStreamAsync<TPage>(response, cancellationToken);
 
-            if (wantedResponse is null || wantedResponse.Records.Count is 0)
+            if (pageResponse is null || records(pageResponse).Count is 0)
             {
                 break;
             }
 
-            if (totalRecords is 0)
+            if (total is 0)
             {
-                totalRecords = wantedResponse.TotalRecords;
+                total = totalRecords(pageResponse);
             }
 
-            records.AddRange(wantedResponse.Records);
+            result.AddRange(records(pageResponse));
 
-            if (records.Count >= totalRecords)
+            if (result.Count >= total)
             {
                 break;
             }
@@ -351,7 +386,7 @@ public abstract class ArrClient : IArrClient
             page++;
         } while (page <= MaxWantedPages);
 
-        return records;
+        return result;
     }
 
     /// <inheritdoc/>
@@ -471,7 +506,7 @@ public abstract class ArrClient : IArrClient
     }
 
     /// <inheritdoc/>
-    public async Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance)
+    public virtual async Task<List<ArrCommandStatus>> GetCommandsAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{CommandUrlPath}";

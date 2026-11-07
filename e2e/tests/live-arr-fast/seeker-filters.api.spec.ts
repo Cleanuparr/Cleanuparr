@@ -6,6 +6,8 @@ import {
   LIDARR,
   RADARR,
   SONARR,
+  SPORTARR,
+  SPORTARR_EVENTS,
   WHISPARR,
   WHISPARR2,
   addDecoyDownloads,
@@ -15,10 +17,13 @@ import {
   createStallRule,
   expectNoSearch,
   firstSearchEvent,
+  isolateSportarrGrabbableEvent,
   listSearchEvents,
   resetDownloads,
   resetLiveArrState,
   restoreLibrary,
+  restoreSportarrEvents,
+  setSportarrEventsMonitored,
   snapshotLibrary,
   teardownInstances,
   teardownQueueCleaner,
@@ -729,6 +734,67 @@ test.describe('Seeker candidate filters on Chaptarr', () => {
 
   test('searches a book released long ago at the longest grace period', async ({ api }) => {
     const instanceId = await arrangeInstance(api, CHAPTARR, { config: { postReleaseGraceHours: 72 } });
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+  });
+});
+
+// A PUT on a league also sets the monitored flag of its events, so no spec writes the library back.
+test.describe('Seeker candidate filters on Sportarr', () => {
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    await indexerMock.stubMany(grabbableRelease(SPORTARR.searchMode, SPORTARR.release, SPORTARR.category).mappings);
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreSportarrEvents();
+    await resetLiveArrState();
+  });
+
+  test('searches the one monitored missing event', async ({ api }) => {
+    await isolateSportarrGrabbableEvent();
+    const instanceId = await arrangeInstance(api, SPORTARR);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain('UFC Fight Night 232 Allen vs Craig');
+  });
+
+  test('searches an event of an unmonitored league', async ({ api }) => {
+    await setSportarrEventsMonitored(
+      [SPORTARR_EVENTS.missing, SPORTARR_EVENTS.belowCutoff, SPORTARR_EVENTS.grabbable],
+      false,
+    );
+    const instanceId = await arrangeInstance(api, SPORTARR);
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain('Bellator 301');
+  });
+
+  test('skips every event once none is monitored', async ({ api }) => {
+    await setSportarrEventsMonitored(
+      [
+        SPORTARR_EVENTS.missing,
+        SPORTARR_EVENTS.belowCutoff,
+        SPORTARR_EVENTS.grabbable,
+        SPORTARR_EVENTS.inUnmonitoredLeague,
+      ],
+      false,
+    );
+    const instanceId = await arrangeInstance(api, SPORTARR);
+
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches an event released long ago at the longest grace period', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, SPORTARR, { config: { postReleaseGraceHours: 72 } });
     await triggerSeeker(api);
 
     await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);

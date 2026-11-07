@@ -29,6 +29,11 @@ public class SeekerCommandMonitor : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>
+    /// Trackers whose completed command matched nothing in the queue on one pass.
+    /// </summary>
+    private readonly HashSet<Guid> _emptyQueueRechecks = [];
+
     public SeekerCommandMonitor(
         ILogger<SeekerCommandMonitor> logger,
         IServiceScopeFactory scopeFactory,
@@ -144,19 +149,24 @@ public class SeekerCommandMonitor : BackgroundService
         foreach (SeekerCommandTracker tracker in trackers.Where(t => IsTerminal(t.Status)))
         {
             didWork = true;
+            bool recheckPending = _emptyQueueRechecks.Contains(tracker.Id);
 
             if (await TryPublishOutcomeAsync(tracker, instancesById, queueSnapshots, eventPublisher, eventsContext))
             {
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
+                _emptyQueueRechecks.Remove(tracker.Id);
                 continue;
             }
 
-            if (now - tracker.CreatedAt > AbandonAfter)
+            bool deferredThisPass = !recheckPending && _emptyQueueRechecks.Contains(tracker.Id);
+
+            if (now - tracker.CreatedAt > AbandonAfter && !deferredThisPass)
             {
                 _logger.LogWarning(
                     "Abandoning search command {CommandId} for '{Title}' after repeated publish failures (event {EventId})",
                     tracker.CommandId, tracker.ItemTitle, tracker.EventId);
                 eventsContext.SeekerCommandTrackers.Remove(tracker);
+                _emptyQueueRechecks.Remove(tracker.Id);
             }
         }
 
@@ -198,7 +208,7 @@ public class SeekerCommandMonitor : BackgroundService
                 continue;
             }
 
-            MarkForgottenCommandAsCompleted(tracker, arrInstance);
+            await PollSingleCommandAsync(arrClient, arrInstance, tracker, eventPublisher);
         }
     }
 
@@ -351,6 +361,16 @@ public class SeekerCommandMonitor : BackgroundService
             }
 
             List<string>? grabbedItems = FindGrabbedItems(tracker, arrInstance, queue);
+
+            // The arr completes the command a moment before its queue lists the grab
+            if (grabbedItems is null && _emptyQueueRechecks.Add(tracker.Id))
+            {
+                _logger.LogDebug(
+                    "Rechecking the queue on {Instance} for '{Title}' on the next pass (event {EventId})",
+                    arrInstance.Name, tracker.ItemTitle, tracker.EventId);
+                return false;
+            }
+
             await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
             _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);
             await RecordUnitOutcomeAsync(eventsContext, tracker,

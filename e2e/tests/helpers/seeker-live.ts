@@ -7,7 +7,7 @@ import { buildSingleFileTorrent } from './torrent-fixtures';
 import type { CleanuparrApi } from './api';
 import { buildDownloadClientPayload } from './api/download-client';
 import type { ArrType } from './api/arr';
-import { LiveArr, indexerMock, liveChaptarr, liveLidarr, liveRadarr, liveSonarr, liveWhisparr, liveWhisparr2 } from './live-arr';
+import { LiveArr, indexerMock, liveChaptarr, liveLidarr, liveRadarr, liveSonarr, liveSportarr, liveWhisparr, liveWhisparr2 } from './live-arr';
 import { QBittorrentDriver } from './torrent-clients/qbittorrent';
 import {
   TORZNAB_AUDIO_CATEGORY,
@@ -164,6 +164,56 @@ export const CHAPTARR: SeededArr = {
   seededTitle: TEST_CONFIG.liveArr.seededAuthorName,
   downloadCategory: 'chaptarr',
 };
+
+export const SPORTARR: SeededArr = {
+  type: 'sportarr',
+  arr: liveSportarr,
+  url: TEST_CONFIG.liveArr.sportarrUrl,
+  apiKey: TEST_CONFIG.liveArr.sportarrApiKey,
+  version: 4,
+  // Sportarr sends a plain search, never tvsearch.
+  searchMode: 'search',
+  category: TORZNAB_TV_CATEGORY,
+  release: `UFC Fight Night 232 Allen vs Craig 1080p WEB h264-E2E${RUN_TAG}`,
+  itemId: 1,
+  itemPath: 'series',
+  seededTitle: TEST_CONFIG.liveArr.seededLeagueName,
+  downloadCategory: 'sportarr',
+};
+
+/** Event ids in the Sportarr seed, see e2e/scripts/seed-arr.sh. */
+export const SPORTARR_EVENTS = {
+  missing: 1,
+  belowCutoff: 2,
+  grabbable: 4,
+  postponed: 5,
+  inUnmonitoredLeague: 6,
+};
+
+export async function setSportarrEventsMonitored(eventIds: number[], monitored: boolean): Promise<void> {
+  await SPORTARR.arr.put('/api/v3/episode/monitor', { episodeIds: eventIds, monitored });
+}
+
+/** Leaves the grabbable event as the only one the Seeker can pick. */
+export async function isolateSportarrGrabbableEvent(): Promise<void> {
+  await setSportarrEventsMonitored(
+    [SPORTARR_EVENTS.missing, SPORTARR_EVENTS.belowCutoff, SPORTARR_EVENTS.inUnmonitoredLeague],
+    false,
+  );
+}
+
+export async function restoreSportarrEvents(): Promise<void> {
+  await setSportarrEventsMonitored(
+    [
+      SPORTARR_EVENTS.missing,
+      SPORTARR_EVENTS.belowCutoff,
+      SPORTARR_EVENTS.grabbable,
+      SPORTARR_EVENTS.postponed,
+      SPORTARR_EVENTS.inUnmonitoredLeague,
+    ],
+    true,
+  );
+}
 
 export const qbittorrent = new QBittorrentDriver();
 
@@ -345,7 +395,7 @@ export async function waitForArrQueue(arr: LiveArr, downloadId: string, timeoutM
 
   while (Date.now() - start < timeoutMs) {
     const records = await arr.queue();
-    if (records.some((record) => record.downloadId === downloadId)) {
+    if (records.some((record) => record.downloadId.toUpperCase() === downloadId)) {
       return;
     }
 
@@ -371,6 +421,7 @@ export async function resetDownloads(): Promise<void> {
     liveWhisparr2.clearQueue(),
     liveLidarr.clearQueue(),
     liveChaptarr.clearQueue(),
+    liveSportarr.clearQueue(),
   ]);
   await Promise.all([
     waitForEmptyQueue(liveSonarr),
@@ -379,6 +430,7 @@ export async function resetDownloads(): Promise<void> {
     waitForEmptyQueue(liveWhisparr2),
     waitForEmptyQueue(liveLidarr),
     waitForEmptyQueue(liveChaptarr),
+    waitForEmptyQueue(liveSportarr),
   ]);
 }
 

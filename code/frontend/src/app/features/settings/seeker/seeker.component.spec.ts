@@ -26,6 +26,8 @@ const SONARR: SeekerInstanceConfig = {
   monitoredOnly: true,
   useCutoff: false,
   useCustomFormatScore: false,
+  readsCustomFormatScores: true,
+  choosesMonitoredOnly: true,
   sonarrSearchMode: SonarrSearchMode.Auto,
   radarrReleaseGate: RadarrReleaseGate.ReleaseDate,
 };
@@ -49,6 +51,8 @@ const RADARR: SeekerInstanceConfig = {
   monitoredOnly: false,
   useCutoff: true,
   useCustomFormatScore: true,
+  readsCustomFormatScores: true,
+  choosesMonitoredOnly: true,
   sonarrSearchMode: SonarrSearchMode.Auto,
   radarrReleaseGate: RadarrReleaseGate.ReleaseDate,
 };
@@ -570,7 +574,7 @@ describe('SeekerComponent', () => {
   });
 
   it('marks a Chaptarr row as new and hides the custom format score toggle', () => {
-    const chaptarr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Chaptarr', instanceType: 'Chaptarr', enabled: true, useCustomFormatScore: false };
+    const chaptarr: SeekerInstanceConfig = { ...RADARR, instanceName: 'Chaptarr', instanceType: 'Chaptarr', enabled: true, useCustomFormatScore: false, readsCustomFormatScores: false };
     const { fixture } = setup({ config: { ...CONFIG, instances: [chaptarr] } });
 
     const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
@@ -578,6 +582,27 @@ describe('SeekerComponent', () => {
     expect(releaseGateSelect(fixture, 0)).toBeUndefined();
     expect(fixture.nativeElement.textContent).not.toContain('Search Mode');
     expect(fixture.nativeElement.textContent).not.toContain('Use Custom Format Score');
+  });
+
+  it('marks a Sportarr row as new and hides search mode, monitored only and custom format score', () => {
+    const sportarr: SeekerInstanceConfig = { ...SONARR, instanceName: 'Sportarr', instanceType: 'Sportarr', enabled: true, useCustomFormatScore: false, readsCustomFormatScores: false, choosesMonitoredOnly: false };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [sportarr] } });
+
+    const badge = fixture.nativeElement.querySelector('.instance-row__info app-new-badge') as HTMLElement;
+    expect(badge.getAttribute('featureId')).toBe('seeker-sportarr');
+    expect(searchModeSelect(fixture, 0)).toBeUndefined();
+    expect(fixture.nativeElement.textContent).not.toContain('Search for specials');
+    expect(fixture.nativeElement.textContent).not.toContain('Search for anime');
+    expect(fixture.nativeElement.textContent).not.toContain('Monitored Only');
+    expect(fixture.nativeElement.textContent).not.toContain('Use Custom Format Score');
+  });
+
+  it('follows the server flags rather than the instance type for the toggles', () => {
+    const hidden: SeekerInstanceConfig = { ...RADARR, enabled: true, readsCustomFormatScores: false, choosesMonitoredOnly: false };
+    const { fixture } = setup({ config: { ...CONFIG, instances: [hidden] } });
+
+    expect(fixture.nativeElement.textContent).not.toContain('Use Custom Format Score');
+    expect(fixture.nativeElement.textContent).not.toContain('Monitored Only');
   });
 
   it('shows the custom format score toggle for a Radarr row', () => {

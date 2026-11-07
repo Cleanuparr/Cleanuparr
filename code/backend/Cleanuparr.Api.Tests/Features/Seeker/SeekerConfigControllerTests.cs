@@ -231,6 +231,17 @@ public class SeekerConfigControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSeekerConfig_ListsSportarrInstances()
+    {
+        ArrInstance sportarr = SeekerTestDataFactory.AddSportarrInstance(_dataContext);
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        response.Instances.ShouldContain(i => i.ArrInstanceId == sportarr.Id);
+    }
+
+    [Fact]
     public async Task GetSeekerConfig_ListsChaptarrInstances()
     {
         ArrInstance chaptarr = SeekerTestDataFactory.AddChaptarrInstance(_dataContext);
@@ -239,6 +250,27 @@ public class SeekerConfigControllerTests : IDisposable
         SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
 
         response.Instances.ShouldContain(i => i.ArrInstanceId == chaptarr.Id);
+    }
+
+    [Theory]
+    [InlineData(InstanceType.Sonarr, true, true)]
+    [InlineData(InstanceType.Chaptarr, false, true)]
+    [InlineData(InstanceType.Sportarr, false, false)]
+    public async Task GetSeekerConfig_ReportsWhichTogglesTheInstanceTypeAllows(InstanceType type, bool readsCustomFormatScores, bool choosesMonitoredOnly)
+    {
+        ArrInstance instance = type switch
+        {
+            InstanceType.Sonarr => SeekerTestDataFactory.AddSonarrInstance(_dataContext),
+            InstanceType.Chaptarr => SeekerTestDataFactory.AddChaptarrInstance(_dataContext),
+            _ => SeekerTestDataFactory.AddSportarrInstance(_dataContext),
+        };
+
+        IActionResult result = await _controller.GetSeekerConfig();
+        SeekerConfigResponse response = result.ShouldBeOfType<OkObjectResult>().Value.ShouldBeOfType<SeekerConfigResponse>();
+
+        SeekerInstanceConfigResponse row = response.Instances.Single(i => i.ArrInstanceId == instance.Id);
+        row.ReadsCustomFormatScores.ShouldBe(readsCustomFormatScores);
+        row.ChoosesMonitoredOnly.ShouldBe(choosesMonitoredOnly);
     }
 
     #endregion
@@ -266,6 +298,48 @@ public class SeekerConfigControllerTests : IDisposable
         stored.UseCustomFormatScore.ShouldBeFalse();
         await _jobManagementService.DidNotReceive()
             .StartJob(JobType.CustomFormatScoreSyncer, null, Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_SportarrWithCustomFormatScoreAndMonitoredOnlyOff_StoresThemAsOffAndOn()
+    {
+        ArrInstance sportarr = SeekerTestDataFactory.AddSportarrInstance(_dataContext);
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = sportarr.Id, Enabled = true, UseCustomFormatScore = true, MonitoredOnly = false }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        SeekerInstanceConfig stored = _dataContext.SeekerInstanceConfigs.Single(s => s.ArrInstanceId == sportarr.Id);
+        stored.UseCustomFormatScore.ShouldBeFalse();
+        stored.MonitoredOnly.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_SonarrWithMonitoredOnlyOff_KeepsItOff()
+    {
+        ArrInstance sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
+        UpdateSeekerConfigRequest request = new()
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = sonarr.Id, Enabled = true, MonitoredOnly = false }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        _dataContext.SeekerInstanceConfigs.Single(s => s.ArrInstanceId == sonarr.Id).MonitoredOnly.ShouldBeFalse();
     }
 
     [Fact]

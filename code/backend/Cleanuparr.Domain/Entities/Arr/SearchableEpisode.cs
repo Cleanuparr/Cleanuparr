@@ -10,6 +10,13 @@ public sealed record SearchableEpisode
 
     public int EpisodeNumber { get; init; }
 
+    public string? Title { get; init; }
+
+    /// <summary>
+    /// Set when the app lists the episode but will never search it, like a postponed or cancelled Sportarr event.
+    /// </summary>
+    public bool Unsearchable { get; init; }
+
     public bool Monitored { get; init; }
 
     public DateTimeOffset? AirDateUtc { get; init; }

@@ -1,0 +1,158 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ApiKey>0000000000000000000000000000e2ea</ApiKey>
+  <AuthenticationMethod>None</AuthenticationMethod>
+  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <AuthenticationEnabled>false</AuthenticationEnabled>
+  <OnboardingDismissed>false</OnboardingDismissed>
+  <Username />
+  <PasswordHash />
+  <PasswordSalt />
+  <PasswordIterations>10000</PasswordIterations>
+  <CertificateValidation>Enabled</CertificateValidation>
+  <SslCertHash />
+  <BindAddress>*</BindAddress>
+  <Port>1867</Port>
+  <UrlBase />
+  <InstanceName>Sportarr</InstanceName>
+  <EnableSsl>false</EnableSsl>
+  <SslPort>1868</SslPort>
+  <SslCertPath />
+  <SslCertPassword />
+  <LaunchBrowser>false</LaunchBrowser>
+  <UseProxy>false</UseProxy>
+  <ProxyType>Http</ProxyType>
+  <ProxyHostname />
+  <ProxyPort>8080</ProxyPort>
+  <ProxyUsername />
+  <ProxyPassword />
+  <ProxyBypassFilter />
+  <ProxyBypassLocalAddresses>true</ProxyBypassLocalAddresses>
+  <LogLevel>info</LogLevel>
+  <ConsoleLogLevel />
+  <LogSizeLimit>1</LogSizeLimit>
+  <SendAnonymousUsageData>true</SendAnonymousUsageData>
+  <AnalyticsEnabled>false</AnalyticsEnabled>
+  <AnalyticsInstanceId />
+  <DismissedHealthCheckTypes />
+  <BackupFolder />
+  <BackupInterval>7</BackupInterval>
+  <BackupRetention>28</BackupRetention>
+  <Branch>main</Branch>
+  <UpdateAutomatically>false</UpdateAutomatically>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <UpdateScriptPath />
+  <FirstDayOfWeek>Sunday</FirstDayOfWeek>
+  <CalendarWeekColumnHeader>ddd M/D</CalendarWeekColumnHeader>
+  <ShortDateFormat>MMM D YYYY</ShortDateFormat>
+  <LongDateFormat>dddd, MMMM D YYYY</LongDateFormat>
+  <TimeFormat>h:mm A</TimeFormat>
+  <ShowRelativeDates>true</ShowRelativeDates>
+  <Theme>Auto</Theme>
+  <EnableColorImpairedMode>false</EnableColorImpairedMode>
+  <UILanguage>en</UILanguage>
+  <EventViewMode>auto</EventViewMode>
+  <ShowUnknownLeagueItems>false</ShowUnknownLeagueItems>
+  <ShowEventPath>false</ShowEventPath>
+  <TimeZone />
+  <QueryBackoffCapMs>120000</QueryBackoffCapMs>
+  <RenameEvents>false</RenameEvents>
+  <ReplaceIllegalCharacters>true</ReplaceIllegalCharacters>
+  <EnableMultiPartEpisodes>true</EnableMultiPartEpisodes>
+  <SeriesFolderFormat>{Series}</SeriesFolderFormat>
+  <SeasonFolderFormat>Season {Season}</SeasonFolderFormat>
+  <CreateEventFolders>true</CreateEventFolders>
+  <DeleteEmptyFolders>false</DeleteEmptyFolders>
+  <SkipFreeSpaceCheck>false</SkipFreeSpaceCheck>
+  <MinimumFreeSpace>100</MinimumFreeSpace>
+  <MinimumImportDurationMinutes>0</MinimumImportDurationMinutes>
+  <UseHardlinks>true</UseHardlinks>
+  <ImportExtraFiles>false</ImportExtraFiles>
+  <ExtraFileExtensions>srt,nfo</ExtraFileExtensions>
+  <ChangeFileDate>None</ChangeFileDate>
+  <RecycleBin />
+  <RecycleBinCleanup>7</RecycleBinCleanup>
+  <WatchFolders />
+  <SetPermissions>false</SetPermissions>
+  <ChmodFolder>755</ChmodFolder>
+  <ChownGroup />
+  <DownloadClientWorkingFolders>_UNPACK_,_FAILED_</DownloadClientWorkingFolders>
+  <EnableCompletedDownloadHandling>true</EnableCompletedDownloadHandling>
+  <CheckForFinishedDownloadInterval>1</CheckForFinishedDownloadInterval>
+  <RedownloadFailedDownloads>true</RedownloadFailedDownloads>
+  <RedownloadFailedFromInteractiveSearch>true</RedownloadFailedFromInteractiveSearch>
+  <SearchCacheDuration>0</SearchCacheDuration>
+  <IndexerRetention>0</IndexerRetention>
+  <EventFileMissingDeleteAfterDays>30</EventFileMissingDeleteAfterDays>
+  <PreferIndexerFlags>true</PreferIndexerFlags>
+  <DiskScanIntervalMinutes>720</DiskScanIntervalMinutes>
+  <SettingsUpgradeLevel>1</SettingsUpgradeLevel>
+  <EnableEventRetention>false</EnableEventRetention>
+  <EventRetentionDays>30</EventRetentionDays>
+  <MaxDownloadQueueSize>-1</MaxDownloadQueueSize>
+  <DownloadMonitorPollSeconds>30</DownloadMonitorPollSeconds>
+  <RssSyncInterval>15</RssSyncInterval>
+  <MaxRssReleasesPerIndexer>500</MaxRssReleasesPerIndexer>
+  <RssReleaseAgeLimit>14</RssReleaseAgeLimit>
+  <IndexerHttpTimeoutSeconds>30</IndexerHttpTimeoutSeconds>
+  <IptvPlaylistRefreshHours>168</IptvPlaylistRefreshHours>
+  <IptvTrustedNetworks />
+  <EpgRefreshHours>48</EpgRefreshHours>
+  <EpgMaxDownloadSizeMb>256</EpgMaxDownloadSizeMb>
+  <BacklogSearchIntervalMinutes>360</BacklogSearchIntervalMinutes>
+  <BacklogSearchMaxConcurrent>3</BacklogSearchMaxConcurrent>
+  <BacklogSearchMaxAgeDays>365</BacklogSearchMaxAgeDays>
+  <BacklogSearchEnabled>true</BacklogSearchEnabled>
+  <BacklogSearchGraceMinutes>240</BacklogSearchGraceMinutes>
+  <IndexerMinimumAgeMinutes>0</IndexerMinimumAgeMinutes>
+  <AutoSearchRetryBackoffMinutes>30,60,120,240,480</AutoSearchRetryBackoffMinutes>
+  <DvrDefaultProfileId>1</DvrDefaultProfileId>
+  <DvrRecordingPath />
+  <DvrFileNamingPattern>{Title} - {Date}</DvrFileNamingPattern>
+  <DvrPrePaddingMinutes>5</DvrPrePaddingMinutes>
+  <DvrPostPaddingMinutes>30</DvrPostPaddingMinutes>
+  <DvrMaxConcurrentRecordings>0</DvrMaxConcurrentRecordings>
+  <DvrSimultaneousChannels>1</DvrSimultaneousChannels>
+  <DvrDeleteAfterImport>false</DvrDeleteAfterImport>
+  <DvrRecordingRetentionDays>0</DvrRecordingRetentionDays>
+  <DvrKeepLastRecordingsPerLeague>0</DvrKeepLastRecordingsPerLeague>
+  <DvrHardwareAcceleration>99</DvrHardwareAcceleration>
+  <DvrFfmpegPath />
+  <DvrPostRecordingCommand />
+  <DvrEnableReconnect>true</DvrEnableReconnect>
+  <DvrMaxReconnectAttempts>5</DvrMaxReconnectAttempts>
+  <DvrReconnectDelaySeconds>5</DvrReconnectDelaySeconds>
+  <DvrReadTimeoutSeconds>0</DvrReadTimeoutSeconds>
+  <StalledDownloadTimeoutMinutes>60</StalledDownloadTimeoutMinutes>
+  <DownloadPropersAndRepacks>preferAndUpgrade</DownloadPropersAndRepacks>
+  <DvrOvertimeGuardEnabled>true</DvrOvertimeGuardEnabled>
+  <DvrOvertimeMaxExtensionMinutes>120</DvrOvertimeMaxExtensionMinutes>
+  <DvrEarlyFinishGuardEnabled>false</DvrEarlyFinishGuardEnabled>
+  <DvrEarlyFinishBufferMinutes>5</DvrEarlyFinishBufferMinutes>
+  <DvrReresolveChannelsEnabled>true</DvrReresolveChannelsEnabled>
+  <DvrReresolveLockMinutes>45</DvrReresolveLockMinutes>
+  <DvrReresolveMinImprovement>10</DvrReresolveMinImprovement>
+  <DvrReplaceRecordingsWithIndexerReleases>false</DvrReplaceRecordingsWithIndexerReleases>
+  <DvrConflictPolicy>Refuse</DvrConflictPolicy>
+  <DvrUseCatchupWhenAvailable>true</DvrUseCatchupWhenAvailable>
+  <DvrCatchupReadyGraceMinutes>15</DvrCatchupReadyGraceMinutes>
+  <DvrCatchupTimeshiftMode>auto</DvrCatchupTimeshiftMode>
+  <DvrCatchupBackfillHours>48</DvrCatchupBackfillHours>
+  <DvrVideoCodec>copy</DvrVideoCodec>
+  <DvrAudioCodec>copy</DvrAudioCodec>
+  <DvrAudioChannels>original</DvrAudioChannels>
+  <DvrAudioBitrate>192</DvrAudioBitrate>
+  <DvrVideoBitrate>0</DvrVideoBitrate>
+  <DvrContainer>mp4</DvrContainer>
+  <MaxConcurrentEventSearches>3</MaxConcurrentEventSearches>
+  <EventSearchDelayMs>3000</EventSearchDelayMs>
+  <MaxConcurrentIndexerQueries>5</MaxConcurrentIndexerQueries>
+  <DefaultSportsRuntimeMinutes>180</DefaultSportsRuntimeMinutes>
+  <SizeComparisonChunkMB>200</SizeComparisonChunkMB>
+  <AutoGrabMinMatchScore>50</AutoGrabMinMatchScore>
+  <MinimumMatchConfidence>60</MinimumMatchConfidence>
+  <DownloadClientCacheSlidingExpirationMinutes>30</DownloadClientCacheSlidingExpirationMinutes>
+  <DownloadClientCacheAbsoluteExpirationHours>2</DownloadClientCacheAbsoluteExpirationHours>
+  <HttpClientTimeoutSeconds>100</HttpClientTimeoutSeconds>
+  <CustomMetadataApiUrl>http://127.0.0.1:9/api/v2/json</CustomMetadataApiUrl>
+</Config>

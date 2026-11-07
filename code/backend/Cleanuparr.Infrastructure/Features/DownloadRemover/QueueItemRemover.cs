@@ -103,14 +103,17 @@ public sealed class QueueItemRemover : IQueueItemRemover
             return;
         }
 
-        _eventsContext.SearchQueue.Add(new SearchQueueItem
+        foreach (SearchItem searchItem in target.AdditionalSearchItems.Prepend(target.SearchItem))
         {
-            ArrInstanceId = request.Instance.Id,
-            ItemId = target.SearchItem.Id,
-            SeriesId = (target.SearchItem as SeriesSearchItem)?.SeriesId,
-            SearchType = (target.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
-            Title = target.Title,
-        });
+            _eventsContext.SearchQueue.Add(new SearchQueueItem
+            {
+                ArrInstanceId = request.Instance.Id,
+                ItemId = searchItem.Id,
+                SeriesId = (searchItem as SeriesSearchItem)?.SeriesId,
+                SearchType = (searchItem as SeriesSearchItem)?.SearchType.ToString(),
+                Title = target.Title,
+            });
+        }
 
         await _eventsContext.SaveChangesAsync();
     }

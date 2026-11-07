@@ -28,8 +28,9 @@ public class SeekerAppsTests
     [InlineData(InstanceType.Lidarr, 0, true)]
     [InlineData(InstanceType.Lidarr, 2, true)]
     [InlineData(InstanceType.Chaptarr, 0, true)]
+    [InlineData(InstanceType.Sportarr, 0, true)]
     [InlineData(InstanceType.Readarr, 0, false)]
-    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrChaptarrAndWhisparr(InstanceType type, float version, bool expected)
+    public void IsSupported_ReturnsTrueOnlyForSonarrRadarrLidarrChaptarrSportarrAndWhisparr(InstanceType type, float version, bool expected)
     {
         // Act
         bool supported = SeekerApps.IsSupported(Instance(type, version));
@@ -44,7 +45,8 @@ public class SeekerAppsTests
     [InlineData(InstanceType.Lidarr, true)]
     [InlineData(InstanceType.Whisparr, true)]
     [InlineData(InstanceType.Chaptarr, false)]
-    public void ReadsCustomFormatScores_ReturnsFalseOnlyForChaptarr(InstanceType type, bool expected)
+    [InlineData(InstanceType.Sportarr, false)]
+    public void ReadsCustomFormatScores_ReturnsFalseOnlyForChaptarrAndSportarr(InstanceType type, bool expected)
     {
         // Act
         bool reads = SeekerApps.ReadsCustomFormatScores(Instance(type, 3));
@@ -102,6 +104,39 @@ public class SeekerAppsTests
 
         // Assert
         name.ShouldBe("Show S01E05");
+    }
+
+    [Theory]
+    [InlineData(InstanceType.Sportarr, true)]
+    [InlineData(InstanceType.Sonarr, false)]
+    [InlineData(InstanceType.Whisparr, false)]
+    public void SearchesEventsOnly_ReturnsTrueOnlyForSportarr(InstanceType type, bool expected)
+    {
+        // Act
+        bool eventsOnly = SeekerApps.SearchesEventsOnly(Instance(type, 2));
+
+        // Assert
+        eventsOnly.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void EpisodeName_Sportarr_JoinsTheLeagueAndEventTitle()
+    {
+        // Act
+        string name = SeekerApps.EpisodeName(Instance(InstanceType.Sportarr), "UFC", 2024, 0, DateTimeOffset.UtcNow, "UFC 300: Pereira vs Hill");
+
+        // Assert
+        name.ShouldBe("UFC - UFC 300: Pereira vs Hill");
+    }
+
+    [Fact]
+    public void EpisodeName_SportarrWithoutTitle_UsesTheLeagueTitle()
+    {
+        // Act
+        string name = SeekerApps.EpisodeName(Instance(InstanceType.Sportarr), "UFC", 2024, 0, null);
+
+        // Assert
+        name.ShouldBe("UFC");
     }
 
     [Fact]

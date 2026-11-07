@@ -2,7 +2,7 @@ import { TEST_CONFIG } from './test-config';
 import { WireMockClient } from './mocks/wiremock-client';
 
 /**
- * Direct access to the real Sonarr, Radarr, Whisparr v3, Whisparr v2, Lidarr and Chaptarr containers.
+ * Direct access to the real Sonarr, Radarr, Whisparr v3, Whisparr v2, Lidarr, Chaptarr and Sportarr containers.
  *
  * The specs drive Cleanuparr through its own API, like every other spec.
  * This is the other side of the contract: what the arr itself ended up with.
@@ -171,6 +171,12 @@ export const liveChaptarr = new LiveArr(
   TEST_CONFIG.liveArr.chaptarrApiKey,
   'includeUnknownAuthorItems=true&includeAuthor=true&includeBook=true',
   'v1',
+);
+
+export const liveSportarr = new LiveArr(
+  TEST_CONFIG.liveArr.sportarrUrl,
+  TEST_CONFIG.liveArr.sportarrApiKey,
+  'includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true',
 );
 
 /** The fake Torznab indexer, kept out of MockServers: other suites lack its container. */

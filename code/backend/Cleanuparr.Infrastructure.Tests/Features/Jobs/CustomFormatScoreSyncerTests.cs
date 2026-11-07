@@ -1010,6 +1010,32 @@ public class CustomFormatScoreSyncerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_SportarrWithTheFlagOn_IsSkipped()
+    {
+        // Arrange
+        ArrInstance sportarrInstance = TestDataContextFactory.AddSportarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sportarrInstance.Id,
+            ArrInstance = sportarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+        _radarrClient.ReceivedCalls().ShouldBeEmpty();
+        _lidarrClient.ReceivedCalls().ShouldBeEmpty();
+        (await _fixture.EventsContext.CustomFormatScoreEntries.AnyAsync()).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ReadarrWithTheFlagOn_IsSkipped()
     {
         // Arrange

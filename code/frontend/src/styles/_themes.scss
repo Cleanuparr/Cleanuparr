@@ -81,6 +81,9 @@
   --focus-ring: var(--brand-500);
   --focus-ring-offset: var(--surface-ground);
 
+  // Sportarr badge: its logo is black and white, so the badge color follows the theme
+  --badge-sportarr-rgb: 231, 226, 238;
+
   // Logo body color: black on dark theme so it blends into the dark sidebar —
   // only the accent-colored parts of the logo read against the background.
   --logo-fg: #000000;
@@ -226,6 +229,9 @@
   // Focus ring
   --focus-ring: var(--brand-600);
   --focus-ring-offset: var(--surface-ground);
+
+  // Sportarr badge: its logo is black and white, so the badge color follows the theme
+  --badge-sportarr-rgb: 61, 53, 71;
 
   // Logo body color: white on light theme so it blends into the light sidebar —
   // only the accent-colored parts of the logo read against the background.

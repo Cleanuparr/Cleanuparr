@@ -208,8 +208,7 @@ public sealed class QueueCleaner : GenericHandler
 
                 await PublishQueueItemRemoveRequest(
                     instance,
-                    record,
-                    group.Count() > 1,
+                    group.ToList(),
                     removeFromClient,
                     downloadCheckResult.DeleteReason,
                     skipSearch: !hasContentId,
@@ -254,8 +253,7 @@ public sealed class QueueCleaner : GenericHandler
 
                 await PublishQueueItemRemoveRequest(
                     instance,
-                    record,
-                    group.Count() > 1,
+                    group.ToList(),
                     removeFromClient,
                     DeleteReason.FailedImport,
                     skipSearch: !hasContentId,

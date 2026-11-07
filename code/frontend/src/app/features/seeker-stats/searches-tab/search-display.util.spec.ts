@@ -166,6 +166,7 @@ describe('funnelStages', () => {
     expect(funnelStages(funnel, 'Whisparr', 3).narrowing[0]).toEqual({ label: 'movies', value: 10 });
     expect(funnelStages(funnel, 'Lidarr', 0).narrowing[0]).toEqual({ label: 'artists', value: 10 });
     expect(funnelStages(funnel, 'Chaptarr', 0).narrowing[0]).toEqual({ label: 'authors', value: 10 });
+    expect(funnelStages(funnel, 'Sportarr', 0).narrowing[0]).toEqual({ label: 'leagues', value: 10 });
   });
 
   it('splits the units needing a search by state', () => {

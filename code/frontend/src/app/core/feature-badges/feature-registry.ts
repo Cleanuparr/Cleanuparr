@@ -73,4 +73,5 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'seeker-whisparr' },
   { id: 'seeker-lidarr' },
   { id: 'seeker-chaptarr' },
+  { id: 'seeker-sportarr' },
 ];
