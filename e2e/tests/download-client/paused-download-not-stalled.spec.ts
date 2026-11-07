@@ -197,6 +197,8 @@ test.describe('Queue Cleaner stall check on rTorrent', () => {
       expect(await rtorrent.getIsActive(arranged.hash), 'd.pause clears d.is_active').toBe(0);
 
       await runQueueCleaner(api, mocks);
+      // The second run starts only after the first finishes.
+      await runQueueCleaner(api, mocks);
 
       expect(await countEvents(api, 'StalledStrike', arranged.hash)).toBe(0);
       expect(await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).toHaveLength(0);
