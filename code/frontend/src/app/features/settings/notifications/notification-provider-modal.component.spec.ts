@@ -26,6 +26,7 @@ const DEFAULT_EVENTS = {
   onSearchItemGrabbed: false,
   onForceImported: false,
   onErroredStrike: false,
+  onSeekerCycleCompleted: false,
 };
 
 const NTFY_PROVIDER: NotificationProviderDto = {
@@ -45,6 +46,7 @@ const NTFY_PROVIDER: NotificationProviderDto = {
     onSearchItemGrabbed: true,
     onForceImported: false,
     onErroredStrike: false,
+    onSeekerCycleCompleted: false,
   },
   configuration: {
     serverUrl: 'https://ntfy.example.com',
@@ -688,6 +690,30 @@ describe('NotificationProviderModalComponent', () => {
     expect(component.visible()).toBe(false);
     expect(component.saving()).toBe(false);
     expect(onSaved).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the Seeker Cycle Completed toggle and sends its value on save', () => {
+    const { fixture, component, api } = setup({ initialType: NotificationProviderType.Discord });
+
+    const toggle = fixture.nativeElement.querySelector(
+      '.event-flags button[aria-label="Seeker Cycle Completed"]',
+    ) as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    expect(component.modalModel().onSeekerCycleCompleted).toBe(true);
+
+    component.modalModel.update((m) => ({ ...m, name: 'Alerts', webhookUrl: 'https://discord.com/hook' }));
+    component.saveProvider();
+    fixture.detectChanges();
+
+    expect(api.create).toHaveBeenCalledWith(
+      NOTIFICATION_PROVIDER_DESCRIPTORS[NotificationProviderType.Discord],
+      expect.objectContaining({ onSeekerCycleCompleted: true }),
+    );
   });
 
   it('updates an existing ntfy provider with the loaded configuration', () => {

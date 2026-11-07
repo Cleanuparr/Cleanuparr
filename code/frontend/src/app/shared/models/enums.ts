@@ -206,4 +206,5 @@ export enum EventType {
   StrikeReset = 'StrikeReset',
   ForceImported = 'ForceImported',
   DownloadStopped = 'DownloadStopped',
+  SeekerCycleCompleted = 'SeekerCycleCompleted',
 }

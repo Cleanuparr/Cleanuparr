@@ -638,6 +638,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("INTEGER")
                         .HasColumnName("is_dry_run");
 
+                    b.Property<string>("NotifiedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("notified_at");
+
                     b.Property<int>("RemainingUnits")
                         .HasColumnType("INTEGER")
                         .HasColumnName("remaining_units");

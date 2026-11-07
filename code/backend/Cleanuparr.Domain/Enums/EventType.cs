@@ -17,6 +17,7 @@ public enum EventType
     ForceImported,
     DownloadStopped,
     ErroredStrike,
+    SeekerCycleCompleted,
 
     /// <summary>
     /// Text this build does not know.

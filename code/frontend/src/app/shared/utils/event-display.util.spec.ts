@@ -12,6 +12,7 @@ describe('eventTypeSeverity', () => {
   it.each([
     [EventType.StrikeReset, 'success'],
     [EventType.DownloadCleaned, 'success'],
+    [EventType.SeekerCycleCompleted, 'success'],
     [EventType.FailedImportStrike, 'error'],
     [EventType.QueueItemDeleted, 'error'],
     [EventType.StalledStrike, 'warning'],
@@ -78,6 +79,7 @@ describe('eventIcon', () => {
     [EventType.DownloadCleaned, 'tablerDownload'],
     [EventType.QueueItemDeleted, 'tablerTrash'],
     [EventType.CategoryChanged, 'tablerTag'],
+    [EventType.SeekerCycleCompleted, 'tablerSearch'],
     [EventType.DownloadStopped, 'tablerCircle'],
   ])('maps %s to %s', (eventType, expected) => {
     expect(eventIcon(eventType)).toBe(expected);

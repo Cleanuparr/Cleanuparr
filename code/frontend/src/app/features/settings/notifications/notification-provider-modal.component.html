@@ -220,6 +220,10 @@
         <app-toggle label="Errored Strike" [formField]="modalForm.onErroredStrike"
           hint="Notify when an errored download strike occurs"
           helpKey="notifications:onErroredStrike" />
+        <app-toggle label="Seeker Cycle Completed" [formField]="modalForm.onSeekerCycleCompleted"
+          hint="Notify when Seeker has searched every eligible item on an instance once"
+          helpKey="notifications:onSeekerCycleCompleted"
+          featureId="seeker-cycle-notification" />
       </div>
     </div>
   </div>

@@ -638,6 +638,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Events
                         .HasColumnType("boolean")
                         .HasColumnName("is_dry_run");
 
+                    b.Property<DateTimeOffset?>("NotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("notified_at");
+
                     b.Property<int>("RemainingUnits")
                         .HasColumnType("integer")
                         .HasColumnName("remaining_units");

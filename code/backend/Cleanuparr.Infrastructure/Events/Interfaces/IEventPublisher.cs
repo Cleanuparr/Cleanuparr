@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 
 namespace Cleanuparr.Infrastructure.Events.Interfaces;
 
@@ -75,6 +76,11 @@ public interface IEventPublisher
     /// Sets the status of a search event to started.
     /// </summary>
     Task PublishSearchStarted(Guid eventId);
+
+    /// <summary>
+    /// Records the first completion of a Seeker cycle and notifies about it. Later completions of the same cycle are ignored.
+    /// </summary>
+    Task PublishSeekerCycleCompleted(SeekerCycle cycle, string instanceName);
 
     /// <summary>
     /// Fails each search event of an arr instance that has no terminal status.

@@ -35,6 +35,11 @@ public sealed record SeekerCycle
     public SeekerCycleCompletionReason? CompletionReason { get; set; }
 
     /// <summary>
+    /// When the cycle completed notification went out. Null until then.
+    /// </summary>
+    public DateTimeOffset? NotifiedAt { get; set; }
+
+    /// <summary>
     /// Eligible units when the cycle opened
     /// </summary>
     public int EligibleAtStart { get; set; }

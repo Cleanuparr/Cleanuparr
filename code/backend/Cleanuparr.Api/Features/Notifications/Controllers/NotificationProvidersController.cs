@@ -152,7 +152,8 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = request.OnSearchTriggered,
                 OnSearchItemGrabbed = request.OnSearchItemGrabbed,
                 OnForceImported = request.OnForceImported,
-                OnErroredStrike = request.OnErroredStrike
+                OnErroredStrike = request.OnErroredStrike,
+                OnSeekerCycleCompleted = request.OnSeekerCycleCompleted
             }, config);
 
             await _dataContext.NotificationConfigs.AddAsync(provider);
@@ -229,6 +230,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchItemGrabbed = request.OnSearchItemGrabbed,
                 OnForceImported = request.OnForceImported,
                 OnErroredStrike = request.OnErroredStrike,
+                OnSeekerCycleCompleted = request.OnSeekerCycleCompleted,
                 UpdatedAt = _timeProvider.GetUtcNow()
             }, newConfig);
 
@@ -331,7 +333,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnSearchTriggered = false,
                     OnSearchItemGrabbed = false,
                     OnForceImported = false,
-                    OnErroredStrike = false
+                    OnErroredStrike = false,
+                    OnSeekerCycleCompleted = false
                 },
                 Configuration = config
             };
@@ -367,7 +370,8 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnSearchTriggered = provider.OnSearchTriggered,
                 OnSearchItemGrabbed = provider.OnSearchItemGrabbed,
                 OnForceImported = provider.OnForceImported,
-                OnErroredStrike = provider.OnErroredStrike
+                OnErroredStrike = provider.OnErroredStrike,
+                OnSeekerCycleCompleted = provider.OnSeekerCycleCompleted
             },
             Configuration = (object?)descriptor.GetConfig(provider) ?? new object()
         };
