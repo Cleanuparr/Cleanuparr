@@ -7,14 +7,19 @@ namespace Cleanuparr.Infrastructure.Features.Seeker;
 public static class SeekerApps
 {
     /// <summary>
-    /// True for the instances Seeker searches proactively: Sonarr, Radarr, Lidarr and Whisparr.
+    /// True for the instances Seeker searches proactively: Sonarr, Radarr, Lidarr, Chaptarr and Whisparr.
     /// </summary>
     public static bool IsSupported(ArrInstance arrInstance) => arrInstance.ArrConfig.Type switch
     {
-        InstanceType.Sonarr or InstanceType.Radarr or InstanceType.Lidarr => true,
+        InstanceType.Sonarr or InstanceType.Radarr or InstanceType.Lidarr or InstanceType.Chaptarr => true,
         InstanceType.Whisparr => arrInstance.Version is 2 or 3,
         _ => false,
     };
+
+    /// <summary>
+    /// False for Chaptarr, whose book files carry no custom format score.
+    /// </summary>
+    public static bool ReadsCustomFormatScores(ArrInstance arrInstance) => arrInstance.ArrConfig.Type is not InstanceType.Chaptarr;
 
     /// <summary>
     /// True for the instances that search one movie per unit: Radarr and Whisparr v3.

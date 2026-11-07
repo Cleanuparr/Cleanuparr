@@ -12,7 +12,7 @@ public class HealthStats
     public List<DownloadClientHealthDto> DownloadClients { get; set; } = [];
 
     /// <summary>
-    /// Health of each enabled arr instance (Sonarr, Radarr, Lidarr, Readarr, Whisparr).
+    /// Health of each enabled arr instance (Sonarr, Radarr, Lidarr, Readarr, Whisparr, Chaptarr).
     /// </summary>
     public List<ArrInstanceHealthDto> ArrInstances { get; set; } = [];
 }

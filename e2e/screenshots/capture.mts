@@ -142,7 +142,7 @@ interface SeedContext {
   clients: Map<string, ClientInfo>;
 }
 
-const ARR_TYPE_SLUGS = ['sonarr', 'radarr', 'lidarr', 'readarr', 'whisparr', 'sportarr', 'lazylibrarian'];
+const ARR_TYPE_SLUGS = ['sonarr', 'radarr', 'lidarr', 'readarr', 'chaptarr', 'whisparr', 'sportarr', 'lazylibrarian'];
 
 async function authedGet(path: string, accessToken: string): Promise<any | null> {
   const res = await fetch(`${BASE_URL}${path}`, {

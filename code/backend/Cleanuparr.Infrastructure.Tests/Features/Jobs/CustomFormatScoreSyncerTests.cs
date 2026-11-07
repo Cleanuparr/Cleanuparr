@@ -983,6 +983,58 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
     #endregion
 
+    [Fact]
+    public async Task ExecuteAsync_ChaptarrWithTheFlagOn_IsSkipped()
+    {
+        // Arrange
+        ArrInstance chaptarrInstance = TestDataContextFactory.AddChaptarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = chaptarrInstance.Id,
+            ArrInstance = chaptarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+        _radarrClient.ReceivedCalls().ShouldBeEmpty();
+        _lidarrClient.ReceivedCalls().ShouldBeEmpty();
+        (await _fixture.EventsContext.CustomFormatScoreEntries.AnyAsync()).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ReadarrWithTheFlagOn_IsSkipped()
+    {
+        // Arrange
+        ArrInstance readarrInstance = TestDataContextFactory.AddReadarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = readarrInstance.Id,
+            ArrInstance = readarrInstance,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        CustomFormatScoreSyncer sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+        _radarrClient.ReceivedCalls().ShouldBeEmpty();
+        _lidarrClient.ReceivedCalls().ShouldBeEmpty();
+        (await _fixture.EventsContext.CustomFormatScoreEntries.AnyAsync()).ShouldBeFalse();
+    }
+
     #region Lidarr Sync Tests
 
     private async Task<ArrInstance> AddLidarrWithSyncAsync()

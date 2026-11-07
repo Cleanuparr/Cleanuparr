@@ -2,6 +2,7 @@ import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import type { CleanuparrApi } from '../helpers/api';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  CHAPTARR,
   LIDARR,
   RADARR,
   RUN_TAG,
@@ -278,6 +279,36 @@ test.describe('Seeker preview on Lidarr', () => {
     expect(next?.reason).toBe('Missing');
     expect(preview.funnel.libraryItems).toBe(library.length);
     expect(preview.funnel.eligibleUnits).toBeGreaterThan(0);
+    expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
+  });
+});
+
+test.describe('Seeker preview on Chaptarr', () => {
+  let library: Array<Record<string, unknown>> = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(CHAPTARR);
+    await indexerMock.stub(torznabSearchStub(CHAPTARR.searchMode, []));
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await restoreLibrary(CHAPTARR, library);
+    await resetLiveArrState();
+  });
+
+  test('lists one format of the seeded title next up as missing with author funnel counts', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, CHAPTARR);
+
+    const preview = await getPreview(api, instanceId);
+
+    // The Seeker picks one unit per author, so only one format shows
+    const title = `${CHAPTARR.seededTitle} - ${TEST_CONFIG.liveArr.seededBookTitle}`;
+    const next = preview.nextUp.find((u) => u.name === `${title} (Audiobook)` || u.name === `${title} (Ebook)`);
+    expect(next?.reason).toBe('Missing');
+    expect(preview.funnel.libraryItems).toBe(library.length);
+    expect(preview.funnel.eligibleUnits).toBe(2);
     expect(await listSearchEvents(api, instanceId)).toHaveLength(0);
   });
 });

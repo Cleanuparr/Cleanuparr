@@ -77,6 +77,12 @@
     border: 1px solid rgba(0, 146, 82, 0.2);
   }
 
+  &--chaptarr {
+    background: rgba(185, 28, 28, 0.12);
+    color: rgb(185, 28, 28);
+    border: 1px solid rgba(185, 28, 28, 0.2);
+  }
+
   // Severity indicator dot for non-default badges
   &--primary,
   &--success,
@@ -85,7 +91,8 @@
   &--info,
   &--accent,
   &--whisparr,
-  &--lidarr {
+  &--lidarr,
+  &--chaptarr {
     &::before {
       content: '';
       width: 6px;

@@ -98,7 +98,8 @@ public static class ConfigControllerTestDataFactory
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Readarr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Whisparr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Sportarr, Instances = [], FailedImportMaxStrikes = 3 },
-            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.LazyLibrarian, Instances = [], FailedImportMaxStrikes = 3 }
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.LazyLibrarian, Instances = [], FailedImportMaxStrikes = 3 },
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Chaptarr, Instances = [], FailedImportMaxStrikes = 3 }
         );
 
         context.QueueCleanerConfigs.Add(new QueueCleanerConfig
@@ -120,6 +121,7 @@ public static class ConfigControllerTestDataFactory
             Whisparr = new BlocklistSettings { Enabled = false },
             Sportarr = new BlocklistSettings { Enabled = false },
             LazyLibrarian = new BlocklistSettings { Enabled = false },
+            Chaptarr = new BlocklistSettings { Enabled = false },
         });
 
         context.DownloadCleanerConfigs.Add(new DownloadCleanerConfig

@@ -7,6 +7,7 @@ describe('instanceTypeSeverity', () => {
     [InstanceType.Sonarr, 'info'],
     [InstanceType.Whisparr, 'whisparr'],
     [InstanceType.Lidarr, 'lidarr'],
+    [InstanceType.Chaptarr, 'chaptarr'],
     [InstanceType.LazyLibrarian, 'default'],
   ])('maps %s to %s', (type, expected) => {
     expect(instanceTypeSeverity(type)).toBe(expected);
@@ -23,6 +24,7 @@ describe('instanceTypeHighlight', () => {
     [InstanceType.Sonarr, 'info'],
     [InstanceType.Whisparr, 'info'],
     [InstanceType.Lidarr, 'info'],
+    [InstanceType.Chaptarr, 'info'],
   ])('maps %s to %s', (type, expected) => {
     expect(instanceTypeHighlight(type)).toBe(expected);
   });

@@ -1,6 +1,7 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import { indexerMock } from '../helpers/live-arr';
 import {
+  CHAPTARR,
   LIDARR,
   RADARR,
   SONARR,
@@ -35,6 +36,13 @@ const LIST_FALLBACK = 'Failed to list commands on';
 
 const TEST_TIMEOUT = TRIGGERED_SEARCH_TIMEOUT + TRANSITION_TIMEOUT + 120_000;
 
+const AUDIOBOOK_SKIP_TAG = 'e2e-grab-skip-audiobook';
+
+async function setChaptarrAudiobookTags(audiobookTags: number[]): Promise<void> {
+  const author = await CHAPTARR.arr.get<Record<string, unknown>>(`/api/v1/author/${CHAPTARR.itemId}`);
+  await CHAPTARR.arr.put(`/api/v1/author/${CHAPTARR.itemId}`, { ...author, audiobookTags });
+}
+
 const yearSceneIds = TEST_CONFIG.whisparr2Seed.yearSearch.scenes.map((scene) => scene.id);
 
 test.describe('Seeker grab on demand', () => {
@@ -44,11 +52,12 @@ test.describe('Seeker grab on demand', () => {
 
   test.afterEach(async ({ api }) => {
     await teardownInstances(api);
+    await setChaptarrAudiobookTags([]);
     await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds: yearSceneIds, monitored: true });
     await resetLiveArrState();
   });
 
-  for (const target of [SONARR, RADARR, WHISPARR, WHISPARR2, LIDARR]) {
+  for (const target of [SONARR, RADARR, WHISPARR, WHISPARR2, LIDARR, CHAPTARR]) {
     test(`records the real ${target.type} v${target.version} grab on the search event`, async ({ api }) => {
       test.setTimeout(TEST_TIMEOUT);
 
@@ -61,7 +70,17 @@ test.describe('Seeker grab on demand', () => {
         await WHISPARR2.arr.put('/api/v3/episode/monitor', { episodeIds: yearSceneIds, monitored: false });
       }
 
-      const instanceId = await arrangeInstance(api, target);
+      if (target === CHAPTARR) {
+        // The release is an EPUB, so only the ebook row can grab it
+        const tagId = await CHAPTARR.arr.ensureTag(AUDIOBOOK_SKIP_TAG);
+        await setChaptarrAudiobookTags([tagId]);
+      }
+
+      const instanceId = await arrangeInstance(
+        api,
+        target,
+        target === CHAPTARR ? { instance: { skipTags: [AUDIOBOOK_SKIP_TAG] } } : {},
+      );
       await triggerSeeker(api);
 
       await waitForArrQueue(target.arr, release.downloadId, TRIGGERED_SEARCH_TIMEOUT);

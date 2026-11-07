@@ -11,6 +11,8 @@ export function instanceTypeSeverity(type: string): BadgeSeverity {
       return 'whisparr';
     case InstanceType.Lidarr:
       return 'lidarr';
+    case InstanceType.Chaptarr:
+      return 'chaptarr';
     default:
       return 'default';
   }
@@ -23,6 +25,7 @@ export function instanceTypeHighlight(type: string): BadgeSeverity {
     case InstanceType.Sonarr:
     case InstanceType.Whisparr:
     case InstanceType.Lidarr:
+    case InstanceType.Chaptarr:
       return 'info';
     default:
       return 'default';

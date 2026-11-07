@@ -31,6 +31,7 @@ public class SeekerTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IChaptarrClient _chaptarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly IDryRunInterceptor _dryRunInterceptor;
@@ -47,6 +48,7 @@ public class SeekerTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
+        _chaptarrClient = Substitute.For<IChaptarrClient>();
         _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
@@ -128,6 +130,7 @@ public class SeekerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 _lidarrClient,
+                _chaptarrClient,
                 _whisparrV2Client,
                 _whisparrV3Client,
                 _fixture.TimeProvider)
@@ -10838,6 +10841,126 @@ public class SeekerTests : IDisposable
         await _fixture.EventsContext.SaveChangesAsync();
         mockArrClient
             .SearchItemAsync(lidarrInstance, Arg.Any<SearchItem>())
+            .Returns(42L);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        (await _fixture.EventsContext.SeekerHistory.AnyAsync(h => h.ExternalItemId == 99)).ShouldBeFalse();
+        (await _fixture.EventsContext.SeekerHistory.AnyAsync(h => h.ExternalItemId == 5)).ShouldBeTrue();
+    }
+
+    private async Task<(ArrInstance Instance, IArrClient ArrClient)> SetUpChaptarrProactiveAsync()
+    {
+        SeekerConfig config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        ArrInstance chaptarrInstance = TestDataContextFactory.AddChaptarrInstance(_fixture.DataContext);
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = chaptarrInstance.Id,
+            ArrInstance = chaptarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            CurrentCycleId = Guid.NewGuid(),
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrQueueReader
+            .ReadAllAsync(mockArrClient, Arg.Any<ArrInstance>())
+            .Returns([]);
+
+        List<SearchableAuthor> authors = [new SearchableAuthor { Id = 5, AuthorName = "Author 5", Monitored = true }];
+        List<SearchableBook> books =
+        [
+            new SearchableBook { Id = 77, Title = "Book 77", AuthorId = 5, Monitored = true, MediaType = ChaptarrMediaType.Audiobook },
+        ];
+        _chaptarrClient
+            .StreamAllAuthorsAsync(chaptarrInstance, Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable<SearchableAuthor>(authors));
+        _chaptarrClient
+            .GetMissingBooksAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(books);
+        _chaptarrClient
+            .GetCutoffUnmetBooksAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _chaptarrClient
+            .GetAllTagsAsync(Arg.Any<ArrInstance>())
+            .Returns([]);
+        _chaptarrClient
+            .GetRecentlyGrabbedBookIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Chaptarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        return (chaptarrInstance, mockArrClient);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Chaptarr_ProactiveSearch_SearchesTheBookAndTracksAuthorAndBook()
+    {
+        // Arrange
+        (ArrInstance chaptarrInstance, IArrClient mockArrClient) = await SetUpChaptarrProactiveAsync();
+        SearchItem? capturedSearchItem = null;
+        mockArrClient
+            .SearchItemAsync(chaptarrInstance, Arg.Do<SearchItem>(item => capturedSearchItem = item))
+            .Returns(42L);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.ShouldNotBeOfType<SeriesSearchItem>();
+        capturedSearchItem.Id.ShouldBe(77);
+
+        SeekerHistory history = await _fixture.EventsContext.SeekerHistory
+            .SingleAsync(h => h.ArrInstanceId == chaptarrInstance.Id);
+        history.ItemType.ShouldBe(InstanceType.Chaptarr);
+        history.ExternalItemId.ShouldBe(5);
+        history.SeasonNumber.ShouldBe(0);
+        history.EpisodeId.ShouldBe(77);
+        history.ItemTitle.ShouldBe("Author 5 - Book 77 (Audiobook)");
+
+        SeekerCommandTracker tracker = await _fixture.EventsContext.SeekerCommandTrackers
+            .SingleAsync(t => t.ArrInstanceId == chaptarrInstance.Id);
+        tracker.CommandId.ShouldBe(42L);
+        tracker.ExternalItemId.ShouldBe(5);
+        tracker.SeasonNumber.ShouldBe(0);
+        tracker.EpisodeId.ShouldBe(77);
+        _sonarrClient.ReceivedCalls().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Chaptarr_CleansUpHistoryOfAuthorsOutsideTheLibrary()
+    {
+        // Arrange
+        (ArrInstance chaptarrInstance, IArrClient mockArrClient) = await SetUpChaptarrProactiveAsync();
+        Guid cycleId = (await _fixture.DataContext.SeekerInstanceConfigs
+            .SingleAsync(c => c.ArrInstanceId == chaptarrInstance.Id)).CurrentCycleId;
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = chaptarrInstance.Id,
+            ExternalItemId = 99,
+            ItemType = InstanceType.Chaptarr,
+            EpisodeId = 990,
+            CycleId = cycleId,
+            LastSearchedAt = DateTime.UtcNow.AddDays(-5),
+            ItemTitle = "Deleted Author - Book",
+        });
+        await _fixture.EventsContext.SaveChangesAsync();
+        mockArrClient
+            .SearchItemAsync(chaptarrInstance, Arg.Any<SearchItem>())
             .Returns(42L);
 
         SeekerJob sut = CreateSut();

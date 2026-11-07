@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/base';
 import type { ArrType } from '../helpers/api/arr';
 
-const ARR_TYPES: ArrType[] = ['sonarr', 'radarr', 'lidarr', 'readarr', 'whisparr', 'sportarr'];
+const ARR_TYPES: ArrType[] = ['sonarr', 'radarr', 'lidarr', 'readarr', 'chaptarr', 'whisparr', 'sportarr'];
 
 test.describe('Arr — base config CRUD', () => {
   for (const type of ARR_TYPES) {

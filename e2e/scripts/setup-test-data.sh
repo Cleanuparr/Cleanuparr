@@ -16,7 +16,7 @@ ARR_SEED="$HERE/arr-seed"
 rm -rf "$TEST_DATA/torznab-src"
 
 # Media an arr imports during a run, wiped so its library always starts empty.
-rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies" "$TEST_DATA/whisparr-movies" "$TEST_DATA/whisparr2-scenes" "$TEST_DATA/lidarr-music" "$TEST_DATA/lazylibrarian-books"
+rm -rf "$TEST_DATA/sonarr-tv" "$TEST_DATA/radarr-movies" "$TEST_DATA/whisparr-movies" "$TEST_DATA/whisparr2-scenes" "$TEST_DATA/lidarr-music" "$TEST_DATA/chaptarr-books" "$TEST_DATA/lazylibrarian-books"
 
 mkdir -p \
   "$TEST_DATA/torznab-src" \
@@ -25,6 +25,7 @@ mkdir -p \
   "$TEST_DATA/whisparr-movies" \
   "$TEST_DATA/whisparr2-scenes" \
   "$TEST_DATA/lidarr-music" \
+  "$TEST_DATA/chaptarr-books" \
   "$TEST_DATA/lazylibrarian-books" \
   "$TEST_DATA/downloads/qbittorrent" \
   "$TEST_DATA/downloads/transmission" \
@@ -103,9 +104,9 @@ script = Default
 priority = 0
 EOF
 
-# Restore Sonarr, Radarr, Whisparr, Whisparr v2 and Lidarr from the committed seed.
+# Restore Sonarr, Radarr, Whisparr, Whisparr v2, Lidarr and Chaptarr from the committed seed.
 # The arrs write to /config on every start, so the run gets a throwaway copy.
-for arr in sonarr radarr whisparr whisparr2 lidarr; do
+for arr in sonarr radarr whisparr whisparr2 lidarr chaptarr; do
   if [[ -d "$ARR_SEED/$arr" ]]; then
     rm -rf "$TEST_DATA/$arr-config"
     cp -R "$ARR_SEED/$arr" "$TEST_DATA/$arr-config"

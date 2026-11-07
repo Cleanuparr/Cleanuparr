@@ -972,6 +972,53 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task Reports_the_grab_of_a_proactive_chaptarr_book_search()
+    {
+        // Arrange
+        ArrInstance chaptarrInstance = TestDataContextFactory.AddChaptarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(chaptarrInstance.Id, externalItemId: 5, episodeId: 88, itemTitle: "Example Author - Example Book (Ebook)"),
+            new QueueRecord { Id = 1, AuthorId = 5, BookId = 88, Title = "Example.Book.EPUB", DownloadId = "BK88", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Book.EPUB"]);
+    }
+
+    [Fact]
+    public async Task Ignores_another_book_of_a_proactive_chaptarr_search()
+    {
+        // Arrange
+        ArrInstance chaptarrInstance = TestDataContextFactory.AddChaptarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(chaptarrInstance.Id, externalItemId: 5, episodeId: 88, itemTitle: "Example Author - Example Book (Ebook)"),
+            new QueueRecord { Id = 1, AuthorId = 5, BookId = 89, Title = "Example.Other.EPUB", DownloadId = "BK89", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Reports_the_grab_of_a_chaptarr_replacement_search()
+    {
+        // Arrange
+        ArrInstance chaptarrInstance = TestDataContextFactory.AddChaptarrInstance(_dataContext);
+
+        // Act
+        List<string>? grabbedItems = await CaptureGrabbedItemsAsync(
+            Tracker(chaptarrInstance.Id, externalItemId: 88, itemTitle: "Example Book"),
+            new QueueRecord { Id = 1, BookId = 88, Title = "Example.Book.EPUB", DownloadId = "BK88", Protocol = "torrent", Status = "downloading" });
+
+        // Assert
+        grabbedItems.ShouldNotBeNull();
+        grabbedItems!.ShouldBe(["Example.Book.EPUB"]);
+    }
+
+    [Fact]
     public async Task Reports_the_grab_of_a_readarr_search()
     {
         // Arrange

@@ -25,6 +25,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly ILidarrClient _lidarrClient;
+    private readonly IChaptarrClient _chaptarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly FakeTimeProvider _timeProvider;
@@ -34,6 +35,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
     private readonly ArrInstance _sonarr;
     private readonly ArrInstance _whisparr;
     private readonly ArrInstance _lidarr;
+    private readonly ArrInstance _chaptarr;
 
     public SeekerUnitEvaluatorTests()
     {
@@ -42,6 +44,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _radarrClient = Substitute.For<IRadarrClient>();
         _sonarrClient = Substitute.For<ISonarrClient>();
         _lidarrClient = Substitute.For<ILidarrClient>();
+        _chaptarrClient = Substitute.For<IChaptarrClient>();
         _whisparrV2Client = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
         _timeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 1, 10, 12, 0, 0, TimeSpan.Zero));
@@ -49,6 +52,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _sonarr = TestDataContextFactory.AddSonarrInstance(_dataContext);
         _whisparr = TestDataContextFactory.AddWhisparrInstance(_dataContext, version: 3);
         _lidarr = TestDataContextFactory.AddLidarrInstance(_dataContext);
+        _chaptarr = TestDataContextFactory.AddChaptarrInstance(_dataContext);
 
         _radarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _sonarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
@@ -59,6 +63,8 @@ public class SeekerUnitEvaluatorTests : IDisposable
         _lidarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _lidarrClient.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
         _lidarrClient.GetCutoffUnmetAlbumsAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
+        _chaptarrClient.GetCutoffUnmetBooksAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
         _whisparrV3Client.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([]);
         _whisparrV3Client.GetQualityProfilesAsync(Arg.Any<ArrInstance>()).Returns([]);
         _whisparrV3Client.GetCutoffUnmetMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns([]);
@@ -69,6 +75,7 @@ public class SeekerUnitEvaluatorTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _lidarrClient,
+            _chaptarrClient,
             _whisparrV2Client,
             _whisparrV3Client,
             _timeProvider);
@@ -2870,6 +2877,578 @@ public class SeekerUnitEvaluatorTests : IDisposable
 
         // Assert
         grabs.AlbumIds.ShouldBe([10L]);
+        grabs.Episodes.ShouldBeEmpty();
+        await _sonarrClient.DidNotReceive()
+            .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
+    #region Chaptarr
+
+    private static SearchableAuthor Author(
+        long id,
+        bool monitored = true,
+        List<long>? audiobookTags = null,
+        List<long>? ebookTags = null,
+        DateTimeOffset? added = null)
+    {
+        return new SearchableAuthor
+        {
+            Id = id,
+            AuthorName = $"Author {id}",
+            Monitored = monitored,
+            AudiobookTags = audiobookTags ?? [],
+            EbookTags = ebookTags ?? [],
+            Added = added,
+        };
+    }
+
+    private SearchableBook Book(
+        long id,
+        long authorId,
+        ChaptarrMediaType mediaType = ChaptarrMediaType.Ebook,
+        bool monitored = true,
+        DateTimeOffset? releaseDate = null,
+        bool noReleaseDate = false)
+    {
+        return new SearchableBook
+        {
+            Id = id,
+            Title = $"Book {id}",
+            AuthorId = authorId,
+            Monitored = monitored,
+            MediaType = mediaType,
+            ReleaseDate = noReleaseDate ? null : releaseDate ?? _timeProvider.GetUtcNow().AddDays(-30),
+        };
+    }
+
+    private void SetupChaptarr(List<SearchableAuthor> library, List<SearchableBook> missing, List<SearchableBook>? cutoffUnmet = null)
+    {
+        _chaptarrClient.StreamAllAuthorsAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(_ => ToAsyncEnumerable(library));
+        _chaptarrClient.GetMissingBooksAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+            .Returns(missing.Where(b => b.Monitored).ToList());
+        _chaptarrClient.GetMissingBooksAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+            .Returns(missing.Where(b => !b.Monitored).ToList());
+
+        if (cutoffUnmet is not null)
+        {
+            _chaptarrClient.GetCutoffUnmetBooksAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>())
+                .Returns(cutoffUnmet.Where(b => b.Monitored).ToList());
+            _chaptarrClient.GetCutoffUnmetBooksAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>())
+                .Returns(cutoffUnmet.Where(b => !b.Monitored).ToList());
+        }
+    }
+
+    private Task<SeekerEvaluation> EvaluateChaptarrAsync(
+        SeekerInstanceConfig? instanceConfig = null,
+        List<QueueRecord>? queue = null,
+        SeekerRecentGrabs? recentGrabs = null,
+        List<SeekerHistory>? history = null)
+    {
+        return _sut.EvaluateAsync(
+            _config,
+            instanceConfig ?? InstanceConfig(_chaptarr),
+            _chaptarr,
+            queue ?? [],
+            recentGrabs ?? new SeekerRecentGrabs(),
+            history ?? [],
+            CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_MissingBook_BuildsUnitKeyedByAuthorAndBook()
+    {
+        // Arrange
+        DateTimeOffset added = _timeProvider.GetUtcNow().AddDays(-100);
+        DateTimeOffset releaseDate = _timeProvider.GetUtcNow().AddDays(-40);
+        SetupChaptarr(
+            [Author(1, added: added)],
+            [Book(10, 1, ChaptarrMediaType.Audiobook, releaseDate: releaseDate)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        SeekerSearchUnit unit = evaluation.Units.ShouldHaveSingleItem();
+        unit.ItemId.ShouldBe(1);
+        unit.SeasonNumber.ShouldBe(0);
+        unit.EpisodeId.ShouldBe(10);
+        unit.Name.ShouldBe("Author 1 - Book 10 (Audiobook)");
+        unit.ContentKind.ShouldBeNull();
+        unit.Reasons.ShouldBe([SeekerSearchReason.Missing]);
+        unit.AirDateUtc.ShouldBe(releaseDate);
+        unit.Added.ShouldBe(added);
+        unit.LastSearchTime.ShouldBeNull();
+        evaluation.AllLibraryIds.ShouldBe([1L]);
+    }
+
+    [Theory]
+    [InlineData(ChaptarrMediaType.Audiobook, "Author 1 - Book 10 (Audiobook)")]
+    [InlineData(ChaptarrMediaType.Ebook, "Author 1 - Book 10 (Ebook)")]
+    [InlineData(ChaptarrMediaType.Unknown, "Author 1 - Book 10")]
+    public async Task EvaluateAsync_Chaptarr_NamesTheUnitBySide(ChaptarrMediaType mediaType, string expectedName)
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1, mediaType)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().Name.ShouldBe(expectedName);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_TwoRowsOfOneTitle_AreTwoUnits()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).OrderBy(id => id).ShouldBe([10L, 11L]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BookMissingAndCutoffUnmet_CarriesBothReasons()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1)], [Book(10, 1), Book(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.UseCutoff = true));
+
+        // Assert
+        evaluation.Units.Count.ShouldBe(2);
+        evaluation.Units.Single(u => u.EpisodeId == 10).Reasons
+            .ShouldBe([SeekerSearchReason.Missing, SeekerSearchReason.QualityCutoffNotMet]);
+        evaluation.Units.Single(u => u.EpisodeId == 11).Reasons
+            .ShouldBe([SeekerSearchReason.QualityCutoffNotMet]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_UseCutoffOff_SkipsTheCutoffRead()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1)], [Book(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.UseCutoff = false));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+        await _chaptarrClient.DidNotReceive()
+            .GetCutoffUnmetBooksAsync(Arg.Any<ArrInstance>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_MonitoredOnlyOff_ReadsBothMonitoredValues()
+    {
+        // Arrange
+        SetupChaptarr([Author(1, monitored: false)], [Book(10, 1, monitored: false), Book(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.MonitoredOnly = false));
+
+        // Assert
+        evaluation.Units.Select(u => u.EpisodeId).OrderBy(id => id).ShouldBe([10L, 11L]);
+        await _chaptarrClient.Received(1).GetMissingBooksAsync(Arg.Any<ArrInstance>(), true, Arg.Any<CancellationToken>());
+        await _chaptarrClient.Received(1).GetMissingBooksAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_MonitoredOnly_ReadsOnlyMonitoredBooks()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1)]);
+
+        // Act
+        await EvaluateChaptarrAsync();
+
+        // Assert
+        await _chaptarrClient.DidNotReceive().GetMissingBooksAsync(Arg.Any<ArrInstance>(), false, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BookDatedInTheFuture_ExcludesAsNotReleased()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1, releaseDate: _timeProvider.GetUtcNow().AddDays(5))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Author 1 - Book 10 (Ebook)").ShouldBe(SeekerExclusionReason.NotReleased);
+        evaluation.Units.ShouldBeEmpty();
+        evaluation.Excluded.ShouldNotContain(e => e.Name == "Author 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BookReleasedInsideGraceWindow_ExcludesAsInGracePeriod()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1, releaseDate: _timeProvider.GetUtcNow().AddHours(-1))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Author 1 - Book 10 (Ebook)").ShouldBe(SeekerExclusionReason.InGracePeriod);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BookReleasedPastGraceWindow_BuildsUnit()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1, releaseDate: _timeProvider.GetUtcNow().AddHours(-7))]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BookWithoutReleaseDate_CountsAsReleased()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1, noReleaseDate: true)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().AirDateUtc.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_SkipTagOnAudiobookSide_ExcludesOnlyTheAudiobookRow()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "skip" }]);
+        SetupChaptarr(
+            [Author(1, audiobookTags: [3])],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.SkipTags = ["skip"]));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+        ReasonOf(evaluation, "Author 1 - Book 10 (Audiobook)").ShouldBe(SeekerExclusionReason.SkipTag);
+        evaluation.Excluded.ShouldNotContain(e => e.Name == "Author 1");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_IncludeTagOnEbookSideOnly_KeepsOnlyTheEbookRow()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "keep" }]);
+        SetupChaptarr(
+            [Author(1, ebookTags: [3])],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.IncludeTags = ["keep"]));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+        ReasonOf(evaluation, "Author 1 - Book 10 (Audiobook)").ShouldBe(SeekerExclusionReason.MissingIncludeTag);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_SkipTagOnBothSides_ExcludesTheAuthor()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "skip" }]);
+        SetupChaptarr(
+            [Author(1, audiobookTags: [3], ebookTags: [3])],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.SkipTags = ["skip"]));
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.SkipTag);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_UnknownSideWithOneSideTagged_IsExcluded()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "skip" }]);
+        SetupChaptarr([Author(1, ebookTags: [3])], [Book(10, 1, ChaptarrMediaType.Unknown)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.SkipTags = ["skip"]));
+
+        // Assert
+        evaluation.Units.ShouldBeEmpty();
+        ReasonOf(evaluation, "Author 1 - Book 10").ShouldBe(SeekerExclusionReason.SkipTag);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BothSidesExcluded_RecordsSkipTagOverMissingInclude()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns(
+        [
+            new Tag { Id = 1, Label = "keep" },
+            new Tag { Id = 3, Label = "skip" },
+        ]);
+        SetupChaptarr(
+            [Author(1, ebookTags: [3])],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c =>
+        {
+            c.SkipTags = ["skip"];
+            c.IncludeTags = ["keep"];
+        }));
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.SkipTag);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BothSidesMissingInclude_RecordsMissingIncludeTag()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 1, Label = "keep" }]);
+        SetupChaptarr(
+            [Author(1)],
+            [Book(10, 1, ChaptarrMediaType.Audiobook), Book(11, 1, ChaptarrMediaType.Ebook)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.IncludeTags = ["keep"]));
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.MissingIncludeTag);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_UnknownSideWithIncludeTagOnOneSide_IsKept()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 1, Label = "keep" }]);
+        SetupChaptarr([Author(1, audiobookTags: [1])], [Book(10, 1, ChaptarrMediaType.Unknown)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.IncludeTags = ["keep"]));
+
+        // Assert
+        evaluation.Units.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+        evaluation.Excluded.ShouldNotContain(e => e.Name == "Author 1 - Book 10");
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_UnmonitoredAuthor_ExcludesAsNotMonitored()
+    {
+        // Arrange
+        SetupChaptarr([Author(1, monitored: false)], [Book(10, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.NotMonitored);
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_AuthorWithoutWantedBooks_ExcludesAsNothingToSearch()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], []);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Assert
+        ReasonOf(evaluation, "Author 1").ShouldBe(SeekerExclusionReason.NothingToSearch);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_StageCounts_CountAuthors()
+    {
+        // Arrange
+        _chaptarrClient.GetAllTagsAsync(Arg.Any<ArrInstance>()).Returns([new Tag { Id = 3, Label = "skip" }]);
+        SetupChaptarr(
+            [Author(1), Author(2, monitored: false), Author(3, audiobookTags: [3], ebookTags: [3])],
+            [Book(10, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.SkipTags = ["skip"]));
+
+        // Assert
+        evaluation.ReleasedItems.ShouldBe(3);
+        evaluation.MonitoredItems.ShouldBe(2);
+        evaluation.TagFilteredItems.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_QueuedBook_BlocksOnlyThatBook()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1), Book(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(
+            queue: [new QueueRecord
+            {
+                Id = 1,
+                Title = "Download",
+                DownloadId = "hash",
+                Protocol = "torrent",
+                SizeLeft = 1000,
+                AuthorId = 1,
+                BookId = 10,
+                TrackedDownloadState = "downloading",
+            }]);
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 10).BlockedBy.ShouldBe(SeekerExclusionReason.InQueue);
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_RecentlyGrabbedBook_BlocksOnlyThatBook()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1), Book(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(recentGrabs: new SeekerRecentGrabs { BookIds = [10] });
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 10).BlockedBy.ShouldBe(SeekerExclusionReason.RecentlyGrabbed);
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_RestingBook_ExcludesAsResting()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1), Book(11, 1)]);
+        await SeedMissesAsync(_chaptarr, 1, 3, _timeProvider.GetUtcNow().AddDays(-2), episodeId: 10);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.RestUnitsEnabled = true));
+
+        // Assert
+        SeekerSearchUnit resting = evaluation.Units.Single(u => u.EpisodeId == 10);
+        resting.BlockedBy.ShouldBe(SeekerExclusionReason.Resting);
+        resting.Rest.ShouldNotBeNull().ConsecutiveMisses.ShouldBe(3);
+        evaluation.Remaining.ShouldHaveSingleItem().EpisodeId.ShouldBe(11);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_BookInCycleHistory_IsSearchedThisCycle()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], [Book(10, 1), Book(11, 1)]);
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(
+            history: [History(_chaptarr, 1, _timeProvider.GetUtcNow().AddDays(-1), episodeId: 10)]);
+
+        // Assert
+        evaluation.Units.Single(u => u.EpisodeId == 10).Searched.ShouldBeTrue();
+        evaluation.Units.Single(u => u.EpisodeId == 11).Searched.ShouldBeFalse();
+        evaluation.WithoutCycleHistory().Units.ShouldAllBe(u => !u.Searched);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_Chaptarr_CustomFormatEntryWithFlagOn_IsIgnored()
+    {
+        // Arrange
+        SetupChaptarr([Author(1)], []);
+        await _eventsContext.CustomFormatScoreEntries.AddAsync(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = _chaptarr.Id,
+            ExternalItemId = 1,
+            EpisodeId = 10,
+            Title = "Author 1 - Book 10",
+            ItemType = InstanceType.Chaptarr,
+            SeasonNumber = 0,
+            AirDateUtc = _timeProvider.GetUtcNow().AddDays(-30),
+            IsMonitored = true,
+            CurrentScore = 10,
+            CutoffScore = 35,
+        });
+        await _eventsContext.SaveChangesAsync();
+
+        // Act
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync(InstanceConfig(_chaptarr, c => c.UseCustomFormatScore = true));
+
+        // Assert
+        evaluation.Units.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task SelectNext_Chaptarr_ReturnsOneBookPerAuthor()
+    {
+        // Arrange
+        SetupChaptarr(
+            [Author(1), Author(2)],
+            [Book(10, 1), Book(11, 1), Book(12, 1), Book(13, 1), Book(14, 1), Book(20, 2)]);
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Act
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.Random, 2);
+
+        // Assert
+        evaluation.Remaining.Count().ShouldBe(6);
+        candidates.Select(c => c.ItemId).OrderBy(id => id).ShouldBe([1L, 2L]);
+        candidates.Single(c => c.ItemId == 2).EpisodeId.ShouldBe(20);
+    }
+
+    [Fact]
+    public async Task SelectNext_Chaptarr_PicksTheEarliestReleasedBookOfTheAuthor()
+    {
+        // Arrange
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SetupChaptarr(
+            [Author(1)],
+            [
+                Book(12, 1, releaseDate: now.AddDays(-30)),
+                Book(11, 1, releaseDate: now.AddDays(-60)),
+                Book(10, 1, releaseDate: now.AddDays(-60)),
+            ]);
+        SeekerEvaluation evaluation = await EvaluateChaptarrAsync();
+
+        // Act
+        List<SeekerSearchCandidate> candidates = SeekerUnitEvaluator.SelectNext(evaluation, SelectionStrategy.Random, 1);
+
+        // Assert
+        candidates.ShouldHaveSingleItem().EpisodeId.ShouldBe(10);
+    }
+
+    [Fact]
+    public async Task ReadRecentGrabsAsync_Chaptarr_ReadsGrabbedBookIds()
+    {
+        // Arrange
+        _chaptarrClient
+            .GetRecentlyGrabbedBookIdsAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<long> { 10 });
+
+        // Act
+        SeekerRecentGrabs grabs = await _sut.ReadRecentGrabsAsync(
+            InstanceConfig(_chaptarr, c => c.RecentGrabWindowHours = 6), _chaptarr, CancellationToken.None);
+
+        // Assert
+        grabs.BookIds.ShouldBe([10L]);
         grabs.Episodes.ShouldBeEmpty();
         await _sonarrClient.DidNotReceive()
             .GetRecentlyGrabbedEpisodesAsync(Arg.Any<ArrInstance>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());

@@ -9,5 +9,7 @@ public sealed record SeekerRecentGrabs
 
     public HashSet<long> AlbumIds { get; init; } = [];
 
+    public HashSet<long> BookIds { get; init; } = [];
+
     public HashSet<(long SeriesId, long SeasonNumber, long EpisodeId)> Episodes { get; init; } = [];
 }

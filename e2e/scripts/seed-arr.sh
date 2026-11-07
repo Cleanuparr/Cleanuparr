@@ -7,7 +7,7 @@
 # CI therefore needs no network and every run sees the same library.
 #
 # Needs internet: each arr reads its metadata provider.
-# Stops the sonarr, radarr, whisparr, whisparr2 and lidarr containers.
+# Stops the sonarr, radarr, whisparr, whisparr2, lidarr and chaptarr containers.
 #
 # Re-run it when the pinned image tags change, or when the library has to change.
 #
@@ -23,11 +23,13 @@ RADARR_URL="http://localhost:7878"
 WHISPARR_URL="http://localhost:6970"
 WHISPARR2_URL="http://localhost:6971"
 LIDARR_URL="http://localhost:8686"
+CHAPTARR_URL="http://localhost:8789"
 SONARR_API_KEY="0000000000000000000000000000e2e1"
 RADARR_API_KEY="0000000000000000000000000000e2e2"
 WHISPARR_API_KEY="0000000000000000000000000000e2e6"
 LIDARR_API_KEY="0000000000000000000000000000e2e7"
 WHISPARR2_API_KEY="0000000000000000000000000000e2e8"
+CHAPTARR_API_KEY="0000000000000000000000000000e2e9"
 ROOTFOLDER_V3="/api/v3/rootfolder"
 
 # The mock Torznab indexer, and qBittorrent, both on the host network.
@@ -52,6 +54,10 @@ WHISPARR_TMDB_ID=1253309
 WHISPARR2_TVDB_ID=3417
 # Jeff Buckley: one studio album and a plain name.
 LIDARR_MBID=e6e879c0-3d56-4f12-b3c5-3ce459661a8e
+# Delia Ray, Hardcover author hc:142722: eight titles, and Finding Fortune is the one left monitored.
+# The lookup term is not the author id, hc:5000 resolves to her.
+CHAPTARR_AUTHOR_TERM='hc:5000'
+CHAPTARR_WANTED_TITLE='Finding Fortune'
 
 log() {
   echo "[seed-arr] $*"
@@ -191,7 +197,11 @@ EOF
 # qBittorrent trusts the host network, which makes the login unnecessary.
 add_download_client() {
   local url="$1" api_key="$2" category_field="$3" category="$4" api_version="${5:-v3}"
-  local username="${6-admin}" password="${7-adminadmin}"
+  local username="${6-admin}" password="${7-adminadmin}" second_category_field="${8:-}"
+  local second_category=""
+  if [[ -n "$second_category_field" ]]; then
+    second_category="{ \"name\": \"$second_category_field\", \"value\": \"$category\" },"
+  fi
 
   arr_post "$url" "$api_key" "/api/$api_version/downloadclient?forceSave=true" "$(cat <<EOF
 {
@@ -213,6 +223,7 @@ add_download_client() {
     { "name": "username", "value": "$username" },
     { "name": "password", "value": "$password" },
     { "name": "$category_field", "value": "$category" },
+    $second_category
     { "name": "initialState", "value": 0 },
     { "name": "sequentialOrder", "value": false },
     { "name": "firstAndLast", "value": false }
@@ -343,6 +354,57 @@ print(json.dumps(item))
   wait_for_items "$LIDARR_URL" "$LIDARR_API_KEY" '/api/v1/wanted/missing' 'lidarr missing albums'
 }
 
+seed_chaptarr() {
+  log "configuring chaptarr"
+  # Profile 1 is E-Book and 2 is Audiobook, metadata profile 1 is Audiobook Default and 2 is Ebook Default.
+  arr_post "$CHAPTARR_URL" "$CHAPTARR_API_KEY" '/api/v1/rootfolder' \
+    '{"name":"Books","path":"/books","folderType":0,"defaultMonitorOption":"all","audiobookQualityProfileId":2,"audiobookMetadataProfileId":1,"ebookQualityProfileId":1,"ebookMetadataProfileId":2}' > /dev/null
+  add_indexer "$CHAPTARR_URL" "$CHAPTARR_API_KEY" '[3030,7020]' 'v1'
+  add_download_client "$CHAPTARR_URL" "$CHAPTARR_API_KEY" 'audiobookCategory' 'chaptarr' 'v1' admin adminadmin 'ebookCategory'
+
+  log "adding the author"
+  local author
+  author=$(arr_get "$CHAPTARR_URL" "$CHAPTARR_API_KEY" "/api/v1/author/lookup?term=${CHAPTARR_AUTHOR_TERM/:/%3A}" \
+    | python3 -c '
+import json
+import sys
+
+item = json.load(sys.stdin)[0]
+item.update({
+    "monitored": True,
+    "audiobookMonitored": True,
+    "ebookMonitored": True,
+    "rootFolderPath": "/books",
+    "path": "/books/" + item["authorName"],
+    "audiobookQualityProfileId": 2,
+    "audiobookMetadataProfileId": 1,
+    "ebookQualityProfileId": 1,
+    "ebookMetadataProfileId": 2,
+    "addOptions": {"monitor": "all", "searchForMissingBooks": False},
+})
+print(json.dumps(item))
+')
+  arr_post "$CHAPTARR_URL" "$CHAPTARR_API_KEY" '/api/v1/author' "$author" > /dev/null
+
+  wait_for_items "$CHAPTARR_URL" "$CHAPTARR_API_KEY" '/api/v1/wanted/missing' 'chaptarr missing books'
+  # The add returns before the bibliography is complete.
+  sleep 20
+
+  # Each title has an audiobook row and an ebook row.
+  # Only the wanted title keeps its two rows monitored.
+  log "unmonitoring all but one title"
+  local others
+  others=$(arr_get "$CHAPTARR_URL" "$CHAPTARR_API_KEY" '/api/v1/book?authorId=1' \
+    | python3 -c '
+import json
+import sys
+
+print(json.dumps({"bookIds": [b["id"] for b in json.load(sys.stdin) if b["title"] != sys.argv[1]], "monitored": False}))
+' "$CHAPTARR_WANTED_TITLE")
+  curl -fsS -X PUT "$CHAPTARR_URL/api/v1/book/monitor" \
+    -H "X-Api-Key: $CHAPTARR_API_KEY" -H 'Content-Type: application/json' -d "$others" > /dev/null
+}
+
 # Keeps the database and config.xml, drops everything the arr rebuilds on start.
 # Whisparr v3 names its database whisparr3.db, v2 whisparr2.db.
 snapshot() {
@@ -376,32 +438,36 @@ main() {
   write_config_xml "$TEST_DATA/whisparr-config" 6970 "$WHISPARR_API_KEY" 'Whisparr'
   write_config_xml "$TEST_DATA/whisparr2-config" 6971 "$WHISPARR2_API_KEY" 'Whisparr2'
   write_config_xml "$TEST_DATA/lidarr-config" 8686 "$LIDARR_API_KEY" 'Lidarr'
+  write_config_xml "$TEST_DATA/chaptarr-config" 8789 "$CHAPTARR_API_KEY" 'Chaptarr'
 
   # An arr tests the indexer and the download client before it saves them.
   # Both have to answer during seeding.
   log "starting the arrs"
-  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr whisparr2 lidarr
+  $COMPOSE up -d --force-recreate wiremock-indexer qbittorrent sonarr radarr whisparr whisparr2 lidarr chaptarr
 
   wait_for_arr "$SONARR_URL" 'sonarr'
   wait_for_arr "$RADARR_URL" 'radarr'
   wait_for_arr "$WHISPARR_URL" 'whisparr'
   wait_for_arr "$WHISPARR2_URL" 'whisparr2'
   wait_for_arr "$LIDARR_URL" 'lidarr'
+  wait_for_arr "$CHAPTARR_URL" 'chaptarr'
 
   seed_sonarr
   seed_radarr
   seed_whisparr
   seed_whisparr2
   seed_lidarr
+  seed_chaptarr
 
   log "stopping the arrs"
-  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr whisparr2 lidarr
+  $COMPOSE stop wiremock-indexer qbittorrent sonarr radarr whisparr whisparr2 lidarr chaptarr
 
   snapshot sonarr
   snapshot radarr
   snapshot whisparr whisparr3
   snapshot whisparr2
   snapshot lidarr
+  snapshot chaptarr
 
   # The seed is public, so it keeps the title and drops the synopsis, posters and cast.
   sqlite3 "$ARR_SEED/whisparr/whisparr3.db" "UPDATE MovieMetadata SET Overview = '', Images = '[]', Credits = '[]'; VACUUM;"
@@ -429,6 +495,14 @@ main() {
     VACUUM;"
 
   sqlite3 "$ARR_SEED/lidarr/lidarr.db" "UPDATE ArtistMetadata SET Overview = '', Images = '[]', Links = '[]'; UPDATE Albums SET Overview = '', Images = '[]', Links = '[]'; VACUUM;"
+
+  # The refresh timestamps sit in the future, or an online run refetches the bibliography.
+  sqlite3 "$ARR_SEED/chaptarr/chaptarr.db" "
+    UPDATE Authors SET Overview = '', Images = '[]', Links = '[]', LastInfoSync = '2099-01-01 00:00:00Z';
+    UPDATE Books SET Overview = '', Images = '[]', Links = '[]', LastInfoSync = '2099-01-01 00:00:00Z';
+    UPDATE Editions SET Overview = '', Images = '[]', Links = '[]';
+    UPDATE ScheduledTasks SET LastExecution = '2099-01-01 00:00:00Z';
+    VACUUM;"
 
   log "seed written to $ARR_SEED"
 }

@@ -292,6 +292,10 @@ export class SeekerComponent implements HasPendingChanges {
     return instance.instanceType === 'Sonarr' || (instance.instanceType === 'Whisparr' && instance.instanceVersion === 2);
   }
 
+  readsCustomFormatScores(instance: InstanceState): boolean {
+    return instance.instanceType !== 'Chaptarr';
+  }
+
   updateInstanceRadarrReleaseGate(index: number, gate: unknown): void {
     this.patchInstance(index, { radarrReleaseGate: gate as RadarrReleaseGate });
   }
