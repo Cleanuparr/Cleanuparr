@@ -86,6 +86,7 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     public bool IsDownloading() =>
         (Info.Status & UTorrentStatus.Started) != 0 &&
         (Info.Status & UTorrentStatus.Checked) != 0 &&
+        (Info.Status & UTorrentStatus.Paused) == 0 &&
         (Info.Status & UTorrentStatus.Error) == 0;
 
     public bool IsStalled() => IsDownloading() && Info is { DownloadSpeed: 0, ETA: 0 };
