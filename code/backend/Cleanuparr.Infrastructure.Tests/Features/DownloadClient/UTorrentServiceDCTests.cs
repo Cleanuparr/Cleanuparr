@@ -137,6 +137,74 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             result.ShouldHaveSingleItem();
             result[0].DownloadId.ShouldBe("hash2");
         }
+
+        [Fact]
+        public async Task IncludesStoppedFinishedTorrent()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+
+            List<UTorrentItem> torrents =
+            [
+                new UTorrentItem
+                {
+                    Hash = "hash1",
+                    Name = "Stopped",
+                    Status = UTorrentStatus.Checked | UTorrentStatus.Loaded,
+                    DateCompleted = 1000
+                }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentsAsync()
+                .Returns(torrents);
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].DownloadId.ShouldBe("hash1");
+        }
+
+        [Fact]
+        public async Task ExcludesStoppedIncompleteAndErroredTorrents()
+        {
+            // Arrange
+            UTorrentService sut = _fixture.CreateSut();
+
+            List<UTorrentItem> torrents =
+            [
+                new UTorrentItem
+                {
+                    Hash = "hash1",
+                    Name = "Stopped incomplete",
+                    Status = UTorrentStatus.Checked | UTorrentStatus.Loaded,
+                    DateCompleted = 0
+                },
+                new UTorrentItem
+                {
+                    Hash = "hash2",
+                    Name = "Stopped errored",
+                    Status = UTorrentStatus.Checked | UTorrentStatus.Loaded | UTorrentStatus.Error,
+                    DateCompleted = 1000
+                }
+            ];
+
+            _fixture.ClientWrapper
+                .GetTorrentsAsync()
+                .Returns(torrents);
+
+            // Act
+            List<ITorrentItemWrapper> result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldBeEmpty();
+        }
     }
 
     public class FilterDownloadsToBeCleanedAsync_Tests : UTorrentServiceDCTests

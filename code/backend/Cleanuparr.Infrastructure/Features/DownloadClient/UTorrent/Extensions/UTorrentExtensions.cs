@@ -13,7 +13,9 @@ public static class UTorrentExtensions
     /// </summary>
     public static bool IsSeeding(this UTorrentItem item)
     {
-        return IsDownloading(item.Status) && item.DateCompleted > 0;
+        return (item.Status & UTorrentStatus.Checked) != 0 &&
+               (item.Status & UTorrentStatus.Error) == 0 &&
+               item.DateCompleted > 0;
     }
 
     /// <summary>
