@@ -59,4 +59,12 @@ describe('SearchStatsApi', () => {
 
     expect(post).toHaveBeenCalledWith('/api/seeker/cycles/instance-1/reset', null);
   });
+
+  it('gets the preview for the instance', () => {
+    const { api, get } = setup();
+
+    api.getPreview('instance-1');
+
+    expect(get).toHaveBeenCalledWith('/api/seeker/preview/instance-1');
+  });
 });

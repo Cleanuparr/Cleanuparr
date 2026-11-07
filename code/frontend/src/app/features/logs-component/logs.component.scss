@@ -72,7 +72,7 @@
   &__message {
     color: var(--text-secondary);
     padding: 0 var(--space-4) var(--space-2);
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &__copy {

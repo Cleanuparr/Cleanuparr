@@ -72,6 +72,10 @@ To get notified when a cycle completes, turn on [Seeker Cycle Completed](../noti
 
 **Reset cycle** on an instance card closes the current cycle and starts a new one right away, so every eligible item can be searched again. It skips the minimum cycle time once. The button stays disabled until the cycle has searched something. With dry run on, it resets the dry run cycle.
 
+The **Eligibility** row on an instance card counts what passed each filter on the latest run. It starts with the movies or series in the library, then those released and past the grace period, monitored, and past the tag filters. The last stage counts the units that need a search, split into in queue, recently grabbed, searched this cycle, and left.
+
+**Preview** on an instance card reads the instance live and lists the next 10 units the selection strategy would pick, plus every excluded item with the first filter that dropped it. You can filter the excluded list by reason or title. Preview searches nothing and saves nothing. With a random or weighted strategy, the next up list is one random draw, so the next run can pick other items. A series with missing episodes in several seasons also gets a random season draw under any strategy. When the cycle is complete and waits for the minimum cycle time, the preview shows when the next cycle starts.
+
 Each Sonarr search event records a content kind: `Standard` (a regular season), `Daily` (a daily series season), `Anime` (an anime season or episode) or `Special` (an episode from season 0). Radarr and replacement searches carry none. The Searches tab can filter events by content kind.
 </Note>
 

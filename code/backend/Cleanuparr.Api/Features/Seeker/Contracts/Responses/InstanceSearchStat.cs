@@ -17,4 +17,5 @@ public sealed record InstanceSearchStat
     public DateTimeOffset? CycleCompletedAt { get; init; }
     public DateTimeOffset? LastCycleStartedAt { get; init; }
     public DateTimeOffset? LastCycleCompletedAt { get; init; }
+    public InstanceFunnelStat? Funnel { get; init; }
 }

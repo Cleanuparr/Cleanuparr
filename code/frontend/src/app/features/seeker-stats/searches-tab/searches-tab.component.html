@@ -70,6 +70,27 @@
             }
           </div>
 
+          @if (inst.funnel; as funnel) {
+            @let stages = funnelStages(funnel, inst.instanceType);
+            <div class="instance-card__funnel">
+              <app-tooltip [text]="'How many items passed each filter on the latest run, counted ' + (funnel.countedAt | date:'MM/dd HH:mm')">
+                <span class="instance-card__progress-label">
+                  Eligibility<app-new-badge variant="dot" featureId="seeker-eligibility-funnel" />
+                </span>
+              </app-tooltip>
+              <ol class="instance-card__funnel-stages">
+                @for (stage of stages.narrowing; track stage.label) {
+                  <li class="instance-card__funnel-stage"><strong>{{ stage.value }}</strong> {{ stage.label }}</li>
+                }
+              </ol>
+              <ul class="instance-card__funnel-split">
+                @for (stage of stages.split; track stage.label) {
+                  <li class="instance-card__funnel-stage"><strong>{{ stage.value }}</strong> {{ stage.label }}</li>
+                }
+              </ul>
+            </div>
+          }
+
           <div class="instance-card__stats">
             <div class="instance-card__stat">
               <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>
@@ -89,8 +110,7 @@
               </span>
               <app-tooltip text="How long the previous search cycle took">
                 <span class="instance-card__stat-label">
-                  Last Cycle
-                  <app-new-badge variant="inline" featureId="seeker-last-cycle-duration" />
+                  Last Cycle<app-new-badge variant="dot" featureId="seeker-last-cycle-duration" />
                 </span>
               </app-tooltip>
             </div>
@@ -108,23 +128,31 @@
             <app-tooltip text="Unique identifier for the current search cycle. Changes when all items have been searched or the cycle is reset">
               <span class="instance-card__cycle-chip">{{ inst.currentCycleId ? inst.currentCycleId.substring(0, 8) : '—' }}</span>
             </app-tooltip>
-            <app-button
-              class="instance-card__reset"
-              variant="ghost"
-              size="sm"
-              [disabled]="inst.cycleItemsSearched === 0 || resettingIds().has(inst.instanceId)"
-              [loading]="resettingIds().has(inst.instanceId)"
-              (clicked)="resetCycle(inst)"
-            >
-              Reset cycle
-              <app-new-badge variant="inline" featureId="seeker-reset-cycle" />
-            </app-button>
+            <div class="instance-card__actions">
+              <app-button variant="ghost" size="sm" (clicked)="openPreview(inst)">
+                Preview
+                <app-new-badge variant="dot" featureId="seeker-preview" />
+              </app-button>
+              <app-button
+                class="instance-card__reset"
+                variant="ghost"
+                size="sm"
+                [disabled]="inst.cycleItemsSearched === 0 || resettingIds().has(inst.instanceId)"
+                [loading]="resettingIds().has(inst.instanceId)"
+                (clicked)="resetCycle(inst)"
+              >
+                Reset cycle
+                <app-new-badge variant="dot" featureId="seeker-reset-cycle" />
+              </app-button>
+            </div>
           </div>
         </app-card>
       }
     </div>
   }
 }
+
+<app-seeker-preview-drawer [instance]="previewInstance()" [(visible)]="previewOpen" />
 
 <!-- Toolbar -->
 <div class="toolbar" appStickyAware>

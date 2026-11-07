@@ -85,7 +85,7 @@
     font-weight: 500;
     color: var(--text-primary);
     padding: 0 var(--space-4) var(--space-2);
-    word-break: break-word;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
 
@@ -165,7 +165,7 @@
   &__detail-value {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }
 

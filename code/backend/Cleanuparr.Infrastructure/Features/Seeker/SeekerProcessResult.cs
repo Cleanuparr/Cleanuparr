@@ -8,10 +8,11 @@ namespace Cleanuparr.Infrastructure.Features.Seeker;
 internal sealed record SeekerProcessResult
 {
     public required List<SeekerSearchCandidate> Candidates { get; init; }
-    public required List<long> AllLibraryIds { get; init; }
 
     /// <summary>
     /// Cycle the candidates belong to.
     /// </summary>
     public required SeekerCycle Cycle { get; init; }
+
+    public required SeekerEvaluation Evaluation { get; init; }
 }

@@ -1,11 +1,12 @@
 import { SeekerSearchReason, SeekerSearchType } from '@core/models/search-stats.models';
-import type { InstanceSearchStat } from '@core/models/search-stats.models';
+import type { InstanceFunnel, InstanceSearchStat } from '@core/models/search-stats.models';
 import {
   cycleProgress,
   formatCycleDuration,
   formatDurationBetween,
   formatGrabbedItems,
   formatSearchReason,
+  funnelStages,
   instanceHealthWarning,
   searchReasonSeverity,
   searchStatusSeverity,
@@ -29,6 +30,7 @@ function instance(partial: Partial<InstanceSearchStat> = {}): InstanceSearchStat
     cycleCompletedAt: null,
     lastCycleStartedAt: null,
     lastCycleCompletedAt: null,
+    funnel: null,
     ...partial,
   };
 }
@@ -138,5 +140,29 @@ describe('formatDurationBetween', () => {
     expect(formatDurationBetween('2026-07-29T09:00:00Z', '2026-07-31T12:00:00Z')).toBe('2d 3h');
     expect(formatDurationBetween('2026-07-31T07:00:00Z', '2026-07-31T12:00:00Z')).toBe('5h');
     expect(formatDurationBetween('2026-07-31T11:30:00Z', '2026-07-31T12:00:00Z')).toBe('30m');
+  });
+});
+
+describe('funnelStages', () => {
+  const funnel: InstanceFunnel = {
+    libraryItems: 10,
+    releasedItems: 9,
+    monitoredItems: 8,
+    tagFilteredItems: 7,
+    eligibleUnits: 6,
+    queuedUnits: 1,
+    recentlyGrabbedUnits: 2,
+    searchedUnits: 1,
+    remainingUnits: 2,
+    countedAt: '2026-07-30T10:00:00Z',
+  };
+
+  it('names the library stage after the instance type', () => {
+    expect(funnelStages(funnel, 'Radarr').narrowing[0]).toEqual({ label: 'movies', value: 10 });
+    expect(funnelStages(funnel, 'Sonarr').narrowing[0]).toEqual({ label: 'series', value: 10 });
+  });
+
+  it('splits the units needing a search by state', () => {
+    expect(funnelStages(funnel, 'Sonarr').split.map((s) => s.value)).toEqual([1, 2, 1, 2]);
   });
 });

@@ -1,0 +1,73 @@
+<app-drawer [title]="'Preview ' + (instance()?.instanceName ?? '')" [(visible)]="visible">
+  @if (loading()) {
+    <div class="preview__loading"><app-spinner /></div>
+  } @else if (error(); as message) {
+    <app-empty-state icon="tablerAlertTriangle" heading="Preview failed" [description]="message" />
+  } @else if (preview(); as p) {
+    @if (stages(); as s) {
+      <ol class="preview__funnel">
+        @for (stage of s; track stage.label) {
+          <li class="preview__funnel-stage"><strong>{{ stage.value }}</strong> {{ stage.label }}</li>
+        }
+      </ol>
+    }
+
+    <section class="preview__section">
+      <h3 class="preview__heading">Next up</h3>
+      @if (p.cycleWaitingUntil) {
+        <p class="preview__note preview__note--waiting">
+          Cycle complete. The next cycle starts after {{ p.cycleWaitingUntil | date:'MM/dd HH:mm' }}.
+        </p>
+      } @else {
+        @if (p.randomPick) {
+          <p class="preview__note">Random draw: the next run can pick other items or seasons.</p>
+        }
+        <ol class="preview__list">
+          @for (unit of p.nextUp; track $index) {
+            <li class="preview__row preview__row--next">
+              <span class="preview__name">{{ unit.name }}</span>
+              <app-badge [severity]="searchReasonSeverity(unit.reason)" size="sm">{{ formatSearchReason(unit.reason) }}</app-badge>
+              @if (unit.contentKind) {
+                <app-badge size="sm">{{ unit.contentKind }}</app-badge>
+              }
+            </li>
+          } @empty {
+            <li class="preview__note">Nothing left to search.</li>
+          }
+        </ol>
+      }
+    </section>
+
+    <section class="preview__section">
+      <h3 class="preview__heading">Excluded ({{ p.excluded.length }})</h3>
+      <div class="preview__filters">
+        <app-select [value]="reasonFilter()" [options]="reasonOptions()" (valueChange)="onReasonChange($event)" />
+        <app-input type="search" placeholder="Filter by title..." [(value)]="titleFilter" />
+      </div>
+      <ul class="preview__list">
+        @for (item of pagedExcluded(); track $index) {
+          <li class="preview__row preview__row--excluded">
+            <span class="preview__name">{{ item.name }}</span>
+            <app-badge size="sm">{{ reasonLabels[item.reason] }}</app-badge>
+          </li>
+        } @empty {
+          <li class="preview__note">No excluded items match.</li>
+        }
+      </ul>
+      @if (filteredExcluded().length > pageSize()) {
+        <app-paginator
+          [totalRecords]="filteredExcluded().length"
+          [pageSize]="pageSize()"
+          [currentPage]="page()"
+          [pageSizeOptions]="[25, 50, 100]"
+          (pageChange)="page.set($event)"
+          (pageSizeChange)="pageSize.set($event)"
+        />
+      }
+    </section>
+  }
+
+  <div drawer-footer>
+    <app-button variant="ghost" [loading]="loading()" (clicked)="refresh()">Refresh</app-button>
+  </div>
+</app-drawer>

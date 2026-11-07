@@ -68,7 +68,7 @@
     color: var(--text-primary);
     min-width: 0;
     flex: 1;
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   &__hash {
@@ -155,7 +155,7 @@
   &__detail-value {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
-    word-break: break-word;
+    overflow-wrap: anywhere;
 
     &--mono {
       font-family: var(--font-mono);

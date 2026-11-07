@@ -83,9 +83,56 @@
   }
 }
 
+// Dot variant: an inline span whose padding reserves the gap and the dot.
+// Inline (not inline-block) so the dot never wraps away from the last word.
+.new-dot {
+  position: relative;
+  padding-left: 11px;
+
+  // Word joiner: without content the empty span still allows a line break.
+  &::before {
+    content: '\2060';
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    width: 7px;
+    height: 7px;
+    transform: translateY(-50%);
+    border-radius: var(--radius-full);
+    background: linear-gradient(
+      135deg,
+      var(--new-badge-flame-start) 0%,
+      var(--new-badge-flame-mid) 45%,
+      var(--new-badge-flame-end) 100%
+    );
+    box-shadow: 0 0 4px rgba(var(--new-badge-glow-rgb), 0.45);
+    animation: new-dot-glow 2.4s var(--ease-default) infinite;
+  }
+}
+
+// app-button already spaces its content with a flex gap.
+:host-context(app-button) .new-dot {
+  margin-left: calc(-1 * var(--space-2));
+}
+
+@keyframes new-dot-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(var(--new-badge-glow-rgb), 0.4);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(var(--new-badge-glow-rgb), 0.75);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .new-ribbon,
-  .new-pill {
+  .new-pill,
+  .new-dot::after {
     animation: none;
   }
 }

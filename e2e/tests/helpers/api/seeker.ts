@@ -36,6 +36,10 @@ export class SeekerApi {
     return this.client.get('/api/seeker/search-stats/summary');
   }
 
+  getPreview(instanceId: string): Promise<Response> {
+    return this.client.get(`/api/seeker/preview/${instanceId}`);
+  }
+
   resetCycle(instanceId: string): Promise<Response> {
     return this.client.post(`/api/seeker/cycles/${instanceId}/reset`);
   }
