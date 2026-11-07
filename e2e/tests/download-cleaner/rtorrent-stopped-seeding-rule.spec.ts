@@ -65,7 +65,7 @@ test.describe.serial('rTorrent stopped seeding rule', () => {
   let api: CleanuparrApi;
   let clientId: string | undefined;
 
-  async function addStoppedTorrent(suffix: string, category: string) {
+  async function addSeedingTorrentFx(suffix: string, category: string) {
     chmodIgnoringEPERM(RTORRENT_DOWNLOADS, 0o777);
     const fx = buildFolderTorrent(RTORRENT_DOWNLOADS, `stopped-seed-${suffix}`, 32_768, ANNOUNCE);
     await rtorrent.addSeedingTorrent({
@@ -76,6 +76,11 @@ test.describe.serial('rTorrent stopped seeding rule', () => {
       infoHash: fx.infoHash,
     });
     await waitForSeeding(fx.infoHash, category);
+    return fx;
+  }
+
+  async function addStoppedTorrent(suffix: string, category: string) {
+    const fx = await addSeedingTorrentFx(suffix, category);
     await rtorrent.stopTorrent(fx.infoHash);
     expect(await rtorrent.getState(fx.infoHash)).toBe(0);
     expect(await rtorrent.getIsOpen(fx.infoHash)).toBe(0);
@@ -176,13 +181,24 @@ test.describe.serial('rTorrent stopped seeding rule', () => {
 
     const category = 'rt-stopped-stop';
     const fx = await addStoppedTorrent('stop', category);
+    const control = await addSeedingTorrentFx('stop-control', category);
     const before = await countEvents(api, 'DownloadStopped', fx.infoHash);
+    const controlBefore = await countEvents(api, 'DownloadStopped', control.infoHash);
     await createClientWithRule(category, 'Stop');
 
     const trig = await triggerJob(token, 'DownloadCleaner');
     expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-    // No event to poll for, so wait out the run.
-    await sleep(20_000);
+    await sleep(10_000); // The job waits 10 s for the Arr queue sync.
+
+    // The control's event proves the run evaluated this category.
+    await expect
+      .poll(() => countEvents(api, 'DownloadStopped', control.infoHash), {
+        message: 'the Stop rule never stopped the active control torrent',
+        timeout: 60_000,
+        intervals: [1_000],
+      })
+      .toBeGreaterThan(controlBefore);
+    expect(await rtorrent.getState(control.infoHash)).toBe(0);
 
     expect(await countEvents(api, 'DownloadStopped', fx.infoHash)).toBe(before);
     expect(await isPresent(fx.infoHash)).toBe(true);
