@@ -929,7 +929,7 @@ describe('SeekerComponent', () => {
     expect(component.getInstanceIcon('Radarr')).toBe('icons/ext/radarr-light.svg');
     expect(component.getInstanceTypeSeverity('Sonarr')).toBe('info');
     expect(component.getInstanceTypeSeverity('Radarr')).toBe('warning');
-    expect(component.getInstanceTypeSeverity('Lidarr')).toBe('default');
+    expect(component.getInstanceTypeSeverity('Lidarr')).toBe('lidarr');
 
     const icons = fixture.nativeElement.querySelectorAll('.instance-row__icon');
     expect((icons[0] as HTMLImageElement).getAttribute('src')).toBe('icons/ext/sonarr-light.svg');

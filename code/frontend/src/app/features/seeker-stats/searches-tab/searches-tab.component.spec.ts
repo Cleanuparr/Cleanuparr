@@ -481,7 +481,7 @@ describe('SearchesTabComponent', () => {
 
     expect(component.instanceTypeSeverity('Radarr')).toBe('warning');
     expect(component.instanceTypeSeverity('Sonarr')).toBe('info');
-    expect(component.instanceTypeSeverity('Lidarr')).toBe('default');
+    expect(component.instanceTypeSeverity('Lidarr')).toBe('lidarr');
 
     expect(component.searchTypeSeverity(SeekerSearchType.Replacement)).toBe('warning');
     expect(component.searchTypeSeverity(SeekerSearchType.Proactive)).toBe('info');
