@@ -85,6 +85,16 @@ export class RTorrentDriver implements TorrentClientDriver {
     return Number(await this.call('d.state', [infoHash.toUpperCase()]));
   }
 
+  /** d.is_active: 0 when paused or stopped. */
+  async getIsActive(infoHash: string): Promise<number> {
+    return Number(await this.call('d.is_active', [infoHash.toUpperCase()]));
+  }
+
+  /** d.pause stops transfers but leaves d.state at 1. */
+  async pause(infoHash: string): Promise<void> {
+    await this.call('d.pause', [infoHash.toUpperCase()]);
+  }
+
   /** d.complete: 1 once the hash check confirms all pieces are present. */
   async getComplete(infoHash: string): Promise<number> {
     return Number(await this.call('d.complete', [infoHash.toUpperCase()]));
