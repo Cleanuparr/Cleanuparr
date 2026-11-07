@@ -6,11 +6,14 @@ import { buildDownloadClientPayload } from '../helpers/api/download-client';
 import { ArrStubs } from '../helpers/mocks';
 import { MockServers } from '../helpers/mocks/wiremock-client';
 import { RTorrentDriver } from '../helpers/torrent-clients/rtorrent';
+import { UTorrentDriver } from '../helpers/torrent-clients/utorrent';
+import type { TorrentClientDriver } from '../helpers/torrent-clients/types';
 import { buildFolderTorrent } from '../helpers/torrent-fixtures';
 
 /**
- * A paused rTorrent download must not collect stall strikes (#880).
- * d.pause leaves d.state at 1; only d.is_active marks it paused.
+ * A paused download must not collect stall strikes (#880).
+ * rTorrent: d.pause leaves d.state at 1; only d.is_active marks it paused.
+ * uTorrent: pause sets the Paused bit and keeps Started; a seeding torrent also reports no speed or ETA.
  */
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
@@ -20,8 +23,29 @@ const EPISODE_ID = 2;
 const QUEUE_ITEM_ID = 7101;
 
 const rtorrent = new RTorrentDriver();
+const utorrent = new UTorrentDriver();
 
-async function stubHealthyLookingQueue(mocks: MockServers, downloadId: string): Promise<void> {
+interface ClientUnderTest {
+  driver: TorrentClientDriver;
+  type: 'rtorrent' | 'utorrent';
+  downloadsDir: string;
+}
+
+const RTORRENT: ClientUnderTest = { driver: rtorrent, type: 'rtorrent', downloadsDir: 'rtorrent' };
+const UTORRENT: ClientUnderTest = { driver: utorrent, type: 'utorrent', downloadsDir: 'utorrent' };
+
+interface ArrangeOptions {
+  keepData?: boolean;
+  trackedDownloadState?: string;
+  sizeleft?: number;
+}
+
+async function stubHealthyLookingQueue(
+  mocks: MockServers,
+  downloadId: string,
+  trackedDownloadState: string,
+  sizeleft: number,
+): Promise<void> {
   await ArrStubs.applyArrDefaults(mocks.arr);
   await mocks.arr.stub(
     ArrStubs.arrRawQueueStub(
@@ -37,11 +61,11 @@ async function stubHealthyLookingQueue(mocks: MockServers, downloadId: string): 
             title: 'paused.test.s01e02',
             status: 'ok',
             trackedDownloadStatus: 'ok',
-            trackedDownloadState: 'downloading',
+            trackedDownloadState,
             downloadId,
             protocol: 'torrent',
             size: 32768,
-            sizeleft: 32768,
+            sizeleft,
           },
         ],
       }),
@@ -81,40 +105,81 @@ interface Arrangement {
   ruleId: string;
 }
 
-/** Adds an incomplete, started rTorrent download and points Cleanuparr at it with a stall rule. */
-async function arrange(api: CleanuparrApi, mocks: MockServers, label: string): Promise<Arrangement> {
-  await rtorrent.ready();
-  await rtorrent.clearAllTorrents();
+async function waitForRTorrentDownloading(hash: string): Promise<void> {
+  await expect
+    .poll(
+      async () => [await rtorrent.getComplete(hash), await rtorrent.getState(hash), await rtorrent.getIsActive(hash)],
+      { message: 'rTorrent never reported an active, incomplete download', timeout: 60_000 },
+    )
+    .toEqual([0, 1, 1]);
+}
 
-  const torrent = buildFolderTorrent(join(HOST_DOWNLOADS, 'rtorrent'), `${label}-${Date.now()}`);
-  // With no data on disk the start-time hash check leaves the torrent incomplete.
-  rmSync(torrent.contentPath, { recursive: true, force: true });
-  await rtorrent.addTorrent({
+const UTORRENT_STARTED = 1;
+const UTORRENT_CHECKED = 8;
+const UTORRENT_PAUSED = 32;
+
+function waitForUTorrent(completed: boolean): (hash: string) => Promise<void> {
+  return async (hash) => {
+    await expect
+      .poll(
+        async () => {
+          const row = await utorrent.getStatusAndCompleted(hash);
+          return (
+            row !== undefined &&
+            (row.status & UTORRENT_STARTED) !== 0 &&
+            (row.status & UTORRENT_CHECKED) !== 0 &&
+            (row.status & UTORRENT_PAUSED) === 0 &&
+            row.dateCompleted > 0 === completed
+          );
+        },
+        { message: `uTorrent never reported a started torrent with completed=${completed}`, timeout: 60_000 },
+      )
+      .toBe(true);
+  };
+}
+
+/**
+ * Adds a started torrent and points Cleanuparr at it with a stall rule.
+ * Without keepData the torrent stays incomplete.
+ */
+async function arrange(
+  api: CleanuparrApi,
+  mocks: MockServers,
+  label: string,
+  client: ClientUnderTest,
+  waitUntilAdded: (hash: string) => Promise<void>,
+  options: ArrangeOptions = {},
+): Promise<Arrangement> {
+  await client.driver.ready();
+  await client.driver.clearAllTorrents();
+
+  const torrent = buildFolderTorrent(join(HOST_DOWNLOADS, client.downloadsDir), `${label}-${Date.now()}`);
+  if (!options.keepData) {
+    // With no data on disk the start-time hash check leaves the torrent incomplete.
+    rmSync(torrent.contentPath, { recursive: true, force: true });
+  }
+  await client.driver.addTorrent({
     metainfo: torrent.metainfo,
     savePath: CLIENT_DOWNLOADS,
     name: torrent.name,
     infoHash: torrent.infoHash,
   });
 
-  await expect
-    .poll(
-      async () => [
-        await rtorrent.getComplete(torrent.infoHash),
-        await rtorrent.getState(torrent.infoHash),
-        await rtorrent.getIsActive(torrent.infoHash),
-      ],
-      { message: 'rTorrent never reported an active, incomplete download', timeout: 60_000 },
-    )
-    .toEqual([0, 1, 1]);
+  await waitUntilAdded(torrent.infoHash);
 
-  await stubHealthyLookingQueue(mocks, torrent.infoHash);
+  await stubHealthyLookingQueue(
+    mocks,
+    torrent.infoHash,
+    options.trackedDownloadState ?? 'downloading',
+    options.sizeleft ?? 32768,
+  );
 
   const created = await api.downloadClient.create(
-    buildDownloadClientPayload('rtorrent', {
-      name: `rtorrent-paused-${Date.now()}`,
-      host: rtorrent.cleanuparrHost,
-      username: rtorrent.username,
-      password: rtorrent.password,
+    buildDownloadClientPayload(client.type, {
+      name: `${client.type}-paused-${Date.now()}`,
+      host: client.driver.cleanuparrHost,
+      username: client.driver.username,
+      password: client.driver.password,
     }),
   );
   const createdBody = await created.text();
@@ -154,13 +219,13 @@ async function arrange(api: CleanuparrApi, mocks: MockServers, label: string): P
   };
 }
 
-async function cleanup(api: CleanuparrApi, arranged: Arrangement | undefined): Promise<void> {
+async function cleanup(api: CleanuparrApi, arranged: Arrangement | undefined, client: ClientUnderTest): Promise<void> {
   if (arranged) {
     await api.queueCleaner.deleteRule('stall', arranged.ruleId);
     await api.arr.deleteInstance('sonarr', arranged.arrInstanceId);
     await api.downloadClient.delete(arranged.clientId);
   }
-  await rtorrent.clearAllTorrents();
+  await client.driver.clearAllTorrents();
 }
 
 test.describe('Queue Cleaner stall check on rTorrent', () => {
@@ -170,7 +235,7 @@ test.describe('Queue Cleaner stall check on rTorrent', () => {
     let arranged: Arrangement | undefined;
 
     try {
-      arranged = await arrange(api, mocks, 'stall-control');
+      arranged = await arrange(api, mocks, 'stall-control', RTORRENT, waitForRTorrentDownloading);
       await runQueueCleaner(api, mocks);
 
       await expect
@@ -180,7 +245,7 @@ test.describe('Queue Cleaner stall check on rTorrent', () => {
         })
         .toBe(1);
     } finally {
-      await cleanup(api, arranged);
+      await cleanup(api, arranged, RTORRENT);
     }
   });
 
@@ -190,7 +255,7 @@ test.describe('Queue Cleaner stall check on rTorrent', () => {
     let arranged: Arrangement | undefined;
 
     try {
-      arranged = await arrange(api, mocks, 'stall-paused');
+      arranged = await arrange(api, mocks, 'stall-paused', RTORRENT, waitForRTorrentDownloading);
 
       await rtorrent.pause(arranged.hash);
       expect(await rtorrent.getState(arranged.hash), 'd.pause leaves d.state at 1').toBe(1);
@@ -203,7 +268,79 @@ test.describe('Queue Cleaner stall check on rTorrent', () => {
       expect(await countEvents(api, 'StalledStrike', arranged.hash)).toBe(0);
       expect(await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).toHaveLength(0);
     } finally {
-      await cleanup(api, arranged);
+      await cleanup(api, arranged, RTORRENT);
+    }
+  });
+});
+
+test.describe('Queue Cleaner stall check on uTorrent', () => {
+  test('an incomplete download with no speed or ETA gets a stall strike', async ({ api, mocks }) => {
+    test.setTimeout(180_000);
+
+    let arranged: Arrangement | undefined;
+
+    try {
+      arranged = await arrange(api, mocks, 'stall-control', UTORRENT, waitForUTorrent(false));
+      await runQueueCleaner(api, mocks);
+
+      await expect
+        .poll(() => countEvents(api, 'StalledStrike', arranged!.hash), {
+          message: 'the stall strike was never recorded',
+          timeout: 60_000,
+        })
+        .toBe(1);
+    } finally {
+      await cleanup(api, arranged, UTORRENT);
+    }
+  });
+
+  test('a paused download gets no stall strike', async ({ api, mocks }) => {
+    test.setTimeout(180_000);
+
+    let arranged: Arrangement | undefined;
+
+    try {
+      arranged = await arrange(api, mocks, 'stall-paused', UTORRENT, waitForUTorrent(false));
+
+      await utorrent.pause(arranged.hash);
+      await expect
+        .poll(async () => ((await utorrent.getStatus(arranged!.hash)) ?? 0) & UTORRENT_PAUSED, {
+          message: 'uTorrent never set the Paused bit',
+          timeout: 30_000,
+        })
+        .toBe(UTORRENT_PAUSED);
+      expect((await utorrent.getStatus(arranged.hash))! & UTORRENT_STARTED, 'pause keeps the Started bit').toBe(UTORRENT_STARTED);
+
+      await runQueueCleaner(api, mocks);
+      // The second run starts only after the first finishes.
+      await runQueueCleaner(api, mocks);
+
+      expect(await countEvents(api, 'StalledStrike', arranged.hash)).toBe(0);
+      expect(await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).toHaveLength(0);
+    } finally {
+      await cleanup(api, arranged, UTORRENT);
+    }
+  });
+
+  test('a seeding download gets no stall strike', async ({ api, mocks }) => {
+    test.setTimeout(180_000);
+
+    let arranged: Arrangement | undefined;
+
+    try {
+      arranged = await arrange(api, mocks, 'stall-seeding', UTORRENT, waitForUTorrent(true), {
+        keepData: true,
+        trackedDownloadState: 'importPending',
+        sizeleft: 0,
+      });
+      await runQueueCleaner(api, mocks);
+      // The second run starts only after the first finishes.
+      await runQueueCleaner(api, mocks);
+
+      expect(await countEvents(api, 'StalledStrike', arranged.hash)).toBe(0);
+      expect(await mocks.arr.findRequests({ method: 'DELETE', urlPattern: '/api/v3/queue/.*' })).toHaveLength(0);
+    } finally {
+      await cleanup(api, arranged, UTORRENT);
     }
   });
 });
