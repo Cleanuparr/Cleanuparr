@@ -30,7 +30,8 @@ public sealed class RTorrentClient
         "d.timestamp.finished=",
         "d.custom1=",
         "d.base_path=",
-        "d.directory="
+        "d.directory=",
+        "d.is_active="
     ];
 
     // Fields to request when fetching file data via f.multicall
@@ -345,7 +346,10 @@ public sealed class RTorrentClient
 
     private static RTorrentTorrent? CreateTorrentFromValues(object?[] values)
     {
-        if (values.Length < 13) return null;
+        if (values.Length < TorrentFields.Length)
+        {
+            return null;
+        }
 
         return new RTorrentTorrent
         {
@@ -361,7 +365,8 @@ public sealed class RTorrentClient
             TimestampFinished = Convert.ToInt64(values[9] ?? 0),
             Label = values[10]?.ToString(),
             BasePath = values[11]?.ToString(),
-            Directory = values[12]?.ToString()
+            Directory = values[12]?.ToString(),
+            IsActive = Convert.ToInt32(values[13] ?? 0)
         };
     }
 
