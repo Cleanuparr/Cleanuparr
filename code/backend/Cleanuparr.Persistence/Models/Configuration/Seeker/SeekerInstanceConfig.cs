@@ -60,7 +60,7 @@ public sealed record SeekerInstanceConfig
 
     /// <summary>
     /// Excludes downloads that carry a Queue Cleaner strike from the active download count.
-    /// Counted strike types: stalled, slow speed, slow time, downloading metadata.
+    /// Counted strike types: stalled, slow speed, slow time, downloading metadata, errored.
     /// </summary>
     public bool IgnoreStruckDownloads { get; set; }
 
