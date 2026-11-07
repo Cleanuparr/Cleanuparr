@@ -52,6 +52,11 @@ public sealed record RTorrentTorrent
     public int IsActive { get; init; }
 
     /// <summary>
+    /// d.is_multi_file: 1 for multi-file torrents, 0 for single-file torrents
+    /// </summary>
+    public int IsMultiFile { get; init; }
+
+    /// <summary>
     /// Completion status: 0 = incomplete, 1 = complete
     /// </summary>
     public int Complete { get; init; }

@@ -31,7 +31,8 @@ public sealed class RTorrentClient
         "d.custom1=",
         "d.base_path=",
         "d.directory=",
-        "d.is_active="
+        "d.is_active=",
+        "d.is_multi_file="
     ];
 
     // Fields to request when fetching file data via f.multicall
@@ -366,7 +367,8 @@ public sealed class RTorrentClient
             Label = values[10]?.ToString(),
             BasePath = values[11]?.ToString(),
             Directory = values[12]?.ToString(),
-            IsActive = Convert.ToInt32(values[13] ?? 0)
+            IsActive = Convert.ToInt32(values[13] ?? 0),
+            IsMultiFile = Convert.ToInt32(values[14] ?? 0)
         };
     }
 

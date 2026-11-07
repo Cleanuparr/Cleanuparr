@@ -74,9 +74,9 @@ public class RTorrentClientTests
             """;
     }
 
-    private static string[] TorrentCells(int isActive, bool includeIsActive)
+    private static string[] TorrentCells(int isActive = 0, int isMultiFile = 0)
     {
-        List<string> cells =
+        return
         [
             "<value><string>HASH1</string></value>",
             "<value><string>Torrent 1</string></value>",
@@ -91,20 +91,15 @@ public class RTorrentClientTests
             "<value><string>tv</string></value>",
             "<value><string>/downloads/Torrent 1</string></value>",
             "<value><string>/downloads</string></value>",
+            $"<value><i8>{isActive}</i8></value>",
+            $"<value><i8>{isMultiFile}</i8></value>",
         ];
-
-        if (includeIsActive)
-        {
-            cells.Add($"<value><i8>{isActive}</i8></value>");
-        }
-
-        return cells.ToArray();
     }
 
     [Fact]
     public async Task GetAllTorrentsAsync_RequestsIsActive()
     {
-        (RTorrentClient client, FakeHttpMessageHandler handler) = CreateClient(TorrentRowsResponse(TorrentCells(0, true)));
+        (RTorrentClient client, FakeHttpMessageHandler handler) = CreateClient(TorrentRowsResponse(TorrentCells()));
 
         await client.GetAllTorrentsAsync();
 
@@ -116,7 +111,7 @@ public class RTorrentClientTests
     [InlineData(1)]
     public async Task GetAllTorrentsAsync_ParsesIsActive(int isActive)
     {
-        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells(isActive, true)));
+        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells(isActive: isActive)));
 
         List<RTorrentTorrent> torrents = await client.GetAllTorrentsAsync();
 
@@ -124,9 +119,31 @@ public class RTorrentClientTests
     }
 
     [Fact]
-    public async Task GetAllTorrentsAsync_WhenRowLacksIsActive_Throws()
+    public async Task GetAllTorrentsAsync_RequestsIsMultiFile()
     {
-        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells(0, false)));
+        (RTorrentClient client, FakeHttpMessageHandler handler) = CreateClient(TorrentRowsResponse(TorrentCells()));
+
+        await client.GetAllTorrentsAsync();
+
+        handler.CapturedRequestBodies[0]!.ShouldContain("d.is_multi_file=");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task GetAllTorrentsAsync_ParsesIsMultiFile(int isMultiFile)
+    {
+        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells(isMultiFile: isMultiFile)));
+
+        List<RTorrentTorrent> torrents = await client.GetAllTorrentsAsync();
+
+        torrents.Single().IsMultiFile.ShouldBe(isMultiFile);
+    }
+
+    [Fact]
+    public async Task GetAllTorrentsAsync_WhenRowLacksIsMultiFile_Throws()
+    {
+        (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells()[..^1]));
 
         await Should.ThrowAsync<RTorrentClientException>(() => client.GetAllTorrentsAsync());
     }

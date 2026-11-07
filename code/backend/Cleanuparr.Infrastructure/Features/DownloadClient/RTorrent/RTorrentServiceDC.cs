@@ -14,7 +14,7 @@ public partial class RTorrentService
         var result = new List<ITorrentItemWrapper>();
         foreach (var torrent in downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => x is { Complete: 1, State: 1 }))
+            .Where(x => x.Complete == 1))
         {
             var trackers = await _client.GetTrackersAsync(torrent.Hash);
             result.Add(new RTorrentItemWrapper(torrent, trackers, _timeProvider));
@@ -73,6 +73,11 @@ public partial class RTorrentService
         {
             await _client.DeleteTorrentAsync(hash);
             return;
+        }
+
+        if (string.IsNullOrEmpty(item.SavePath))
+        {
+            throw new IOException($"rTorrent reported no data path, cannot delete files | {item.Name}");
         }
 
         // rTorrent keeps files open while a torrent is active, so stop it before deleting them.
