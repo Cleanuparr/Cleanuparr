@@ -21,4 +21,6 @@ public sealed record UpdateSeekerInstanceConfigRequest
     public bool UseCutoff { get; init; }
 
     public bool UseCustomFormatScore { get; init; }
+
+    public int RecentGrabWindowHours { get; init; } = 24;
 }

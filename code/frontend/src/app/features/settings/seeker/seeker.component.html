@@ -135,6 +135,17 @@
                   helpKey="seeker:ignoreStruckDownloads"
                   featureId="seeker-ignore-struck-downloads" />
                 <app-number-input
+                  label="Recent Grab Window (Hours)"
+                  placeholder="24"
+                  hint="Skip items the arr grabbed within this many hours, even after the download left the queue (0 = disabled)"
+                  [value]="instance.recentGrabWindowHours"
+                  [min]="0"
+                  [max]="168"
+                  (valueChange)="updateInstanceRecentGrabWindowHours($index, $event)"
+                  helpKey="seeker:recentGrabWindowHours"
+                  featureId="seeker-recent-grab-window"
+                />
+                <app-number-input
                   label="Min Cycle Time (Days)"
                   placeholder="7"
                   hint="Minimum number of days a complete search cycle must span before starting a new one"

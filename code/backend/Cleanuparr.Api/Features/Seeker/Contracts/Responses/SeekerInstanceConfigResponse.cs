@@ -31,4 +31,6 @@ public sealed record SeekerInstanceConfigResponse
     public bool UseCutoff { get; init; }
 
     public bool UseCustomFormatScore { get; init; }
+
+    public int RecentGrabWindowHours { get; init; }
 }

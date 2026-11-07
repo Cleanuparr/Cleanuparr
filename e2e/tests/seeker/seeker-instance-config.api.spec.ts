@@ -43,6 +43,7 @@ test.describe('Seeker — per-instance config', () => {
       expect(instance).toHaveProperty('enabled');
       expect(instance).toHaveProperty('skipTags');
       expect(instance).toHaveProperty('includeTags');
+      expect(instance).toHaveProperty('recentGrabWindowHours');
       expect(instance).toHaveProperty('activeDownloadLimit');
       expect(instance).toHaveProperty('ignoreStruckDownloads');
       expect(instance).toHaveProperty('minCycleTimeDays');
@@ -59,6 +60,7 @@ test.describe('Seeker — per-instance config', () => {
     expect(radarr.useCustomFormatScore).toBe(false);
     expect(radarr.ignoreStruckDownloads).toBe(false);
     expect(radarr.includeTags).toEqual([]);
+    expect(radarr.recentGrabWindowHours).toBe(24);
   });
 
   test('updates per-instance settings independently', async ({ api }) => {
@@ -75,6 +77,7 @@ test.describe('Seeker — per-instance config', () => {
           useCustomFormatScore: true,
           ignoreStruckDownloads: true,
           includeTags: ['wanted', '4k'],
+          recentGrabWindowHours: 48,
         };
       }
       if (i.arrInstanceId === sonarrId) {
@@ -95,7 +98,9 @@ test.describe('Seeker — per-instance config', () => {
     expect(radarr.useCustomFormatScore).toBe(true);
     expect(radarr.ignoreStruckDownloads).toBe(true);
     expect(radarr.includeTags).toEqual(['wanted', '4k']);
+    expect(radarr.recentGrabWindowHours).toBe(48);
     expect(sonarr.includeTags).toEqual([]);
+    expect(sonarr.recentGrabWindowHours).toBe(24);
     expect(sonarr.ignoreStruckDownloads).toBe(false);
     expect(sonarr.monitoredOnly).toBe(true);
     expect(sonarr.useCutoff).toBe(true);

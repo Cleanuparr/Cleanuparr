@@ -696,6 +696,73 @@ public class SonarrClientTests
 
     #endregion
 
+    #region GetRecentlyGrabbedSeasonsAsync
+
+    [Fact]
+    public async Task GetRecentlyGrabbedSeasonsAsync_BuildsExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(Array.Empty<object>())));
+        DateTimeOffset since = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        // Act
+        await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, since);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/history/since");
+        request.RequestUri.Query.ShouldBe("?date=2026-01-01T00%3A00%3A00.0000000Z&eventType=1&includeEpisode=true");
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedSeasonsAsync_DropsRowsWithoutSeriesOrEpisode()
+    {
+        // Arrange
+        const string body = """
+        [
+            { "seriesId": 10, "episode": { "seasonNumber": 1 } },
+            { "seriesId": 0, "episode": { "seasonNumber": 2 } },
+            { "seriesId": 11, "episode": null }
+        ]
+        """;
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        }));
+
+        // Act
+        HashSet<(long SeriesId, long SeasonNumber)> seasons = await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow);
+
+        // Assert
+        seasons.ShouldBe([(10L, 1L)]);
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedSeasonsAsync_NullBody_ReturnsEmpty()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
+
+        // Act
+        HashSet<(long SeriesId, long SeasonNumber)> seasons = await _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow);
+
+        // Assert
+        seasons.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task GetRecentlyGrabbedSeasonsAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.InternalServerError);
+
+        // Act, Assert
+        await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetRecentlyGrabbedSeasonsAsync(_arrInstance, DateTimeOffset.UtcNow));
+    }
+
+    #endregion
+
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {
         Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
