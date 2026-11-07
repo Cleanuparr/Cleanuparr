@@ -8,6 +8,7 @@ describe('instanceTypeSeverity', () => {
     [InstanceType.Whisparr, 'whisparr'],
     [InstanceType.Lidarr, 'lidarr'],
     [InstanceType.Chaptarr, 'chaptarr'],
+    [InstanceType.Sportarr, 'sportarr'],
     [InstanceType.LazyLibrarian, 'default'],
   ])('maps %s to %s', (type, expected) => {
     expect(instanceTypeSeverity(type)).toBe(expected);

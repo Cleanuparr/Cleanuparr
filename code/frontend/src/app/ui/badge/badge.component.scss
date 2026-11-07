@@ -83,6 +83,12 @@
     border: 1px solid rgba(185, 28, 28, 0.2);
   }
 
+  &--sportarr {
+    background: rgba(var(--badge-sportarr-rgb), 0.12);
+    color: rgb(var(--badge-sportarr-rgb));
+    border: 1px solid rgba(var(--badge-sportarr-rgb), 0.2);
+  }
+
   // Severity indicator dot for non-default badges
   &--primary,
   &--success,
@@ -92,7 +98,8 @@
   &--accent,
   &--whisparr,
   &--lidarr,
-  &--chaptarr {
+  &--chaptarr,
+  &--sportarr {
     &::before {
       content: '';
       width: 6px;
