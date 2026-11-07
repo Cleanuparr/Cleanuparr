@@ -37,6 +37,16 @@ public abstract class ArrClient : IArrClient
     protected const int QueuePageSize = 200;
 
     /// <summary>
+    /// Page size used when paging through an *arr instance's wanted lists.
+    /// </summary>
+    protected const int WantedPageSize = 1000;
+
+    /// <summary>
+    /// Hard cap on pages read from a wanted list, so a stuck pagination loop can't run forever.
+    /// </summary>
+    private const int MaxWantedPages = 1000;
+
+    /// <summary>
     /// Command API path for this app's API version.
     /// </summary>
     protected string CommandUrlPath => $"/api/{ApiVersion}/command";
@@ -308,6 +318,71 @@ public abstract class ArrClient : IArrClient
         return await DeserializeStreamAsync<List<ArrHistoryRecord>>(response, cancellationToken) ?? [];
     }
 
+    /// <summary>
+    /// Reads every record of a paged wanted list (missing or cutoff) from an arr instance.
+    /// </summary>
+    /// <param name="arrInstance">The arr instance to query.</param>
+    /// <param name="wantedKind">The wanted list to read, "missing" or "cutoff".</param>
+    /// <param name="monitored">Only monitored items when true, only unmonitored items when false.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    protected async Task<List<T>> GetAllWantedAsync<T>(
+        ArrInstance arrInstance,
+        string wantedKind,
+        bool monitored,
+        CancellationToken cancellationToken = default
+    )
+    {
+        List<T> records = [];
+        int totalRecords = 0;
+        int page = 1;
+        string monitoredValue = monitored ? "true" : "false";
+
+        do
+        {
+            UriBuilder uriBuilder = new(arrInstance.Url);
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/{ApiVersion}/wanted/{wantedKind}";
+            uriBuilder.Query = $"page={page}&pageSize={WantedPageSize}&monitored={monitoredValue}";
+
+            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+            SetApiKey(request, arrInstance.ApiKey);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            try
+            {
+                response.EnsureSuccessStatusCode();
+            }
+            catch
+            {
+                _logger.LogError("wanted {Kind} failed | {Uri}", wantedKind, uriBuilder.Uri);
+                throw;
+            }
+
+            ArrPagedResponse<T>? wantedResponse = await DeserializeStreamAsync<ArrPagedResponse<T>>(response, cancellationToken);
+
+            if (wantedResponse is null || wantedResponse.Records.Count is 0)
+            {
+                break;
+            }
+
+            if (totalRecords is 0)
+            {
+                totalRecords = wantedResponse.TotalRecords;
+            }
+
+            records.AddRange(wantedResponse.Records);
+
+            if (records.Count >= totalRecords)
+            {
+                break;
+            }
+
+            page++;
+        } while (page <= MaxWantedPages);
+
+        return records;
+    }
+
     /// <inheritdoc/>
     public virtual ManualImportFile? MapCandidate(QueueRecord record, ManualImportCandidate candidate) => null;
 
@@ -501,12 +576,6 @@ public abstract class ArrClient : IArrClient
     {
         CommandIdResponse? result = await DeserializeStreamAsync<CommandIdResponse>(response);
         return result?.Id;
-    }
-
-    private sealed class CommandIdResponse
-    {
-        [JsonPropertyName("id")]
-        public long? Id { get; init; }
     }
 
     /// <summary>

@@ -763,6 +763,84 @@ public class SonarrClientTests
 
     #endregion
 
+    #region GetMissingEpisodesAsync / GetCutoffUnmetEpisodesAsync
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_BuildsExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new ArrPagedResponse<SearchableEpisode>())));
+
+        // Act
+        await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/wanted/missing");
+        request.RequestUri.Query.ShouldBe("?page=1&pageSize=1000&monitored=true");
+    }
+
+    [Fact]
+    public async Task GetCutoffUnmetEpisodesAsync_MonitoredFalse_BuildsExpectedUri()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new ArrPagedResponse<SearchableEpisode>())));
+
+        // Act
+        await _client.GetCutoffUnmetEpisodesAsync(_arrInstance, monitored: false);
+
+        // Assert
+        HttpRequestMessage request = _httpMessageHandler.CapturedRequests.ShouldHaveSingleItem();
+        request.RequestUri!.AbsolutePath.ShouldBe("/api/v3/wanted/cutoff");
+        request.RequestUri.Query.ShouldBe("?page=1&pageSize=1000&monitored=false");
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_AccumulatesPagesAndParsesSeriesId()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse((_, _) =>
+        {
+            int page = _httpMessageHandler.CapturedRequests.Count;
+            ArrPagedResponse<SearchableEpisode> response = page == 1
+                ? new ArrPagedResponse<SearchableEpisode>
+                {
+                    TotalRecords = 2,
+                    Records = [new SearchableEpisode { Id = 1, SeriesId = 10, SeasonNumber = 1, EpisodeNumber = 1 }],
+                }
+                : new ArrPagedResponse<SearchableEpisode>
+                {
+                    TotalRecords = 2,
+                    Records = [new SearchableEpisode { Id = 2, SeriesId = 11, SeasonNumber = 1, EpisodeNumber = 2 }],
+                };
+            return Task.FromResult(JsonResponse(response));
+        });
+
+        // Act
+        List<SearchableEpisode> episodes = await _client.GetMissingEpisodesAsync(_arrInstance, monitored: true);
+
+        // Assert
+        episodes.Count.ShouldBe(2);
+        episodes[0].SeriesId.ShouldBe(10L);
+        episodes[1].SeriesId.ShouldBe(11L);
+        _httpMessageHandler.CapturedRequests.Count.ShouldBe(2);
+        _httpMessageHandler.CapturedRequests[1].RequestUri!.Query.ShouldBe("?page=2&pageSize=1000&monitored=true");
+    }
+
+    [Fact]
+    public async Task GetMissingEpisodesAsync_TheArrRefused_Throws()
+    {
+        // Arrange
+        _httpMessageHandler.SetupResponse(HttpStatusCode.NotFound);
+
+        // Act, Assert
+        HttpRequestException exception = await Should.ThrowAsync<HttpRequestException>(
+            () => _client.GetMissingEpisodesAsync(_arrInstance, monitored: true));
+        exception.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
     private static HttpResponseMessage JsonResponse<T>(T body) => new(HttpStatusCode.OK)
     {
         Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),

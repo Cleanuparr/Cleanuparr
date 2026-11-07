@@ -23,7 +23,7 @@ import {
   TRIGGERED_SEARCH_TIMEOUT,
   type SeededArr,
 } from '../helpers/seeker-live';
-import { grabbableRelease, grabbableReleases } from '../helpers/mocks/torznab-stubs';
+import { grabbableRelease, grabbableReleases, torznabSearchStub } from '../helpers/mocks/torznab-stubs';
 
 /**
  * The per-instance filters that decide whether the Seeker searches at all.
@@ -160,6 +160,31 @@ test.describe('Seeker candidate filters', () => {
 
     await mutateMovie((movie) => ({ ...movie, monitored: false }));
     await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches an unmonitored movie once monitoredOnly is off', async ({ api }) => {
+    // The seed's other movie is unmonitored too, so it would also qualify once monitoredOnly
+    // is off. Tag it out of the run so only the movie this test unmonitors can be searched.
+    const skipTagId = await RADARR.arr.ensureTag(SKIP_TAG);
+    const others = (await RADARR.arr.get<Array<{ id: number }>>('/api/v3/movie')).filter(
+      (movie) => movie.id !== RADARR.itemId,
+    );
+    for (const other of others) {
+      const full = await RADARR.arr.get<Record<string, unknown>>(`/api/v3/movie/${other.id}`);
+      await RADARR.arr.put(`/api/v3/movie/${other.id}`, { ...full, tags: [skipTagId] });
+    }
+
+    const instanceId = await arrangeInstance(api, RADARR, {
+      instance: { monitoredOnly: false, skipTags: [SKIP_TAG] },
+    });
+
+    await mutateMovie((movie) => ({ ...movie, monitored: false }));
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toContain(RADARR.seededTitle);
   });
 
   test('skips a movie carrying a skipped tag', async ({ api }) => {
@@ -349,5 +374,50 @@ test.describe('Seeker candidate filters', () => {
     await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
 
     expect(await listSearchEvents(api, instanceId)).toHaveLength(1);
+  });
+});
+
+test.describe('Seeker monitored-only filters on Sonarr', () => {
+  /**
+   * Every episode in the seeded season is aired and fileless, so every one of
+   * them is a "missing" gap. Unmonitoring all of them (never just S01E01,
+   * whose id doubles as the series id and would hide an id mix-up) removes
+   * the only gap from the monitored=true list; it only reappears once
+   * monitoredOnly is off and the Seeker also reads the monitored=false list.
+   */
+
+  let library: Array<Record<string, unknown>> = [];
+  let episodeIds: number[] = [];
+
+  test.beforeEach(async () => {
+    await resetLiveArrState();
+    library = await snapshotLibrary(SONARR);
+    await indexerMock.stub(torznabSearchStub(SONARR.searchMode, []));
+
+    const episodes = await SONARR.arr.get<Array<{ id: number }>>(`/api/v3/episode?seriesId=${SONARR.itemId}`);
+    episodeIds = episodes.map((episode) => episode.id);
+    await SONARR.arr.put('/api/v3/episode/monitor', { episodeIds, monitored: false });
+  });
+
+  test.afterEach(async ({ api }) => {
+    await teardownInstances(api);
+    await SONARR.arr.put('/api/v3/episode/monitor', { episodeIds, monitored: true });
+    await restoreLibrary(SONARR, library);
+    await resetLiveArrState();
+  });
+
+  test('skips the season while its only gap is unmonitored', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, SONARR, { instance: { monitoredOnly: true } });
+    await expectNoSearch(api, instanceId, SETTLE_MS);
+  });
+
+  test('searches the season once monitoredOnly lets the unmonitored gap count', async ({ api }) => {
+    const instanceId = await arrangeInstance(api, SONARR, { instance: { monitoredOnly: false } });
+    await triggerSeeker(api);
+
+    await expect.poll(async () => (await listSearchEvents(api, instanceId)).length, { timeout: SETTLE_MS }).toBe(1);
+
+    const event = await firstSearchEvent(api, instanceId);
+    expect(event?.itemTitle).toBe(`${SONARR.seededTitle} S01`);
   });
 });
