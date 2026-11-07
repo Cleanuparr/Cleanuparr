@@ -534,12 +534,16 @@ public sealed class Seeker : IHandler
 
         // Load cached CF scores when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
+        HashSet<int> upgradesDisabledProfileIds = [];
         if (instanceConfig.UseCustomFormatScore)
         {
             cfScores = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == InstanceType.Radarr)
                 .ToDictionaryAsync(e => e.ExternalItemId);
+
+            List<ArrQualityProfile> profiles = await _radarrClient.GetQualityProfilesAsync(arrInstance);
+            upgradesDisabledProfileIds = profiles.Where(p => !p.UpgradeAllowed).Select(p => p.Id).ToHashSet();
         }
 
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
@@ -573,11 +577,18 @@ public sealed class Seeker : IHandler
                 continue;
             }
 
+            bool belowCustomFormatCutoff = instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(movie.Id, out var entry) && entry.CurrentScore < entry.CutoffScore;
+            bool upgradesDisabled = belowCustomFormatCutoff && upgradesDisabledProfileIds.Contains(movie.QualityProfileId);
             bool passesQualityCheck = !movie.HasFile
                 || (instanceConfig.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false))
-                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(movie.Id, out var entry) && entry.CurrentScore < entry.CutoffScore);
+                || (belowCustomFormatCutoff && !upgradesDisabled);
             if (!passesQualityCheck)
             {
+                if (upgradesDisabled)
+                {
+                    _logger.LogDebug("skip | upgrades disabled in profile | {Title} | {InstanceName}", movie.Title, arrInstance.Name);
+                }
+
                 continue;
             }
 
@@ -699,6 +710,13 @@ public sealed class Seeker : IHandler
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
+        HashSet<int> upgradesDisabledProfileIds = [];
+        if (instanceConfig.UseCustomFormatScore)
+        {
+            List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
+            upgradesDisabledProfileIds = profiles.Where(p => !p.UpgradeAllowed).Select(p => p.Id).ToHashSet();
+        }
+
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
         
         List<long> allLibraryIds = new();
@@ -729,8 +747,15 @@ public sealed class Seeker : IHandler
             bool fullyDownloaded = series.Statistics is not null
                 && series.Statistics.EpisodeCount > 0
                 && series.Statistics.EpisodeFileCount >= series.Statistics.EpisodeCount;
-            if (fullyDownloaded && !instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
+            bool customFormatUpgradesAllowed = instanceConfig.UseCustomFormatScore
+                && !upgradesDisabledProfileIds.Contains(series.QualityProfileId);
+            if (fullyDownloaded && !instanceConfig.UseCutoff && !customFormatUpgradesAllowed)
             {
+                if (instanceConfig.UseCustomFormatScore)
+                {
+                    _logger.LogDebug("skip | upgrades disabled in profile | {SeriesTitle} | {InstanceName}", series.Title, arrInstance.Name);
+                }
+
                 continue;
             }
 
@@ -775,7 +800,8 @@ public sealed class Seeker : IHandler
                 seriesTitle = series.Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode, SeekerSearchReason searchReason) =
-                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, cancellationToken, queuedSeasons);
+                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff,
+                        !upgradesDisabledProfileIds.Contains(series.QualityProfileId), cancellationToken, queuedSeasons);
 
                 if (searchItem is not null)
                 {
@@ -858,6 +884,7 @@ public sealed class Seeker : IHandler
         List<SeekerHistory> seriesHistory,
         string seriesTitle,
         DateTimeOffset graceCutoff,
+        bool customFormatUpgradesAllowed,
         CancellationToken cancellationToken,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
@@ -886,17 +913,32 @@ public sealed class Seeker : IHandler
                 .ToDictionaryAsync(e => e.EpisodeId);
         }
 
+        bool BelowCustomFormatCutoff(SearchableEpisode e) =>
+            cfScores != null && cfScores.TryGetValue(e.Id, out CustomFormatScoreEntry? entry) && entry.CurrentScore < entry.CutoffScore;
+
         // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed.
         // Cutoff status comes from the episodefile endpoint; items without a cached CF score are excluded.
-        var qualifying = episodes
+        List<SearchableEpisode> released = episodes
             .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff)
             .Where(e => !instanceConfig.MonitoredOnly || e.Monitored)
+            .ToList();
+
+        var qualifying = released
             .Where(e => !e.HasFile
                 || (instanceConfig.UseCutoff && cutoffNotMetFileIds.Contains(e.EpisodeFileId))
-                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(e.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
+                || (customFormatUpgradesAllowed && BelowCustomFormatCutoff(e)))
             .OrderBy(e => e.SeasonNumber)
             .ThenBy(e => e.EpisodeNumber)
             .ToList();
+
+        if (!customFormatUpgradesAllowed)
+        {
+            foreach (SearchableEpisode e in released.Where(e => BelowCustomFormatCutoff(e) && !qualifying.Contains(e)))
+            {
+                _logger.LogDebug("skip | upgrades disabled in profile | {SeriesTitle} S{Season:D2}E{Episode:D2} | {InstanceName}",
+                    seriesTitle, e.SeasonNumber, e.EpisodeNumber, arrInstance.Name);
+            }
+        }
 
         if (qualifying.Count == 0)
         {
@@ -949,8 +991,7 @@ public sealed class Seeker : IHandler
         var seasonEpisodes = qualifying.Where(e => e.SeasonNumber == selected.SeasonNumber).ToList();
         int missingCount = seasonEpisodes.Count(e => !e.HasFile);
         int cutoffCount = seasonEpisodes.Count(e => e.HasFile && cutoffNotMetFileIds.Contains(e.EpisodeFileId));
-        int cfCount = seasonEpisodes.Count(e => e.HasFile && cfScores != null
-            && cfScores.TryGetValue(e.Id, out var cfEntry) && cfEntry.CurrentScore < cfEntry.CutoffScore);
+        int cfCount = seasonEpisodes.Count(e => e.HasFile && customFormatUpgradesAllowed && BelowCustomFormatCutoff(e));
 
         List<string> reasons = [];
         if (missingCount > 0)
