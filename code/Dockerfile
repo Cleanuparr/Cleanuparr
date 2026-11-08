@@ -55,7 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV VIRTUAL_ENV=/opt/apprise-venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN pip install --no-cache-dir apprise==1.9.6
+RUN pip install --no-cache-dir apprise==2.1.0
 
 ENV PUID=1000 \
     PGID=1000 \
