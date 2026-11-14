@@ -321,6 +321,130 @@ public class SonarrClientTests
     }
 
     [Fact]
+    public async Task SearchItemsAsync_EpisodesAcrossSeries_ResolvesLogContextAndPostsCommand()
+    {
+        // Arrange
+        RouteResponses(
+            commandIdForPost: 5,
+            episodes: new[]
+            {
+                new { id = 1, seriesId = 10, seasonNumber = 1, episodeNumber = 2 },
+                new { id = 2, seriesId = 10, seasonNumber = 1, episodeNumber = 1 },
+            },
+            series: new { id = 10, title = "Show" });
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+            new SeriesSearchItem { Id = 2, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 5 });
+        _httpMessageHandler.CapturedRequests.ShouldContain(r => r.RequestUri!.AbsolutePath == "/api/v3/series/10");
+        PostedBody().ShouldContain("\"episodeIds\":[1,2]", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_EpisodeSeriesLookupReturnsNull_StillPostsCommand()
+    {
+        // Arrange
+        RouteResponses(
+            commandIdForPost: 6,
+            episodes: new[] { new { id = 1, seriesId = 10, seasonNumber = 1, episodeNumber = 1 } });
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 6 });
+        PostedBody().ShouldContain("\"episodeIds\":[1]", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_EpisodeLookupFails_StillPostsCommand()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 8, episodesStatus: HttpStatusCode.InternalServerError);
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 1, SeriesId = 10, SearchType = SeriesSearchType.Episode },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 8 });
+        PostedBody().ShouldContain("\"episodeIds\":[1]", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_SeasonSearchWithKnownSeries_PostsCommand()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 9, series: new { id = 100, title = "Show" });
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 3, SeriesId = 100, SearchType = SeriesSearchType.Season },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 9 });
+        _httpMessageHandler.CapturedRequests.ShouldContain(r => r.RequestUri!.AbsolutePath == "/api/v3/series/100");
+        PostedBody().ShouldContain("\"seasonNumber\":3", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_SeriesSearchWithKnownSeries_PostsCommand()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 12, series: new { id = 100, title = "Show" });
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 100, SeriesId = 100, SearchType = SeriesSearchType.Series },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 12 });
+        _httpMessageHandler.CapturedRequests.ShouldContain(r => r.RequestUri!.AbsolutePath == "/api/v3/series/100");
+        PostedBody().ShouldContain("\"name\":\"SeriesSearch\"", Case.Insensitive);
+    }
+
+    [Fact]
+    public async Task SearchItemsAsync_SeasonAndSeries_PostsBothWithoutEpisodeIds()
+    {
+        // Arrange
+        RouteResponses(commandIdForPost: 13);
+        var items = new HashSet<SearchItem>
+        {
+            new SeriesSearchItem { Id = 2, SeriesId = 10, SearchType = SeriesSearchType.Season },
+            new SeriesSearchItem { Id = 20, SeriesId = 20, SearchType = SeriesSearchType.Series },
+        };
+
+        // Act
+        var ids = await _client.SearchItemsAsync(_arrInstance, items);
+
+        // Assert
+        ids.ShouldBe(new long[] { 13, 13 });
+        List<string> bodies = PostedBodies();
+        bodies.Count.ShouldBe(2);
+        bodies.ShouldAllBe(body => !body.Contains("episodeIds", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task SearchItemsAsync_DryRun_ReturnsEmptyAndDoesNotPost()
     {
         // Arrange — interceptor returns null on dry run
@@ -577,18 +701,48 @@ public class SonarrClientTests
 
     #region Helpers
 
-    private void RouteResponses(long commandIdForPost)
+    private void RouteResponses(
+        long commandIdForPost,
+        object? episodes = null,
+        object? series = null,
+        HttpStatusCode? episodesStatus = null)
     {
         _httpMessageHandler.SetupResponse((req, _) =>
         {
-            if (req.Method == HttpMethod.Post && req.RequestUri!.AbsolutePath.EndsWith("/command"))
+            string path = req.RequestUri!.AbsolutePath;
+
+            if (req.Method == HttpMethod.Post && path.EndsWith("/command"))
             {
                 return Task.FromResult(JsonResponse(new { id = commandIdForPost }));
             }
-            // GET log-context calls (/series/{id}, /episode?...) return null so log context bails out
+
+            if (path.EndsWith("/episode") && episodesStatus is not null)
+            {
+                return Task.FromResult(new HttpResponseMessage(episodesStatus.Value));
+            }
+
+            if (path.EndsWith("/episode") && episodes is not null)
+            {
+                return Task.FromResult(JsonResponse(episodes));
+            }
+
+            if (path.Contains("/series/") && series is not null)
+            {
+                return Task.FromResult(JsonResponse(series));
+            }
+
+            // Unrouted log-context GETs return null so log context bails out
             return Task.FromResult(JsonNullResponse());
         });
     }
+
+    private List<string> PostedBodies() => _httpMessageHandler.CapturedRequests
+        .Select((request, index) => (request, body: _httpMessageHandler.CapturedRequestBodies[index]))
+        .Where(pair => pair.request.Method == HttpMethod.Post)
+        .Select(pair => pair.body!)
+        .ToList();
+
+    private string PostedBody() => PostedBodies().Single();
 
     private static QueueRecord BuildRecord(long id) => new()
     {
