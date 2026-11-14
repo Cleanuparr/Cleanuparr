@@ -110,6 +110,31 @@ public class WhisparrV3ClientTests
 
     #endregion
 
+    #region IsUpgrade
+
+    [Fact]
+    public void IsUpgrade_MovieFileIdSet_ReturnsTrue()
+    {
+        var record = new QueueRecord { Movie = new QueueMovie { MovieFileId = 12 } };
+        _client.IsUpgrade([record]).ShouldBe(true);
+    }
+
+    [Fact]
+    public void IsUpgrade_MovieFileIdZero_ReturnsFalse()
+    {
+        var record = new QueueRecord { Movie = new QueueMovie { MovieFileId = 0 } };
+        _client.IsUpgrade([record]).ShouldBe(false);
+    }
+
+    [Fact]
+    public void IsUpgrade_RecordMissingMovie_ReturnsFalse()
+    {
+        var record = new QueueRecord { Movie = null };
+        _client.IsUpgrade([record]).ShouldBe(false);
+    }
+
+    #endregion
+
     #region SearchItemsAsync
 
     [Fact]

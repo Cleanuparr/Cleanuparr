@@ -112,6 +112,38 @@ public class ExternalApiReadTests
     }
 
     [Fact]
+    public void QueueRecord_SonarrEpisodeHasFile_Deserializes()
+    {
+        const string payload = """
+        {
+            "totalRecords": 1,
+            "records": [{ "id": 1, "title": "T", "downloadId": "ABC", "protocol": "torrent", "seriesId": 7, "episodeId": 9, "episode": { "hasFile": true } }]
+        }
+        """;
+
+        QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>(payload, CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result.Records[0].Episode.ShouldNotBeNull();
+        result.Records[0].Episode!.HasFile.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void QueueRecord_RadarrMovieFileId_Deserializes()
+    {
+        const string payload = """
+        {
+            "totalRecords": 1,
+            "records": [{ "id": 1, "title": "T", "downloadId": "ABC", "protocol": "torrent", "movieId": 3, "movie": { "movieFileId": 12, "hasFile": null } }]
+        }
+        """;
+
+        QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>(payload, CleanuparrJsonOptions.ExternalApiRead)!;
+
+        result.Records[0].Movie.ShouldNotBeNull();
+        result.Records[0].Movie!.MovieFileId.ShouldBe(12);
+    }
+
+    [Fact]
     public void EmptyQueueResponse_Deserializes()
     {
         QueueListResponse result = JsonSerializer.Deserialize<QueueListResponse>("{}", CleanuparrJsonOptions.ExternalApiRead)!;

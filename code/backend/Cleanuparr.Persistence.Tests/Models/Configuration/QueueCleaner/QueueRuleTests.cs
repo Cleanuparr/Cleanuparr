@@ -292,6 +292,64 @@ public sealed class QueueRuleTests
 
     #endregion
 
+    #region MatchesContentType
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void MatchesContentType_All_AlwaysMatches(bool? isUpgrade)
+    {
+        var rule = new StallRule { Name = "test-rule", ContentType = QueueRuleContentType.All };
+
+        rule.MatchesContentType(isUpgrade).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void MatchesContentType_New_MatchesFalseOnly()
+    {
+        var rule = new StallRule { Name = "test-rule", ContentType = QueueRuleContentType.New };
+
+        rule.MatchesContentType(false).ShouldBeTrue();
+        rule.MatchesContentType(true).ShouldBeFalse();
+        rule.MatchesContentType(null).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void MatchesContentType_Upgrade_MatchesTrueOnly()
+    {
+        var rule = new StallRule { Name = "test-rule", ContentType = QueueRuleContentType.Upgrade };
+
+        rule.MatchesContentType(true).ShouldBeTrue();
+        rule.MatchesContentType(false).ShouldBeFalse();
+        rule.MatchesContentType(null).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void MatchesContentType_UndefinedValue_AlwaysMatches()
+    {
+        var rule = new StallRule { Name = "test-rule", ContentType = (QueueRuleContentType)99 };
+
+        rule.MatchesContentType(true).ShouldBeTrue();
+        rule.MatchesContentType(false).ShouldBeTrue();
+        rule.MatchesContentType(null).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithUndefinedContentType_ThrowsCustomValidationException()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+            ContentType = (QueueRuleContentType)99
+        };
+
+        Should.Throw<CustomValidationException>(() => rule.Validate());
+    }
+
+    #endregion
+
     #region Validate - ChangeCategory Validation
 
     [Fact]

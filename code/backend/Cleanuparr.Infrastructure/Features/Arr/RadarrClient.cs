@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public class RadarrClient : ArrClient, IRadarrClient
+public class RadarrClient : ArrClient, IRadarrClient, IUpgradeDetectionCapable
 {
     public RadarrClient(
         ILogger<ArrClient> logger,
@@ -25,7 +25,20 @@ public class RadarrClient : ArrClient, IRadarrClient
     ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
     {
     }
-    
+
+    /// <inheritdoc/>
+    public bool? IsUpgrade(IReadOnlyList<QueueRecord> records)
+    {
+        int withFile = records.Count(record => record.Movie?.MovieFileId > 0);
+
+        if (records.Count == 0 || (withFile > 0 && withFile < records.Count))
+        {
+            return null;
+        }
+
+        return withFile == records.Count;
+    }
+
     protected override string ApiVersion => "v3";
 
     protected override string GetSystemStatusUrlPath()

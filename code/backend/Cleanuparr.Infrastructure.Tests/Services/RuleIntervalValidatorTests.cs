@@ -522,16 +522,110 @@ public class RuleIntervalValidatorTests
             MaxCompletionPercentage = 100
         };
 
-        // Validate with no existing rules - should pass
         var result = _validator.ValidateStallRuleIntervals(newRule, new List<StallRule>());
 
         result.IsValid.ShouldBeTrue();
     }
 
     [Fact]
+    public void ValidateStallRuleIntervals_NewAndUpgradeOverSameRange_DoesNotOverlap()
+    {
+        var existingRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Upgrade",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            ContentType = QueueRuleContentType.Upgrade,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        var newRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "New",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            ContentType = QueueRuleContentType.New,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        var result = _validator.ValidateStallRuleIntervals(newRule, new List<StallRule> { existingRule });
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ValidateStallRuleIntervals_AllOverlapsWithNew_IsRejected()
+    {
+        var existingRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "AllRule",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            ContentType = QueueRuleContentType.All,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        var newRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "NewRule",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            ContentType = QueueRuleContentType.New,
+            MinCompletionPercentage = 50,
+            MaxCompletionPercentage = 80
+        };
+
+        var result = _validator.ValidateStallRuleIntervals(newRule, new List<StallRule> { existingRule });
+
+        result.IsValid.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ValidateStallRuleIntervals_AllOverlapsWithAll_IsRejected()
+    {
+        var existingRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "First All",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            ContentType = QueueRuleContentType.All,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        var newRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Second All",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            ContentType = QueueRuleContentType.All,
+            MinCompletionPercentage = 50,
+            MaxCompletionPercentage = 80
+        };
+
+        var result = _validator.ValidateStallRuleIntervals(newRule, new List<StallRule> { existingRule });
+
+        result.IsValid.ShouldBeFalse();
+    }
+
+    [Fact]
     public void ValidateStallRuleIntervals_DetectsMultipleOverlaps()
     {
-        // Rule1 covers 0-80%
         var rule1 = new StallRule
         {
             Id = Guid.NewGuid(),

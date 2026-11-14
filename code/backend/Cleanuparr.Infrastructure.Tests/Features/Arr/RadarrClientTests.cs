@@ -120,6 +120,45 @@ public class RadarrClientTests
 
     #endregion
 
+    #region IsUpgrade
+
+    [Fact]
+    public void IsUpgrade_MovieFileIdSet_ReturnsTrue()
+    {
+        var record = new QueueRecord { Movie = new QueueMovie { MovieFileId = 12 } };
+        _client.IsUpgrade([record]).ShouldBe(true);
+    }
+
+    [Fact]
+    public void IsUpgrade_MovieFileIdZero_ReturnsFalse()
+    {
+        var record = new QueueRecord { Movie = new QueueMovie { MovieFileId = 0 } };
+        _client.IsUpgrade([record]).ShouldBe(false);
+    }
+
+    [Fact]
+    public void IsUpgrade_RecordMissingMovie_ReturnsFalse()
+    {
+        var record = new QueueRecord { Movie = null };
+        _client.IsUpgrade([record]).ShouldBe(false);
+    }
+
+    [Fact]
+    public void IsUpgrade_NoRecords_ReturnsNull()
+    {
+        _client.IsUpgrade([]).ShouldBeNull();
+    }
+
+    [Fact]
+    public void IsUpgrade_MixedRecords_ReturnsNull()
+    {
+        var withFile = new QueueRecord { Movie = new QueueMovie { MovieFileId = 12 } };
+        var withoutFile = new QueueRecord { Movie = new QueueMovie { MovieFileId = 0 } };
+        _client.IsUpgrade([withFile, withoutFile]).ShouldBeNull();
+    }
+
+    #endregion
+
     #region SearchItemsAsync
 
     [Fact]

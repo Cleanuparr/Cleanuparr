@@ -22,7 +22,9 @@ public abstract record QueueRule : IConfig
     public int MaxStrikes { get; init; } = 3;
     
     public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Public;
-    
+
+    public QueueRuleContentType ContentType { get; init; } = QueueRuleContentType.All;
+
     public ushort MinCompletionPercentage { get; init; } = 0;
 
     public ushort MaxCompletionPercentage { get; init; } = 100;
@@ -38,6 +40,11 @@ public abstract record QueueRule : IConfig
         if (string.IsNullOrWhiteSpace(Name))
         {
             throw new Cleanuparr.Domain.Exceptions.CustomValidationException("Rule name cannot be empty");
+        }
+
+        if (!Enum.IsDefined(ContentType))
+        {
+            throw new Cleanuparr.Domain.Exceptions.CustomValidationException("Invalid content type");
         }
 
         if (MaxStrikes < 3)
@@ -71,6 +78,25 @@ public abstract record QueueRule : IConfig
         }
     }
     
+    /// <summary>
+    /// Checks whether the rule's content type scope matches the download's upgrade status.
+    /// </summary>
+    /// <param name="isUpgrade">
+    /// True when every record has a file.
+    /// False when none does.
+    /// Null when the arr cannot tell: not upgrade-detection capable, missing content id, or a mixed download.
+    /// </param>
+    public bool MatchesContentType(bool? isUpgrade)
+    {
+        return ContentType switch
+        {
+            QueueRuleContentType.All => true,
+            QueueRuleContentType.New => isUpgrade == false,
+            QueueRuleContentType.Upgrade => isUpgrade == true,
+            _ => true
+        };
+    }
+
     protected bool MatchesPrivacyType(bool isPrivate)
     {
         return PrivacyType switch
