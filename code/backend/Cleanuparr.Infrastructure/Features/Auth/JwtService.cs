@@ -9,6 +9,10 @@ namespace Cleanuparr.Infrastructure.Features.Auth;
 
 public sealed class JwtService : IJwtService
 {
+    public const string TokenTypeClaim = "token_type";
+    public const string AccessTokenType = "access";
+    public const string LoginTokenType = "login";
+
     private const string Issuer = "Cleanuparr";
     private const string Audience = "Cleanuparr";
     private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
@@ -34,7 +38,7 @@ public sealed class JwtService : IJwtService
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim("token_type", "access")
+            new Claim(TokenTypeClaim, AccessTokenType)
         };
 
         return GenerateToken(claims, AccessTokenLifetime);
@@ -45,7 +49,7 @@ public sealed class JwtService : IJwtService
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim("token_type", "login")
+            new Claim(TokenTypeClaim, LoginTokenType)
         };
 
         return GenerateToken(claims, LoginTokenLifetime);
@@ -64,8 +68,8 @@ public sealed class JwtService : IJwtService
         var principal = ValidateToken(token);
         if (principal is null) return null;
 
-        var tokenType = principal.FindFirst("token_type")?.Value;
-        return tokenType == "access" ? principal : null;
+        var tokenType = principal.FindFirst(TokenTypeClaim)?.Value;
+        return tokenType == AccessTokenType ? principal : null;
     }
 
     public Guid? ValidateLoginToken(string token)
@@ -73,8 +77,8 @@ public sealed class JwtService : IJwtService
         var principal = ValidateToken(token);
         if (principal is null) return null;
 
-        var tokenType = principal.FindFirst("token_type")?.Value;
-        if (tokenType != "login") return null;
+        var tokenType = principal.FindFirst(TokenTypeClaim)?.Value;
+        if (tokenType != LoginTokenType) return null;
 
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return Guid.TryParse(userIdClaim, out var userId) ? userId : null;

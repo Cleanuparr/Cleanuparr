@@ -368,6 +368,49 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         }
     }
 
+    [Fact, TestPriority(23)]
+    public async Task LoginToken_AsBearerToken_IsRejectedOnProtectedEndpoints()
+    {
+        string loginToken = await RequestLoginToken();
+
+        HttpClient bearerClient = _factory.CreateClient();
+        bearerClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginToken);
+        HttpResponseMessage apiKeyResponse = await bearerClient.GetAsync("/api/account/api-key");
+
+        HttpResponseMessage negotiateResponse = await _factory.CreateClient()
+            .PostAsync($"/api/hubs/app/negotiate?negotiateVersion=1&access_token={Uri.EscapeDataString(loginToken)}", null);
+
+        apiKeyResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        negotiateResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        await ClearLockout();
+    }
+
+    [Fact, TestPriority(24)]
+    public async Task AccessToken_FromTwoFactorLogin_IsAcceptedOnProtectedEndpoints()
+    {
+        string loginToken = await RequestLoginToken();
+
+        HttpResponseMessage loginResponse = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login/2fa", new
+        {
+            loginToken,
+            code = _recoveryCodes[1],
+            isRecoveryCode = true
+        });
+        loginResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        JsonElement body = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        string accessToken = body.GetProperty("accessToken").GetString()!;
+
+        HttpClient bearerClient = _factory.CreateClient();
+        bearerClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        HttpResponseMessage apiKeyResponse = await bearerClient.GetAsync("/api/account/api-key");
+
+        apiKeyResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await ClearLockout();
+    }
+
     private async Task<string> RequestLoginToken()
     {
         HttpResponseMessage response = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new
