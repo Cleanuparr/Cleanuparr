@@ -66,15 +66,6 @@ public sealed class JwtService : IJwtService
         return Convert.ToBase64String(bytes);
     }
 
-    public ClaimsPrincipal? ValidateAccessToken(string token)
-    {
-        var principal = ValidateToken(token, Audience);
-        if (principal is null) return null;
-
-        var tokenType = principal.FindFirst(TokenTypeClaim)?.Value;
-        return tokenType == AccessTokenType ? principal : null;
-    }
-
     public Guid? ValidateLoginToken(string token)
     {
         var principal = ValidateToken(token, LoginAudience);
