@@ -91,11 +91,11 @@ public abstract class SonarrClientBase : ArrClient, ISonarrClient
                     }
                 }
 
-                _logger.LogInformation("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, true, logContext));
+                _logger.LogInformation("{Log}", GetSearchLog(command.SearchType, arrInstance.Url, command, true, logContext));
             }
             catch
             {
-                _logger.LogError("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, false, logContext));
+                _logger.LogError("{Log}", GetSearchLog(command.SearchType, arrInstance.Url, command, false, logContext));
                 throw;
             }
         }
@@ -417,7 +417,7 @@ public abstract class SonarrClientBase : ArrClient, ISonarrClient
                 case SeriesSearchType.Season:
                     command.Name = seasonSearch;
                     command.SeasonNumber = item.Id;
-                    command.SeriesId = ((SeriesSearchItem)item).SeriesId;
+                    command.SeriesId = item.SeriesId;
                     break;
 
                 case SeriesSearchType.Series:
@@ -426,7 +426,7 @@ public abstract class SonarrClientBase : ArrClient, ISonarrClient
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(item.SearchType), item.SearchType, null);
+                    throw new ArgumentOutOfRangeException(nameof(items), item.SearchType, null);
             }
 
             if (item.SearchType is SeriesSearchType.Episode && commands.Any(x => x.SearchType is SeriesSearchType.Episode))
