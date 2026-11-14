@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence.Models.Auth;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Time.Testing;
+using Microsoft.IdentityModel.Tokens;
 using Shouldly;
 using Xunit;
 
@@ -78,5 +80,32 @@ public sealed class JwtServiceTests : IDisposable
         Guid userId = Guid.NewGuid();
 
         jwtService.ValidateLoginToken(jwtService.GenerateLoginToken(userId)).ShouldBe(userId);
+    }
+
+    [Fact]
+    public void ValidateLoginToken_ForAnAccessToken_ReturnsNull()
+    {
+        JwtService jwtService = new(TimeProvider.System);
+        User user = new() { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hash", TotpSecret = "secret", ApiKey = "key" };
+
+        jwtService.ValidateLoginToken(jwtService.GenerateAccessToken(user)).ShouldBeNull();
+    }
+
+    [Fact]
+    public void ValidateLoginToken_ForALoginAudienceTokenWithAccessType_ReturnsNull()
+    {
+        JwtService jwtService = new(TimeProvider.System);
+        JwtSecurityToken token = new(
+            issuer: "Cleanuparr",
+            audience: "Cleanuparr-login",
+            claims:
+            [
+                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+                new Claim(JwtService.TokenTypeClaim, JwtService.AccessTokenType)
+            ],
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(jwtService.GetOrCreateSigningKey()), SecurityAlgorithms.HmacSha256));
+
+        jwtService.ValidateLoginToken(new JwtSecurityTokenHandler().WriteToken(token)).ShouldBeNull();
     }
 }
