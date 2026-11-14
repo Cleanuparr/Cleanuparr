@@ -15,6 +15,9 @@ public sealed class JwtService : IJwtService
 
     private const string Issuer = "Cleanuparr";
     private const string Audience = "Cleanuparr";
+
+    // The bearer pipeline accepts only Audience, so a login token never authenticates a request
+    private const string LoginAudience = "Cleanuparr-login";
     private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
     private static readonly TimeSpan LoginTokenLifetime = TimeSpan.FromMinutes(5);
 
@@ -41,7 +44,7 @@ public sealed class JwtService : IJwtService
             new Claim(TokenTypeClaim, AccessTokenType)
         };
 
-        return GenerateToken(claims, AccessTokenLifetime);
+        return GenerateToken(claims, Audience, AccessTokenLifetime);
     }
 
     public string GenerateLoginToken(Guid userId)
@@ -52,7 +55,7 @@ public sealed class JwtService : IJwtService
             new Claim(TokenTypeClaim, LoginTokenType)
         };
 
-        return GenerateToken(claims, LoginTokenLifetime);
+        return GenerateToken(claims, LoginAudience, LoginTokenLifetime);
     }
 
     public string GenerateRefreshToken()
@@ -65,7 +68,7 @@ public sealed class JwtService : IJwtService
 
     public ClaimsPrincipal? ValidateAccessToken(string token)
     {
-        var principal = ValidateToken(token);
+        var principal = ValidateToken(token, Audience);
         if (principal is null) return null;
 
         var tokenType = principal.FindFirst(TokenTypeClaim)?.Value;
@@ -74,7 +77,7 @@ public sealed class JwtService : IJwtService
 
     public Guid? ValidateLoginToken(string token)
     {
-        var principal = ValidateToken(token);
+        var principal = ValidateToken(token, LoginAudience);
         if (principal is null) return null;
 
         var tokenType = principal.FindFirst(TokenTypeClaim)?.Value;
@@ -107,14 +110,14 @@ public sealed class JwtService : IJwtService
         return key;
     }
 
-    private string GenerateToken(Claim[] claims, TimeSpan lifetime)
+    private string GenerateToken(Claim[] claims, string audience, TimeSpan lifetime)
     {
         var key = new SymmetricSecurityKey(_signingKey);
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer: Issuer,
-            audience: Audience,
+            audience: audience,
             claims: claims,
             expires: _timeProvider.GetUtcNow().Add(lifetime).UtcDateTime,
             signingCredentials: credentials);
@@ -122,7 +125,7 @@ public sealed class JwtService : IJwtService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private ClaimsPrincipal? ValidateToken(string token)
+    private ClaimsPrincipal? ValidateToken(string token, string audience)
     {
         var key = new SymmetricSecurityKey(_signingKey);
         var handler = new JwtSecurityTokenHandler();
@@ -134,7 +137,7 @@ public sealed class JwtService : IJwtService
                 ValidateIssuer = true,
                 ValidIssuer = Issuer,
                 ValidateAudience = true,
-                ValidAudience = Audience,
+                ValidAudience = audience,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = key,

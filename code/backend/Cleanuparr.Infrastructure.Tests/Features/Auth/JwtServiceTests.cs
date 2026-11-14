@@ -55,4 +55,28 @@ public sealed class JwtServiceTests : IDisposable
 
         ExpiryOf(token).ShouldBe(Now.UtcDateTime.Add(LoginTokenLifetime));
     }
+
+    [Fact]
+    public void GenerateLoginToken_UsesADifferentAudienceThanAccessTokens()
+    {
+        JwtService jwtService = new(new FakeTimeProvider(Now));
+        User user = new() { Id = Guid.NewGuid(), Username = "admin", PasswordHash = "hash", TotpSecret = "secret", ApiKey = "key" };
+        JwtSecurityTokenHandler handler = new();
+
+        IEnumerable<string> loginAudiences = handler.ReadJwtToken(jwtService.GenerateLoginToken(user.Id)).Audiences;
+        IEnumerable<string> accessAudiences = handler.ReadJwtToken(jwtService.GenerateAccessToken(user)).Audiences;
+
+        loginAudiences.ShouldNotBeEmpty();
+        loginAudiences.ShouldNotContain(accessAudiences.Single());
+    }
+
+    [Fact]
+    public void ValidateLoginToken_ForALoginToken_ReturnsItsUserId()
+    {
+        // Validation checks expiry against the system clock
+        JwtService jwtService = new(TimeProvider.System);
+        Guid userId = Guid.NewGuid();
+
+        jwtService.ValidateLoginToken(jwtService.GenerateLoginToken(userId)).ShouldBe(userId);
+    }
 }
