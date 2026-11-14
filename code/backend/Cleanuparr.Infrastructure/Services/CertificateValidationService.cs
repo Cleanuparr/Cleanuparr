@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
@@ -24,28 +25,18 @@ public class CertificateValidationService
         SslPolicyErrors sslPolicyErrors
     )
     {
-        var targetHostName = string.Empty;
-
-        if (sender is not SslStream && sender is not string)
+        string targetHostName = sender switch
         {
-            return true;
-        }
-
-        if (sender is SslStream request)
-        {
-            targetHostName = request.TargetHostName;
-        }
-
-        // Mailkit passes host in sender as string
-        if (sender is string stringHost)
-        {
-            targetHostName = stringHost;
-        }
+            HttpRequestMessage request => request.RequestUri?.Host ?? string.Empty,
+            SslStream stream => stream.TargetHostName,
+            _ => string.Empty
+        };
 
         if (certificate is X509Certificate2 cert2 && cert2.SignatureAlgorithm.FriendlyName == "md5RSA")
         {
             _logger.LogError(
-                $"https://{targetHostName} uses the obsolete md5 hash in its https certificate, if that is your certificate, please (re)create certificate with better algorithm as soon as possible.");
+                "https://{TargetHostName} uses the obsolete md5 hash in its https certificate, if that is your certificate, please (re)create certificate with better algorithm as soon as possible.",
+                targetHostName);
         }
 
         if (sslPolicyErrors == SslPolicyErrors.None)
@@ -58,31 +49,43 @@ public class CertificateValidationService
             return true;
         }
 
-        var ipAddresses = GetIpAddresses(targetHostName);
-
         if (certificateValidationType == CertificateValidationType.Disabled)
         {
             return true;
         }
 
         if (certificateValidationType == CertificateValidationType.DisabledForLocalAddresses &&
+            // All() is true for an empty list, so an unresolved host must not count as local
+            GetIpAddresses(targetHostName) is { Length: > 0 } ipAddresses &&
             ipAddresses.All(i => i.IsLocalAddress()))
         {
             return true;
         }
 
-        _logger.LogError($"certificate validation for {targetHostName} failed. {sslPolicyErrors}");
+        _logger.LogError("certificate validation for {TargetHostName} failed. {SslPolicyErrors}", targetHostName, sslPolicyErrors);
 
         return false;
     }
 
     private static IPAddress[] GetIpAddresses(string host)
     {
-        if (IPAddress.TryParse(host, out var ipAddress))
+        if (IPAddress.TryParse(host, out IPAddress? ipAddress))
         {
             return [ipAddress];
         }
 
-        return Dns.GetHostEntry(host).AddressList;
+        if (string.IsNullOrEmpty(host))
+        {
+            return [];
+        }
+
+        try
+        {
+            return Dns.GetHostEntry(host).AddressList;
+        }
+        catch (SocketException)
+        {
+            return [];
+        }
     }
 }

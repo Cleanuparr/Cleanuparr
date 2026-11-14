@@ -132,7 +132,7 @@ Seconds to wait before timing out HTTP requests to *arrs, download clients, and 
 SSL certificate validation for HTTPS connections.
 
 **Options:**
-- **Enabled:** Validate all SSL certificates
+- **Enabled:** Validate all SSL certificates. Self-signed certificates fail unless the host is `localhost`
 - **Disabled for Local Addresses:** Skip validation for local/private IP addresses only
 - **Disabled:** Skip all validation (not recommended)
 
