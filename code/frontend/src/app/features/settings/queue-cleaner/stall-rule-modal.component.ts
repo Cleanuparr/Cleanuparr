@@ -3,13 +3,14 @@ import { form, required, min, max, maxLength, validate, disabled, FormField } fr
 import {
   ModalComponent, InputComponent, ToggleComponent, NumberInputComponent,
   SelectComponent, SizeInputComponent, ButtonComponent,
-  type SelectOption, type SizeUnit,
+  type SizeUnit,
 } from '@ui';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { StallRule, CreateStallRuleDto } from '@shared/models/queue-rule.model';
 import { QueueRuleContentType, TorrentPrivacyType } from '@shared/models/enums';
+import { PRIVACY_TYPE_OPTIONS, CONTENT_TYPE_OPTIONS } from './queue-rule-options';
 
 interface StallRuleFormModel {
   name: string;
@@ -24,18 +25,6 @@ interface StallRuleFormModel {
   deletePrivate: boolean;
   changeCategory: boolean;
 }
-
-const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
-  { label: 'Public', value: TorrentPrivacyType.Public },
-  { label: 'Private', value: TorrentPrivacyType.Private },
-  { label: 'Both', value: TorrentPrivacyType.Both },
-];
-
-const CONTENT_TYPE_OPTIONS: SelectOption[] = [
-  { label: 'All', value: QueueRuleContentType.All },
-  { label: 'New', value: QueueRuleContentType.New },
-  { label: 'Upgrade', value: QueueRuleContentType.Upgrade },
-];
 
 @Component({
   selector: 'app-stall-rule-modal',
