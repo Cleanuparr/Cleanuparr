@@ -9,8 +9,15 @@ namespace Cleanuparr.Infrastructure.Features.Auth;
 
 public sealed class JwtService : IJwtService
 {
+    public const string TokenTypeClaim = "token_type";
+    public const string AccessTokenType = "access";
+    public const string LoginTokenType = "login";
+
     private const string Issuer = "Cleanuparr";
     private const string Audience = "Cleanuparr";
+
+    // The bearer pipeline accepts only Audience, so a login token never authenticates a request
+    private const string LoginAudience = "Cleanuparr-login";
     private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
     private static readonly TimeSpan LoginTokenLifetime = TimeSpan.FromMinutes(5);
 
@@ -34,10 +41,10 @@ public sealed class JwtService : IJwtService
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim("token_type", "access")
+            new Claim(TokenTypeClaim, AccessTokenType)
         };
 
-        return GenerateToken(claims, AccessTokenLifetime);
+        return GenerateToken(claims, Audience, AccessTokenLifetime);
     }
 
     public string GenerateLoginToken(Guid userId)
@@ -45,10 +52,10 @@ public sealed class JwtService : IJwtService
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim("token_type", "login")
+            new Claim(TokenTypeClaim, LoginTokenType)
         };
 
-        return GenerateToken(claims, LoginTokenLifetime);
+        return GenerateToken(claims, LoginAudience, LoginTokenLifetime);
     }
 
     public string GenerateRefreshToken()
@@ -59,22 +66,13 @@ public sealed class JwtService : IJwtService
         return Convert.ToBase64String(bytes);
     }
 
-    public ClaimsPrincipal? ValidateAccessToken(string token)
-    {
-        var principal = ValidateToken(token);
-        if (principal is null) return null;
-
-        var tokenType = principal.FindFirst("token_type")?.Value;
-        return tokenType == "access" ? principal : null;
-    }
-
     public Guid? ValidateLoginToken(string token)
     {
-        var principal = ValidateToken(token);
+        var principal = ValidateToken(token, LoginAudience);
         if (principal is null) return null;
 
-        var tokenType = principal.FindFirst("token_type")?.Value;
-        if (tokenType != "login") return null;
+        var tokenType = principal.FindFirst(TokenTypeClaim)?.Value;
+        if (tokenType != LoginTokenType) return null;
 
         var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
@@ -103,14 +101,14 @@ public sealed class JwtService : IJwtService
         return key;
     }
 
-    private string GenerateToken(Claim[] claims, TimeSpan lifetime)
+    private string GenerateToken(Claim[] claims, string audience, TimeSpan lifetime)
     {
         var key = new SymmetricSecurityKey(_signingKey);
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer: Issuer,
-            audience: Audience,
+            audience: audience,
             claims: claims,
             expires: _timeProvider.GetUtcNow().Add(lifetime).UtcDateTime,
             signingCredentials: credentials);
@@ -118,7 +116,7 @@ public sealed class JwtService : IJwtService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private ClaimsPrincipal? ValidateToken(string token)
+    private ClaimsPrincipal? ValidateToken(string token, string audience)
     {
         var key = new SymmetricSecurityKey(_signingKey);
         var handler = new JwtSecurityTokenHandler();
@@ -130,7 +128,7 @@ public sealed class JwtService : IJwtService
                 ValidateIssuer = true,
                 ValidIssuer = Issuer,
                 ValidateAudience = true,
-                ValidAudience = Audience,
+                ValidAudience = audience,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = key,

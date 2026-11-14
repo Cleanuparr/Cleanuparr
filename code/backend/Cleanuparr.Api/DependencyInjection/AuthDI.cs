@@ -55,9 +55,9 @@ public static class AuthDI
                     ClockSkew = JwtService.ClockSkew
                 };
 
-                // Support SignalR token via query string
                 options.Events = new JwtBearerEvents
                 {
+                    // Support SignalR token via query string
                     OnMessageReceived = context =>
                     {
                         var accessToken = context.Request.Query["access_token"];
@@ -66,6 +66,17 @@ public static class AuthDI
                         if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/api/hubs"))
                         {
                             context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    // The pre-2FA login token shares the signing key
+                    OnTokenValidated = context =>
+                    {
+                        string? tokenType = context.Principal?.FindFirst(JwtService.TokenTypeClaim)?.Value;
+                        if (tokenType != JwtService.AccessTokenType)
+                        {
+                            context.Fail("Token is not an access token");
                         }
 
                         return Task.CompletedTask;

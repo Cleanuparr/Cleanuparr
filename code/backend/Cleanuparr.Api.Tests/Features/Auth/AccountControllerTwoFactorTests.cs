@@ -1,11 +1,15 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using System.Text.Json;
+using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Auth;
@@ -368,6 +372,65 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         }
     }
 
+    [Fact, TestPriority(23)]
+    public async Task LoginToken_AsBearerToken_IsRejectedOnProtectedEndpoints()
+    {
+        string loginToken = await RequestLoginToken();
+
+        HttpClient bearerClient = _factory.CreateClient();
+        bearerClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginToken);
+        HttpResponseMessage apiKeyResponse = await bearerClient.GetAsync("/api/account/api-key");
+
+        HttpResponseMessage negotiateResponse = await _factory.CreateClient()
+            .PostAsync($"/api/hubs/app/negotiate?negotiateVersion=1&access_token={Uri.EscapeDataString(loginToken)}", null);
+
+        apiKeyResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        negotiateResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        await ClearLockout();
+    }
+
+    [Fact, TestPriority(24)]
+    public async Task AccessToken_FromTwoFactorLogin_IsAcceptedOnProtectedEndpoints()
+    {
+        string loginToken = await RequestLoginToken();
+
+        HttpResponseMessage loginResponse = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login/2fa", new
+        {
+            loginToken,
+            code = _recoveryCodes[1],
+            isRecoveryCode = true
+        });
+        loginResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        JsonElement body = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        string accessToken = body.GetProperty("accessToken").GetString()!;
+
+        HttpClient bearerClient = _factory.CreateClient();
+        bearerClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        HttpResponseMessage apiKeyResponse = await bearerClient.GetAsync("/api/account/api-key");
+
+        apiKeyResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await ClearLockout();
+    }
+
+    [Fact, TestPriority(25)]
+    public async Task LegacyLoginToken_WithAccessAudience_IsRejectedOnProtectedEndpoints()
+    {
+        string legacyLoginToken = await CreateLegacyLoginToken();
+
+        HttpClient bearerClient = _factory.CreateClient();
+        bearerClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", legacyLoginToken);
+        HttpResponseMessage apiKeyResponse = await bearerClient.GetAsync("/api/account/api-key");
+
+        HttpResponseMessage negotiateResponse = await _factory.CreateClient()
+            .PostAsync($"/api/hubs/app/negotiate?negotiateVersion=1&access_token={Uri.EscapeDataString(legacyLoginToken)}", null);
+
+        apiKeyResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        negotiateResponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
     private async Task<string> RequestLoginToken()
     {
         HttpResponseMessage response = await _factory.CreateClient().PostAsJsonAsync("/api/auth/login", new
@@ -381,6 +444,27 @@ public class AccountControllerTwoFactorTests : IClassFixture<CustomWebApplicatio
         body.GetProperty("requiresTwoFactor").GetBoolean().ShouldBeTrue();
 
         return body.GetProperty("loginToken").GetString()!;
+    }
+
+    private async Task<string> CreateLegacyLoginToken()
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        UsersContext context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+        User user = await context.Users.AsNoTracking().FirstAsync();
+        byte[] signingKey = scope.ServiceProvider.GetRequiredService<IJwtService>().GetOrCreateSigningKey();
+
+        JwtSecurityToken token = new(
+            issuer: "Cleanuparr",
+            audience: "Cleanuparr",
+            claims:
+            [
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(JwtService.TokenTypeClaim, JwtService.LoginTokenType)
+            ],
+            expires: DateTime.UtcNow.AddMinutes(5),
+            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(signingKey), SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     private async Task<DateTimeOffset> ReadUpdatedAt()
