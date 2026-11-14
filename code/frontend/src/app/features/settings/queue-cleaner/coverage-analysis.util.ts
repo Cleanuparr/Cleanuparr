@@ -14,7 +14,7 @@ export interface CoverageResult {
 }
 
 const PRIVACY_TYPES = [TorrentPrivacyType.Public, TorrentPrivacyType.Private];
-const CONTENT_TYPES = [QueueRuleContentType.New, QueueRuleContentType.Upgrade];
+const CONTENT_TYPES: string[] = [QueueRuleContentType.New, QueueRuleContentType.Upgrade, 'Unknown'];
 
 export function analyzeCoverage(rules: QueueRule[]): CoverageResult {
   const enabledRules = rules.filter((r) => r.enabled);

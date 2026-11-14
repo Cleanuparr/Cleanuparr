@@ -235,8 +235,10 @@ describe('QueueCleanerComponent', () => {
     expect(component.slowCoverage().gaps).toEqual([
       { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.New, from: 50, to: 100 },
       { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.Upgrade, from: 50, to: 100 },
+      { privacyType: TorrentPrivacyType.Public, contentType: 'Unknown', from: 50, to: 100 },
       { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.New, from: 50, to: 100 },
       { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.Upgrade, from: 50, to: 100 },
+      { privacyType: TorrentPrivacyType.Private, contentType: 'Unknown', from: 50, to: 100 },
     ]);
 
     component.stallExpanded.set(true);

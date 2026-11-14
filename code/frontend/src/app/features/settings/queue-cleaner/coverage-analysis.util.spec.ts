@@ -24,8 +24,10 @@ describe('analyzeCoverage', () => {
       gaps: [
         { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.New, from: 0, to: 100 },
         { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.Upgrade, from: 0, to: 100 },
+        { privacyType: TorrentPrivacyType.Public, contentType: 'Unknown', from: 0, to: 100 },
         { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.New, from: 0, to: 100 },
         { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.Upgrade, from: 0, to: 100 },
+        { privacyType: TorrentPrivacyType.Private, contentType: 'Unknown', from: 0, to: 100 },
       ],
     });
   });
@@ -34,7 +36,7 @@ describe('analyzeCoverage', () => {
     const result = analyzeCoverage([rule({ enabled: false })]);
 
     expect(result.hasGaps).toBe(true);
-    expect(result.gaps).toHaveLength(4);
+    expect(result.gaps).toHaveLength(6);
   });
 
   it('counts a Both/All rule toward every privacy and content combination', () => {
@@ -50,6 +52,7 @@ describe('analyzeCoverage', () => {
     expect(result.gaps).toEqual([
       { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.New, from: 0, to: 100 },
       { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.Upgrade, from: 0, to: 100 },
+      { privacyType: TorrentPrivacyType.Private, contentType: 'Unknown', from: 0, to: 100 },
     ]);
   });
 
@@ -58,7 +61,21 @@ describe('analyzeCoverage', () => {
 
     expect(result.gaps).toEqual([
       { privacyType: TorrentPrivacyType.Public, contentType: QueueRuleContentType.Upgrade, from: 0, to: 100 },
+      { privacyType: TorrentPrivacyType.Public, contentType: 'Unknown', from: 0, to: 100 },
       { privacyType: TorrentPrivacyType.Private, contentType: QueueRuleContentType.Upgrade, from: 0, to: 100 },
+      { privacyType: TorrentPrivacyType.Private, contentType: 'Unknown', from: 0, to: 100 },
+    ]);
+  });
+
+  it('leaves Unknown uncovered when rules cover only New and Upgrade', () => {
+    const result = analyzeCoverage([
+      rule({ contentType: QueueRuleContentType.New }),
+      rule({ contentType: QueueRuleContentType.Upgrade }),
+    ]);
+
+    expect(result.gaps).toEqual([
+      { privacyType: TorrentPrivacyType.Public, contentType: 'Unknown', from: 0, to: 100 },
+      { privacyType: TorrentPrivacyType.Private, contentType: 'Unknown', from: 0, to: 100 },
     ]);
   });
 
