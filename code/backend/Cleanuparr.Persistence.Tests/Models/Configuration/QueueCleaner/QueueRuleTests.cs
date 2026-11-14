@@ -325,6 +325,29 @@ public sealed class QueueRuleTests
         rule.MatchesContentType(null).ShouldBeFalse();
     }
 
+    [Fact]
+    public void MatchesContentType_UndefinedValue_AlwaysMatches()
+    {
+        var rule = new StallRule { Name = "test-rule", ContentType = (QueueRuleContentType)99 };
+
+        rule.MatchesContentType(true).ShouldBeTrue();
+        rule.MatchesContentType(false).ShouldBeTrue();
+        rule.MatchesContentType(null).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithUndefinedContentType_ThrowsCustomValidationException()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+            ContentType = (QueueRuleContentType)99
+        };
+
+        Should.Throw<CustomValidationException>(() => rule.Validate());
+    }
+
     #endregion
 
     #region Validate - ChangeCategory Validation

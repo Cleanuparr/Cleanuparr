@@ -42,6 +42,11 @@ public abstract record QueueRule : IConfig
             throw new Cleanuparr.Domain.Exceptions.CustomValidationException("Rule name cannot be empty");
         }
 
+        if (!Enum.IsDefined(ContentType))
+        {
+            throw new Cleanuparr.Domain.Exceptions.CustomValidationException("Invalid content type");
+        }
+
         if (MaxStrikes < 3)
         {
             throw new Cleanuparr.Domain.Exceptions.CustomValidationException("Max strikes must be at least 3");
