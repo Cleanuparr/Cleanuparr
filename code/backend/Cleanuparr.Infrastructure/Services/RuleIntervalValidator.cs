@@ -67,7 +67,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
             {
                 overlappingRules.Add(overlap.ConflictingRuleName);
 
-                _logger.LogWarning("Rule {newRuleName} overlaps for {privacyType} {contentType} torrents with rule {ruleName} (both cover {start}%-{end}%)",
+                _logger.LogWarning("Rule {NewRuleName} overlaps for {PrivacyType} {ContentType} torrents with rule {RuleName} (both cover {Start}%-{End}%)",
                     newRuleName,
                     group.Key.PrivacyType,
                     group.Key.ContentType,
