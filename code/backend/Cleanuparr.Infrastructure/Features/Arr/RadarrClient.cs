@@ -27,8 +27,17 @@ public class RadarrClient : ArrClient, IRadarrClient, IUpgradeDetectionCapable
     }
 
     /// <inheritdoc/>
-    public bool IsUpgrade(IReadOnlyList<QueueRecord> records) =>
-        records.Count > 0 && records.All(record => record.Movie?.MovieFileId > 0);
+    public bool? IsUpgrade(IReadOnlyList<QueueRecord> records)
+    {
+        int withFile = records.Count(record => record.Movie?.MovieFileId > 0);
+
+        if (records.Count == 0 || (withFile > 0 && withFile < records.Count))
+        {
+            return null;
+        }
+
+        return withFile == records.Count;
+    }
 
     protected override string ApiVersion => "v3";
 

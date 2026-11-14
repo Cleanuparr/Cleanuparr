@@ -727,6 +727,60 @@ public class QueueCleanerTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessInstanceAsync_CapableClientMixedGroup_PushesNullToContext()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient, IUpgradeDetectionCapable>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        ((IUpgradeDetectionCapable)mockArrClient).IsUpgrade(Arg.Any<IReadOnlyList<QueueRecord>>()).Returns((bool?)null);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "mixed-download-id",
+            Title = "Mixed Download",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1,
+            Episode = new QueueEpisode { HasFile = false },
+        };
+
+        _fixture.ArrQueueReader
+            .ReadAllAsync(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>())
+            .Returns([queueRecord]);
+
+        object? capturedIsUpgrade = "not captured";
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(_ =>
+            {
+                capturedIsUpgrade = ContextProvider.Get(ContextProvider.Keys.IsUpgrade);
+                return Task.FromResult(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        capturedIsUpgrade.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ProcessInstanceAsync_NonCapableClient_PushesNullToContext()
     {
         // Arrange

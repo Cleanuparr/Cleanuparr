@@ -18,6 +18,15 @@ public class SonarrClient : SonarrClientBase, IUpgradeDetectionCapable
     }
 
     /// <inheritdoc/>
-    public bool IsUpgrade(IReadOnlyList<QueueRecord> records) =>
-        records.Count > 0 && records.All(record => record.Episode?.HasFile == true);
+    public bool? IsUpgrade(IReadOnlyList<QueueRecord> records)
+    {
+        int withFile = records.Count(record => record.Episode?.HasFile == true);
+
+        if (records.Count == 0 || (withFile > 0 && withFile < records.Count))
+        {
+            return null;
+        }
+
+        return withFile == records.Count;
+    }
 }

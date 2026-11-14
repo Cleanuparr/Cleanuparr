@@ -11,6 +11,6 @@ public interface IUpgradeDetectionCapable : IArrClient
     /// Checks whether every record of a download has a file.
     /// </summary>
     /// <param name="records">The queue records that share the same download, for example a season pack.</param>
-    /// <returns>True when every record has a file.</returns>
-    bool IsUpgrade(IReadOnlyList<QueueRecord> records);
+    /// <returns>True when every record has a file, false when none does, null when the group is mixed or empty.</returns>
+    bool? IsUpgrade(IReadOnlyList<QueueRecord> records);
 }

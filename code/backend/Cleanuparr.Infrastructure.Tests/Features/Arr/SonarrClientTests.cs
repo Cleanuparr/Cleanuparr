@@ -134,35 +134,43 @@ public class SonarrClientTests
     public void IsUpgrade_SingleRecordWithFile_ReturnsTrue()
     {
         var record = new QueueRecord { Episode = new QueueEpisode { HasFile = true } };
-        _client.IsUpgrade([record]).ShouldBeTrue();
+        _client.IsUpgrade([record]).ShouldBe(true);
     }
 
     [Fact]
     public void IsUpgrade_SingleRecordWithoutFile_ReturnsFalse()
     {
         var record = new QueueRecord { Episode = new QueueEpisode { HasFile = false } };
-        _client.IsUpgrade([record]).ShouldBeFalse();
+        _client.IsUpgrade([record]).ShouldBe(false);
     }
 
     [Fact]
-    public void IsUpgrade_SeasonPackWithOneMissingEpisode_ReturnsFalse()
+    public void IsUpgrade_SeasonPackWithOneMissingEpisode_ReturnsNull()
     {
         var withFile = new QueueRecord { Episode = new QueueEpisode { HasFile = true } };
         var withoutFile = new QueueRecord { Episode = new QueueEpisode { HasFile = false } };
-        _client.IsUpgrade([withFile, withoutFile]).ShouldBeFalse();
+        _client.IsUpgrade([withFile, withoutFile]).ShouldBeNull();
+    }
+
+    [Fact]
+    public void IsUpgrade_SeasonPackWithNoFiles_ReturnsFalse()
+    {
+        var first = new QueueRecord { Episode = new QueueEpisode { HasFile = false } };
+        var second = new QueueRecord { Episode = new QueueEpisode { HasFile = false } };
+        _client.IsUpgrade([first, second]).ShouldBe(false);
     }
 
     [Fact]
     public void IsUpgrade_RecordMissingEpisode_ReturnsFalse()
     {
         var record = new QueueRecord { Episode = null };
-        _client.IsUpgrade([record]).ShouldBeFalse();
+        _client.IsUpgrade([record]).ShouldBe(false);
     }
 
     [Fact]
-    public void IsUpgrade_NoRecords_ReturnsFalse()
+    public void IsUpgrade_NoRecords_ReturnsNull()
     {
-        _client.IsUpgrade([]).ShouldBeFalse();
+        _client.IsUpgrade([]).ShouldBeNull();
     }
 
     #endregion

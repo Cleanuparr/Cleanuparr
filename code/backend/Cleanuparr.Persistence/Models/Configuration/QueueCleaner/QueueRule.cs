@@ -84,7 +84,7 @@ public abstract record QueueRule : IConfig
     /// <param name="isUpgrade">
     /// True when every record has a file.
     /// False when none does.
-    /// Null when the arr cannot tell: not upgrade-detection capable, or missing content id.
+    /// Null when the arr cannot tell: not upgrade-detection capable, missing content id, or a mixed download.
     /// </param>
     public bool MatchesContentType(bool? isUpgrade)
     {
