@@ -67,7 +67,7 @@ public sealed class QueueCleaner : GenericHandler
             .OrderByDescending(r => r.MaxCompletionPercentage)
             .ThenByDescending(r => r.MinCompletionPercentage)
             .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
             
         if (stallRules.Count is 0)
         {
@@ -81,7 +81,7 @@ public sealed class QueueCleaner : GenericHandler
             .OrderByDescending(r => r.MaxCompletionPercentage)
             .ThenByDescending(r => r.MinCompletionPercentage)
             .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
             
         if (slowRules.Count is 0)
         {
