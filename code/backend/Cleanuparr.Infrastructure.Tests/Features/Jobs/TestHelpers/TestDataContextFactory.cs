@@ -51,6 +51,7 @@ public static class TestDataContextFactory
 
         var options = new DbContextOptionsBuilder<EventsContext>()
             .UseSqlite(connection)
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         var context = new EventsContext(options);
