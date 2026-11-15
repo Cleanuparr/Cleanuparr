@@ -49,6 +49,26 @@ public class QBittorrentClientAddTorrentTests
         }
     }
 
+    [Fact]
+    public async Task AddTorrentsAsync_RelativeUrl_ReleasesFileHandle()
+    {
+        string file = Path.GetTempFileName();
+        try
+        {
+            using FakeQBittorrentServer server = new();
+            server.Route("api/v2/torrents/add", "Ok.");
+            AddTorrentsRequest request = new([file], [new Uri("relative/path", UriKind.Relative)]);
+
+            await Should.ThrowAsync<InvalidOperationException>(() => server.Client.AddTorrentsAsync(request));
+
+            using FileStream exclusive = new(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+
     [Theory]
     [InlineData("Ok.")]
     [InlineData("")]

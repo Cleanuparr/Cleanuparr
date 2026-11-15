@@ -205,17 +205,17 @@ namespace QBittorrent.Client.Internal
                 {
                     data.AddFile("torrents", file, "application/x-bittorrent");
                 }
+
+                var urls = string.Join("\n", request.TorrentUrls.Select(url => url.AbsoluteUri));
+                data.AddValue("urls", urls);
+
+                return (Url.AddTorrentFiles(), data);
             }
             catch
             {
                 data.Dispose();
                 throw;
             }
-
-            var urls = string.Join("\n", request.TorrentUrls.Select(url => url.AbsoluteUri));
-            data.AddValue("urls", urls);
-
-            return (Url.AddTorrentFiles(), data);
         }
 
         public override (Uri url, HttpContent request) AddRssFolder(string path)
