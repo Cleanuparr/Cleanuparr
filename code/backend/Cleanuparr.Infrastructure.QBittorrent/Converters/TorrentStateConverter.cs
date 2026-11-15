@@ -45,30 +45,5 @@ internal class TorrentStateConverter : JsonConverter<TorrentState>
             return torrentState;
 
         throw new JsonSerializationException($"Unexpected torrent state \"{stringValue}\".");
-
-        //return stringValue switch
-        //{
-        //    "UNKNOWN" => TorrentState.Unknown,
-        //    "ERROR" => TorrentState.Error,
-        //    "PAUSEDUP" or "STOPPEDUP" => TorrentState.PausedUpload,
-        //    "PAUSEDDL" or "STOPPEDDL" => TorrentState.PausedDownload,
-        //    "QUEUEDUP" => TorrentState.QueuedUpload,
-        //    "QUEUEDDL" => TorrentState.QueuedDownload,
-        //    "UPLOADING" => TorrentState.Uploading,
-        //    "STALLEDUP" => TorrentState.StalledUpload,
-        //    "CHECKINGUP" => TorrentState.CheckingUpload,
-        //    "CHECKINGDL" => TorrentState.CheckingDownload,
-        //    "DOWNLOADING" => TorrentState.Downloading,
-        //    "STALLEDDL" => TorrentState.StalledDownload,
-        //    "METADL" => TorrentState.FetchingMetadata,
-        //    "FORCEDMETADL" => TorrentState.ForcedFetchingMetadata,
-        //    "FORCEDUP" => TorrentState.ForcedUpload,
-        //    "FORCEDDL" => TorrentState.ForcedDownload,
-        //    "MISSINGFILES" => TorrentState.MissingFiles,
-        //    "ALLOCATING" => TorrentState.Allocating,
-        //    "QUEUEDFORCHECKING" => TorrentState.QueuedForChecking,
-        //    "CHECKINGRESUMEDATA" => TorrentState.CheckingResumeData,
-        //    "MOVING" => TorrentState.Moving
-        //};
     }
 }
