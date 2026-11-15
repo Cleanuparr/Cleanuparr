@@ -7,7 +7,6 @@ namespace QBittorrent.Client
     /// <summary>
     /// This exception is thrown if QBittorrent server answers with non-success status code.
     /// </summary>
-    [Serializable]
     public class QBittorrentClientRequestException : HttpRequestException
     {
         /// <summary>

@@ -7,7 +7,6 @@ namespace QBittorrent.Client
     /// </summary>
     /// <seealso cref="ApiLevel"/>
     /// <seealso cref="ApiLevelAttribute"/>
-    [Serializable]
     public class ApiNotSupportedException : NotSupportedException
     {
         /// <summary>
