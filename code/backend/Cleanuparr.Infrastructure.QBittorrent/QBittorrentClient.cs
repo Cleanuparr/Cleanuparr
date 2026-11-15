@@ -119,7 +119,7 @@ namespace QBittorrent.Client
             string password,
             CancellationToken token = default)
         {
-            return PostAsync(p => p.Login(username, password), token);
+            return PostRejectingFailsBodyAsync(p => p.Login(username, password), token);
         }
 
         /// <summary>
@@ -1156,6 +1156,22 @@ namespace QBittorrent.Client
                     response.EnsureSuccessStatusCodeEx();
                 }
             }
+        }
+
+        // qBittorrent 4.x and 5.0.x report a rejected request as 200 with a "Fails." body
+        private Task PostRejectingFailsBodyAsync(Func<IRequestProvider, (Uri, HttpContent)> builder,
+            CancellationToken token)
+        {
+            return PostAsync(builder, token, async response =>
+            {
+                string body = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+                if (string.Equals(body.Trim(), "Fails.", StringComparison.Ordinal))
+                {
+                    throw new QBittorrentClientRequestException("qBittorrent rejected the request.", HttpStatusCode.Forbidden);
+                }
+
+                return true;
+            });
         }
 
         private async Task<T> PostAsync<T>(Func<IRequestProvider, (Uri, HttpContent)> builder,

@@ -41,15 +41,27 @@ public class QBittorrentClientLoginTests
         await Should.NotThrowAsync(() => server.Client.LoginAsync("admin", "adminadmin"));
     }
 
-    [Fact]
-    public async Task LoginAsync_FailsBodyWithStatus200_DoesNotThrow()
+    [Theory]
+    [InlineData(HttpStatusCode.OK, "")]
+    [InlineData(HttpStatusCode.NoContent, "")]
+    public async Task LoginAsync_EmptyBody_Succeeds(HttpStatusCode status, string body)
     {
-        // qBittorrent 4.x and 5.0.x answer 200 "Fails." on bad credentials.
-        // The client ignores the body today, so the login looks successful.
+        using FakeQBittorrentServer server = new();
+        server.Route("api/v2/auth/login", body, status);
+
+        await Should.NotThrowAsync(() => server.Client.LoginAsync("admin", "adminadmin"));
+    }
+
+    [Fact]
+    public async Task LoginAsync_FailsBodyWithStatus200_Throws()
+    {
         using FakeQBittorrentServer server = new();
         server.Route("api/v2/auth/login", "Fails.");
 
-        await Should.NotThrowAsync(() => server.Client.LoginAsync("admin", "wrong"));
+        QBittorrentClientRequestException exception = await Should.ThrowAsync<QBittorrentClientRequestException>(
+            () => server.Client.LoginAsync("admin", "wrong"));
+
+        exception.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Theory]
