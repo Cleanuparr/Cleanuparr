@@ -9,6 +9,8 @@ namespace QBittorrent.Client.Internal
 {
     internal sealed class Api2RequestProvider : BaseRequestProvider
     {
+        private const string Hashes = "hashes";
+
         internal Api2RequestProvider(Uri baseUri)
         {
             Url = new Api2UrlProvider(baseUri);
@@ -21,25 +23,25 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) Pause(IEnumerable<string> hashes)
         {
             return BuildForm(Url.Pause(),
-                ("hashes", JoinHashes(hashes)));
+                (Hashes, JoinHashes(hashes)));
         }
 
         public override (Uri url, HttpContent request) PauseAll()
         {
             return BuildForm(Url.PauseAll(),
-                ("hashes", "all"));
+                (Hashes, "all"));
         }
 
         public override (Uri url, HttpContent request) Resume(IEnumerable<string> hashes)
         {
             return BuildForm(Url.Resume(),
-                ("hashes", JoinHashes(hashes)));
+                (Hashes, JoinHashes(hashes)));
         }
 
         public override (Uri url, HttpContent request) ResumeAll()
         {
             return BuildForm(Url.ResumeAll(),
-                ("hashes", "all"));
+                (Hashes, "all"));
         }
 
         public override (Uri url, HttpContent request) EditCategory(string category, string savePath)
@@ -52,20 +54,20 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) DeleteTorrents(IEnumerable<string> hashes, bool withFiles)
         {
             return BuildForm(Url.DeleteTorrents(withFiles),
-                ("hashes", JoinHashes(hashes)),
+                (Hashes, JoinHashes(hashes)),
                 ("deleteFiles", withFiles.ToLowerString()));
         }
 
         public override (Uri url, HttpContent request) Recheck(IEnumerable<string> hashes)
         {
             return BuildForm(Url.Recheck(),
-                ("hashes", JoinHashes(hashes)));
+                (Hashes, JoinHashes(hashes)));
         }
 
         public override (Uri url, HttpContent request) Reannounce(IEnumerable<string> hashes)
         {
             return BuildForm(Url.Reannounce(),
-                ("hashes", JoinHashes(hashes)));
+                (Hashes, JoinHashes(hashes)));
         }
 
         public override (Uri url, HttpContent request) EditTracker(string hash, Uri trackerUrl, Uri newTrackerUrl)
@@ -94,7 +96,7 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) SetShareLimits(IEnumerable<string> hashes, double ratio, TimeSpan seedingTime)
         {
             return BuildForm(Url.SetShareLimits(),
-                ("hashes", JoinHashes(hashes)),
+                (Hashes, JoinHashes(hashes)),
                 ("ratioLimit", ratio.ToString("R", CultureInfo.InvariantCulture)),
                 ("seedingTimeLimit", seedingTime.TotalMinutes.ToString("F0")));
         }
@@ -102,7 +104,7 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) SetShareLimits(IEnumerable<string> hashes, double ratio, TimeSpan seedingTime, TimeSpan inactiveSeedingTime)
         {
             return BuildForm(Url.SetShareLimits(),
-                ("hashes", JoinHashes(hashes)),
+                (Hashes, JoinHashes(hashes)),
                 ("ratioLimit", ratio.ToString("R", CultureInfo.InvariantCulture)),
                 ("seedingTimeLimit", seedingTime.TotalMinutes.ToString("F0")),
                 ("inactiveSeedingTimeLimit", inactiveSeedingTime.TotalMinutes.ToString("F0")));
@@ -111,25 +113,25 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) Start(IEnumerable<string> hashes)
         {
             return BuildForm(Url.Start(),
-                ("hashes", JoinHashes(hashes)));
+                (Hashes, JoinHashes(hashes)));
         }
 
         public override (Uri url, HttpContent request) StartAll()
         {
             return BuildForm(Url.Start(),
-                ("hashes", "all"));
+                (Hashes, "all"));
         }
 
         public override (Uri url, HttpContent request) Stop(IEnumerable<string> hashes)
         {
             return BuildForm(Url.Stop(),
-                ("hashes", JoinHashes(hashes)));
+                (Hashes, JoinHashes(hashes)));
         }
 
         public override (Uri url, HttpContent request) StopAll()
         {
             return BuildForm(Url.Stop(),
-                ("hashes", "all"));
+                (Hashes, "all"));
         }
 
         public override (Uri url, HttpContent request) BanPeers(IEnumerable<string> peers)
@@ -141,7 +143,7 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) AddTorrentPeers(IEnumerable<string> hashes, IEnumerable<string> peers)
         {
             return BuildForm(Url.AddTorrentPeers(),
-                ("hashes", JoinHashes(hashes)),
+                (Hashes, JoinHashes(hashes)),
                 ("peers", string.Join("|", peers)));
         }
 
@@ -160,14 +162,14 @@ namespace QBittorrent.Client.Internal
         public override (Uri url, HttpContent request) AddTorrentTags(IEnumerable<string> hashes, IEnumerable<string> tags)
         {
             return BuildForm(Url.AddTorrentTags(),
-                ("hashes", JoinHashes(hashes)),
+                (Hashes, JoinHashes(hashes)),
                 ("tags", string.Join(",", tags)));
         }
 
         public override (Uri url, HttpContent request) DeleteTorrentTags(IEnumerable<string> hashes, IEnumerable<string> tags)
         {
             return BuildForm(Url.DeleteTorrentTags(),
-                ("hashes", JoinHashes(hashes)),
+                (Hashes, JoinHashes(hashes)),
                 ("tags", string.Join(",", tags)));
         }
 
