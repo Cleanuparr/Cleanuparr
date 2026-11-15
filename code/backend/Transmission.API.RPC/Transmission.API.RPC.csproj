@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <AssemblyName>FLM.Transmission</AssemblyName>
+        <TargetFramework>net10.0</TargetFramework>
+        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+        <ApplicationIcon />
+        <OutputType>Library</OutputType>
+        <StartupObject />
+        <Version>1.0.3</Version>
+        <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+    </PropertyGroup>
+
+<!--  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">-->
+<!--    <DocumentationFile>D:\Workspace\Github\Transmission.API.RPC\Transmission.API.RPC\bin\Debug\netstandard2.0\Transmission.API.RPC.xml</DocumentationFile>-->
+<!--  </PropertyGroup>-->
+
+<!--  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">-->
+<!--    <DocumentationFile>D:\Workspace\Github\Transmission.API.RPC\Transmission.API.RPC\bin\Release\netstandard2.0\Transmission.API.RPC.xml</DocumentationFile>-->
+<!--  </PropertyGroup>-->
+
+<!--  <ItemGroup Condition=" '$(TargetFramework)' != 'netstandard2.0' ">-->
+<!--    <Reference Include="System.Collections.Concurrent" />-->
+<!--    <Reference Include="System" />-->
+<!--    <Reference Include="Microsoft.CSharp" />-->
+<!--  </ItemGroup>-->
+
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>
