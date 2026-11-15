@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace QBittorrent.Client.Converters
 {
-    internal class StringToListConverter : JsonConverter<IReadOnlyList<string>>
+    internal class StringToListConverter : JsonConverter<IReadOnlyCollection<string>>
     {
         private readonly string _separator;
         private readonly bool _trim;
@@ -16,7 +16,7 @@ namespace QBittorrent.Client.Converters
             _trim = trim;
         }
 
-        public override void WriteJson(JsonWriter writer, IReadOnlyList<string> value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, IReadOnlyCollection<string> value, JsonSerializer serializer)
         {
             if (value == null)
             {
@@ -27,7 +27,7 @@ namespace QBittorrent.Client.Converters
             writer.WriteValue(string.Join(_separator, value));
         }
 
-        public override IReadOnlyList<string> ReadJson(JsonReader reader, Type objectType, IReadOnlyList<string> existingValue, bool hasExistingValue,
+        public override IReadOnlyCollection<string> ReadJson(JsonReader reader, Type objectType, IReadOnlyCollection<string> existingValue, bool hasExistingValue,
             JsonSerializer serializer)
         {
             if (reader.TokenType == JsonToken.Null)
