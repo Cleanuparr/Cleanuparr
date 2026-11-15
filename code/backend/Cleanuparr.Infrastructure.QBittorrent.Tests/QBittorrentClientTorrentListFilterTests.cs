@@ -25,4 +25,16 @@ public class QBittorrentClientTorrentListFilterTests
 
         server.SingleApiRequest.Uri.Query.ShouldBe($"?filter={expected}&reverse=false");
     }
+
+    [Fact]
+    public async Task GetTorrentListAsync_Tag_IsEncodedOnce()
+    {
+        using FakeQBittorrentServer server = new();
+        server.Route("api/v2/torrents/info", "[]");
+
+        await server.Client.GetTorrentListAsync(new TorrentListQuery { Tag = "My tag" });
+
+        server.SingleApiRequest.Uri.Query.ShouldContain("tag=My%20tag");
+        server.SingleApiRequest.Uri.Query.ShouldNotContain("%2520");
+    }
 }

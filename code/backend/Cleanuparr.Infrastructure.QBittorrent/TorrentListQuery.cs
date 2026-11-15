@@ -48,8 +48,8 @@ namespace QBittorrent.Client
         public IEnumerable<string> Hashes { get; set; }
 
         /// <summary>
-        /// Get torrents with the given tag (empty string means "without tag"; no "tag" parameter means "any tag".
-        /// Remember to URL-encode the category name. For example, <c>My tag</c> becomes <c>My%20tag</c>.
+        /// Get torrents with the given tag name (empty string means "without tag"; null means "any tag").
+        /// Pass the raw name. The client URL-encodes it.
         /// </summary>
         [ApiLevel(ApiLevel.V2, MinVersion = "2.8.3")]
         [CanBeNull]
