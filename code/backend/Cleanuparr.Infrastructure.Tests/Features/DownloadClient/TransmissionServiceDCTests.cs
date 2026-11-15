@@ -688,7 +688,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                     s.Ids.Contains(123L)
                     && s.Labels.Contains("existing")
                     && s.Labels.Contains("CLEANUPARR-DEAD")
-                    && s.Labels.Length == 2));
+                    && s.Labels!.Length == 2));
             await _fixture.ClientWrapper.DidNotReceive()
                 .TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
             await _fixture.EventPublisher.Received(1)
@@ -1021,7 +1021,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await _fixture.ClientWrapper.Received(1)
                 .TorrentSetAsync(Arg.Is<TorrentSettings>(s =>
                     s.Ids.Contains(123L)
-                    && s.Labels.Length == 1
+                    && s.Labels!.Length == 1
                     && s.Labels.Contains("UNLINKED")));
         }
 

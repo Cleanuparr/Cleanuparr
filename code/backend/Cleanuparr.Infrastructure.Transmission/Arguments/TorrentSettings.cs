@@ -31,7 +31,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// The name of this torrent's bandwidth group
         /// </summary>
-        public string Group { get { return GetValue<string>("group"); } set { this["group"] = value; } }
+        public string? Group { get { return GetValue<string>("group"); } set { this["group"] = value; } }
 
         /// <summary>
         /// Session upload limits are honored
@@ -41,17 +41,17 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Torrent id array
         /// </summary>
-        public object[] Ids { get { return GetValue<object[]>("ids"); } set { this["ids"] = value; } }
+        public object[]? Ids { get { return GetValue<object[]>("ids"); } set { this["ids"] = value; } }
 
         /// <summary>
         /// Array of strings containing the labels assigned to the torrent
         /// </summary>
-        public string[] Labels { get { return GetValue<string[]>("labels"); } set { this["labels"] = value; } }
+        public string[]? Labels { get { return GetValue<string[]>("labels"); } set { this["labels"] = value; } }
 
         /// <summary>
         /// New location of the torrent's content
         /// </summary>
-        public string Location { get { return GetValue<string>("location"); } set { this["location"] = value; } }
+        public string? Location { get { return GetValue<string>("location"); } set { this["location"] = value; } }
 
         /// <summary>
         /// Maximum number of peers
@@ -102,23 +102,23 @@ namespace Transmission.API.RPC.Arguments
         /// strings of announce URLs to add
         /// </summary>
         [Obsolete("TrackerAdd is obsolete since Transmission 4.0.0, use TrackerList instead.")]
-		public string[] TrackerAdd { get { return GetValue<string[]>("trackerAdd"); } set { this["trackerAdd"] = value; } }
+		public string[]? TrackerAdd { get { return GetValue<string[]>("trackerAdd"); } set { this["trackerAdd"] = value; } }
 
         /// <summary>
         /// Ids of trackers to remove
         /// </summary>
         [Obsolete("TrackerRemove is obsolete since Transmission 4.0.0, use TrackerList instead.")]
-		public long[] TrackerRemove { get { return GetValue<long[]>("trackerRemove"); } set { this["trackerRemove"] = value; } }
+		public long[]? TrackerRemove { get { return GetValue<long[]>("trackerRemove"); } set { this["trackerRemove"] = value; } }
 
         /// <summary>
         /// Pairs of IDs of announce URLs to replace along with their new value
         /// </summary>
         [Obsolete("TrackerReplace is obsolete since Transmission 4.0.0, use TrackerList instead.")]
-        public KeyValuePair<int, string>[] TrackerReplace
+        public KeyValuePair<int, string>[]? TrackerReplace
         {
             get
             {
-                object[] flat = GetValue<object[]>("trackerReplace");
+                object[]? flat = GetValue<object[]>("trackerReplace");
                 if (flat == null)
                 {
                     return null;
@@ -141,31 +141,31 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// string of announce URLs, one per line, with a blank line between tiers
         /// </summary>
-        public string TrackerList { get { return GetValue<string>("trackerList"); } set { this["trackerList"] = value; } }
+        public string? TrackerList { get { return GetValue<string>("trackerList"); } set { this["trackerList"] = value; } }
 
 		/// <summary>
 		/// Files wanted
 		/// </summary>
-		public long[] FilesWanted { get { return GetValue<long[]>("files-wanted"); } set { this["files-wanted"] = value; } }
+		public long[]? FilesWanted { get { return GetValue<long[]>("files-wanted"); } set { this["files-wanted"] = value; } }
 
 		/// <summary>
 		/// Files unwanted
 		/// </summary>
-		public long[] FilesUnwanted { get { return GetValue<long[]>("files-unwanted"); } set { this["files-unwanted"] = value; } }
+		public long[]? FilesUnwanted { get { return GetValue<long[]>("files-unwanted"); } set { this["files-unwanted"] = value; } }
 
 		/// <summary>
 		/// High priority files
 		/// </summary>
-		public long[] PriorityHigh { get { return GetValue<long[]>("priority-high"); } set { this["priority-high"] = value; } }
+		public long[]? PriorityHigh { get { return GetValue<long[]>("priority-high"); } set { this["priority-high"] = value; } }
 
 		/// <summary>
 		/// Low priority files
 		/// </summary>
-		public long[] PriorityLow { get { return GetValue<long[]>("priority-low"); } set { this["priority-low"] = value; } }
+		public long[]? PriorityLow { get { return GetValue<long[]>("priority-low"); } set { this["priority-low"] = value; } }
 
 		/// <summary>
 		/// Normal priority files
 		/// </summary>
-		public long[] PriorityNormal { get { return GetValue<long[]>("priority-normal"); } set { this["priority-normal"] = value; } }
+		public long[]? PriorityNormal { get { return GetValue<long[]>("priority-normal"); } set { this["priority-normal"] = value; } }
 	}
 }

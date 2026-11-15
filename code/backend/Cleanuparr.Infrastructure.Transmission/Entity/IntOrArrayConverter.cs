@@ -4,9 +4,13 @@ using System.Text.Json.Serialization;
 
 namespace Transmission.API.RPC.Entity
 {
+    /// <summary>
+    /// Reads a JSON number or array as a long array.
+    /// </summary>
     public class IntOrArrayConverter : JsonConverter<long[]>
     {
-        public override long[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        /// <inheritdoc/>
+        public override long[]? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.Number)
             {
@@ -21,7 +25,8 @@ namespace Transmission.API.RPC.Entity
             throw new JsonException("Unexpected token type");
         }
 
-        public override void Write(Utf8JsonWriter writer, long[] value, JsonSerializerOptions options)
+        /// <inheritdoc/>
+        public override void Write(Utf8JsonWriter writer, long[]? value, JsonSerializerOptions options)
         {
             JsonSerializer.Serialize(writer, value, options);
         }

@@ -51,7 +51,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Location of the blocklist to use for "blocklist-update"
         /// </summary>
-        public string BlocklistUrl { get { return GetValue<string>("blocklist-url"); } set { this["blocklist-url"] = value; } }
+        public string? BlocklistUrl { get { return GetValue<string>("blocklist-url"); } set { this["blocklist-url"] = value; } }
 
         /// <summary>
         /// True means enabled
@@ -66,12 +66,12 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Announce URLs, one per line, and a blank line between tiers
         /// </summary>
-        public string DefaultTrackers { get { return GetValue<string>("default-trackers"); } set { this["default-trackers"] = value; } }
+        public string? DefaultTrackers { get { return GetValue<string>("default-trackers"); } set { this["default-trackers"] = value; } }
 
         /// <summary>
         /// Default path to download torrents to
         /// </summary>
-        public string DownloadDirectory { get { return GetValue<string>("download-dir"); } set { this["download-dir"] = value; } }
+        public string? DownloadDirectory { get { return GetValue<string>("download-dir"); } set { this["download-dir"] = value; } }
 
         /// <summary>
         /// Max number of torrents to download at once (see download-queue-enabled)
@@ -91,7 +91,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// "required", "preferred", "tolerated"
         /// </summary>
-        public string Encryption { get { return GetValue<string>("encryption"); } set { this["encryption"] = value; } }
+        public string? Encryption { get { return GetValue<string>("encryption"); } set { this["encryption"] = value; } }
 
         /// <summary>
         /// Torrents we're seeding will be stopped if they're idle for this long
@@ -106,7 +106,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Path for incomplete torrents, when enabled
         /// </summary>
-        public string IncompleteDirectory { get { return GetValue<string>("incomplete-dir"); } set { this["incomplete-dir"] = value; } }
+        public string? IncompleteDirectory { get { return GetValue<string>("incomplete-dir"); } set { this["incomplete-dir"] = value; } }
 
         /// <summary>
         /// True means keep torrents in incomplete-dir until done
@@ -166,7 +166,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Filename of the script to run
         /// </summary>
-        public string ScriptTorrentAddedFilename { get { return GetValue<string>("script-torrent-added-filename"); } set { this["script-torrent-added-filename"] = value; } }
+        public string? ScriptTorrentAddedFilename { get { return GetValue<string>("script-torrent-added-filename"); } set { this["script-torrent-added-filename"] = value; } }
 
         /// <summary>
         /// Whether or not to call the "added" script
@@ -176,7 +176,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Filename of the script to run
         /// </summary>
-        public string ScriptTorrentDoneFilename { get { return GetValue<string>("script-torrent-done-filename"); } set { this["script-torrent-done-filename"] = value; } }
+        public string? ScriptTorrentDoneFilename { get { return GetValue<string>("script-torrent-done-filename"); } set { this["script-torrent-done-filename"] = value; } }
 
         /// <summary>
         /// Whether or not to call the "done" script
@@ -186,7 +186,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Filename of the script to run
         /// </summary>
-        public string ScriptTorrentDoneSeedingFilename { get { return GetValue<string>("script-torrent-done-seeding-filename"); } set { this["script-torrent-done-seeding-filename"] = value; } }
+        public string? ScriptTorrentDoneSeedingFilename { get { return GetValue<string>("script-torrent-done-seeding-filename"); } set { this["script-torrent-done-seeding-filename"] = value; } }
 
         /// <summary>
         /// Whether or not to call the "done seeding" script

@@ -18,7 +18,7 @@ namespace Transmission.API.RPC.Arguments
         /// <summary>
         /// Name of the bandwidth group
         /// </summary>
-        public string Name { get { return GetValue<string>("name"); } set { this["name"] = value; } }
+        public string? Name { get { return GetValue<string>("name"); } set { this["name"] = value; } }
 
         /// <summary>
         /// Max global download speed of this bandwidth group (KBps)

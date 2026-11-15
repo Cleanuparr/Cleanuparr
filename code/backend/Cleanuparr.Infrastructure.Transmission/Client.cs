@@ -19,7 +19,7 @@ namespace Transmission.API.RPC
         };
 
         private readonly HttpClient _httpClient;
-        private readonly string _authorization;
+        private readonly string? _authorization;
         private readonly bool _needAuthorization;
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace Transmission.API.RPC
         /// <summary>
         /// Session ID
         /// </summary>
-        public string SessionID
+        public string? SessionID
         {
             get;
             private set;
@@ -62,7 +62,7 @@ namespace Transmission.API.RPC
         /// <param name="login">Login</param>
         /// <param name="password">Password</param>
         /// <param name="httpClient">HttpClient</param>
-        public Client(HttpClient httpClient, string url, string sessionID = null, string login = null, string password = null)
+        public Client(HttpClient httpClient, string url, string? sessionID = null, string? login = null, string? password = null)
         {
             this.Url = url;
             this.SessionID = sessionID;

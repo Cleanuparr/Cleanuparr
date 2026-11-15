@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Transmission.API.RPC.Arguments;
 using Transmission.API.RPC.Entity;

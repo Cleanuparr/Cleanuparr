@@ -23,7 +23,7 @@ namespace Transmission.API.RPC.Common
         /// Data
         /// </summary>
         [JsonPropertyName("arguments")]
-        public Dictionary<string, object> Arguments { get; set; }
+        public Dictionary<string, object?>? Arguments { get; set; }
 
         /// <summary>
         /// Number (id)
@@ -56,7 +56,7 @@ namespace Transmission.API.RPC.Common
         /// </summary>
         /// <param name="method">Method name</param>
         /// <param name="arguments">Arguments</param>
-        public TransmissionRequest(string method, Dictionary<string, object> arguments)
+        public TransmissionRequest(string method, Dictionary<string, object?> arguments)
         {
             this.Method = method;
             this.Arguments = arguments;

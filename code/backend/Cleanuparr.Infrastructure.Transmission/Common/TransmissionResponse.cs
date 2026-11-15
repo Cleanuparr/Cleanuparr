@@ -12,7 +12,7 @@ namespace Transmission.API.RPC.Common
 		/// Contains "success" on success, or an error string on failure.
 		/// </summary>
         [JsonPropertyName("result")]
-        public string Result { get; set; }
+        public string? Result { get; set; }
 
         /// <summary>
         /// Uniquely identifies which request this is a response to
