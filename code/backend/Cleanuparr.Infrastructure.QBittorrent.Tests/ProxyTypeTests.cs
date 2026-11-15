@@ -29,6 +29,7 @@ public class ProxyTypeTests
     [InlineData("2.11.4", ProxyType.HttpAuth, "HTTP", true)]
     [InlineData("2.11.4", ProxyType.Socks5Auth, "SOCKS5", true)]
     [InlineData("2.11.4", ProxyType.Http, "HTTP", false)]
+    [InlineData("2.11.4", ProxyType.Socks5, "SOCKS5", false)]
     public async Task SetPreferencesAsync_NewApi_AuthTypeSetsAuthFlag(string version, ProxyType type, string expectedType, bool expectFlag)
     {
         using FakeQBittorrentServer server = new(version);
@@ -37,7 +38,17 @@ public class ProxyTypeTests
 
         JObject posted = PostedJson(server);
         posted["proxy_type"]!.Value<string>().ShouldBe(expectedType);
-        posted.ContainsKey("proxy_auth_enabled").ShouldBe(expectFlag);
+        posted["proxy_auth_enabled"]!.Value<bool>().ShouldBe(expectFlag);
+    }
+
+    [Fact]
+    public async Task SetPreferencesAsync_NewApi_NullProxyType_OmitsAuthFlag()
+    {
+        using FakeQBittorrentServer server = new("2.11.4");
+
+        await server.Client.SetPreferencesAsync(new Preferences { ProxyType = null });
+
+        PostedJson(server).ContainsKey("proxy_auth_enabled").ShouldBeFalse();
     }
 
     [Fact]

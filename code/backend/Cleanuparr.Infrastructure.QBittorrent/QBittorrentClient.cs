@@ -1088,11 +1088,10 @@ namespace QBittorrent.Client
             };
 
             string json;
-            if (apiVersion >= new ApiVersion(2, 9)
-                && (preferences.ProxyType == ProxyType.HttpAuth || preferences.ProxyType == ProxyType.Socks5Auth))
+            if (apiVersion >= new ApiVersion(2, 9) && preferences.ProxyType.HasValue)
             {
                 JObject tree = JObject.FromObject(preferences, JsonSerializer.Create(settings));
-                tree["proxy_auth_enabled"] = true;
+                tree["proxy_auth_enabled"] = preferences.ProxyType == ProxyType.HttpAuth || preferences.ProxyType == ProxyType.Socks5Auth;
                 json = tree.ToString(Formatting.None);
             }
             else
