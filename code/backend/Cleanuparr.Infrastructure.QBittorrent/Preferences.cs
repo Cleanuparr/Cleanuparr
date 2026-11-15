@@ -1321,9 +1321,9 @@ namespace QBittorrent.Client
         /// <summary>
         /// Indicates whether this converter can write a type to JSON.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <returns>True if <paramref name="type"/> is nullable <see cref="ProxyType"/>.</returns>
-        public override bool CanConvert(Type type) => type == typeof(ProxyType?);
+        /// <param name="objectType">The type.</param>
+        /// <returns>True if <paramref name="objectType"/> is nullable <see cref="ProxyType"/>.</returns>
+        public override bool CanConvert(Type objectType) => objectType == typeof(ProxyType?);
 
         /// <summary>
         /// Indicates whether this converter can read JSON.
