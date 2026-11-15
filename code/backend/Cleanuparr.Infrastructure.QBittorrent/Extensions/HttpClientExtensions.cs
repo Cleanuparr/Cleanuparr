@@ -31,7 +31,7 @@ namespace QBittorrent.Client.Extensions
                 HttpContent content = response.Content;
                 if (content != null)
                 {
-                    return await content.ReadAsStringAsync().ConfigureAwait(false);
+                    return await content.ReadAsStringAsync(token).ConfigureAwait(false);
                 }
 
                 return string.Empty;

@@ -663,7 +663,7 @@ namespace QBittorrent.Client
             ValidatePeers(ref peers);
 
             return PostAsync(p => p.AddTorrentPeers(hashes, peers), token, 
-                ParseAddTorrentPeersResponse, ApiLevel.V2, Version_2_3_0);
+                response => ParseAddTorrentPeersResponse(response, token), ApiLevel.V2, Version_2_3_0);
         }
 
         /// <summary>
@@ -681,12 +681,12 @@ namespace QBittorrent.Client
             ValidatePeers(ref peers);
 
             return PostAsync(p => p.AddTorrentPeers(hashes, peers.Select(x => x.ToString())), token,
-                ParseAddTorrentPeersResponse, ApiLevel.V2, Version_2_3_0);
+                response => ParseAddTorrentPeersResponse(response, token), ApiLevel.V2, Version_2_3_0);
         }
 
-        private static async Task<IReadOnlyDictionary<string, PeerAddResult>> ParseAddTorrentPeersResponse(HttpResponseMessage response)
+        private static async Task<IReadOnlyDictionary<string, PeerAddResult>> ParseAddTorrentPeersResponse(HttpResponseMessage response, CancellationToken token)
         {
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
             var result = JsonConvert.DeserializeObject<IReadOnlyDictionary<string, PeerAddResult>>(json);
             return result;
         }
@@ -1116,7 +1116,7 @@ namespace QBittorrent.Client
                 p => p.StartSearch(pattern, plugins, category), token, 
                 async response =>
                 {
-                    var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
                     return JObject.Parse(json)["id"].ToObject<int>();
                 },
                 ApiLevel.V2, Version_2_1_1);

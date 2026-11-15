@@ -634,7 +634,7 @@ namespace QBittorrent.Client
             CancellationToken token = default)
         {
             ValidateHashes(ref hashes);
-            return PostAsync(p => p.GetTorrentDownloadLimit(hashes), token, GetTorrentLimits);
+            return PostAsync(p => p.GetTorrentDownloadLimit(hashes), token, response => GetTorrentLimits(response, token));
         }
 
         /// <summary>
@@ -667,7 +667,7 @@ namespace QBittorrent.Client
             CancellationToken token = default)
         {
             ValidateHashes(ref hashes);
-            return PostAsync(p => p.GetTorrentUploadLimit(hashes), token, GetTorrentLimits);
+            return PostAsync(p => p.GetTorrentUploadLimit(hashes), token, response => GetTorrentLimits(response, token));
         }
 
         /// <summary>
@@ -700,7 +700,7 @@ namespace QBittorrent.Client
             return PostAsync(p => p.GetGlobalDownloadLimit(), token,
                 async response =>
                 {
-                    var strValue = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var strValue = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
                     return long.TryParse(strValue, out long value) ? value : (long?)0;
                 });
         }
@@ -732,7 +732,7 @@ namespace QBittorrent.Client
             return PostAsync(p => p.GetGlobalUploadLimit(), token,
                 async response =>
                 {
-                    var strValue = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var strValue = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
                     return long.TryParse(strValue, out long value) ? value : (long?)0;
                 });
         }
@@ -1200,9 +1200,9 @@ namespace QBittorrent.Client
                 throw new ApiNotSupportedException(minApiLevel, minApiVersion, maxApiVersion);
         }
 
-        private static async Task<IReadOnlyDictionary<string, long?>> GetTorrentLimits(HttpResponseMessage response)
+        private static async Task<IReadOnlyDictionary<string, long?>> GetTorrentLimits(HttpResponseMessage response, CancellationToken token)
         {
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
             var dict = JsonConvert.DeserializeObject<Dictionary<string, long?>>(json, new NegativeToNullConverter());
             return dict;
         }
