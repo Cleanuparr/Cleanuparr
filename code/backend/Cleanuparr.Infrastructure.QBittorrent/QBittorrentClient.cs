@@ -23,7 +23,7 @@ namespace QBittorrent.Client
     /// <seealso cref="IDisposable" />
     /// <seealso cref="IQBittorrentClient"/>
     /// <seealso cref="QBittorrentClientExtensions"/>
-    public partial class QBittorrentClient : IQBittorrentClient, IDisposable
+    public sealed partial class QBittorrentClient : IQBittorrentClient, IDisposable
     {
         /// <summary>
         /// The legacy API version returned by qBittorrent 4.2 or later.
