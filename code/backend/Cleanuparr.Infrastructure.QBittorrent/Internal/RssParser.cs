@@ -23,7 +23,7 @@ namespace QBittorrent.Client.Internal
 
             RssItem Convert(JObject jObject, string name)
             {
-                var item = jObject.ContainsKey("uid") ? ConvertFeed(jObject) : ConvertFolder(jObject);
+                var item = name.Length > 0 && jObject["uid"]?.Type == JTokenType.String ? ConvertFeed(jObject) : ConvertFolder(jObject);
                 item.Name = name;
                 return item;
             }
