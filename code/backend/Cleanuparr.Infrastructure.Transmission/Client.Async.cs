@@ -503,16 +503,7 @@ namespace Transmission.API.RPC
             //Send request and prepare response
             using (var httpResponse = await _httpClient.SendAsync(httpRequest))
             {
-                if (httpResponse.IsSuccessStatusCode)
-                {
-                    var responseString = await httpResponse.Content.ReadAsStringAsync();
-                    result = JsonSerializer.Deserialize<TransmissionResponse>(responseString, _jsonOptions)
-                        ?? throw new RequestFailedException("Empty response");
-
-                    if (result.Result != "success")
-                        throw new RequestFailedException(result.Result);
-                }
-                else if (httpResponse.StatusCode == HttpStatusCode.Conflict)
+                if (httpResponse.StatusCode == HttpStatusCode.Conflict)
                 {
                     if (isRetry || !httpResponse.Headers.TryGetValues("X-Transmission-Session-Id", out var values))
                     {
@@ -520,10 +511,19 @@ namespace Transmission.API.RPC
                     }
 
                     SessionID = values.First();
-                    result = await SendRequestAsync(request, true);
+                    return await SendRequestAsync(request, true);
                 }
-                else
-                    throw new HttpRequestException();
+
+                httpResponse.EnsureSuccessStatusCode();
+
+                var responseString = await httpResponse.Content.ReadAsStringAsync();
+                result = JsonSerializer.Deserialize<TransmissionResponse>(responseString, _jsonOptions)
+                    ?? throw new RequestFailedException("Empty response");
+
+                if (result.Result != "success")
+                {
+                    throw new RequestFailedException(result.Result);
+                }
             }
 
             return result;
