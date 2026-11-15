@@ -133,7 +133,7 @@ namespace QBittorrent.Client
             CancellationToken token = default)
         {
             ValidateHashes(ref hashes);
-            return PostAsync(p => p.Recheck(hashes), token, ApiLevel.V2);
+            return PostAsync(p => p.Recheck(hashes), token);
         }
 
         /// <summary>
