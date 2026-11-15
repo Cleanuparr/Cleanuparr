@@ -19,7 +19,8 @@ namespace QBittorrent.Client.Internal
             int? limit,
             int? offset, 
             IEnumerable<string> hashes,
-            string tag);
+            string tag,
+            bool stoppedFilterNames = false);
 
         Uri GetTorrentProperties(string hash);
 

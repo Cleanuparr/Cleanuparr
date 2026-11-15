@@ -24,7 +24,8 @@ namespace QBittorrent.Client.Internal
             int? limit,
             int? offset, 
             IEnumerable<string> hashes,
-            string tag)
+            string tag,
+            bool stoppedFilterNames = false)
         {
             var hashesString = hashes != null ? string.Join("|", hashes) : null;
             return Create("api/v2/torrents/info",
@@ -41,6 +42,8 @@ namespace QBittorrent.Client.Internal
             {
                 TorrentListFilter.StalledDownloading => "stalled_downloading",
                 TorrentListFilter.StalledUploading => "stalled_uploading",
+                TorrentListFilter.Paused when stoppedFilterNames => "stopped",
+                TorrentListFilter.Resumed when stoppedFilterNames => "running",
                 _ => filter.ToString().ToLowerInvariant()
             };
         }

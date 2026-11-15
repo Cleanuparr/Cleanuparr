@@ -243,6 +243,13 @@ namespace QBittorrent.Client
 
             async Task<IReadOnlyList<TorrentInfo>> ExecuteAsync()
             {
+                var stoppedFilterNames = false;
+                if (query.Filter == TorrentListFilter.Paused || query.Filter == TorrentListFilter.Resumed)
+                {
+                    var apiVersion = await GetApiVersionAsync(token).ConfigureAwait(false);
+                    stoppedFilterNames = apiVersion >= Version_2_11_0;
+                }
+
                 var uri = await BuildUriAsync(p => p.GetTorrentList(
                         query.Filter,
                         query.Category,
@@ -251,7 +258,8 @@ namespace QBittorrent.Client
                         query.Limit,
                         query.Offset,
                         hashes,
-                        query.Tag), token)
+                        query.Tag,
+                        stoppedFilterNames), token)
                     .ConfigureAwait(false);
 
                 var json = await _client.GetStringWithCancellationAsync(uri, token).ConfigureAwait(false);
