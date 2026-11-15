@@ -23,7 +23,7 @@ namespace Transmission.API.RPC
         public async Task CloseSessionAsync()
         {
             var request = new TransmissionRequest("session-close");
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace Transmission.API.RPC
         public async Task SetSessionSettingsAsync(SessionSettings settings)
         {
             var request = new TransmissionRequest("session-set", settings);
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace Transmission.API.RPC
         public async Task TorrentSetAsync(TorrentSettings settings)
         {
             var request = new TransmissionRequest("torrent-set", settings);
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -174,7 +174,7 @@ namespace Transmission.API.RPC
             arguments.Add("delete-local-data", deleteData);
 
             var request = new TransmissionRequest("torrent-remove", arguments);
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #region Torrent Start
@@ -186,7 +186,7 @@ namespace Transmission.API.RPC
         public async Task TorrentStartAsync(object[] ids)
         {
             var request = new TransmissionRequest("torrent-start", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace Transmission.API.RPC
         public async Task TorrentStartRecentlyActiveAsync()
         {
             var request = new TransmissionRequest("torrent-start", new Dictionary<string, object> { { "ids", "recently-active" } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
@@ -209,7 +209,7 @@ namespace Transmission.API.RPC
         public async Task TorrentStartNowAsync(object[] ids)
         {
             var request = new TransmissionRequest("torrent-start-now", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -218,7 +218,7 @@ namespace Transmission.API.RPC
         public async Task TorrentStartNowRecentlyActiveAsync()
         {
             var request = new TransmissionRequest("torrent-start-now", new Dictionary<string, object> { { "ids", "recently-active" } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
@@ -232,7 +232,7 @@ namespace Transmission.API.RPC
         public async Task TorrentStopAsync(object[] ids)
         {
             var request = new TransmissionRequest("torrent-stop", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -241,7 +241,7 @@ namespace Transmission.API.RPC
         public async Task TorrentStopRecentlyActiveAsync()
         {
             var request = new TransmissionRequest("torrent-stop", new Dictionary<string, object> { { "ids", "recently-active" } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
@@ -255,7 +255,7 @@ namespace Transmission.API.RPC
         public async Task TorrentVerifyAsync(object[] ids)
         {
             var request = new TransmissionRequest("torrent-verify", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -264,7 +264,7 @@ namespace Transmission.API.RPC
         public async Task TorrentVerifyRecentlyActiveAsync()
         {
             var request = new TransmissionRequest("torrent-verify", new Dictionary<string, object> { { "ids", "recently-active" } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
@@ -278,7 +278,7 @@ namespace Transmission.API.RPC
         public async Task TorrentReannounceAsync(object[] ids)
         {
             var request = new TransmissionRequest("torrent-reannounce", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -287,7 +287,7 @@ namespace Transmission.API.RPC
         public async Task TorrentReannounceRecentlyActiveAsync()
         {
             var request = new TransmissionRequest("torrent-reannounce", new Dictionary<string, object> { { "ids", "recently-active" } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
@@ -301,7 +301,7 @@ namespace Transmission.API.RPC
         public async Task TorrentQueueMoveTopAsync(long[] ids)
         {
             var request = new TransmissionRequest("queue-move-top", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -311,7 +311,7 @@ namespace Transmission.API.RPC
         public async Task TorrentQueueMoveUpAsync(long[] ids)
         {
             var request = new TransmissionRequest("queue-move-up", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -321,7 +321,7 @@ namespace Transmission.API.RPC
         public async Task TorrentQueueMoveDownAsync(long[] ids)
         {
             var request = new TransmissionRequest("queue-move-down", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -331,7 +331,7 @@ namespace Transmission.API.RPC
         public async Task TorrentQueueMoveBottomAsync(long[] ids)
         {
             var request = new TransmissionRequest("queue-move-bottom", new Dictionary<string, object> { { "ids", ids } });
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
@@ -350,7 +350,7 @@ namespace Transmission.API.RPC
             arguments.Add("move", move);
 
             var request = new TransmissionRequest("torrent-set-location", arguments);
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         /// <summary>
@@ -417,7 +417,7 @@ namespace Transmission.API.RPC
         public async Task BandwidthGroupSetAsync(BandwidthGroupSettings group)
         {
             var request = new TransmissionRequest("group-set", group);
-            var response = await SendRequestAsync(request);
+            await SendRequestAsync(request);
         }
 
         #endregion
