@@ -8,9 +8,4 @@ namespace Transmission.API.RPC
     {
         public RequestFailedException(string description) : base(description) { }
     }
-
-    public class SessionIdException : Exception
-    {
-        public SessionIdException() : base("Session ID Error") { }
-    }
 }
