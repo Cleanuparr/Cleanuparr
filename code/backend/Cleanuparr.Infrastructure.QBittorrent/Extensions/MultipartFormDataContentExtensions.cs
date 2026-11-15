@@ -15,11 +15,19 @@ namespace QBittorrent.Client.Extensions
         {
             var stream = File.OpenRead(path);
             var fileName = Path.GetFileName(path);
-            var content = new StreamContent(stream)
+            try
             {
-                Headers = { ContentType = new MediaTypeHeaderValue(contentType) }
-            };
-            @this.Add(content, name, fileName);
+                var content = new StreamContent(stream)
+                {
+                    Headers = { ContentType = new MediaTypeHeaderValue(contentType) }
+                };
+                @this.Add(content, name, fileName);
+            }
+            catch
+            {
+                stream.Dispose();
+                throw;
+            }
 
             return @this;
         }

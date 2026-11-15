@@ -29,4 +29,22 @@ public class MultipartFormDataContentExtensionsTests
             CultureInfo.CurrentCulture = original;
         }
     }
+
+    [Fact]
+    public void AddFile_WhenAddFails_ReleasesFileHandle()
+    {
+        string path = Path.GetTempFileName();
+        try
+        {
+            using MultipartFormDataContent content = new();
+
+            Should.Throw<ArgumentException>(() => content.AddFile("", path));
+
+            using FileStream exclusive = new(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

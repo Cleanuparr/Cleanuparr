@@ -26,9 +26,17 @@ namespace QBittorrent.Client.Internal
         public virtual (Uri url, HttpContent request) AddTorrents(AddTorrentFilesRequest request)
         {
             var data = AddTorrentsCore(request);
-            foreach (var file in request.TorrentFiles)
+            try
             {
-                data.AddFile("torrents", file, "application/x-bittorrent");
+                foreach (var file in request.TorrentFiles)
+                {
+                    data.AddFile("torrents", file, "application/x-bittorrent");
+                }
+            }
+            catch
+            {
+                data.Dispose();
+                throw;
             }
 
             return (Url.AddTorrentFiles(), data);

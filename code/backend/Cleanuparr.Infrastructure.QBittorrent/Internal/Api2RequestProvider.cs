@@ -199,9 +199,17 @@ namespace QBittorrent.Client.Internal
         {
             var data = AddTorrentsCore(request);
 
-            foreach (var file in request.TorrentFiles)
+            try
             {
-                data.AddFile("torrents", file, "application/x-bittorrent");
+                foreach (var file in request.TorrentFiles)
+                {
+                    data.AddFile("torrents", file, "application/x-bittorrent");
+                }
+            }
+            catch
+            {
+                data.Dispose();
+                throw;
             }
 
             var urls = string.Join("\n", request.TorrentUrls.Select(url => url.AbsoluteUri));
