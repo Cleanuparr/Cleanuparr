@@ -114,12 +114,34 @@ namespace Transmission.API.RPC.Arguments
         /// Pairs of IDs of announce URLs to replace along with their new value
         /// </summary>
         [Obsolete("TrackerReplace is obsolete since Transmission 4.0.0, use TrackerList instead.")]
-        public KeyValuePair<int, string>[] TrackerReplace { get { return GetValue<KeyValuePair<int, string>[]>("trackerReplace"); } set { this["trackerReplace"] = value; } }
+        public KeyValuePair<int, string>[] TrackerReplace
+        {
+            get
+            {
+                object[] flat = GetValue<object[]>("trackerReplace");
+                if (flat == null)
+                {
+                    return null;
+                }
+
+                KeyValuePair<int, string>[] pairs = new KeyValuePair<int, string>[flat.Length / 2];
+                for (int i = 0; i < pairs.Length; i++)
+                {
+                    pairs[i] = new KeyValuePair<int, string>(Convert.ToInt32(flat[2 * i]), (string)flat[2 * i + 1]);
+                }
+
+                return pairs;
+            }
+            set
+            {
+                this["trackerReplace"] = value?.SelectMany(pair => new object[] { pair.Key, pair.Value }).ToArray();
+            }
+        }
 
         /// <summary>
         /// string of announce URLs, one per line, with a blank line between tiers
         /// </summary>
-        public string[] TrackerList { get { return GetValue<string[]>("trackerList"); } set { this["trackerList"] = value; } }
+        public string TrackerList { get { return GetValue<string>("trackerList"); } set { this["trackerList"] = value; } }
 
 		/// <summary>
 		/// Files wanted
@@ -134,16 +156,16 @@ namespace Transmission.API.RPC.Arguments
 		/// <summary>
 		/// High priority files
 		/// </summary>
-		public string[] PriorityHigh { get { return GetValue<string[]>("priority-high"); } set { this["priority-high"] = value; } }
+		public long[] PriorityHigh { get { return GetValue<long[]>("priority-high"); } set { this["priority-high"] = value; } }
 
 		/// <summary>
 		/// Low priority files
 		/// </summary>
-		public string[] PriorityLow { get { return GetValue<string[]>("priority-low"); } set { this["priority-low"] = value; } }
+		public long[] PriorityLow { get { return GetValue<long[]>("priority-low"); } set { this["priority-low"] = value; } }
 
 		/// <summary>
 		/// Normal priority files
 		/// </summary>
-		public string[] PriorityNormal { get { return GetValue<string[]>("priority-normal"); } set { this["priority-normal"] = value; } }
+		public long[] PriorityNormal { get { return GetValue<long[]>("priority-normal"); } set { this["priority-normal"] = value; } }
 	}
 }
