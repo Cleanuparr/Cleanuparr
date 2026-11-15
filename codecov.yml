@@ -30,3 +30,8 @@ flags:
 
 ignore:
   - "**/Migrations/**"
+  - "code/backend/Cleanuparr.Infrastructure.QBittorrent/Rss*.cs"
+  - "code/backend/Cleanuparr.Infrastructure.QBittorrent/Search*.cs"
+  - "code/backend/Cleanuparr.Infrastructure.QBittorrent/Internal/RssParser.cs"
+  - "code/backend/Cleanuparr.Infrastructure.QBittorrent/Internal/Api1UrlProvider.cs"
+  - "code/backend/Cleanuparr.Infrastructure.QBittorrent/Internal/Api1RequestProvider.cs"
