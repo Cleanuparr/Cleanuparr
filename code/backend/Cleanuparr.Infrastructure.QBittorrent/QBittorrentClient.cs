@@ -244,10 +244,10 @@ namespace QBittorrent.Client
 
             async Task<IReadOnlyList<TorrentInfo>> ExecuteAsync()
             {
-                var stoppedFilterNames = false;
+                bool stoppedFilterNames = false;
                 if (query.Filter == TorrentListFilter.Paused || query.Filter == TorrentListFilter.Resumed)
                 {
-                    var apiVersion = await GetApiVersionAsync(token).ConfigureAwait(false);
+                    ApiVersion apiVersion = await GetApiVersionAsync(token).ConfigureAwait(false);
                     stoppedFilterNames = apiVersion >= Version_2_11_0;
                 }
 
@@ -1081,8 +1081,8 @@ namespace QBittorrent.Client
             if (preferences == null)
                 throw new ArgumentNullException(nameof(preferences));
 
-            var apiVersion = await GetApiVersionAsync(token).ConfigureAwait(false);
-            var settings = new JsonSerializerSettings
+            ApiVersion apiVersion = await GetApiVersionAsync(token).ConfigureAwait(false);
+            JsonSerializerSettings settings = new JsonSerializerSettings
             {
                 Converters = { new ProxyTypeConverter(apiVersion) }
             };
@@ -1091,7 +1091,7 @@ namespace QBittorrent.Client
             if (apiVersion >= new ApiVersion(2, 9)
                 && (preferences.ProxyType == ProxyType.HttpAuth || preferences.ProxyType == ProxyType.Socks5Auth))
             {
-                var tree = JObject.FromObject(preferences, JsonSerializer.Create(settings));
+                JObject tree = JObject.FromObject(preferences, JsonSerializer.Create(settings));
                 tree["proxy_auth_enabled"] = true;
                 json = tree.ToString(Formatting.None);
             }

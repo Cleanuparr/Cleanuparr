@@ -36,7 +36,9 @@ namespace QBittorrent.Client.Internal
         {
             if (!Enum.IsDefined(typeof(TorrentContentPriority), priority)
                 || (priority >= TorrentContentPriority.VeryLow && priority <= TorrentContentPriority.High))
+            {
                 throw new ArgumentOutOfRangeException(nameof(priority));
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

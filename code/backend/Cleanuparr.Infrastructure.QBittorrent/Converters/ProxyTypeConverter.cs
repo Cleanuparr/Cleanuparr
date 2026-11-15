@@ -53,7 +53,7 @@ namespace QBittorrent.Client
                 return;
             }
 
-            // from 2.9 authentication is a separate flag, not part of the type
+            // 2.9 moved authentication into proxy_auth_enabled
             string name = proxyType switch
             {
                 ProxyType.HttpAuth => "HTTP",
