@@ -84,24 +84,12 @@ wget -q -P /tmp/nuget/ \
 ```
   </Step>
 
-  <Step title="Configure NuGet Sources">
-Add NuGet package sources:
+  <Step title="Configure NuGet Source">
+Add the downloaded packages as a local NuGet source:
 
 ```bash
-# Add local NuGet source
 dotnet nuget add source /tmp/nuget --name tmp
-
-# Add GitHub NuGet source
-# Note: Generate a PAT at https://github.com/settings/tokens
-dotnet nuget add source \
-  --username <YOUR_USERNAME> \
-  --password <YOUR_PERSONAL_ACCESS_TOKEN> \
-  --store-password-in-clear-text \
-  --name Cleanuparr \
-  https://nuget.pkg.github.com/Cleanuparr/index.json
 ```
-
-**Important:** Replace `<YOUR_USERNAME>` and `<YOUR_PERSONAL_ACCESS_TOKEN>` with your actual GitHub credentials.
   </Step>
 
   <Step title="Clone and Build Frontend">

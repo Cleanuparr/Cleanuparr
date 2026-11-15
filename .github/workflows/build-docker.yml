@@ -175,8 +175,7 @@ jobs:
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           secrets:
-            secrets/data/github repo_readonly_pat | REPO_READONLY_PAT;
-            secrets/data/github packages_pat | PACKAGES_PAT
+            secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
 
       - name: Checkout target repository
         uses: actions/checkout@v7
@@ -216,9 +215,6 @@ jobs:
             org.opencontainers.image.version=${{ needs.prepare.outputs.version_docker_tag }}
           build-args: |
             VERSION=${{ needs.prepare.outputs.version }}
-            PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}
-          secrets: |
-            packages_pat=${{ env.PACKAGES_PAT }}
           platforms: ${{ matrix.platform }}
           outputs: type=image,"name=${{ env.REGISTRY_IMAGE }}",push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
@@ -237,9 +233,6 @@ jobs:
             org.opencontainers.image.version=${{ needs.prepare.outputs.version_docker_tag }}
           build-args: |
             VERSION=${{ needs.prepare.outputs.version }}
-            PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}
-          secrets: |
-            packages_pat=${{ env.PACKAGES_PAT }}
           platforms: ${{ matrix.platform }}
           push: false
           cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
