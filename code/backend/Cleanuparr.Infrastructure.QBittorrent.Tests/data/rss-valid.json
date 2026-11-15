@@ -1,0 +1,59 @@
+{
+  "Ubuntu": {
+    "articles": [
+      {
+        "date": "29 Nov 2018 10:56:14 +0000",
+        "fileName": "ubuntu-16.04.4-desktop-amd64.iso",
+        "id": "http://releases.ubuntu.com/16.04/ubuntu-16.04.4-desktop-amd64.iso.torrent",
+        "infoHash": "778CE280B595E57780FF083F2EB6F897DFA4A4EE",
+        "link": "https://www.ubuntu.com/download/desktop",
+        "magnetURI": "magnet:?xt=urn:btih:778ce280b595e57780ff083f2eb6f897dfa4a4ee&dn=ubuntu-16.04.4-desktop-amd64.iso&tr=http://torrent.ubuntu.com:6969/announce&tr=http://ipv6.torrent.ubuntu.com:6969/announce",
+        "peers": "0",
+        "seeds": "0",
+        "title": "Ubuntu 16.04.4",
+        "torrentURL": "http://releases.ubuntu.com/16.04/ubuntu-16.04.4-desktop-amd64.iso.torrent",
+        "verified": "0"
+      },
+      {
+        "date": "29 Nov 2018 11:52:49 +0000",
+        "fileName": "ubuntu-17.10.1-desktop-amd64.iso",
+        "id": "http://releases.ubuntu.com/17.10/ubuntu-17.10.1-desktop-amd64.iso.torrent",
+        "infoHash": "F07E0B0584745B7BCB35E98097488D34E68623D0",
+        "link": "https://www.ubuntu.com/download/desktop",
+        "magnetURI": "magnet:?xt=urn:btih:f07e0b0584745b7bcb35e98097488d34e68623d0&dn=ubuntu-17.10.1-desktop-amd64.iso&tr=http://torrent.ubuntu.com:6969/announce&tr=http://ipv6.torrent.ubuntu.com:6969/announce9",
+        "peers": "0",
+        "seeds": "0",
+        "title": "Ubuntu 17.10.1",
+        "torrentURL": "http://releases.ubuntu.com/17.10/ubuntu-17.10.1-desktop-amd64.iso.torrent",
+        "verified": "0"
+      }
+    ],
+    "hasError": false,
+    "isLoading": false,
+    "lastBuildDate": "Thu, 29 Nov 2018 09:34:01 -0500",
+    "title": "Ubuntu downloads",
+    "uid": "{80858e34-897e-48bb-bfe3-ed0fec030861}",
+    "url": "http://example.com/ubuntu.rss"
+  },
+	"Test folder" : {
+    "Rutracker": {
+      "articles": [
+        {
+          "date": "18 Nov 2018 19:56:41 +0000",
+          "description": "Ubuntu 14.04 i386 and AMD64",
+          "id": "428325a2b3b846759bf7b1089b42bfa2",
+          "info_hash": "8B0D024760C412F5E0DCBCFAB59B267CBDD895C6",
+          "raw_title": "ubuntu-pack-14.04-unity",
+          "title": "Ubuntu 14.04",
+          "torrentURL": "magnet:?xt=urn:btih:9fadb1dcf775fe9a88a7ff0e8150b979d3803398&dn=ubuntu-pack-14.04-unity&tr=http://bt.t-ru.org/ann&tr=http://retracker.local/announce"
+        }
+      ],
+      "hasError": false,
+      "isLoading": false,
+      "lastBuildDate": "",
+      "title": "Rutracker feed",
+      "uid": "{d4c0a303-7aeb-4199-997c-1ca420501b56}",
+      "url": "http://example.com/rutracker.rss"
+    }
+	}
+}

@@ -9,6 +9,7 @@
     <ItemGroup>
         <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
         <EmbeddedResource Include="data\rss-valid.json" />
+        <Using Include="Xunit" />
     </ItemGroup>
 
     <ItemGroup>
