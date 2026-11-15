@@ -400,7 +400,7 @@ namespace Transmission.API.RPC
         public async Task<BandwidthGroup[]?> BandwidthGroupGetAsync(string[] groups)
         {
             var arguments = new Dictionary<string, object>();
-            arguments.Add("group", groups);
+            arguments.Add("name", groups);
 
             var request = new TransmissionRequest("group-get", arguments);
 
