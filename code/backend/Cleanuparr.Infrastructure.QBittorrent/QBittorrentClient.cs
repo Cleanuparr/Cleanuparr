@@ -812,8 +812,7 @@ namespace QBittorrent.Client
             ValidateHash(hash);
             if (fileId < 0)
                 throw new ArgumentOutOfRangeException(nameof(fileId));
-            if (!Enum.GetValues(typeof(TorrentContentPriority)).Cast<TorrentContentPriority>().Contains(priority))
-                throw new ArgumentOutOfRangeException(nameof(priority));
+            ValidateFilePriority(priority);
 
             return PostAsync(p => p.SetFilePriority(hash, fileId, priority), token);
         }

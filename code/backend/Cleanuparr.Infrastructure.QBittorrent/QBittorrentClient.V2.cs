@@ -514,8 +514,7 @@ namespace QBittorrent.Client
             ValidateHash(hash);
             if (fileIds == null)
                 throw new ArgumentNullException(nameof(fileIds));
-            if (!Enum.GetValues(typeof(TorrentContentPriority)).Cast<TorrentContentPriority>().Contains(priority))
-                throw new ArgumentOutOfRangeException(nameof(priority));
+            ValidateFilePriority(priority);
 
             var ids = fileIds.ToList();
             if (ids.Any(id => id < 0))

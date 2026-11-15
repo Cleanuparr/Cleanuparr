@@ -31,6 +31,14 @@ namespace QBittorrent.Client.Internal
                     nameof(hash));
         }
 
+        // the server accepts only 0, 1, 6 and 7 and answers 400 to the rest
+        internal static void ValidateFilePriority(TorrentContentPriority priority)
+        {
+            if (!Enum.IsDefined(typeof(TorrentContentPriority), priority)
+                || (priority >= TorrentContentPriority.VeryLow && priority <= TorrentContentPriority.High))
+                throw new ArgumentOutOfRangeException(nameof(priority));
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [ContractAnnotation("null => halt")]
         internal static void ValidateHashes(ref IEnumerable<string> hashes)

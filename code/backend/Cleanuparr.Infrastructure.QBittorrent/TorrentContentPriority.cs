@@ -11,37 +11,37 @@
         Skip = 0,
 
         /// <summary>
-        /// The minimal priority (1). 
+        /// Sent as 1, which qBittorrent treats as normal priority.
         /// </summary>
         Minimal = 1,
 
         /// <summary>
-        /// The very low priority (2).
+        /// Read-only (2). The client rejects it when setting.
         /// </summary>
         VeryLow = 2,
 
         /// <summary>
-        /// The low priority (3).
+        /// Read-only (3). The client rejects it when setting.
         /// </summary>
         Low = 3,
 
         /// <summary>
-        /// The normal priority (4).
+        /// Read-only (4). The client rejects it when setting.
         /// </summary>
         Normal = 4,
 
         /// <summary>
-        /// The high priority (5).
+        /// Read-only (5). The client rejects it when setting.
         /// </summary>
         High = 5,
 
         /// <summary>
-        /// The very high priority (6).
+        /// Sent as 6, which qBittorrent treats as high priority.
         /// </summary>
         VeryHigh = 6,
         
         /// <summary>
-        /// The maximal priority (7).
+        /// Sent as 7, which qBittorrent treats as maximal priority.
         /// </summary>
         Maximal = 7
     }
