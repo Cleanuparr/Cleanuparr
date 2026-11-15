@@ -34,11 +34,11 @@ public abstract class QBittorrentFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        string directory = AppContext.BaseDirectory;
+        byte[] config = await File.ReadAllBytesAsync(Path.Combine(directory, "Contract", "qBittorrent.conf"));
+
         try
         {
-            string directory = AppContext.BaseDirectory;
-            byte[] config = await File.ReadAllBytesAsync(Path.Combine(directory, "Contract", "qBittorrent.conf"));
-
             _container = new ContainerBuilder(_image)
                 .WithPortBinding(WebUiPort, true)
                 .WithEnvironment("PUID", "1000")
@@ -52,16 +52,17 @@ public abstract class QBittorrentFixture : IAsyncLifetime
                 .Build();
 
             await _container.StartAsync();
-
-            BaseUri = new Uri($"http://{_container.Hostname}:{_container.GetMappedPublicPort(WebUiPort)}/");
-            _http = new HttpClient(new HttpClientHandler { CookieContainer = new CookieContainer() });
-            Client = new QBittorrentClient(_http, BaseUri);
-            await Client.LoginAsync(Username, Password);
         }
         catch (Exception exception)
         {
             UnavailableReason = $"Docker or {_image} is unavailable: {exception.Message}";
+            return;
         }
+
+        BaseUri = new Uri($"http://{_container.Hostname}:{_container.GetMappedPublicPort(WebUiPort)}/");
+        _http = new HttpClient(new HttpClientHandler { CookieContainer = new CookieContainer() });
+        Client = new QBittorrentClient(_http, BaseUri);
+        await Client.LoginAsync(Username, Password);
     }
 
     public async Task DisposeAsync()
