@@ -95,7 +95,7 @@ public abstract class QBittorrentFixture : IAsyncLifetime
         form.Add(new ByteArrayContent(await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "Contract", "seed.torrent"))), "torrents", "seed.torrent");
         // 4.x and 5.x name the field differently
         form.Add(new StringContent("true"), "paused");
-        form.Add(new StringContent("false"), "stopped");
+        form.Add(new StringContent("true"), "stopped");
 
         HttpResponseMessage response = await Http.PostAsync(new Uri(BaseUri, "api/v2/torrents/add"), form);
         response.EnsureSuccessStatusCode();
@@ -103,7 +103,7 @@ public abstract class QBittorrentFixture : IAsyncLifetime
         for (int attempt = 0; attempt < 50; attempt++)
         {
             IReadOnlyList<TorrentInfo> torrents = await Client.GetTorrentListAsync() ?? [];
-            if (torrents.Count == 1)
+            if (torrents.Count == 1 && torrents[0].State is TorrentState.PausedDownload or TorrentState.PausedUpload)
             {
                 return torrents[0].Hash;
             }
