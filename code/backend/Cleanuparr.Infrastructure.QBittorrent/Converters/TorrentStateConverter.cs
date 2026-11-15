@@ -9,21 +9,25 @@ namespace QBittorrent.Client.Converters;
 
 internal class TorrentStateConverter : JsonConverter<TorrentState>
 {
-    private static readonly Dictionary<string, TorrentState> StringToTorrentState;
-    private static readonly Dictionary<TorrentState, string> TorrentStateToString;
+    private static readonly Dictionary<TorrentState, string> TorrentStateToString = BuildTorrentStateToString();
+    private static readonly Dictionary<string, TorrentState> StringToTorrentState = BuildStringToTorrentState();
 
-    static TorrentStateConverter()
+    private static Dictionary<TorrentState, string> BuildTorrentStateToString()
     {
-        TorrentStateToString = (
+        return (
             from field in typeof(TorrentState).GetTypeInfo().DeclaredFields
             where field.IsStatic
             let attribute = field.GetCustomAttribute<EnumMemberAttribute>()
             select (value: (TorrentState) field.GetValue(null), strValue: attribute.Value)
         ).ToDictionary(t => t.value, t => t.strValue);
+    }
 
-        StringToTorrentState = TorrentStateToString.ToDictionary(kv => kv.Value, kv => kv.Key, StringComparer.OrdinalIgnoreCase);
-        StringToTorrentState.Add("stoppedUP", TorrentState.PausedUpload);
-        StringToTorrentState.Add("stoppedDL", TorrentState.PausedDownload);
+    private static Dictionary<string, TorrentState> BuildStringToTorrentState()
+    {
+        Dictionary<string, TorrentState> map = TorrentStateToString.ToDictionary(kv => kv.Value, kv => kv.Key, StringComparer.OrdinalIgnoreCase);
+        map.Add("stoppedUP", TorrentState.PausedUpload);
+        map.Add("stoppedDL", TorrentState.PausedDownload);
+        return map;
     }
 
     public override void WriteJson(JsonWriter writer, TorrentState value, JsonSerializer serializer)
