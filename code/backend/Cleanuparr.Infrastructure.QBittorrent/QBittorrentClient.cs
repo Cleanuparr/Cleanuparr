@@ -1112,12 +1112,7 @@ namespace QBittorrent.Client
         /// <returns></returns>
         public async Task ShutdownApplicationAsync(CancellationToken token = default)
         {
-            var uri = await BuildUriAsync(p => p.ShutdownApplication(), token).ConfigureAwait(false);
-            var response = await _client.GetAsync(uri, token).ConfigureAwait(false);
-            using (response)
-            {
-                response.EnsureSuccessStatusCodeEx();
-            }
+            await PostAsync(p => (p.Url.ShutdownApplication(), new CompatibleFormUrlEncodedContent(Enumerable.Empty<(string key, string value)>())), token).ConfigureAwait(false);
         }
 
         #endregion
