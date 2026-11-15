@@ -51,9 +51,9 @@ public abstract class TransmissionFixture : IAsyncLifetime
             RpcUrl = $"http://{_container.Hostname}:{_container.GetMappedPublicPort(RpcPort)}/transmission/rpc";
             Client = CreateClient(Username, Password);
         }
-        catch (Exception exception)
+        catch (DockerUnavailableException exception)
         {
-            UnavailableReason = $"Docker or {_image} is unavailable: {exception.Message}";
+            UnavailableReason = $"Docker is unavailable: {exception.Message}";
         }
     }
 
