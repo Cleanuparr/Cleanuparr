@@ -218,7 +218,7 @@ namespace QBittorrent.Client
         {
             var uri = await BuildUriAsync(p => p.QBittorrentVersion(), token).ConfigureAwait(false);
             var version = await _client.GetStringWithCancellationAsync(uri, token).ConfigureAwait(false);
-            var match = Regex.Match(version, @"\d+\.\d+(?:\.\d+(?:\.\d+)?)?");
+            var match = Regex.Match(version, @"\d+\.\d+(?:\.\d+(?:\.\d+)?)?", RegexOptions.None, TimeSpan.FromSeconds(1));
             return match.Success ? new Version(match.Value) : null;
         }
 

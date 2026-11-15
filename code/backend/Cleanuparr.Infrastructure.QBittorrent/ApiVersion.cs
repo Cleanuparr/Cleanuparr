@@ -56,7 +56,7 @@ namespace QBittorrent.Client
 
             var match = Regex.Match(versionString,
                 @"^(?<major>\d{1,3})(\.(?<minor>\d{1,3})(\.(?<release>\d{1,3}))?)?$",
-                RegexOptions.ExplicitCapture);
+                RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
             if (!match.Success)
                 throw new FormatException("The version string must be in format major[.minor[.release]]");
 
