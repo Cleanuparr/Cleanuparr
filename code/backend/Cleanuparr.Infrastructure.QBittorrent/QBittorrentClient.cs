@@ -1151,22 +1151,6 @@ namespace QBittorrent.Client
             }
         }
 
-        // qBittorrent 4.x and 5.0.x report a rejected request as 200 with a "Fails." body
-        private Task PostRejectingFailsBodyAsync(Func<IRequestProvider, (Uri, HttpContent)> builder,
-            CancellationToken token)
-        {
-            return PostAsync(builder, token, async response =>
-            {
-                string body = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
-                if (string.Equals(body.Trim(), "Fails.", StringComparison.Ordinal))
-                {
-                    throw new QBittorrentClientRequestException("qBittorrent rejected the request.", HttpStatusCode.Forbidden);
-                }
-
-                return true;
-            });
-        }
-
         private async Task<T> PostAsync<T>(Func<IRequestProvider, (Uri, HttpContent)> builder,
             CancellationToken token,
             Func<HttpResponseMessage, Task<T>> transform,
@@ -1185,6 +1169,22 @@ namespace QBittorrent.Client
                     return await transform(response).ConfigureAwait(false);
                 }
             }
+        }
+
+        // qBittorrent 4.x and 5.0.x report a rejected request as 200 with a "Fails." body
+        private Task PostRejectingFailsBodyAsync(Func<IRequestProvider, (Uri, HttpContent)> builder,
+            CancellationToken token)
+        {
+            return PostAsync(builder, token, async response =>
+            {
+                string body = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+                if (string.Equals(body.Trim(), "Fails.", StringComparison.Ordinal))
+                {
+                    throw new QBittorrentClientRequestException("qBittorrent rejected the request.", HttpStatusCode.Forbidden);
+                }
+
+                return true;
+            });
         }
 
         private async Task<T> GetJsonAsync<T>(

@@ -77,16 +77,6 @@ namespace QBittorrent.Client.Internal
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [ContractAnnotation("null => halt")]
-        internal static void ValidatePeer(IPEndPoint peer)
-        {
-            if (peer == null)
-                throw new ArgumentNullException(nameof(peer));
-            if (peer.Port == 0)
-                throw new ArgumentException("Port number must be greater than zero.", nameof(peer));
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [ContractAnnotation("null => halt")]
         internal static void ValidatePeers(ref IEnumerable<string> peers)
         {
             if (peers == null)
@@ -100,6 +90,16 @@ namespace QBittorrent.Client.Internal
             }
 
             peers = list;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [ContractAnnotation("null => halt")]
+        internal static void ValidatePeer(IPEndPoint peer)
+        {
+            if (peer == null)
+                throw new ArgumentNullException(nameof(peer));
+            if (peer.Port == 0)
+                throw new ArgumentException("Port number must be greater than zero.", nameof(peer));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
