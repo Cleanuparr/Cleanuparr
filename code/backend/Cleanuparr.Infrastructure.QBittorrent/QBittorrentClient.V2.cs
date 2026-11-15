@@ -687,8 +687,8 @@ namespace QBittorrent.Client
         private static async Task<IReadOnlyDictionary<string, PeerAddResult>> ParseAddTorrentPeersResponse(HttpResponseMessage response, CancellationToken token)
         {
             var json = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
-            var result = JsonConvert.DeserializeObject<IReadOnlyDictionary<string, PeerAddResult>>(json);
-            return result;
+            var result = JsonConvert.DeserializeObject<Dictionary<string, PeerAddResult>>(json);
+            return result == null ? null : new Dictionary<string, PeerAddResult>(result, StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
