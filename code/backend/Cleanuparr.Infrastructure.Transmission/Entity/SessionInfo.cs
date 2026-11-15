@@ -104,7 +104,7 @@ namespace Transmission.API.RPC.Entity
         /// </summary>
         [JsonPropertyName("download-dir-free-space")]
         [Obsolete("Obsolete since Transmission 4.0.0. Use the free-space method instead.")]
-        public string? DownloadDirectoryFreeSpace { get; set; }
+        public long? DownloadDirectoryFreeSpace { get; set; }
 
         /// <summary>
         /// Max number of torrents to download at once (see download-queue-enabled)
