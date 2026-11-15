@@ -69,19 +69,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Get vault secrets
-        uses: hashicorp/vault-action@v4
-        with:
-          url: ${{ secrets.VAULT_HOST }}
-          method: approle
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          secrets:
-            secrets/data/github packages_pat | PACKAGES_PAT
-
       - name: Restore dependencies
         run: |
-          dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ env.PACKAGES_PAT }} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
           dotnet restore code/backend/cleanuparr.sln
 
       - name: Build solution

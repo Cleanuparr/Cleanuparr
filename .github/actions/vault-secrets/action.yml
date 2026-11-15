@@ -15,7 +15,6 @@ inputs:
     required: true
     default: |
       secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
-      secrets/data/github packages_pat | PACKAGES_PAT
 
 runs:
   using: "composite"

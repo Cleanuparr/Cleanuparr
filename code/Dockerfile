@@ -18,16 +18,13 @@ RUN npm run build
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG TARGETARCH
 ARG VERSION=0.0.1
-ARG PACKAGES_USERNAME
 WORKDIR /app
 EXPOSE 11011
 
 # Copy source code
 COPY backend/ ./backend/
 
-RUN --mount=type=secret,id=packages_pat \
-    --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet nuget add source --username ${PACKAGES_USERNAME} --password "$(cat /run/secrets/packages_pat 2>/dev/null || true)" --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json && \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore ./backend/Cleanuparr.Api/Cleanuparr.Api.csproj -a $TARGETARCH && \
     dotnet publish ./backend/Cleanuparr.Api/Cleanuparr.Api.csproj \
     -a $TARGETARCH \
@@ -36,8 +33,7 @@ RUN --mount=type=secret,id=packages_pat \
     --no-restore \
     /p:Version=${VERSION} \
     /p:PublishSingleFile=true \
-    /p:DebugSymbols=false && \
-    rm -f /root/.nuget/NuGet/NuGet.Config
+    /p:DebugSymbols=false
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

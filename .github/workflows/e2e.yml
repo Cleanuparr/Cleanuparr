@@ -62,16 +62,6 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
 
-      - name: Get vault secrets
-        uses: hashicorp/vault-action@v4
-        with:
-          url: ${{ secrets.VAULT_HOST }}
-          method: approle
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          secrets:
-            secrets/data/github packages_pat | PACKAGES_PAT
-
       # Nothing reverts these. The runner throws the checkout away.
       - name: Apply the e2e patches
         if: matrix.variant == 'patched'
@@ -95,10 +85,6 @@ jobs:
           context: ${{ github.workspace }}/code
           file: ${{ github.workspace }}/code/Dockerfile
           provenance: false
-          build-args: |
-            PACKAGES_USERNAME=${{ github.repository_owner }}
-          secrets: |
-            packages_pat=${{ env.PACKAGES_PAT }}
           tags: cleanuparr-e2e-app:${{ matrix.variant }}
           outputs: type=docker,dest=/tmp/app-image.tar
           # The GHA cache evicted these layers once the repo passed its 10 GB quota.

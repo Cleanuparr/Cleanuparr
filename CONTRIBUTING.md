@@ -52,34 +52,6 @@ This helps us avoid redundant work, git conflicts, and contributions that may no
 
 ## Backend Development
 
-### Initial Setup
-
-#### 1. Create a GitHub Personal Access Token (PAT)
-
-Cleanuparr uses GitHub Packages for NuGet dependencies. You'll need a PAT with `read:packages` permission:
-
-1. Go to [GitHub Settings > Developer Settings > Personal Access Tokens > Tokens (classic)](https://github.com/settings/tokens)
-2. Click "Generate new token" → "Generate new token (classic)"
-3. Give it a descriptive name (e.g., "Cleanuparr NuGet Access")
-4. Set an expiration (recommend 90 days or longer for development)
-5. Select only the `read:packages` scope
-6. Click "Generate token" and copy it
-
-#### 2. Configure NuGet Source
-
-Add the Cleanuparr NuGet repository:
-
-```bash
-dotnet nuget add source \
-  --username YOUR_GITHUB_USERNAME \
-  --password YOUR_GITHUB_PAT \
-  --store-password-in-clear-text \
-  --name Cleanuparr \
-  https://nuget.pkg.github.com/Cleanuparr/index.json
-```
-
-Replace `YOUR_GITHUB_USERNAME` and `YOUR_GITHUB_PAT` with your GitHub username and the PAT you created.
-
 ### Running the Backend
 
 #### Option 1: Using .NET CLI
@@ -244,15 +216,10 @@ To build the Docker image locally for testing:
 
 2. Build the image:
    ```bash
-   export PACKAGES_PAT=YOUR_GITHUB_PAT
    docker build \
-     --build-arg PACKAGES_USERNAME=YOUR_GITHUB_USERNAME \
-     --secret id=packages_pat,env=PACKAGES_PAT \
      -t cleanuparr:local \
      -f Dockerfile .
    ```
-
-   Replace `YOUR_GITHUB_USERNAME` and `YOUR_GITHUB_PAT` with your credentials.
 
 3. Run the container:
    ```bash
@@ -273,11 +240,8 @@ To build the Docker image locally for testing:
 Use Docker Buildx for multi-platform builds:
 
 ```bash
-export PACKAGES_PAT=YOUR_GITHUB_PAT
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg PACKAGES_USERNAME=YOUR_GITHUB_USERNAME \
-  --secret id=packages_pat,env=PACKAGES_PAT \
   -t cleanuparr:local \
   -f Dockerfile .
 ```
