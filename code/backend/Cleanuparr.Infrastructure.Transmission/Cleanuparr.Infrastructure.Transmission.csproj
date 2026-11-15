@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+        <OutputType>Library</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="LICENSE-MIT" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+</Project>

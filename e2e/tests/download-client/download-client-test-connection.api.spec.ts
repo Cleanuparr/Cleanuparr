@@ -2,6 +2,7 @@ import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import { buildDownloadClientPayload } from '../helpers/api/download-client';
 import { DownloadClientStubs } from '../helpers/mocks';
 import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
+import { TransmissionDriver } from '../helpers/torrent-clients/transmission';
 
 test.describe('DownloadClient — test connection', () => {
   test('qbittorrent: success when login returns Ok.', async ({ api, mocks }) => {
@@ -239,5 +240,33 @@ test.describe('DownloadClient: test connection (real qBittorrent container)', ()
     } finally {
       await driver.setLocalAuthBypass(true);
     }
+  });
+});
+
+test.describe('DownloadClient: test connection (real Transmission container)', () => {
+  test('transmission: the seeded credentials succeed', async ({ api }) => {
+    const driver = new TransmissionDriver();
+    const res = await api.downloadClient.test(
+      buildDownloadClientPayload('transmission', {
+        name: 'tr-live-conn',
+        host: driver.cleanuparrHost,
+        username: driver.username,
+        password: driver.password,
+      }),
+    );
+    expect(res.ok).toBe(true);
+  });
+
+  test('transmission: a wrong password fails', async ({ api }) => {
+    const driver = new TransmissionDriver();
+    const res = await api.downloadClient.test(
+      buildDownloadClientPayload('transmission', {
+        name: 'tr-live-wrong-password-conn',
+        host: driver.cleanuparrHost,
+        username: driver.username,
+        password: 'not-the-password',
+      }),
+    );
+    expect(res.ok).toBe(false);
   });
 });

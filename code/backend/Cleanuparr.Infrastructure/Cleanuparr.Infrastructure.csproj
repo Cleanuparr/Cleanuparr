@@ -10,7 +10,6 @@
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
       <PackageReference Include="CliWrap" Version="3.10.0" />
       <PackageReference Include="Otp.NET" Version="1.4.0" />
-      <PackageReference Include="FLM.Transmission" Version="1.0.3" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.7.0" />
       <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.7.0" />
@@ -29,6 +28,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Cleanuparr.Persistence\Cleanuparr.Persistence.csproj" />
       <ProjectReference Include="..\Cleanuparr.Infrastructure.QBittorrent\Cleanuparr.Infrastructure.QBittorrent.csproj" />
+      <ProjectReference Include="..\Cleanuparr.Infrastructure.Transmission\Cleanuparr.Infrastructure.Transmission.csproj" />
     </ItemGroup>
 
 </Project>

@@ -7,6 +7,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Shared.Configuration;
 using Cleanuparr.Shared.Helpers;
+using DotNet.Testcontainers.Builders;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
@@ -226,7 +227,7 @@ public class SqliteToPostgresMigrationTests
             await container.StartAsync();
             return container;
         }
-        catch (Exception exception)
+        catch (DockerUnavailableException exception)
         {
             throw new SkipException($"Docker is unavailable, skipping migrator test: {exception.Message}");
         }
