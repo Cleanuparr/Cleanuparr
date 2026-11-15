@@ -1,6 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Transmission.API.RPC;
+using Transmission.API.RPC.Entity;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Transmission.Tests.Contract;
@@ -74,5 +75,40 @@ public abstract class TransmissionFixture : IAsyncLifetime
         HttpClient httpClient = new();
         _httpClients.Add(httpClient);
         return new Client(httpClient, RpcUrl, login: login, password: password);
+    }
+
+    /// <summary>
+    /// Replaces every torrent with the seed torrent, added paused, and returns its id and hash.
+    /// </summary>
+    public async Task<(long Id, string Hash)> ResetWithSeedTorrentAsync()
+    {
+        TransmissionTorrents? existing = await Client.TorrentGetAsync([TorrentFields.ID]);
+        long[] existingIds = existing?.Torrents?.Select(torrent => torrent.Id).ToArray() ?? [];
+        if (existingIds.Length > 0)
+        {
+            await Client.TorrentRemoveAsync(existingIds, true);
+        }
+
+        byte[] metainfo = await File.ReadAllBytesAsync(Path.Combine(AppContext.BaseDirectory, "Contract", "seed.torrent"));
+        NewTorrentInfo? added = await Client.TorrentAddAsync(new NewTorrent
+        {
+            Metainfo = Convert.ToBase64String(metainfo),
+            Paused = true,
+        });
+
+        string hash = added?.HashString ?? throw new InvalidOperationException("The seed torrent was not added.");
+
+        for (int attempt = 0; attempt < 50; attempt++)
+        {
+            TransmissionTorrents? torrents = await Client.TorrentGetAsync([TorrentFields.ID, TorrentFields.STATUS], hash);
+            if (torrents?.Torrents?.Length == 1 && torrents.Torrents[0].Status == 0)
+            {
+                return (torrents.Torrents[0].Id, hash);
+            }
+
+            await Task.Delay(200);
+        }
+
+        throw new InvalidOperationException("The seed torrent never appeared in the torrent list.");
     }
 }
