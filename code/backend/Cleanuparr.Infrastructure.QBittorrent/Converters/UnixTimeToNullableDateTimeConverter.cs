@@ -32,9 +32,8 @@ namespace QBittorrent.Client.Converters
                     return null;
 
                 // Some torrents have malformed timestamps that fall outside DateTime's representable range
-                const long MinUnixSeconds = -62135596800L;
                 const long MaxUnixSeconds = 253402300799L;
-                if (unixTime > MaxUnixSeconds || unixTime < MinUnixSeconds)
+                if (unixTime > MaxUnixSeconds)
                 {
                     return null;
                 }
