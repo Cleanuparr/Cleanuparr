@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Providers;
+using DotNet.Testcontainers.Builders;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Testcontainers.PostgreSql;
@@ -38,7 +39,7 @@ public class TimelineParityTests
 
             await postgresContainer.StartAsync();
         }
-        catch (Exception exception)
+        catch (DockerUnavailableException exception)
         {
             throw new SkipException($"Docker is unavailable, skipping timeline parity test: {exception.Message}");
         }

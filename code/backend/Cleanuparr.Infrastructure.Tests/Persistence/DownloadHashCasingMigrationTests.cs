@@ -4,6 +4,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Persistence.Providers;
+using DotNet.Testcontainers.Builders;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Testcontainers.PostgreSql;
@@ -76,7 +77,7 @@ public class DownloadHashCasingMigrationTests
 
             await postgresContainer.StartAsync();
         }
-        catch (Exception exception)
+        catch (DockerUnavailableException exception)
         {
             throw new SkipException($"Docker is unavailable, skipping hash casing migration test: {exception.Message}");
         }

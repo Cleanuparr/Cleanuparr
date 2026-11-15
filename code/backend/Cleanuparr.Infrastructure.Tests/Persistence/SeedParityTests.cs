@@ -12,6 +12,7 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Providers;
+using DotNet.Testcontainers.Builders;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -39,7 +40,7 @@ public class SeedParityTests
 
             await postgresContainer.StartAsync();
         }
-        catch (Exception exception)
+        catch (DockerUnavailableException exception)
         {
             throw new SkipException($"Docker is unavailable, skipping seed parity test: {exception.Message}");
         }
