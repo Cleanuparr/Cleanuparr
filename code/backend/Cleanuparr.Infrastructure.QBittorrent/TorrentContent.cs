@@ -35,10 +35,10 @@ namespace QBittorrent.Client
         public TorrentContentPriority Priority { get; set; }
 
         /// <summary>
-        /// True if file is seeding/complete
+        /// True if file is seeding/complete. Set only for the file with index 0.
         /// </summary>
         [JsonProperty("is_seed")]
-        public bool IsSeeding { get; set; }
+        public bool? IsSeeding { get; set; }
 
         /// <summary>
         /// The range of the file.
