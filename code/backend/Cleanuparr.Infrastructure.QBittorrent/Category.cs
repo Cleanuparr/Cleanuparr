@@ -36,7 +36,7 @@ namespace QBittorrent.Client
             if (AdditionalData != null && AdditionalData.TryGetValue("save_path", out JToken savePath) && savePath.Type == JTokenType.String)
             {
                 SavePath = savePath.ToObject<string>();
-                AdditionalData = null;
+                AdditionalData.Remove("save_path");
             }
         }
     }
