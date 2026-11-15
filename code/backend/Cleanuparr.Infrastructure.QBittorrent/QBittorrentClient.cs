@@ -1239,11 +1239,5 @@ namespace QBittorrent.Client
             var dict = JsonConvert.DeserializeObject<Dictionary<string, long?>>(json, new NegativeToNullConverter());
             return dict;
         }
-
-        private struct UrlItem
-        {
-            [JsonProperty("url")]
-            public Uri Url { get; set; }
-        }
     }
 }
