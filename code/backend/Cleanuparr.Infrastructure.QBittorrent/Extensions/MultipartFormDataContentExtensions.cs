@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Globalization;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 
@@ -45,7 +47,10 @@ namespace QBittorrent.Client.Extensions
 
         internal static MultipartFormDataContent AddValue<T>(this MultipartFormDataContent @this, string name, T value)
         {
-            return @this.AddValue(name, value.ToString());
+            string text = value is IFormattable formattable
+                ? formattable.ToString(null, CultureInfo.InvariantCulture)
+                : value.ToString();
+            return @this.AddValue(name, text);
         }
 
         internal static MultipartFormDataContent AddNotNullValue(this MultipartFormDataContent @this, string name, bool? value)
@@ -70,7 +75,7 @@ namespace QBittorrent.Client.Extensions
         {
             if (value != null)
             {
-                @this.AddValue(name, value.Value.ToString());
+                @this.AddValue(name, value.Value);
             }
             return @this;
         }
