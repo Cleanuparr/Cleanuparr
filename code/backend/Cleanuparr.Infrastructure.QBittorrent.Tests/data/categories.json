@@ -1,0 +1,10 @@
+{
+  "movies": {
+    "name": "movies",
+    "savePath": "/downloads/movies"
+  },
+  "tv": {
+    "name": "tv",
+    "savePath": ""
+  }
+}

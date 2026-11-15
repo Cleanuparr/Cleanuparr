@@ -1,0 +1,22 @@
+[
+  {
+    "msg": "",
+    "num_downloaded": 100,
+    "num_leeches": 3,
+    "num_peers": 5,
+    "num_seeds": 12,
+    "status": 2,
+    "tier": 0,
+    "url": "** [DHT] **"
+  },
+  {
+    "msg": "",
+    "num_downloaded": 100,
+    "num_leeches": 3,
+    "num_peers": 5,
+    "num_seeds": 12,
+    "status": 2,
+    "tier": 0,
+    "url": "http://tracker.example.com:6969/announce"
+  }
+]
