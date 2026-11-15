@@ -221,7 +221,7 @@ test.describe('DownloadClient: test connection (real qBittorrent container)', ()
     expect(res.ok).toBe(false);
   });
 
-  // The seeded auth bypass accepts any login from localhost, so it is off for this test.
+  // The seeded config accepts any localhost login until this test disables the bypass.
   test('qbittorrent: a wrong password fails', async ({ api }) => {
     const driver = new QBittorrentDriver();
     await driver.ready();
