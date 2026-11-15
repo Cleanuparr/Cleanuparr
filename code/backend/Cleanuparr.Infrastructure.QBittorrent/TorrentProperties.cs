@@ -131,7 +131,7 @@ namespace QBittorrent.Client
         /// <summary>
         /// Torrent completion date
         /// </summary>
-        [JsonProperty("completion_date ")]
+        [JsonProperty("completion_date")]
         [JsonConverter(typeof(UnixTimeToNullableDateTimeConverter))]
         public DateTime? CompletionDate { get; set; }
 
