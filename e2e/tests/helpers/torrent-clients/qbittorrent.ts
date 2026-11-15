@@ -232,4 +232,39 @@ export class QBittorrentDriver implements TorrentClientDriver {
     const items: Array<{ priority: number }> = await res.json();
     return items.map((f) => f.priority);
   }
+
+  async getExcludedFileNames(): Promise<string> {
+    const res = await fetch(`${this.directHost}/api/v2/app/preferences`, {
+      headers: this.cookie ? { Cookie: this.cookie } : undefined,
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent preferences failed: ${res.status}`);
+    }
+    const prefs = (await res.json()) as { excluded_file_names?: string };
+    return prefs.excluded_file_names ?? '';
+  }
+
+  async setExcludedFileNames(value: string): Promise<void> {
+    await this.setPreferences({ excluded_file_names: value });
+  }
+
+  /** With the bypass on, a login from localhost succeeds whatever the password. */
+  async setLocalAuthBypass(enabled: boolean): Promise<void> {
+    await this.setPreferences({ bypass_local_auth: enabled, bypass_auth_subnet_whitelist_enabled: enabled });
+  }
+
+  private async setPreferences(prefs: Record<string, unknown>): Promise<void> {
+    const body = new URLSearchParams({ json: JSON.stringify(prefs) });
+    const res = await fetch(`${this.directHost}/api/v2/app/setPreferences`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(this.cookie ? { Cookie: this.cookie } : {}),
+      },
+      body: body.toString(),
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent setPreferences failed: ${res.status}`);
+    }
+  }
 }

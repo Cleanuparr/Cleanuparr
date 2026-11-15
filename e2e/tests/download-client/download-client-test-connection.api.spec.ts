@@ -1,6 +1,7 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import { buildDownloadClientPayload } from '../helpers/api/download-client';
 import { DownloadClientStubs } from '../helpers/mocks';
+import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
 
 test.describe('DownloadClient — test connection', () => {
   test('qbittorrent: success when login returns Ok.', async ({ api, mocks }) => {
@@ -218,5 +219,25 @@ test.describe('DownloadClient: test connection (real qBittorrent container)', ()
       }),
     );
     expect(res.ok).toBe(false);
+  });
+
+  // The seeded config accepts any localhost login until this test disables the bypass.
+  test('qbittorrent: a wrong password fails', async ({ api }) => {
+    const driver = new QBittorrentDriver();
+    await driver.ready();
+    await driver.setLocalAuthBypass(false);
+    try {
+      const res = await api.downloadClient.test(
+        buildDownloadClientPayload('qbittorrent', {
+          name: 'qb-live-wrong-password-conn',
+          host: 'http://localhost:8090',
+          username: 'admin',
+          password: 'not-the-password',
+        }),
+      );
+      expect(res.ok).toBe(false);
+    } finally {
+      await driver.setLocalAuthBypass(true);
+    }
   });
 });
