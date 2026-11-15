@@ -494,7 +494,7 @@ namespace QBittorrent.Client
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            return PostAsync(p => p.AddTorrents(request), token);
+            return PostRejectingFailsBodyAsync(p => p.AddTorrents(request), token);
         }
 
         /// <summary>
@@ -510,7 +510,7 @@ namespace QBittorrent.Client
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            return PostAsync(p => p.AddTorrents(request), token);
+            return PostRejectingFailsBodyAsync(p => p.AddTorrents(request), token);
         }
 
         #endregion
