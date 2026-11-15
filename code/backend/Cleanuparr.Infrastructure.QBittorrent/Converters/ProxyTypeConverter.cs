@@ -47,7 +47,20 @@ namespace QBittorrent.Client
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
             var proxyType = (ProxyType?)value;
-            writer.WriteValue(_apiVersion < new ApiVersion(2, 9) ? (int?)proxyType : proxyType?.ToString().ToUpper());
+            if (_apiVersion < new ApiVersion(2, 9))
+            {
+                writer.WriteValue((int?)proxyType);
+                return;
+            }
+
+            // from 2.9 authentication is a separate flag, not part of the type
+            string name = proxyType switch
+            {
+                ProxyType.HttpAuth => "HTTP",
+                ProxyType.Socks5Auth => "SOCKS5",
+                _ => proxyType?.ToString().ToUpper()
+            };
+            writer.WriteValue(name);
         }
     }
 }

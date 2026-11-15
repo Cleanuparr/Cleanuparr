@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using QBittorrent.Client.Converters;
 using QBittorrent.Client.Extensions;
 using System;
@@ -1081,10 +1082,24 @@ namespace QBittorrent.Client
             if (preferences == null)
                 throw new ArgumentNullException(nameof(preferences));
 
-            var json = JsonConvert.SerializeObject(preferences, new JsonSerializerSettings
+            var apiVersion = await GetApiVersionAsync(token).ConfigureAwait(false);
+            var settings = new JsonSerializerSettings
             {
-                Converters = { new ProxyTypeConverter(await GetApiVersionAsync(token).ConfigureAwait(false)) }
-            });
+                Converters = { new ProxyTypeConverter(apiVersion) }
+            };
+
+            string json;
+            if (apiVersion >= new ApiVersion(2, 9)
+                && (preferences.ProxyType == ProxyType.HttpAuth || preferences.ProxyType == ProxyType.Socks5Auth))
+            {
+                var tree = JObject.FromObject(preferences, JsonSerializer.Create(settings));
+                tree["proxy_auth_enabled"] = true;
+                json = tree.ToString(Formatting.None);
+            }
+            else
+            {
+                json = JsonConvert.SerializeObject(preferences, settings);
+            }
 
             await PostAsync(p => p.SetPreferences(json), token);
         }
