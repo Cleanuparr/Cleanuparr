@@ -9,6 +9,7 @@
     <ItemGroup>
         <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
         <EmbeddedResource Include="data\*.json" />
+        <Content Include="Contract\qBittorrent.conf;Contract\seed.torrent" CopyToOutputDirectory="PreserveNewest" />
         <Using Include="Xunit" />
     </ItemGroup>
 
@@ -23,6 +24,7 @@
         </PackageReference>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
         <PackageReference Include="NSubstitute" Version="5.3.0" />
+        <PackageReference Include="Testcontainers" Version="4.13.0" />
         <PackageReference Include="Shouldly" Version="4.3.0" />
         <PackageReference Include="Xunit.SkippableFact" Version="1.5.61" />
         <PackageReference Include="xunit" Version="2.9.3" />
