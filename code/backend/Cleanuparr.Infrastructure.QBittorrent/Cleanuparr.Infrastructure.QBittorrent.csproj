@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <LangVersion>10.0</LangVersion>
+    <TargetFramework>net10.0</TargetFramework>
     <!-- Disable nullable for now. API must be revised and updated accordingly. -->
     <Nullable>Disable</Nullable>
     <Version>1.0.3</Version>
