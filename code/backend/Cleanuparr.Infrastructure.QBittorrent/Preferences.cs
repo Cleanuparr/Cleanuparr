@@ -1264,19 +1264,40 @@ namespace QBittorrent.Client
         [JsonExtensionData]
         public IDictionary<string, JToken> AdditionalData { get; set; }
 
+        private bool _insertedWebUiPassword;
+        private bool _insertedAddTorrentStopped;
+
         [OnSerializing]
         internal void OnSerializingMethod(StreamingContext context)
         {
             if (WebUIPassword != null)
             {
                 AdditionalData ??= new Dictionary<string, JToken>();
+                _insertedWebUiPassword = !AdditionalData.ContainsKey(WebUiPasswordPropertyName);
                 AdditionalData[WebUiPasswordPropertyName] = WebUIPassword;
             }
 
             if (AddTorrentPaused != null)
             {
                 AdditionalData ??= new Dictionary<string, JToken>();
+                _insertedAddTorrentStopped = !AdditionalData.ContainsKey(AddTorrentStoppedPropertyName);
                 AdditionalData[AddTorrentStoppedPropertyName] = AddTorrentPaused;
+            }
+        }
+
+        [OnSerialized]
+        internal void OnSerializedMethod(StreamingContext context)
+        {
+            if (_insertedWebUiPassword)
+            {
+                AdditionalData.Remove(WebUiPasswordPropertyName);
+                _insertedWebUiPassword = false;
+            }
+
+            if (_insertedAddTorrentStopped)
+            {
+                AdditionalData.Remove(AddTorrentStoppedPropertyName);
+                _insertedAddTorrentStopped = false;
             }
         }
 
