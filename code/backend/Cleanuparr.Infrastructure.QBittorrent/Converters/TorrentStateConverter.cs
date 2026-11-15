@@ -37,7 +37,7 @@ internal class TorrentStateConverter : JsonConverter<TorrentState>
         if (reader.TokenType != JsonToken.String)
             throw new JsonSerializationException($"Unexpected token {reader.TokenType}.");
             
-        var stringValue = (reader.Value as string)!.ToUpperInvariant();
+        var stringValue = (reader.Value as string).ToUpperInvariant();
         if (StringToTorrentState.TryGetValue(stringValue, out var torrentState))
             return torrentState;
 

@@ -491,7 +491,7 @@ namespace QBittorrent.Client
             if (trackerUrls == null)
                 throw new ArgumentNullException(nameof(trackerUrls));
             var urls = trackerUrls.ToList();
-            if (urls.Any(u => u == null))
+            if (urls.Contains(null))
                 throw new ArgumentException("The tracker URL cannot be null.", nameof(trackerUrls));
             if (urls.Any(u => !u.IsAbsoluteUri))
                 throw new ArgumentException("The tracker URLs must be absolute.", nameof(trackerUrls));

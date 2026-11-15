@@ -29,7 +29,7 @@ namespace QBittorrent.Client.Internal
 
             return builder.ToString();
 
-            string Encode(string data)
+            static string Encode(string data)
             {
                 if (String.IsNullOrEmpty(data))
                 {

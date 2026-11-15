@@ -375,7 +375,7 @@ namespace QBittorrent.Client.Internal
 
         public abstract (Uri url, HttpContent request) UpdateSearchPlugins();
 
-        protected (Uri, HttpContent) BuildForm(Uri uri, params (string key, string value)[] fields)
+        protected static (Uri, HttpContent) BuildForm(Uri uri, params (string key, string value)[] fields)
         {
             return (uri, new CompatibleFormUrlEncodedContent(fields));
         }
