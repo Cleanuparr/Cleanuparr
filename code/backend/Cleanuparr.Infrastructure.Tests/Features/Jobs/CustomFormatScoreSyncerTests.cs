@@ -2325,7 +2325,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
         };
 
         DbContextOptionsBuilder<EventsContext> optionsBuilder = new DbContextOptionsBuilder<EventsContext>()
-            .UseSqlite(connectionStringBuilder.ConnectionString);
+            .UseSqlite(connectionStringBuilder.ConnectionString)
+            .UseSnakeCaseNamingConvention();
 
         if (interceptors.Length > 0)
         {

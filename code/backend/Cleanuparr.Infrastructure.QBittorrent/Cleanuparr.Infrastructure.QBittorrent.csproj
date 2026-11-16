@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" PrivateAssets="all" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="JetBrains.Annotations" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

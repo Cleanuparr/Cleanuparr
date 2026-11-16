@@ -18,17 +18,17 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="6.0.4">
+        <PackageReference Include="coverlet.collector">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-        <PackageReference Include="NSubstitute" Version="5.3.0" />
-        <PackageReference Include="Testcontainers" Version="4.13.0" />
-        <PackageReference Include="Shouldly" Version="4.3.0" />
-        <PackageReference Include="Xunit.SkippableFact" Version="1.5.61" />
-        <PackageReference Include="xunit" Version="2.9.3" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="Testcontainers" />
+        <PackageReference Include="Shouldly" />
+        <PackageReference Include="Xunit.SkippableFact" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
