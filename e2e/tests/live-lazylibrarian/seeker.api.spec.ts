@@ -53,7 +53,9 @@ async function searchesSince(sinceMs: number): Promise<string[]> {
   const logged = await indexerMock.requests();
 
   return logged
-    .filter((entry) => entry.request.loggedDate >= sinceMs && entry.request.url.includes('q='))
+    .filter((entry) => entry.request.loggedDate >= sinceMs
+      && entry.request.url.startsWith('/api?')
+      && !entry.request.url.includes('t=caps'))
     .map((entry) => decodeURIComponent(entry.request.url.replace(/\+/g, ' ')));
 }
 
