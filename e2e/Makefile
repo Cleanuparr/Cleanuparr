@@ -11,10 +11,10 @@ WIREMOCKS = wiremock-arr wiremock-dlc wiremock-notify wiremock-blocklist
 # nginx depends_on app, so naming it would drag the app into the stack half.
 APP_SERVICES = app nginx
 
-CORE_STACK = keycloak $(WIREMOCKS)
-CLIENTS_STACK = $(CORE_STACK) tracker qbittorrent transmission deluge utorrent rutorrent sabnews sabnzbd
-ARR_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sonarr radarr whisparr whisparr2 lidarr chaptarr sportarr
-LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker qbittorrent sabnews sabnzbd lazylibrarian
+CORE_STACK = keycloak qbittorrent $(WIREMOCKS)
+CLIENTS_STACK = $(CORE_STACK) tracker transmission deluge utorrent rutorrent sabnews sabnzbd
+ARR_STACK = $(CORE_STACK) wiremock-indexer tracker sonarr radarr whisparr whisparr2 lidarr chaptarr sportarr
+LAZYLIBRARIAN_STACK = $(CORE_STACK) wiremock-indexer tracker sabnews sabnzbd lazylibrarian
 
 setup:
 	bash ./scripts/setup-test-data.sh
