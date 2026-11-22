@@ -76,7 +76,10 @@ public class DynamicHttpClientProvider : IDynamicHttpClientProvider
             clientType,
             retryConfig,
             httpConfig.HttpCertificateValidation,
-            httpConfig.HttpSendUserAgent
+            httpConfig.HttpSendUserAgent,
+            downloadClientConfig.HttpAuthType,
+            downloadClientConfig.GetHandlerHttpAuthCredential(),
+            new Uri(downloadClientConfig.Url.GetLeftPart(UriPartial.Authority))
         );
 
         // Create and configure the client

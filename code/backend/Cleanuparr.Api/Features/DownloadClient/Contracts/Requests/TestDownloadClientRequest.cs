@@ -19,6 +19,12 @@ public sealed record TestDownloadClientRequest
 
     public string? ApiKey { get; init; }
 
+    public HttpAuthType HttpAuthType { get; init; }
+
+    public string? HttpAuthUsername { get; init; }
+
+    public string? HttpAuthPassword { get; init; }
+
     public string? UrlBase { get; init; }
 
     public Guid? ClientId { get; init; }
@@ -35,9 +41,15 @@ public sealed record TestDownloadClientRequest
             throw new CustomValidationException("Host cannot be empty");
         }
 
-        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
+        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out Uri? parsedHost))
         {
             throw new CustomValidationException("Host is not a valid URL");
+        }
+
+        if (parsedHost.IsAbsoluteUri && parsedHost.UserInfo.Length > 0)
+        {
+            throw new CustomValidationException(
+                "Credentials in the URL are not supported. Use the HTTP authentication fields instead.");
         }
 
         if (TypeName.RequiresAuthField(DownloadClientAuthField.ApiKey) && string.IsNullOrWhiteSpace(ApiKey) && !ApiKey.IsPlaceholder())
@@ -50,12 +62,27 @@ public sealed record TestDownloadClientRequest
         {
             throw new CustomValidationException("Use either an API key or a username and password, not both");
         }
+
+        if (TypeName.ApiKeyConflictsWithHttpAuth() && !string.IsNullOrWhiteSpace(ApiKey) &&
+            !string.IsNullOrWhiteSpace(HttpAuthUsername))
+        {
+            throw new CustomValidationException(
+                "API key can't be combined with HTTP authentication. Use qBittorrent username/password instead.");
+        }
+
+        string? digestUsername = TypeName.UsesDedicatedHttpAuthFields() ? HttpAuthUsername : Username;
+
+        if (HttpAuthType == HttpAuthType.Digest && string.IsNullOrWhiteSpace(digestUsername))
+        {
+            throw new CustomValidationException("HTTP Digest authentication requires a username");
+        }
     }
 
-    public DownloadClientConfig ToTestConfig(string? resolvedPassword = null, string? resolvedApiKey = null)
+    public DownloadClientConfig ToTestConfig(string? resolvedPassword = null, string? resolvedApiKey = null, string? resolvedHttpAuthPassword = null)
     {
         var password = resolvedPassword ?? Password;
         var apiKey = resolvedApiKey ?? ApiKey;
+        var httpAuthPassword = resolvedHttpAuthPassword ?? HttpAuthPassword;
 
         if (password.IsPlaceholder())
         {
@@ -65,6 +92,11 @@ public sealed record TestDownloadClientRequest
         if (apiKey.IsPlaceholder())
         {
             throw new CustomValidationException("API key cannot be a placeholder value");
+        }
+
+        if (httpAuthPassword.IsPlaceholder())
+        {
+            throw new CustomValidationException("HTTP auth password cannot be a placeholder value");
         }
 
         return new()
@@ -78,6 +110,9 @@ public sealed record TestDownloadClientRequest
             Username = Username,
             Password = password,
             ApiKey = apiKey,
+            HttpAuthType = HttpAuthType,
+            HttpAuthUsername = HttpAuthUsername,
+            HttpAuthPassword = httpAuthPassword,
             UrlBase = UrlBase,
         };
     }

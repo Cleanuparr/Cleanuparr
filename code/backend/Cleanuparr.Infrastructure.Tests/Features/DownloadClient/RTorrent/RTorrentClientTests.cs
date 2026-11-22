@@ -13,7 +13,11 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient.RTorrent;
 
 public class RTorrentClientTests
 {
-    private static (RTorrentClient client, FakeHttpMessageHandler handler) CreateClient(string responseXml)
+    private static (RTorrentClient client, FakeHttpMessageHandler handler) CreateClient(
+        string responseXml,
+        HttpAuthType httpAuthType = HttpAuthType.Basic,
+        string? username = null,
+        string? password = null)
     {
         FakeHttpMessageHandler handler = new();
         handler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
@@ -27,6 +31,9 @@ public class RTorrentClientTests
             TypeName = DownloadClientTypeName.rTorrent,
             Type = DownloadClientType.Torrent,
             Host = new Uri("http://localhost:8080"),
+            HttpAuthType = httpAuthType,
+            Username = username,
+            Password = password,
         };
 
         return (new RTorrentClient(config, new HttpClient(handler)), handler);
@@ -146,5 +153,35 @@ public class RTorrentClientTests
         (RTorrentClient client, _) = CreateClient(TorrentRowsResponse(TorrentCells()[..^1]));
 
         await Should.ThrowAsync<RTorrentClientException>(() => client.GetAllTorrentsAsync());
+    }
+
+    [Fact]
+    public async Task StopTorrentAsync_InBasicMode_SendsBasicHeader()
+    {
+        const string response = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <methodResponse><params><param><value><i4>0</i4></value></param></params></methodResponse>
+            """;
+        (RTorrentClient client, FakeHttpMessageHandler handler) =
+            CreateClient(response, HttpAuthType.Basic, username: "user", password: "pass");
+
+        await client.StopTorrentAsync("HASH123");
+
+        handler.CapturedRequests[0].Headers.Authorization!.Scheme.ShouldBe("Basic");
+    }
+
+    [Fact]
+    public async Task StopTorrentAsync_InDigestMode_SendsNoManualHeader()
+    {
+        const string response = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <methodResponse><params><param><value><i4>0</i4></value></param></params></methodResponse>
+            """;
+        (RTorrentClient client, FakeHttpMessageHandler handler) =
+            CreateClient(response, HttpAuthType.Digest, username: "user", password: "pass");
+
+        await client.StopTorrentAsync("HASH123");
+
+        handler.CapturedRequests[0].Headers.Authorization.ShouldBeNull();
     }
 }

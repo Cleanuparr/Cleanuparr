@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities.UTorrent.Request;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
@@ -51,10 +52,14 @@ public class UTorrentHttpService : IUTorrentHttpService
             
             var httpRequest = new HttpRequestMessage(HttpMethod.Get, uriBuilder.Uri);
             httpRequest.Headers.Add("Cookie", guidCookie);
-            
-            var credentials = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
-            httpRequest.Headers.Add("Authorization", $"Basic {credentials}");
+
+            // In Digest mode the handler's CredentialCache answers instead.
+            if (_config.HttpAuthType == HttpAuthType.Basic)
+            {
+                var credentials = Convert.ToBase64String(
+                    Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
+                httpRequest.Headers.Add("Authorization", $"Basic {credentials}");
+            }
 
             var response = await _httpClient.SendAsync(httpRequest);
 
@@ -99,12 +104,16 @@ public class UTorrentHttpService : IUTorrentHttpService
         {
             UriBuilder uriBuilder = new UriBuilder(_config.Url);
             uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/gui/token.html";
-            
-            var credentials = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
 
             var request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.Uri);
-            request.Headers.Add("Authorization", $"Basic {credentials}");
+
+            // In Digest mode the handler's CredentialCache answers instead.
+            if (_config.HttpAuthType == HttpAuthType.Basic)
+            {
+                var credentials = Convert.ToBase64String(
+                    Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
+                request.Headers.Add("Authorization", $"Basic {credentials}");
+            }
 
             var response = await _httpClient.SendAsync(request);
 
