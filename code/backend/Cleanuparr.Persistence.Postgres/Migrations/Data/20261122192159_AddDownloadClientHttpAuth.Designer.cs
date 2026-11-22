@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cleanuparr.Persistence.Postgres.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20261012213733_AddDownloadClientHttpAuth")]
+    [Migration("20261122192159_AddDownloadClientHttpAuth")]
     partial class AddDownloadClientHttpAuth
     {
         /// <inheritdoc />
@@ -887,6 +887,24 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("use_advanced_scheduling");
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Chaptarr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Chaptarr#BlocklistSettings", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("BlocklistPath")
+                                .HasColumnType("text")
+                                .HasColumnName("chaptarr_blocklist_path");
+
+                            b1.Property<string>("BlocklistType")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("chaptarr_blocklist_type");
+
+                            b1.Property<bool>("Enabled")
+                                .HasColumnType("boolean")
+                                .HasColumnName("chaptarr_enabled");
+                        });
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "LazyLibrarian", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.LazyLibrarian#BlocklistSettings", b1 =>
                         {
                             b1.IsRequired();
@@ -1209,6 +1227,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("on_download_stopped");
 
+                    b.Property<bool>("OnErroredStrike")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_errored_strike");
+
                     b.Property<bool>("OnFailedImportStrike")
                         .HasColumnType("boolean")
                         .HasColumnName("on_failed_import_strike");
@@ -1228,6 +1250,10 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Property<bool>("OnSearchTriggered")
                         .HasColumnType("boolean")
                         .HasColumnName("on_search_triggered");
+
+                    b.Property<bool>("OnSeekerCycleCompleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("on_seeker_cycle_completed");
 
                     b.Property<bool>("OnSlowStrike")
                         .HasColumnType("boolean")
@@ -1454,6 +1480,27 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("use_advanced_scheduling");
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Errored", "Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig.Errored#ErroredConfig", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<bool>("ChangeCategory")
+                                .HasColumnType("boolean")
+                                .HasColumnName("errored_change_category");
+
+                            b1.Property<bool>("DeletePrivate")
+                                .HasColumnType("boolean")
+                                .HasColumnName("errored_delete_private");
+
+                            b1.Property<bool>("IgnorePrivate")
+                                .HasColumnType("boolean")
+                                .HasColumnName("errored_ignore_private");
+
+                            b1.Property<int>("MaxStrikes")
+                                .HasColumnType("integer")
+                                .HasColumnName("errored_max_strikes");
+                        });
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "FailedImport", "Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig.FailedImport#FailedImportConfig", b1 =>
                         {
                             b1.IsRequired();
@@ -1513,6 +1560,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                     b.Property<bool>("ChangeCategory")
                         .HasColumnType("boolean")
                         .HasColumnName("change_category");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
 
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
                         .HasColumnType("boolean")
@@ -1589,6 +1641,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("change_category");
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_type");
+
                     b.Property<bool>("DeletePrivateTorrentsFromClient")
                         .HasColumnType("boolean")
                         .HasColumnName("delete_private_torrents_from_client");
@@ -1655,6 +1712,18 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("proactive_search_enabled");
 
+                    b.Property<bool>("QuietHoursEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("quiet_hours_enabled");
+
+                    b.Property<TimeOnly>("QuietHoursEnd")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("quiet_hours_end");
+
+                    b.Property<TimeOnly>("QuietHoursStart")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("quiet_hours_start");
+
                     b.Property<bool>("SearchEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("search_enabled");
@@ -1705,6 +1774,11 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("ignore_struck_downloads");
 
+                    b.PrimitiveCollection<List<string>>("IncludeTags")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("include_tags");
+
                     b.Property<DateTimeOffset?>("LastProcessedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_processed_at");
@@ -1717,14 +1791,32 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                         .HasColumnType("boolean")
                         .HasColumnName("monitored_only");
 
+                    b.Property<string>("RadarrReleaseGate")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("radarr_release_gate");
+
+                    b.Property<int>("RecentGrabWindowHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("recent_grab_window_hours");
+
+                    b.Property<int>("RestMaxDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("rest_max_days");
+
+                    b.Property<bool>("RestUnitsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("rest_units_enabled");
+
                     b.PrimitiveCollection<List<string>>("SkipTags")
                         .IsRequired()
                         .HasColumnType("text[]")
                         .HasColumnName("skip_tags");
 
-                    b.Property<int>("TotalEligibleItems")
-                        .HasColumnType("integer")
-                        .HasColumnName("total_eligible_items");
+                    b.Property<string>("SonarrSearchMode")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("sonarr_search_mode");
 
                     b.Property<bool>("UseCustomFormatScore")
                         .HasColumnType("boolean")
