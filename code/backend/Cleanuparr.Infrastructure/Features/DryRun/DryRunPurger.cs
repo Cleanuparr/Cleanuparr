@@ -50,12 +50,15 @@ public sealed class DryRunPurger : IDryRunPurger
                 int deletedCycles = await _eventsContext.SeekerCycles
                     .Where(c => c.IsDryRun)
                     .ExecuteDeleteAsync();
+                int deletedSearches = await _eventsContext.SearchQueue
+                    .Where(q => q.IsDryRun)
+                    .ExecuteDeleteAsync();
 
-                if (deletedStrikes + deletedEvents + deletedManualEvents + deletedItems + deletedHistory + deletedCycles > 0)
+                if (deletedStrikes + deletedEvents + deletedManualEvents + deletedItems + deletedHistory + deletedCycles + deletedSearches > 0)
                 {
                     _logger.LogWarning(
-                        "Purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries, {Cycles} search cycles removed",
-                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, deletedCycles);
+                        "Purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries, {Cycles} search cycles, {Searches} queued searches removed",
+                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory, deletedCycles, deletedSearches);
                 }
 
                 await transaction.CommitAsync();

@@ -169,7 +169,7 @@ public class SeekerIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task DryRun_TriggersSearch_ButDoesNotDequeue()
+    public async Task DryRun_TriggersSearch_AndDequeuesDryRunItem()
     {
         // Arrange
         _fixture.DryRunInterceptor.IsDryRunEnabled().Returns(true);
@@ -181,6 +181,7 @@ public class SeekerIntegrationTests : IDisposable
             ArrInstanceId = instance.Id,
             ItemId = 55,
             Title = "DryRun.Movie.2024",
+            IsDryRun = true,
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
@@ -216,9 +217,9 @@ public class SeekerIntegrationTests : IDisposable
         searchEvent.SearchReason.ShouldBe(SeekerSearchReason.Replacement);
         searchEvent.GrabbedItems.ShouldBeEmpty();
 
-        // Assert: Item remains in queue (dry run doesn't dequeue)
+        // Assert: Dry run item was dequeued
         var remainingItems = await _fixture.EventsContext.SearchQueue.CountAsync();
-        remainingItems.ShouldBe(1);
+        remainingItems.ShouldBe(0);
 
         // Assert: No command tracker saved (dry run)
         var trackers = await _fixture.EventsContext.SeekerCommandTrackers.ToListAsync();

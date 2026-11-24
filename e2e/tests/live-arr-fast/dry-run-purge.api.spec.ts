@@ -46,6 +46,11 @@ async function strikeGroup(api: CleanuparrApi, downloadId: string): Promise<Stri
   );
 }
 
+async function pendingReplacementSearches(api: CleanuparrApi): Promise<number> {
+  const summary = await (await api.seeker.getSearchStatsSummary()).json();
+  return summary.pendingReplacementSearches;
+}
+
 /** Searches the seeded movie and waits for the grab to reach the arr's queue. */
 async function grabRelease(api: CleanuparrApi): Promise<void> {
   await triggerSeeker(api);
@@ -69,7 +74,7 @@ async function stalledDownloadId(): Promise<string> {
 
 /** Triggers the queue cleaner until the download's strike count reaches the target. */
 async function strikeUntil(api: CleanuparrApi, downloadId: string, total: number): Promise<void> {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < total + 2; attempt++) {
     await api.jobs.trigger('QueueCleaner');
 
     const reached = await expect
@@ -135,6 +140,26 @@ test.describe('Dry run purge', () => {
         { timeout: PURGE_TIMEOUT },
       )
       .toBe(false);
+  });
+
+  test('disabling dry run purges queued replacement searches', async ({ api }) => {
+    test.setTimeout(240_000);
+
+    await arrangeInstance(api, RADARR);
+    await arrangeQueueCleaner(api);
+    await createStallRule(api, MAX_STRIKES);
+
+    await grabRelease(api);
+    const downloadId = await stalledDownloadId();
+
+    // Dry run never removes the download, so every strike past the limit asks for another replacement.
+    await api.general.patch({ dryRun: true });
+    await strikeUntil(api, downloadId, MAX_STRIKES + 1);
+    expect(await pendingReplacementSearches(api)).toBeGreaterThan(0);
+
+    await api.general.patch({ dryRun: false });
+
+    await expect.poll(() => pendingReplacementSearches(api), { timeout: PURGE_TIMEOUT }).toBe(0);
   });
 
   test('live strikes survive the purge', async ({ api }) => {
