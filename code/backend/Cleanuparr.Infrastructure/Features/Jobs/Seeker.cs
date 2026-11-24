@@ -189,8 +189,13 @@ public sealed class Seeker : IHandler
         }
         finally
         {
-            _eventsContext.SearchQueue.Remove(item);
-            await _eventsContext.SaveChangesAsync();
+            await _eventsContext.SearchQueue
+                .Where(q => q.ArrInstanceId == item.ArrInstanceId
+                    && q.ItemId == item.ItemId
+                    && q.SeriesId == item.SeriesId
+                    && q.SearchType == item.SearchType
+                    && q.IsDryRun == item.IsDryRun)
+                .ExecuteDeleteAsync();
         }
     }
 
