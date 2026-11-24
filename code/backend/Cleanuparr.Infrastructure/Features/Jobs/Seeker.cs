@@ -95,6 +95,7 @@ public sealed class Seeker : IHandler
 
         // Replacement searches queued after download removal
         SearchQueueItem? replacementItem = await _eventsContext.SearchQueue
+            .Where(q => q.IsDryRun == isDryRun)
             .OrderBy(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
@@ -188,11 +189,13 @@ public sealed class Seeker : IHandler
         }
         finally
         {
-            if (!isDryRun)
-            {
-                _eventsContext.SearchQueue.Remove(item);
-                await _eventsContext.SaveChangesAsync();
-            }
+            await _eventsContext.SearchQueue
+                .Where(q => q.ArrInstanceId == item.ArrInstanceId
+                    && q.ItemId == item.ItemId
+                    && q.SeriesId == item.SeriesId
+                    && q.SearchType == item.SearchType
+                    && q.IsDryRun == item.IsDryRun)
+                .ExecuteDeleteAsync();
         }
     }
 

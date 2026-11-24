@@ -526,6 +526,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
+                    b.Property<bool>("IsDryRun")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_dry_run");
+
                     b.Property<long>("ItemId")
                         .HasColumnType("INTEGER")
                         .HasColumnName("item_id");

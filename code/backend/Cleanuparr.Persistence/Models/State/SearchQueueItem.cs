@@ -41,6 +41,11 @@ public sealed record SearchQueueItem
     public string Title { get; set; } = "";
 
     /// <summary>
+    /// Queued by a dry run, so the download was never removed
+    /// </summary>
+    public bool IsDryRun { get; set; }
+
+    /// <summary>
     /// When this search request was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

@@ -482,44 +482,84 @@ public class SeekerTests : IDisposable
         remaining.ShouldBe(0);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_WhenDryRunEnabled_DoesNotRemoveFromSearchQueue()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ExecuteAsync_SkipsReplacementQueuedInTheOtherMode(bool isDryRun)
     {
         // Arrange
-        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(isDryRun);
 
-        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = radarrInstance.Id,
             ItemId = 42,
             Title = "Test Movie",
+            IsDryRun = !isDryRun,
             CreatedAt = DateTime.UtcNow
         });
         await _fixture.DataContext.SaveChangesAsync();
         await _fixture.EventsContext.SaveChangesAsync();
 
-        var mockArrClient = Substitute.For<IArrClient>();
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.DidNotReceive()
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+
+        int remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
+        remaining.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenDryRunEnabled_DequeuesDryRunReplacement()
+    {
+        // Arrange
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
+
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ItemId = 42,
+            Title = "Test Movie",
+            IsDryRun = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
         mockArrClient
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
-            .Returns(100L);
+            .Returns(0L);
 
         _fixture.ArrClientFactory
             .GetClient(InstanceType.Radarr, Arg.Any<float>())
             .Returns(mockArrClient);
 
-        var sut = CreateSut();
+        SeekerJob sut = CreateSut();
 
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — search was triggered but item stays in queue
+        // Assert
         await mockArrClient.Received(1)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
-        var remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
-        remaining.ShouldBe(1);
+        int remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
+        remaining.ShouldBe(0);
     }
 
     [Fact]
@@ -7189,6 +7229,112 @@ public class SeekerTests : IDisposable
         tracker.ExternalItemId.ShouldBe(42);
         tracker.EpisodeId.ShouldBe(0);
         tracker.SeasonNumber.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SonarrSeasonReplacement_DequeuesDuplicatesWithOneSearch()
+    {
+        // Arrange
+        ArrInstance sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        DateTime createdAt = DateTime.UtcNow.AddMinutes(-10);
+
+        for (int copy = 0; copy < 3; copy++)
+        {
+            _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+            {
+                ArrInstanceId = sonarrInstance.Id,
+                ItemId = 3,
+                SeriesId = 42,
+                SearchType = "Season",
+                Title = "Example Show S03",
+                CreatedAt = createdAt.AddMinutes(copy)
+            });
+        }
+
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ItemId = 4,
+            SeriesId = 42,
+            SearchType = "Season",
+            Title = "Example Show S04",
+            CreatedAt = createdAt.AddMinutes(1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.Received(1)
+            .SearchItemAsync(sonarrInstance, Arg.Any<SearchItem>());
+
+        List<SearchQueueItem> remaining = await _fixture.EventsContext.SearchQueue.AsNoTracking().ToListAsync();
+        remaining.Count.ShouldBe(1);
+        remaining[0].ItemId.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RadarrReplacement_DequeuesDuplicatesWithOneSearch()
+    {
+        // Arrange
+        ArrInstance radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        DateTime createdAt = DateTime.UtcNow.AddMinutes(-10);
+
+        for (int copy = 0; copy < 3; copy++)
+        {
+            _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+            {
+                ArrInstanceId = radarrInstance.Id,
+                ItemId = 42,
+                Title = "Test Movie",
+                CreatedAt = createdAt.AddMinutes(copy)
+            });
+        }
+
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ItemId = 43,
+            Title = "Other Movie",
+            CreatedAt = createdAt.AddMinutes(1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
+
+        IArrClient mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        SeekerJob sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await mockArrClient.Received(1)
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
+
+        List<SearchQueueItem> remaining = await _fixture.EventsContext.SearchQueue.AsNoTracking().ToListAsync();
+        remaining.Count.ShouldBe(1);
+        remaining[0].ItemId.ShouldBe(43);
     }
 
     [Fact]

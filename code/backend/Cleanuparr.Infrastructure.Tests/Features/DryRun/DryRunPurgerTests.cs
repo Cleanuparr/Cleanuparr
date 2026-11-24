@@ -87,6 +87,10 @@ public sealed class DryRunPurgerTests : IDisposable
             new SeekerCycle { IsDryRun = true },
             new SeekerCycle { IsDryRun = false });
 
+        _eventsContext.SearchQueue.AddRange(
+            new SearchQueueItem { ItemId = 1, Title = "dry run search", IsDryRun = true },
+            new SearchQueueItem { ItemId = 2, Title = "real search", IsDryRun = false });
+
         await _eventsContext.SaveChangesAsync();
 
         // Act
@@ -99,6 +103,8 @@ public sealed class DryRunPurgerTests : IDisposable
         (await _eventsContext.SeekerHistory.CountAsync()).ShouldBe(1);
         (await _eventsContext.SeekerCycles.CountAsync(x => x.IsDryRun)).ShouldBe(0);
         (await _eventsContext.SeekerCycles.CountAsync()).ShouldBe(1);
+        (await _eventsContext.SearchQueue.CountAsync(x => x.IsDryRun)).ShouldBe(0);
+        (await _eventsContext.SearchQueue.CountAsync()).ShouldBe(1);
 
         DownloadItem touched = await _eventsContext.DownloadItems.AsNoTracking().FirstAsync(x => x.DownloadId == "touched-by-dry-run");
         touched.IsMarkedForRemoval.ShouldBeTrue();
