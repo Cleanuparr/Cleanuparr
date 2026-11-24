@@ -112,6 +112,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 SeriesId = (searchItem as SeriesSearchItem)?.SeriesId,
                 SearchType = (searchItem as SeriesSearchItem)?.SearchType.ToString(),
                 Title = target.Title,
+                IsDryRun = !sent,
             });
         }
 

@@ -348,6 +348,37 @@ public class QueueItemRemoverTests : IDisposable
         additional.SearchType.ShouldBe(SeriesSearchType.Episode.ToString());
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task RemoveQueueItemAsync_FlagsSearchQueueItemsAsDryRunWhenTheDeleteWasSkipped(bool sent, bool expectedDryRun)
+    {
+        // Arrange
+        QueueItemRemoveRequest request = CreateRemoveRequest();
+        ArrRemovalTarget target = request.ArrTarget() with
+        {
+            AdditionalSearchItems = [new SeriesSearchItem { Id = 456, SeriesId = 9, SearchType = SeriesSearchType.Episode }],
+        };
+        request = request with { Target = target };
+
+        _arrClient
+            .DeleteQueueItemAsync(
+                Arg.Any<ArrInstance>(),
+                Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
+                Arg.Any<bool>(),
+                Arg.Any<DeleteReason>())
+            .Returns(sent);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        List<SearchQueueItem> queueItems = await _eventsContext.SearchQueue.ToListAsync();
+        queueItems.Count.ShouldBe(2);
+        queueItems.ShouldAllBe(x => x.IsDryRun == expectedDryRun);
+    }
+
     [Fact]
     public async Task RemoveQueueItemAsync_Success_AddsSearchQueueItem()
     {
